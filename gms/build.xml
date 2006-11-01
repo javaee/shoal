@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ Copyright 2004-2005 Sun Microsystems, Inc.  All rights reserved.
+ Use is subject to license terms.
+-->
+<!--
+ #
+ # The contents of this file are subject to the terms
+ # of the Common Development and Distribution License
+ # (the License).  You may not use this file except in
+ # compliance with the License.
+ #
+ # You can obtain a copy of the license at
+ # https://shoal.dev.java.net/public/CDDLv1.0.html
+ #
+ # See the License for the specific language governing
+ # permissions and limitations under the License.
+ #
+ # When distributing Covered Code, include this CDDL
+ # Header Notice in each file and include the License file
+ # at
+ # If applicable, add the following below the CDDL Header,
+ # with the fields enclosed by brackets [] replaced by
+ # you own identifying information:
+ # "Portions Copyrighted [year] [name of copyright owner]"
+ #
+ # Copyright 2006 Sun Microsystems, Inc. All rights reserved.
+ #
+ -->
+
+<project name="Shoal Group Management Service Module" default="all" basedir=".">  
+
+<!-- ========== Initialize Properties =================================== -->
+
+    <property file="./project.properties"/>
+    <property file="./build.properties"/>
+
+  
+    <!-- all -->
+    <target name="all" depends="clean, compile, assemble"
+        description="Build entire ${component.name}">
+    </target>
+
+    <!-- build -->
+    <target name="build" depends="compile, assemble"
+        description="Build entire ${component.name}">
+    </target>
+
+    <!-- init. Initialization involves creating publishing directories and
+         OS specific targets. --> 
+    <target name="init" description="${component.name} initialization">
+        <tstamp>
+            <format property="start.time" pattern="MM/dd/yyyy hh:mm aa"/>
+        </tstamp>    
+        <mkdir dir="${component.classes.dir}"/>
+	<mkdir dir="${dist.dir}"/>
+    </target>
+
+    <path id="compile.classpath">
+         <pathelement location="${jxta.jar}"/>
+    </path>
+
+
+    <!-- compile: compile the sources --> 
+    <target name="compile" depends="init" 
+        description="Compile ${component.name} sources">  
+     
+        <javac srcdir="${src.dir}" 
+               destdir="${component.classes.dir}"
+               debug="${javac.debug}" 
+               optimize="${javac.optimize}"
+               source="${javac.source}" 
+	       target="${javac.source}"
+               deprecation="${javac.deprecation}"
+               failonerror="true"
+	       >
+	       <compilerarg value="-Xlint:unchecked"/>
+            <classpath>
+                <path refid="compile.classpath"/>              
+            </classpath>
+            <include name="**/*.java"/>
+        </javac>
+
+        <javac srcdir="${tests.dir}" 
+               destdir="${component.classes.dir}"
+               debug="${javac.debug}" 
+               optimize="${javac.optimize}"
+               source="${javac.source}" 
+	       target="${javac.source}"
+               deprecation="${javac.deprecation}"
+               failonerror="true"
+	       >
+	       <compilerarg value="-Xlint:unchecked"/>
+            <classpath>
+                <path refid="compile.classpath"/>              
+            </classpath>
+            <include name="**/*.java"/>
+        </javac>
+
+    </target>
+    
+    <!-- assemble: create jar files and jar files containing localized
+    content -->
+    <target name="assemble" depends="init"
+        description="Create ${component.name} jar files">
+
+        <copy todir="${component.classes.dir}">
+            <fileset dir="${src.dir}"
+                     includes="**/*.properties"/>
+	    <fileset dir="${tests.dir}"/>
+        </copy>
+
+        <jar jarfile="${dist.dir}/${shoal-gms.jar}" update="yes">
+            <fileset dir="${component.classes.dir}">
+                <include name="**/*.class"/>
+                <include name="**/*.properties"/>
+            </fileset>
+            <fileset dir="${src.dir}">
+              <include name="**/*.dtd"/>
+              <include name="**/*.xml"/>
+            </fileset>
+        </jar>
+    </target>
+
+    <!-- clean -->
+    <target name="clean">
+        <delete dir="${component.classes.dir}"/>
+	<delete dir="${dist.dir}"/>
+    </target>
+
+    <!-- javadoc -->
+    <target name="gms-javadocs">
+        <javadoc packagenames="com.sun.enterprise.ee.cms.*"
+            sourcepath="${src.dir}"
+            destdir="${javadocs.dir}"
+            version="false"
+            use="true"
+            private="false"
+            windowtitle="Group Management Service Framework"
+            doctitle="Group Management Service Framework"
+            bottom="Copyright © 2003   Copyright 2004 Sun Microsystems, Inc. All rights reserved. 
+                    SUN PROPRIETARY/CONFIDENTIAL. Use is subject to license terms." >
+
+            <link href="http://java.sun.com/j2se/1.5/docs/api/" />
+
+            <group title="Core Interfaces and Implementations"
+                packages="com.sun.enterprise.ee.cms.core:com.sun.enterprise.ee.cms.core.*"/>
+                
+            <group title="Lifecycle Implementation for Application Server Binding"
+                packages="com.sun.enterprise.ee.cms.lifecycle:com.sun.enterprise.ee.cms.lifecycle.*" />
+
+            <group title="Logging Implementation for Application Server Binding"
+                packages="com.sun.enterprise.ee.cms.logging:com.sun.enterprise.ee.cms.logging.*"/>
+                
+            <group title="Demonstration Example"
+                packages="com.sun.enterprise.ee.cms.demos:com.sun.enterprise.ee.cms.demos.*"/>
+                
+            <classpath>
+                <path refid="compile.classpath"/>              
+            </classpath>
+        </javadoc>    
+    </target>
+
+</project>

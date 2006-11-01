@@ -1,0 +1,71 @@
+<project default="all"
+    xmlns:maven="jelly:maven"
+    xmlns:j="jelly:core"
+    xmlns:define="jelly:define"
+    xmlns:util="jelly:util"
+    xmlns:i="jelly:interaction"
+    xmlns:http="jelly:http"
+    xmlns:ant="jelly:ant">
+<!--
+ Copyright 2004-2005 Sun Microsystems, Inc.  All rights reserved.
+ Use is subject to license terms.
+-->
+    <property file="${shoal.maven}/project.properties" />
+    <goal name="bootstrap">
+        <attainGoal name="checkout-bootstrap"/>
+        <attainGoal name="pre-bootstrap"/>
+        <ant:mkdir dir="${shoal.home}"/>
+        <ant:unzip src="${maven.repo.local}/${shoal.image.name}/jars/${shoal.jar}" dest="${shoal.home}"/>
+    </goal>
+
+    <goal name="pre-bootstrap">
+        <maven:reactor basedir="${shoal.maven}"
+               includes="**/project-bootstrap.xml"
+               banner="Downloading SNAPSHOT jar file for Shoal now"
+               ignoreFailures="false"/>
+    </goal>
+
+    <goal name="bootstrap-all">
+        <attainGoal name="checkout-bootstrap"/>
+        <maven:reactor basedir="${shoal.maven}"
+               includes="**/project-src.xml"
+               goals="bootstrap-all"
+               banner="Downloading binaries for building from source project"
+               ignoreFailures="false"/>
+
+    </goal>
+
+    <!-- Checkout bootstrap module -->
+    <goal name="checkout-bootstrap">
+        <ant:echo>Checking out: ${shoal.cvs.project}/${shoal.cvs.module} </ant:echo>
+        <ant:cvs cvsRoot="${shoal.cvsroot}"
+                 tag="${shoal.cvstag}"
+                 failonerror="true"
+                 package="${shoal.cvs.project}/${shoal.cvs.module}"
+                 dest="${shoal.root}"/>
+    </goal>
+
+    <goal name="all">
+       <attainGoal name="clean"/>
+        <attainGoal name="bootstrap-all"/>
+        <attainGoal name="build"/>
+     </goal>
+
+    <goal name="build">
+        <ant:ant dir="." target="all"/>
+    </goal>
+
+    <goal name="checkout">
+        <ant:cvs cvsRoot="${shoal.cvsroot}" tag="${shoal.cvstag}"
+                 package="${shoal.module.name}"
+                 dest="../."/>
+    </goal>
+
+    <goal name="clean">
+        <ant:ant dir="." target="clean"/>
+    </goal>
+
+    <goal name="gms-javadocs">
+      <ant:ant dir="." target="gms-javadocs"/>
+    </goal>
+</project>

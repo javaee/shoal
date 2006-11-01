@@ -1,0 +1,837 @@
+/*
+ * The contents of this file are subject to the terms
+ * of the Common Development and Distribution License
+ * (the License).  You may not use this file except in
+ * compliance with the License.
+ *
+ * You can obtain a copy of the license at
+ * https://shoal.dev.java.net/public/CDDLv1.0.html
+ *
+ * See the License for the specific language governing
+ * permissions and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL
+ * Header Notice in each file and include the License file
+ * at
+ * If applicable, add the following below the CDDL Header,
+ * with the fields enclosed by brackets [] replaced by
+ * you own identifying information:
+ * "Portions Copyrighted [year] [name of copyright owner]"
+ *
+ * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
+ */
+
+package com.sun.enterprise.jxtamgmt;
+
+import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
+import net.jxta.document.*;
+import net.jxta.endpoint.*;
+import net.jxta.id.ID;
+import net.jxta.impl.endpoint.router.EndpointRouter;
+import net.jxta.impl.endpoint.router.RouteControl;
+import net.jxta.peergroup.PeerGroup;
+import net.jxta.pipe.*;
+import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.protocol.RouteAdvertisement;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Master Node defines a protocol by which a set of nodes connected to a JXTA infrastructure group
+ * may dynamically organize into a group with a determinically self elected master. The protocol is
+ * composed of a JXTA message containing a "NAD", and "ROUTE" and one of the following :
+ * <p/>
+ * -"MQ", is used to query for a master node
+ * <p/>
+ * -"NR", is used to respond to a "MQ", which also contains the following
+ * <p/>
+ * -"AMV", is the MasterView of the cluster
+ * <p/>
+ * -"CCNTL", is used to indicate collision between two nodes
+ * <p/>
+ * -"NADV", contains a node's <code>SystemAdvertisement</code>
+ * <p/>
+ * -"ROUTE", contains a node's list of current physical addresses, which is used to issue ioctl to the JXTA
+ * endpoint to update any existing routes to the nodes.  (useful when a node changes physical addresses.
+ * <p/
+ * <p/>
+ * MasterNode will attempt to discover a master node with the specified timeout (timeout * number of iterations)
+ * after which, it determine whether to become a master, if it happens to be first node in the ordered list of discovered nodes.
+ * Note: due to startup time, a master node may not always be the first node node.  However if the master node fails,
+ * the first node is expected to assert it's designation as the master, otherwise, all nodes will repeat the master node discovery
+ * process.
+ */
+class MasterNode implements PipeMsgListener, Runnable {
+    private static final Logger LOG = JxtaUtil.getLogger(MasterNode.class.getName());
+    private final PeerGroup group;
+    private final ClusterManager manager;
+    private InputPipe inputPipe;
+    private OutputPipe outputPipe;
+
+    private boolean masterAssigned = false;
+    private boolean discoveryInProgress = false;
+    private ID myID = ID.nullID;
+    private final SystemAdvertisement sysAdv;
+    private String myName = "";
+    private PipeAdvertisement pipeAdv = null;
+    private final PipeService pipeService;
+    private final MessageElement sysAdvElement;
+    private MessageElement routeAdvElement = null;
+    private boolean started = false;
+    private boolean stop = false;
+    private Thread thread = null;
+    private ClusterViewManager clusterViewManager;
+    private ClusterView discoveryView;
+    //Collision control
+    private static final String CCNTL = "CCNTL";
+    final String MASTERLOCK = new String("MASTERLOCK");
+    private static final String MASTERNODE = "MN";
+    private static final String MASTERQUERY = "MQ";
+    private static final String NODERESPONSE = "NR";
+    private static final String NAMESPACE = "MASTER";
+    private static final String NODEADV = "NAD";
+    private static final String ROUTEADV = "ROUTE";
+    private static final String AMASTERVIEW = "AMV";
+
+    private int interval = 6;
+    // Default master node discovery timeout
+    private long timeout = 10 * 1000L;
+    private static final String VIEW_CHANGE_EVENT = "VCE";
+    private RouteControl routeControl = null;
+
+    /**
+     * Constructor for the MasterNode object
+     *
+     * @param timeout  - waiting intreval to receive a response to a master
+     *                 node discovery
+     * @param interval - number of iterations to perform master node discovery
+     * @param manager  the cluster manager
+     */
+    MasterNode(final ClusterManager manager,
+               final long timeout,
+               final int interval) {
+        this.group = manager.getNetPeerGroup();
+        pipeService = group.getPipeService();
+        myID = group.getPeerID();
+        myName = group.getPeerName();
+        this.timeout = timeout;
+        this.interval = interval;
+        this.manager = manager;
+        sysAdv = manager.getSystemAdvertisement();
+        discoveryView = new ClusterView(sysAdv);
+        sysAdvElement = new TextDocumentMessageElement(NODEADV,
+                (XMLDocument) manager.getSystemAdvertisement()
+                        .getDocument(MimeMediaType.XMLUTF8), null);
+
+        MessageTransport endpointRouter = (group.getEndpointService()).getMessageTransport("jxta");
+        if (endpointRouter != null) {
+            routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
+            RouteAdvertisement route = routeControl.getMyLocalRoute();
+            if (route != null) {
+                routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
+                        (XMLDocument) manager.getSystemAdvertisement()
+                                .getDocument(MimeMediaType.XMLUTF8), null);
+            }
+        }
+
+        try {
+            // create the pipe advertisement, to be used in creating the pipe
+            pipeAdv = createPipeAdv();
+            //create output
+            outputPipe = pipeService.createOutputPipe(pipeAdv, 0);
+        } catch (IOException io) {
+            io.printStackTrace();
+            LOG.log(Level.WARNING, "Failed to create master outputPipe", io);
+        }
+    }
+
+    /**
+     * returns the cumulative MasterNode timeout
+     *
+     * @return timeout
+     */
+    public long getTimeout() {
+        return timeout * interval;
+    }
+
+    /**
+     * Sets the Master Node peer ID, also checks for collisions at which event
+     * A Conflict Message is sent to the conflicting node, and master designation
+     * is reiterated over the wire after a short timeout
+     *
+     * @param systemAdv the system advertisement
+     * @return true if no collisions detected, false otherwise
+     */
+    public boolean checkMaster(final SystemAdvertisement systemAdv) {
+        if (masterAssigned && isMaster()) {
+            LOG.log(Level.FINER,
+                    "Master node role collision with " + systemAdv.getName() +
+                            " .... attempting to resolve");
+            send(systemAdv.getID(), systemAdv.getName(),
+                    createMasterCollisionMessage());
+            return false;
+        } else {
+            clusterViewManager.setMaster(systemAdv, true);
+            masterAssigned = true;
+            synchronized (MASTERLOCK) {
+                MASTERLOCK.notifyAll();
+            }
+            LOG.log(Level.FINE, "Discovered a Master node :" + systemAdv.getName());
+        }
+        return true;
+    }
+
+    /**
+     * Creates a Master Collision Message. A collision message is used
+     * to indicate the conflict. Nodes receiving this message then required to
+     * assess the candidate master node based on their knowledge of the network
+     * should await for an assertion of the master node candidate
+     *
+     * @return Master Collision Message
+     */
+    private Message createMasterCollisionMessage() {
+        final Message msg = createSelfNodeAdvertisement();
+        final MessageElement el = new StringMessageElement(CCNTL, myID.toString(), null);
+        msg.addMessageElement(NAMESPACE, el);
+        LOG.log(Level.FINER, "Created a Master Collision Message");
+        return msg;
+    }
+
+    private Message createSelfNodeAdvertisement() {
+        Message msg = new Message();
+        msg.addMessageElement(NAMESPACE, sysAdvElement);
+        return msg;
+    }
+
+    private void sendSelfNodeAdvertisement(final ID id, final String name) {
+        final Message msg = createSelfNodeAdvertisement();
+        LOG.log(Level.FINER, "Sending a Node Response Message ");
+        send(id, name, msg);
+    }
+
+    /**
+     * Creates a Master Query Message
+     *
+     * @return a message containing a master query
+     */
+    private Message createMasterQuery() {
+        final Message msg = createSelfNodeAdvertisement();
+        final MessageElement el = new StringMessageElement(MASTERQUERY, "query", null);
+
+        msg.addMessageElement(NAMESPACE, el);
+        LOG.log(Level.FINER, "Created a Master Node Query Message ");
+        return msg;
+    }
+
+    /**
+     * Creates a Master Response Message
+     *
+     * @param masterID the MasterNode ID
+     * @return a message containing a MasterResponse element
+     */
+    private Message createMasterResponse(final ID masterID) {
+        final Message msg = createSelfNodeAdvertisement();
+        final MessageElement el = new StringMessageElement(MASTERNODE, masterID.toString(), null);
+        msg.addMessageElement(NAMESPACE, el);
+        LOG.log(Level.FINER, "Created a Master Response Message with masterId = " + masterID.toString());
+        return msg;
+    }
+
+    /**
+     * Constructs a propagated PipeAdvertisement for the MasterNode discovery
+     * protocol
+     *
+     * @return MasterNode discovery protocol PipeAdvertisement
+     */
+    private PipeAdvertisement createPipeAdv() {
+        final PipeAdvertisement pipeAdv;
+        // create the pipe advertisement, to be used in creating the pipe
+        pipeAdv = (PipeAdvertisement) AdvertisementFactory.newAdvertisement(PipeAdvertisement.getAdvertisementType());
+        pipeAdv.setPipeID(manager.getNetworkManager().getMasterPipeID());
+        pipeAdv.setType(PipeService.PropagateType);
+        return pipeAdv;
+    }
+
+    /**
+     * Returns the ID of a discovered Master node
+     *
+     * @return the MasterNode ID
+     */
+    public boolean discoverMaster() {
+        final long timeToWait = timeout;
+        LOG.log(Level.FINER, "Attempting to discover a master node");
+        Message query = createMasterQuery();
+        send(null, null, query);
+        LOG.log(Level.FINER, " waiting for " + timeout + " ms");
+        try {
+            synchronized (MASTERLOCK) {
+                MASTERLOCK.wait(timeToWait);
+            }
+        } catch (InterruptedException intr) {
+            Thread.interrupted();
+            LOG.log(Level.FINER, "Thread interrupted", intr);
+        }
+        LOG.log(Level.FINE, "masterAssigned=" + masterAssigned);
+        return masterAssigned;
+    }
+
+    /**
+     * Returns true if this node is the master node
+     *
+     * @return The master value
+     */
+    public boolean isMaster() {
+        LOG.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
+        return clusterViewManager.isMaster();
+    }
+
+    /**
+     * Returns true if this node is the master node
+     *
+     * @return The master value
+     */
+    boolean isMasterAssigned() {
+        return masterAssigned;
+    }
+
+    /**
+     * Returns master node ID
+     *
+     * @return The master node ID
+     */
+    public ID getMasterNodeID() {
+        return clusterViewManager.getMaster().getID();
+    }
+
+    /**
+     * return true if this service has been started, false otherwise
+     *
+     * @return true if this service has been started, false otherwise
+     */
+    public synchronized boolean isStarted() {
+        return started;
+    }
+
+    /**
+     * Resets the master node designation to the original state. This is typically
+     * done when an existing master leaves or fails and a new master node is to
+     * selected.
+     */
+    void resetMaster() {
+        LOG.log(Level.FINER, "Resetting Master view");
+        masterAssigned = false;
+    }
+
+    /**
+     * Parseses out the source SystemAdvertisement
+     *
+     * @param msg the Message
+     * @return true if the message is a MasterNode announcement message
+     * @throws IOException if and io error occurs
+     */
+    SystemAdvertisement processNodeAdvertisement(final Message msg) throws IOException {
+        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEADV);
+        if (msgElement == null) {
+            // no need to go any further
+            LOG.log(Level.WARNING, "Received an unknown message");
+            LOG.log(Level.FINER, "No NODEADV message element");
+            JxtaUtil.printMessageStats(msg, false);
+            return null;
+        }
+
+        final StructuredDocument asDoc;
+        asDoc = StructuredDocumentFactory.newStructuredDocument(
+                msgElement.getMimeType(), msgElement.getStream());
+        final SystemAdvertisement adv = new SystemAdvertisement(asDoc);
+        LOG.log(Level.FINER, "Received a System advertisment :");
+        LOG.log(Level.FINER, "Name :" + adv.getName());
+        LOG.log(Level.FINER, "ID :" + adv.getID());
+        if (!adv.getID().equals(myID)) {
+            LOG.log(Level.FINER, "Received a System advertisment from :" + adv.getName());
+        }
+        return adv;
+    }
+
+    /**
+     * Processes a MasterNode announcement.
+     *
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
+     * @return true if the message is a MasterNode announcement message
+     * @throws IOException if and io error occurs
+     */
+    boolean processMasterNodeAnnouncement(final Message msg,
+                                          final SystemAdvertisement adv)
+            throws IOException {
+
+        MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERNODE);
+        if (msgElement == null) {
+            return false;
+        }
+        LOG.log(Level.FINER, "Received a Master Node Announcement from :");
+        LOG.log(Level.FINER, "Name :" + adv.getName());
+        LOG.log(Level.FINER, "ID :" + adv.getID());
+        if (checkMaster(adv)) {
+            msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
+            if (msgElement != null) {
+                final ArrayList<SystemAdvertisement> newLocalView =
+                        (ArrayList<SystemAdvertisement>)
+                                getObjectFromByteArray(msgElement);
+                if (newLocalView != null) {
+                    if (adv.getName() != null) {
+                        LOG.log(Level.FINER, "Received an authoritative view from "
+                                + adv.getName() + ", reseting local view containing "
+                                + newLocalView.size());
+                    } else {
+                        LOG.log(Level.FINER, "Received an authoritative view, reseting local view containing :" + newLocalView.size());
+                    }
+                }
+
+                msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
+                if (msgElement != null) {
+                    final ClusterViewEvent cvEvent =
+                            (ClusterViewEvent) getObjectFromByteArray(msgElement);
+                    if (!newLocalView.contains(manager.getSystemAdvertisement())) {
+                        LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
+                        sendSelfNodeAdvertisement(null, null);
+                    } else {
+                        //update the view once the the master node includes this node
+                        clusterViewManager.addToView(newLocalView, true, cvEvent);
+                    }
+                } else {
+                    LOG.log(Level.WARNING, "New View Received without corresponding ViewChangeEvent details");
+                    //TODO according to the implementation MasterNode does not include VIEW_CHANGE_EVENT
+                    //when it announces a Authortative master view
+                    //throw new IOException("New View Received without corresponding ViewChangeEvent details");
+                }
+            }
+        }
+        synchronized (MASTERLOCK) {
+            MASTERLOCK.notifyAll();
+        }
+        return true;
+    }
+
+    /**
+     * Processes a MasterNode response.
+     *
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
+     * @return true if the message is a master node response message
+     * @throws IOException if and io error occurs
+     */
+    boolean processMasterNodeResponse(final Message msg,
+                                      final SystemAdvertisement adv) throws IOException {
+        MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODERESPONSE);
+        if (msgElement != null) {
+            LOG.log(Level.FINE, "Received a MasterNode Response from :");
+            LOG.log(Level.FINE, "Name :" + adv.getName());
+            LOG.log(Level.FINE, "ID :" + adv.getID());
+
+            clusterViewManager.setMaster(adv, true);
+            msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
+            if (msgElement != null) {
+                LOG.log(Level.FINER, "Received a VIEW_CHANGE_EVENT from : " + adv.getName());
+                final ArrayList<SystemAdvertisement> newLocalView =
+                        (ArrayList<SystemAdvertisement>)
+                                getObjectFromByteArray(msgElement);
+                LOG.log(Level.FINER, "New view contains: " + newLocalView.size());
+                msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
+                if (msgElement != null) {
+                    final ClusterViewEvent cvEvent = (ClusterViewEvent)
+                            getObjectFromByteArray(msgElement);
+                    clusterViewManager.addToView(newLocalView, true, cvEvent);
+                    if (!newLocalView.contains(manager.getSystemAdvertisement())) {
+                        LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
+                        sendSelfNodeAdvertisement(null, null);
+                    }
+                    synchronized (MASTERLOCK) {
+                        MASTERLOCK.notifyAll();
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Processes a cluster change event. This results in adding the new
+     * members to the cluster view, and subsequenlty in application notification.
+     *
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
+     * @return true if the message is a change event message
+     * @throws IOException if and io error occurs
+     */
+    boolean processChangeEvent(final Message msg,
+                               final SystemAdvertisement adv) throws IOException {
+        MessageElement msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
+        if (msgElement != null) {
+            final ClusterViewEvent cvEvent = (ClusterViewEvent)
+                    getObjectFromByteArray(msgElement);
+            LOG.log(Level.FINER, "Recevied a VIEW_CHANGE_EVENT : " + cvEvent.getEvent().toString());
+            msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
+            if (msgElement != null && cvEvent != null) {
+                final ArrayList<SystemAdvertisement> newLocalView =
+                        (ArrayList<SystemAdvertisement>)
+                                getObjectFromByteArray(msgElement);
+                LOG.log(Level.FINER, "Recevied a new view of size :" + newLocalView.size());
+                if (!newLocalView.contains(manager.getSystemAdvertisement())) {
+                    LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
+                    sendSelfNodeAdvertisement(null, null);
+                } else {
+                    clusterViewManager.addToView(newLocalView, true, cvEvent);
+
+                }
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Processes a Masternode Query message. This results in a master node
+     * response if this node is a master node.
+     *
+     * @param msg      the Message
+     * @param adv      the source node SystemAdvertisement
+     * @return true if the message is a query message
+     * @throws IOException if and io error occurs
+     */
+    boolean processMasterNodeQuery(final Message msg,
+                                   final SystemAdvertisement adv) throws IOException {
+        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
+
+        if (msgElement == null || adv == null) {
+            return false;
+        }
+        final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
+        if (routeElement != null && routeControl != null) {
+            final StructuredDocument asDoc;
+            asDoc = StructuredDocumentFactory.newStructuredDocument(
+                    msgElement.getMimeType(), msgElement.getStream());
+            final RouteAdvertisement route = (RouteAdvertisement)
+                    AdvertisementFactory.newAdvertisement((TextElement) asDoc);
+
+            routeControl.addRoute(route);
+        }
+
+        LOG.log(Level.FINER, "Received a MasterNode Query from :");
+        LOG.log(Level.FINER, "Name :" + adv.getName());
+        LOG.log(Level.FINER, "ID :" + adv.getID());
+        if (isMaster() && masterAssigned) {
+            final ClusterViewEvent cvEvent = new ClusterViewEvent(
+                    ClusterViewEvents.ADD_EVENT, adv);
+            sendNewView(cvEvent, createMasterResponse(myID), true);
+        }
+        return true;
+    }
+
+    /**
+     * Processes a MasterNode Collision.  When two nodes assume a master role (by assertion through
+     * a master node announcement), each node can indepedentaly and deterministically elect the master node.
+     * This is done through electing the node atop of the NodeID sort order. If there are more than two
+     * nodes in collision, this same process is repeated.
+     *
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
+     * @return true if the message was indeed a collision message
+     * @throws IOException if and io error occurs
+     */
+    boolean processMasterNodeCollision(final Message msg,
+                                       final SystemAdvertisement adv) throws IOException {
+
+        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, CCNTL);
+        if (msgElement == null) {
+            return false;
+        }
+        LOG.log(Level.FINER, "Received a MasterNode Collision from :");
+        LOG.log(Level.FINER, "Name :" + adv.getName());
+        LOG.log(Level.FINER, "ID :" + adv.getID());
+        final SystemAdvertisement madv = manager.getSystemAdvertisement();
+        LOG.log(Level.FINER, "Candidate Master :" + madv.getName());
+        if (madv.getID().toString().compareTo(adv.getID().toString()) >= 0) {
+            LOG.log(Level.FINER, "Affirming Master Node role");
+            synchronized (MASTERLOCK) {
+                announceMaster(manager.getSystemAdvertisement());
+                MASTERLOCK.notifyAll();
+            }
+        } else {
+            LOG.log(Level.FINER, "Resigning Master Node role");
+        }
+        clusterViewManager.setMaster(madv, true);
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void pipeMsgEvent(final PipeMsgEvent event) {
+
+        if (isStarted()) {
+            final Message msg;
+            // grab the message from the event
+            msg = event.getMessage();
+            if (msg == null) {
+                LOG.log(Level.WARNING, "Received a null message");
+                return;
+            }
+            try {
+                final SystemAdvertisement adv = processNodeAdvertisement(msg);
+                if (adv != null && adv.getID().equals(myID)) {
+                    LOG.log(Level.FINEST, "Discarding loopback message");
+                    return;
+                }
+                // add the advertisement to the list
+                if (adv != null) {
+                    if (isMaster() && masterAssigned) {
+                        clusterViewManager.add(adv);
+                    } else if (discoveryInProgress){
+                        discoveryView.add(adv);
+                    }
+                }
+                if (processMasterNodeQuery(msg, adv)) {
+                    return;
+                }
+                if (processMasterNodeResponse(msg, adv)) {
+                    return;
+                }
+                if (processMasterNodeAnnouncement(msg, adv)) {
+                    return;
+                }
+                if (processMasterNodeCollision(msg, adv)) {
+                    return;
+                }
+                if (processChangeEvent(msg, adv)) {
+                    return;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                LOG.log(Level.WARNING, e.getLocalizedMessage());
+            }
+            LOG.log(Level.FINER, "ClusterViewManager contains " +
+                    clusterViewManager.getViewSize() + " entries");
+        } else {
+            LOG.log(Level.FINER, "Started : " + isStarted());
+        }
+    }
+
+    private void announceMaster(SystemAdvertisement adv) {
+        final Message msg = createMasterResponse(adv.getID());
+        final ClusterViewEvent cvEvent = new ClusterViewEvent(
+                ClusterViewEvents.MASTER_CHANGE_EVENT,
+                adv);
+        LOG.log(Level.FINER, "Announcing Master Node designation");
+        LOG.log(Level.FINER, "Local view contains " + clusterViewManager.getViewSize() + " entries");
+        sendNewView(cvEvent, msg, (masterAssigned && isMaster()));
+    }
+
+    /**
+     * MasterNode discovery thread. Starts the master node discovery protocol
+     */
+    public void run() {
+        startMasterNodeDiscovery();
+        discoveryInProgress = false;
+    }
+
+    /**
+     * Starts the master node discovery protocol
+     */
+    void startMasterNodeDiscovery() {
+        int count = 0;
+        //assumes self as master node
+        synchronized (this) {
+            clusterViewManager.start();
+        }
+        while (!stop && count < interval) {
+            if (!discoverMaster()) {
+                // TODO: Consider changing this approach to a background reaper
+                // that would reconcole the group from time to time, consider
+                // using an incremental timeout interval ex. 800, 1200, 2400,
+                // 4800, 9600 ms for iteration periods, then revert to 800
+                count++;
+                continue;
+            } else {
+                break;
+            }
+        }
+        // timed out
+        if (!masterAssigned) {
+            LOG.log(Level.FINER, "MN Discovery timeout, appointing master");
+            appointMasterNode();
+        }
+    }
+
+    /**
+     * determines a master node candidate, if the result turns to be this node
+     * then a master node announcement is made to assert such state
+     */
+    void appointMasterNode() {
+        final SystemAdvertisement madv;
+        if (discoveryInProgress) {
+            madv = discoveryView.getMasterCandidate();
+        } else {
+            madv = clusterViewManager.getMasterCandidate();
+        }
+
+        if (!madv.getID().equals(myID)) {
+            clusterViewManager.setMaster(madv, false);
+        } else {
+            clusterViewManager.setMaster(madv, false);
+            // generate view change event
+            if (discoveryInProgress) {
+                List<SystemAdvertisement> list = discoveryView.getView();
+                final ClusterViewEvent cvEvent =
+                   new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+                clusterViewManager.addToView(list, true, cvEvent);
+            } else {
+                final ClusterViewEvent cvEvent =
+                   new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+                clusterViewManager.notifyListeners(cvEvent);
+            }
+
+        }
+        discoveryView.clear();
+        discoveryView.add(sysAdv);
+        synchronized(MASTERLOCK) {
+            if (madv.getID().equals(myID)) {
+                masterAssigned = true;
+                // this thread's job is done
+                LOG.log(Level.FINER, "Assuming Master Node designation ...");
+                //broadcast we are the masternode
+                announceMaster(manager.getSystemAdvertisement());
+                MASTERLOCK.notifyAll();
+            }
+        }
+    }
+
+    /**
+     * Send a message to a specific node. In the case where the id is null the
+     * message multicast
+     *
+     * @param peerid the destination node, if null, the message is sent to the cluster
+     * @param msg    the message to send
+     * @param name   name used for debugging messages
+     */
+    private void send(final ID peerid, final String name, final Message msg) {
+        try {
+            if (peerid != null) {
+                // Unicast datagram
+                // create a op pipe to the destination peer
+                if (name != null) {
+                    LOG.log(Level.FINER, "Unicasting Message to :" + name);
+                } else {
+                    LOG.log(Level.FINER, "Unicasting Message to :" + peerid.toString());
+                }
+                final OutputPipe output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                output.send(msg);
+                output.close();
+            } else {
+                // multicast
+                LOG.log(Level.FINER, "Broadcasting Message");
+                outputPipe.send(msg);
+            }
+        } catch (IOException io) {
+            io.printStackTrace();
+            LOG.log(Level.SEVERE, "Failed to send message", io);
+        }
+    }
+
+    /**
+     * Sends the discovered view to the group indicating a new membership snapshot has been
+     * created. This will lead to all members replacing their localviews to
+     * this new view.
+     *
+     * @param event       The ClusterViewEvent object containing details of the event.
+     * @param msg         The message to send
+     * @param includeView if true view will be included in the message
+     */
+    void sendNewView(final ClusterViewEvent event,
+                     final Message msg,
+                     final boolean includeView) {
+        if (includeView) {
+            addAuthoritativeView(msg);
+        }
+
+        final ByteArrayMessageElement cvEvent =
+                new ByteArrayMessageElement(VIEW_CHANGE_EVENT,
+                        MimeMediaType.AOS, JxtaUtil.
+                        createByteArrayFromObject(event),
+                        null);
+        msg.addMessageElement(NAMESPACE, cvEvent);
+        LOG.log(Level.FINER, "Sending new authoritative cluster view to group, events :" + event.getEvent().toString());
+        send(null, null, msg);
+    }
+
+    /**
+     * Adds an authoritative message element to a Message
+     *
+     * @param msg The message to add the view to
+     */
+    void addAuthoritativeView(final Message msg) {
+        final List<SystemAdvertisement> view;
+        view = clusterViewManager.getLocalView().getView();
+        final ByteArrayMessageElement bame =
+                new ByteArrayMessageElement(AMASTERVIEW,
+                        MimeMediaType.AOS,
+                        JxtaUtil.createByteArrayFromObject(view),
+                        null);
+        msg.addMessageElement(NAMESPACE, bame);
+    }
+
+    /**
+     * Stops this service
+     */
+    public synchronized void stop() {
+        LOG.log(Level.FINER, "Stopping MasterNode");
+        outputPipe.close();
+        inputPipe.close();
+        discoveryView.clear();
+        thread = null;
+        masterAssigned = false;
+        started = false;
+        stop = true;
+        discoveryInProgress = false;
+    }
+
+    /**
+     * Starts this service. Creates the communication channels, and the MasterNode discovery thread.
+     */
+    public synchronized void start() {
+        LOG.log(Level.FINER, "Starting MasterNode");
+        discoveryInProgress = true;
+        this.clusterViewManager = manager.getClusterViewManager();
+
+        try {
+            //better set the started flag before the pipe is open
+            //in case messages arrive
+            started = true;
+            inputPipe = pipeService.createInputPipe(pipeAdv, this);
+        } catch (IOException ioe) {
+            LOG.log(Level.SEVERE, "Failed to create service input pipe", ioe);
+        }
+        thread = new Thread(this, "MasterNode Thread interval : " + timeout * interval);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    /**
+     * Sends a ViewChange event to the cluster.
+     *
+     * @param event VievChange event
+     */
+    public void viewChanged(final ClusterViewEvent event) {
+        if (isMaster() && masterAssigned) {
+            Message msg = createSelfNodeAdvertisement();
+            sendNewView(event, msg, true);
+        }
+    }
+}
+
