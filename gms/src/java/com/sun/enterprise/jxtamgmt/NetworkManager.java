@@ -61,7 +61,7 @@ import java.util.logging.Logger;
  *         $Date    December 17, 2005
  */
 
-class NetworkManager implements RendezvousListener {
+public class NetworkManager implements RendezvousListener {
     private static final Logger LOG = JxtaUtil.getLogger();
     private static MessageDigest digest;
     private static PeerGroup netPeerGroup;
@@ -119,7 +119,7 @@ class NetworkManager implements RendezvousListener {
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    NetworkManager(final String groupName,
+    public NetworkManager(final String groupName,
                    final String instanceName,
                    final Map properties) {
 
