@@ -30,15 +30,14 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * Subtypes of Signal will define operations specific to their Signal 
- * functionalities.
+ * A Signal denotes a group event or a message event.
+ *
+ * Subtypes of Signal will define operations specific to their Signal
+ * functionalities i.e specific group events or a message event.
  * 
  * <code>Action</code>s consume <code>Signal</code>s.
  *
  * Each Signal is delivered on its own thread.
- * 
- * The Signal signifies a group event. Each event is typified by subtypes of
- * Signal.
  * 
  * @author Shreedhar Ganapathy
  * Date: November 07, 2003

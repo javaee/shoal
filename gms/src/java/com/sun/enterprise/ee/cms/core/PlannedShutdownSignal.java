@@ -23,9 +23,9 @@
  package com.sun.enterprise.ee.cms.core;
 
 /**
- * Signal corresponding to PlannedShutdownNotificationAction. This Signal enables the
- * consumer to get specifics about a graceful shutdown notification. This Signal type
- * will only be passed to a PlannedShutdownNotificationAction.
+ * Signal corresponding to PlannedShutdownAction. This Signal enables the
+ * consumer to get specifics about a graceful administratively driven shutdown
+ * of a member. This Signal type will only be passed to a PlannedShutdownAction.
  * @author Shreedhar Ganapathy
  *         Date: Feb 3, 2005
  * @version $Revision$

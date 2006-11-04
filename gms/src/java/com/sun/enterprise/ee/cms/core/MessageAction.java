@@ -30,7 +30,7 @@ package com.sun.enterprise.ee.cms.core;
  * An <code>Action</code> type that consumes <code>MessageSignal</code>. 
  * Messages sent by other Group members through the <code>GroupHandle</code> are
  * consumed by <code>MessageAction</code> instances produced by registered 
- * ActionFactories.
+ * MessageActionFactories.
  *
  *
  * @author Shreedhar Ganapathy

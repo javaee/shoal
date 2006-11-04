@@ -25,6 +25,10 @@
 import java.util.List;
 
 /**
+ * Signal corresponding to JoinNotificationAction. This Signal enables the
+ * consumer to get specifics about a Join notification. This Signal type
+ * will only be passed to a JoinNotificationAction.  This Signal
+ * is delivered to registered GMS Clients on all members of the group.
  * @author Shreedhar Ganapathy
  *         Date: Feb 3, 2005
  * @version $Revision$

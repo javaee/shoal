@@ -23,10 +23,8 @@
 package com.sun.enterprise.ee.cms.core;
 
 /**
- * Marker interface to provide a specific type of ActionFactory. The GroupManagementService
- * module internals would expect such sub-types when a factory is added.
- * This factory's implementation provides a way to produce a PlannedShutdownNotificationAction
- * implementation
+ * Marker interface to provide a specific type of ActionFactory
+ * This factory's implementation provides a API to produce a PlannedShutdownAction
 
  * @author Shreedhar Ganapathy
  *         Date: Feb 3, 2005

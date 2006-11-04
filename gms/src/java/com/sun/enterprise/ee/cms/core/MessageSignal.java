@@ -27,8 +27,8 @@
 package com.sun.enterprise.ee.cms.core;
 
 /**
- * A <code>Signal</code> type that enables consumers to acquire the signal,
- * get the message(payload), perform appropriate operations and then release the
+ * A <code>Signal</code> type that enables consumers to acquire the MessageSignal,
+ * get the message( i.e payload), perform appropriate operations and then release the
  * signal to the signal pool.
  * @author Shreedhar Ganapathy
  * Date: Jan 12, 2004

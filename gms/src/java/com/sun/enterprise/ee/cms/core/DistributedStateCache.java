@@ -34,6 +34,8 @@ import java.util.Map;
  * When new members arrive to the group, the underlying implementation
  * could choose to ensure that they get the current cache of states to
  * sync with the group.
+ * Underlying implementations could also choose to share the cache with all
+ * members of the group or pick specific replicas.
  * @author Shreedhar Ganapathy
  *         Date: Dec 7, 2004
  * @version $Revision$

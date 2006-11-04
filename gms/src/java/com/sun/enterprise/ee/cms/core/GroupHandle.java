@@ -33,9 +33,6 @@ import java.util.List;
  * While currently limited to sending messages to the group, 
  * in the future the handle could potentially encompass
  * sending of messages to individual and/or a sub-collection of members.
- * (For example, if replica peers are defined the handle could be used to 
- * publish messages to the replicas. Of course, such a method is not included
- * in the current release.)
  *
  * @author Shreedhar Ganapathy
  * Date: Jan 12, 2004

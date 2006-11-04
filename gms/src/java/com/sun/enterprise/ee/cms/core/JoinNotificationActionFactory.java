@@ -23,8 +23,8 @@
 package com.sun.enterprise.ee.cms.core;
 
 /**
- * Marker interface to provide a specific type of ActionFactory. The GroupManagementService
- * module internals would expect such sub-types when a factory is added.
+ * Marker interface to provide a specific type of ActionFactory  namely JoinNotificationActionFactory.
+ * The GroupManagementService module internals would expect such sub-types when a factory is added.
  * This factory's implementation provides a way to produce a JoinNotificationAction
  * implementation
  * @author Shreedhar Ganapathy

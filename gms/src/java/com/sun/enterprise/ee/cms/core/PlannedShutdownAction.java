@@ -26,8 +26,9 @@ package com.sun.enterprise.ee.cms.core;
  * Implementations of this interface consume a PlannedShutdownNotificationSignal
  * which provides specifics associated with a member that has announced its planned
  * departure from the group.
- * The Signal passed to consumeSignal method should be cast to a PlannedShutdownNotificationSignal
- * in order to use this additional information.
+ * The Signal passed to consumeSignal method should be cast to a PlannedShutdownSignal
+ * in order to use the additional information of the event sub type. The Event SubType
+ * is defined by the enum shutdownType defined in GMSConstants.
  * @author Shreedhar Ganapathy
  *         Date: Feb 3, 2005
  * @version $Revision$

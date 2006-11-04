@@ -23,10 +23,10 @@
  package com.sun.enterprise.ee.cms.core;
 
 /**
- * Implementations of this interface consume a JoinNotificationSignal
- * which provides specifics associated with a member that just joined the group.
- * The Signal passed to consumeSignal method should be cast to a JoinNotificationSignal
- * in order to use this additional information.
+ * An <code>Action</code> type that consumes <code>JoinNotificationSignal</code>.
+  * When a member has joined the group, a <code>JoinNotificationSignal</code> is
+ * generated to be consumed by <code>JoinNotificationAction</code> instances
+ * that are produced by registered instances of JoinNotificationActionFactory.
  *
  *  @author Shreedhar Ganapathy
  *         Date: Feb 3, 2005
