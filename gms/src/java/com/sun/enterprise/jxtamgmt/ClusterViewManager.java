@@ -41,6 +41,7 @@ public class ClusterViewManager {
     private List<ClusterViewEventListener> cvListeners =
             new ArrayList<ClusterViewEventListener>();
     private long viewId = 0;
+    private long masterViewID = 0;
     private ClusterManager manager;
     private Map nameTable = new HashMap();
     private static final String viewLock = new String("vl");
@@ -387,6 +388,14 @@ public class ClusterViewManager {
             throw new IllegalArgumentException("SystemAdvertisment may not be null");
         }
         notifyListeners(new ClusterViewEvent(ClusterViewEvents.NO_LONGER_INDOUBT_EVENT, adv));
+    }
+
+    public long getMasterViewID() {
+        return masterViewID;
+    }
+
+    public void setMasterViewID(long masterViewID) {
+        this.masterViewID = masterViewID;
     }
 }
 

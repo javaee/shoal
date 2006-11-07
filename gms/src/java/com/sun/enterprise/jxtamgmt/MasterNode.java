@@ -23,6 +23,7 @@
 
 package com.sun.enterprise.jxtamgmt;
 
+import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
 import net.jxta.document.*;
 import net.jxta.endpoint.*;
@@ -38,6 +39,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -87,6 +89,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private Thread thread = null;
     private ClusterViewManager clusterViewManager;
     private ClusterView discoveryView;
+    private final AtomicLong masterViewID = new AtomicLong();
     //Collision control
     private static final String CCNTL = "CCNTL";
     final String MASTERLOCK = new String("MASTERLOCK");
@@ -97,6 +100,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String NODEADV = "NAD";
     private static final String ROUTEADV = "ROUTE";
     private static final String AMASTERVIEW = "AMV";
+    private static final String MASTERVIEWSEQ = "SEQ";
 
     private int interval = 6;
     // Default master node discovery timeout
@@ -263,6 +267,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return the MasterNode ID
      */
     public boolean discoverMaster() {
+        masterViewID.set(clusterViewManager.getMasterViewID());
         final long timeToWait = timeout;
         LOG.log(Level.FINER, "Attempting to discover a master node");
         Message query = createMasterQuery();
@@ -391,7 +396,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         LOG.log(Level.FINER, "Received an authoritative view, reseting local view containing :" + newLocalView.size());
                     }
                 }
-
+                long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
                     final ClusterViewEvent cvEvent =
@@ -400,6 +405,11 @@ class MasterNode implements PipeMsgListener, Runnable {
                         LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
                         sendSelfNodeAdvertisement(null, null);
                     } else {
+                        if (seqID < clusterViewManager.getMasterViewID()) {
+                            LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                            return true;
+                        }
+                        clusterViewManager.setMasterViewID(seqID);
                         //update the view once the the master node includes this node
                         clusterViewManager.addToView(newLocalView, true, cvEvent);
                     }
@@ -445,13 +455,20 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (msgElement != null) {
                     final ClusterViewEvent cvEvent = (ClusterViewEvent)
                             getObjectFromByteArray(msgElement);
-                    clusterViewManager.addToView(newLocalView, true, cvEvent);
+                    long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                     if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                         LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
                         sendSelfNodeAdvertisement(null, null);
-                    }
-                    synchronized (MASTERLOCK) {
-                        MASTERLOCK.notifyAll();
+                    } else {
+                        if (seqID < clusterViewManager.getMasterViewID()) {
+                           LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                           return true;
+                        }
+                        clusterViewManager.setMasterViewID(seqID);
+                        clusterViewManager.addToView(newLocalView, true, cvEvent);
+                        synchronized (MASTERLOCK) {
+                           MASTERLOCK.notifyAll();
+                        }
                     }
                     return true;
                 }
@@ -486,6 +503,12 @@ class MasterNode implements PipeMsgListener, Runnable {
                     LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
                     sendSelfNodeAdvertisement(null, null);
                 } else {
+                    long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
+                    if (seqID < clusterViewManager.getMasterViewID()) {
+                        LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                        return true;
+                    }
+                    clusterViewManager.setMasterViewID(seqID);
                     clusterViewManager.addToView(newLocalView, true, cvEvent);
 
                 }
@@ -528,7 +551,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         LOG.log(Level.FINER, "ID :" + adv.getID());
         if (isMaster() && masterAssigned) {
             final ClusterViewEvent cvEvent = new ClusterViewEvent(
-                    ClusterViewEvents.ADD_EVENT, adv);
+                    ADD_EVENT, adv);
             sendNewView(cvEvent, createMasterResponse(myID), true);
         }
         return true;
@@ -560,6 +583,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (madv.getID().toString().compareTo(adv.getID().toString()) >= 0) {
             LOG.log(Level.FINER, "Affirming Master Node role");
             synchronized (MASTERLOCK) {
+                masterViewID.incrementAndGet();
                 announceMaster(manager.getSystemAdvertisement());
                 MASTERLOCK.notifyAll();
             }
@@ -612,6 +636,12 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (processChangeEvent(msg, adv)) {
                     return;
                 }
+                if (isMaster() && masterAssigned) {
+                    final ClusterViewEvent cvEvent = new ClusterViewEvent(
+                            ADD_EVENT, adv);
+                    sendNewView(cvEvent, createMasterResponse(myID), true);
+                }
+
             } catch (IOException e) {
                 e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
@@ -784,6 +814,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         JxtaUtil.createByteArrayFromObject(view),
                         null);
         msg.addMessageElement(NAMESPACE, bame);
+        addLongToMessage(msg, NAMESPACE, MASTERVIEWSEQ, masterViewID.longValue());
     }
 
     /**
@@ -832,6 +863,32 @@ class MasterNode implements PipeMsgListener, Runnable {
             Message msg = createSelfNodeAdvertisement();
             sendNewView(event, msg, true);
         }
+    }
+    /**
+     *  Adds a long to a message
+     *
+     * @param  message    The message to add to
+     * @param  nameSpace  The namespace of the element to add. a null value assumes default namespace.
+     * @param  elemName   Name of the Element.
+     * @param  data       The feature to be added to the LongToMessage attribute
+     */
+    private static void addLongToMessage(Message message, String nameSpace, String elemName, long data) {
+        message.addMessageElement(nameSpace,
+                new StringMessageElement(elemName,
+                Long.toString(data),
+                null));
+    }
+    /**
+     *  Returns an long from a message
+     *
+     * @param  message                    The message to retrieve from
+     * @param  nameSpace                  The namespace of the element to get.
+     * @param  elemName                   Name of the Element.
+     * @return                            The long value
+     * @exception  NumberFormatException  If the String does not contain a parsable int.
+     */
+    private static long getLongFromMessage(Message message, String nameSpace, String elemName) throws NumberFormatException {
+        return Long.parseLong(message.getMessageElement(nameSpace, elemName).toString());
     }
 }
 
