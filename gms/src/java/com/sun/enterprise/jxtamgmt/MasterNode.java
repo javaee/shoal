@@ -353,11 +353,10 @@ class MasterNode implements PipeMsgListener, Runnable {
         asDoc = StructuredDocumentFactory.newStructuredDocument(
                 msgElement.getMimeType(), msgElement.getStream());
         final SystemAdvertisement adv = new SystemAdvertisement(asDoc);
-        LOG.log(Level.FINER, "Received a System advertisment :");
-        LOG.log(Level.FINER, "Name :" + adv.getName());
-        LOG.log(Level.FINER, "ID :" + adv.getID());
         if (!adv.getID().equals(myID)) {
-            LOG.log(Level.FINER, "Received a System advertisment from :" + adv.getName());
+            LOG.log(Level.FINER, "Received a System advertisment :");
+            LOG.log(Level.FINER, "Name :" + adv.getName());
+            LOG.log(Level.FINER, "ID :" + adv.getID());
         }
         return adv;
     }
@@ -589,8 +588,8 @@ class MasterNode implements PipeMsgListener, Runnable {
             }
         } else {
             LOG.log(Level.FINER, "Resigning Master Node role");
+            clusterViewManager.setMaster(adv, true);
         }
-        clusterViewManager.setMaster(madv, true);
         return true;
     }
 
@@ -636,12 +635,13 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (processChangeEvent(msg, adv)) {
                     return;
                 }
+
+                // generate the node add event
                 if (isMaster() && masterAssigned) {
                     final ClusterViewEvent cvEvent = new ClusterViewEvent(
                             ADD_EVENT, adv);
                     sendNewView(cvEvent, createMasterResponse(myID), true);
                 }
-
             } catch (IOException e) {
                 e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
@@ -680,8 +680,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         synchronized (this) {
             clusterViewManager.start();
         }
-        if(masterAssigned){
-            discoveryInProgress=false;
+        if (masterAssigned) {
+            discoveryInProgress = false;
             return;
         }
         while (!stop && count < interval) {
