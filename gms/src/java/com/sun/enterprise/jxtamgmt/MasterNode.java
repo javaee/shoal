@@ -680,6 +680,10 @@ class MasterNode implements PipeMsgListener, Runnable {
         synchronized (this) {
             clusterViewManager.start();
         }
+        if(masterAssigned){
+            discoveryInProgress=false;
+            return;
+        }
         while (!stop && count < interval) {
             if (!discoverMaster()) {
                 // TODO: Consider changing this approach to a background reaper
