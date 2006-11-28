@@ -42,7 +42,6 @@ public class ClusterView {
 
     private final TreeMap<String, SystemAdvertisement> view;
     private final long viewId;
-    private SystemAdvertisement advertisement = null;
     private SystemAdvertisement masterAdvertisement = null;
 
     /**
@@ -150,6 +149,7 @@ public class ClusterView {
     /**
      * Determines whether this node is at the top of the list
      *
+     * @param advertisement the advertisement to test
      * @return true if this node is a the top of the list, false otherwise
      */
     public boolean isFirst(SystemAdvertisement advertisement) {

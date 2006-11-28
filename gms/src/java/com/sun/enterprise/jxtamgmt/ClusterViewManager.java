@@ -43,7 +43,7 @@ public class ClusterViewManager {
     private long viewId = 0;
     private long masterViewID = 0;
     private ClusterManager manager;
-    private Map nameTable = new HashMap();
+    private Map<String, ID> nameTable = new HashMap<String, ID>();
     private static final String viewLock = new String("vl");
 
     /**
@@ -81,7 +81,6 @@ public class ClusterViewManager {
      * adds a system advertisement
      *
      * @param advertisement system adverisement to add
-     * @return true if advertisement is a new entry
      */
     void add(final SystemAdvertisement advertisement) {
 
@@ -248,10 +247,7 @@ public class ClusterViewManager {
      * @return true if this node is the master node
      */
     public boolean isMaster() {
-        if (masterAdvertisement == null) {
-            return false;
-        }
-        return masterAdvertisement.getID().equals(advertisement.getID());
+        return masterAdvertisement != null && masterAdvertisement.getID().equals(advertisement.getID());
     }
 
     /**
@@ -276,12 +272,12 @@ public class ClusterViewManager {
         if (id == null) {
             return -1;
         }
-        final Iterator it = view.keySet().iterator();
+        final Iterator<String> it = view.keySet().iterator();
         final String idStr = id.toString();
         int index = 0;
         String key;
         while (it.hasNext()) {
-            key = (String) it.next();
+            key = it.next();
             if (key.equals(idStr)) {
                 return index;
             }
@@ -291,7 +287,7 @@ public class ClusterViewManager {
     }
 
     public ID getID(final String name) {
-        ID id = (ID) nameTable.get(name);
+        ID id = nameTable.get(name);
         if (id == null) {
             synchronized (viewLock) {
                 for (final SystemAdvertisement adv : view.values()) {
