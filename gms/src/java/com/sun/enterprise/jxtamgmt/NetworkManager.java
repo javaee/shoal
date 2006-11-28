@@ -73,8 +73,6 @@ public class NetworkManager implements RendezvousListener {
     private static final String PREFIX = "SHOAL";
     private static final String connectLock = "connectLock";
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
-    //TODO: DO WE REMOVE THIS OR  KEEP THIS AS DEFAULT?
-    private static final String INFRAGROUPID = "urn:jxta:uuid-59313231343132314A484431544E504702";
 
     /**
      * The infrastructure PeerGroup ID.
@@ -82,7 +80,6 @@ public class NetworkManager implements RendezvousListener {
     public static PeerGroupID INFRAPGID;
     private static PipeID socketID = null;
     private static PipeID pipeID = null;
-    private static PeerID myPeerID;
 
     /**
      * JxtaSocket Pipe ID seed.
@@ -120,12 +117,11 @@ public class NetworkManager implements RendezvousListener {
      *                     JxtaConfigConstants enum.
      */
     public NetworkManager(final String groupName,
-                   final String instanceName,
-                   final Map properties) {
+                          final String instanceName,
+                          final Map properties) {
 
         this.groupName = groupName;
         this.instanceName = instanceName;
-        myPeerID = getPeerID(instanceName);
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
         applyPropertiesSettings(properties);
@@ -154,7 +150,6 @@ public class NetworkManager implements RendezvousListener {
         }
         digest.reset();
         try {
-            //TODO: Mo needs to review the following block
             digArray = digest.digest(expression.getBytes("UTF-8"));
         } catch (UnsupportedEncodingException impossible) {
             LOG.log(Level.WARNING, "digestEncoding unsupported:"
@@ -197,7 +192,15 @@ public class NetworkManager implements RendezvousListener {
         return IDFactory.newPeerID(getInfraPeerGroupID(),
                 hash(PREFIX + instanceName.toUpperCase()));
     }
-
+    /**
+     * Given a instance name, it returns a name encoded PeerID to for binding to specific instance.
+     *
+     * @param groupName instance name value
+     * @return The peerID value
+     */
+    public PeerGroupID getPeerGroupID(final String groupName) {
+        return IDFactory.newPeerGroupID(groupName, hash(PREFIX + groupName.toUpperCase()));
+    }
     /**
      * Returns the HealthMonitor PipeID, used for health monitoring purposes.
      *
@@ -285,7 +288,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The infraPeerGroupID PeerGroupID
      */
     public PeerGroupID getInfraPeerGroupID() {
-        return (PeerGroupID) ID.create(URI.create(INFRAGROUPID));
+        return getPeerGroupID(groupName);
     }
 
     /**
@@ -328,7 +331,7 @@ public class NetworkManager implements RendezvousListener {
     /**
      * Removes the JXTA CacheManager persistent store.
      *
-     * @param rootDir
+     * @param rootDir cache directory
      */
     private static void clearCache(final File rootDir) {
         try {
@@ -400,9 +403,9 @@ public class NetworkManager implements RendezvousListener {
      * {@inheritDoc}
      */
     public void rendezvousEvent(final RendezvousEvent event) {
-        if (event.getType() == event.RDVCONNECT ||
-                event.getType() == event.RDVRECONNECT ||
-                event.getType() == event.BECAMERDV) {
+        if (event.getType() == RendezvousEvent.RDVCONNECT ||
+                event.getType() == RendezvousEvent.RDVRECONNECT ||
+                event.getType() == RendezvousEvent.BECAMERDV) {
             synchronized (connectLock) {
                 connectLock.notify();
             }
