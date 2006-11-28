@@ -79,13 +79,12 @@ public class LWRMulticast implements PipeMsgListener {
     private transient boolean bound = false;
 
     private transient int timeout = 60000;
-    private transient byte[] fauxip = new byte[4];
     private transient MessageElement srcElement = null;
     private transient AtomicLong sequence = new AtomicLong();
     private final static String ackLock = new String("ackLock");
     private transient int threshold = 0;
-    private transient Set ackSet = new HashSet();
-    private transient Set ackList = new HashSet();
+    private transient Set<PeerID> ackSet = new HashSet<PeerID>();
+    private transient Set<PeerID> ackList = new HashSet<PeerID>();
     /**
      * The application message listener
      */
@@ -136,7 +135,6 @@ public class LWRMulticast implements PipeMsgListener {
         String id = group.getPeerID().toString();
         srcElement = new StringMessageElement(SRCIDTAG, id, null);
         LOG.log(Level.FINEST, "Statring LWRMulticast on pipe id :" + pipeAdv.getID());
-        String pipeStr = pipeAd.getPipeID().getUniqueValue().toString();
         bound = true;
     }
 
@@ -250,7 +248,7 @@ public class LWRMulticast implements PipeMsgListener {
      *
      * @return a List of PeerID's
      */
-    public Set getAckList() {
+    public Set<PeerID> getAckList() {
         return ackList;
     }
 
@@ -355,7 +353,7 @@ public class LWRMulticast implements PipeMsgListener {
             try {
                 ackLock.wait(timeout);
                 if (ackSet.size() >= threshold) {
-                    ackList = new HashSet(ackSet);
+                    ackList = new HashSet<PeerID>(ackSet);
                     ackSet.clear();
                     return;
                 }
@@ -363,7 +361,7 @@ public class LWRMulticast implements PipeMsgListener {
                 LOG.log(Level.FINEST, "Interrupted " + ie.toString());
             }
             if (ackSet.size() < threshold) {
-                ackList = new HashSet(ackSet);
+                ackList = new HashSet<PeerID>(ackSet);
                 ackSet.clear();
                 throw new SocketTimeoutException("Failed to receive minimum acknowledments of " + threshold + " received :" + ackSet.size());
             }
@@ -417,7 +415,7 @@ public class LWRMulticast implements PipeMsgListener {
                 try {
                     ackLock.wait(timeout);
                     if (ackSet.size() >= threshold) {
-                        ackList = new HashSet(ackSet);
+                        ackList = new HashSet<PeerID>(ackSet);
                         ackSet.clear();
                         return;
                     }
@@ -425,7 +423,7 @@ public class LWRMulticast implements PipeMsgListener {
                     LOG.log(Level.FINEST, "Interrupted " + ie.toString());
                 }
                 if (ackSet.size() < threshold) {
-                    ackList = new HashSet(ackSet);
+                    ackList = new HashSet<PeerID>(ackSet);
                     ackSet.clear();
                     throw new SocketTimeoutException("Failed to receive minimum acknowledments of " + threshold + " received :" + ackSet.size());
                 }
