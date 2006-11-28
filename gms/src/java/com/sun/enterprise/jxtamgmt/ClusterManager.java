@@ -202,15 +202,12 @@ public class ClusterManager implements PipeMsgListener {
 
     //TODO: NOT YET IMPLEMENTED
     private static Map<String, String> getIdMap() {
-        final Map<String, String> idMap = new HashMap<String, String>();
-        return idMap;
+        return new HashMap<String, String>();
     }
 
     //TODO: NOT YET IMPLEMENTED
     private static Map getPropsForTest() {
-        final Map p = new HashMap();
-        //p.put();
-        return p;
+        return new HashMap();
     }
 
     /**
@@ -343,8 +340,9 @@ public class ClusterManager implements PipeMsgListener {
      * is null the message is sent to the entire group
      * NOT TESTED YET (07 20 06)
      *
-     * @param peerid
-     * @param msg
+     * @param peerid the node ID
+     * @param msg the message to send
+     * @throws java.io.IOException if an io error occurs
      */
     public void send(final ID peerid, final Serializable msg) throws IOException {
         final Message message = new Message();
@@ -373,9 +371,9 @@ public class ClusterManager implements PipeMsgListener {
 
 
     /**
-     * Given a pipeid it returns a pipe advertisement of propagate type
+     * Returns a pipe advertisement for Cluster messaging of propagate type
      *
-     * @return
+     * @return a pipe advertisement for Cluster messaging
      */
     private PipeAdvertisement createPipeAdv() {
         final PipeAdvertisement pipeAdv;
@@ -395,7 +393,6 @@ public class ClusterManager implements PipeMsgListener {
         if (started) {
             final Message msg;
             MessageElement msgElement;
-            final String name;
             // grab the message from the event
             try {
                 msg = event.getMessage();
