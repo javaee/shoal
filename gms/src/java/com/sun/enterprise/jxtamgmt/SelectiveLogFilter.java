@@ -30,8 +30,8 @@ import java.util.logging.LogRecord;
  * A simple logging filter to allow multi per class logging
  */
 class SelectiveLogFilter implements Filter {
-    private HashSet classLogSet = new HashSet();
-    private HashSet methodLogSet = new HashSet();
+    private HashSet<String> classLogSet = new HashSet<String>();
+    private HashSet<String> methodLogSet = new HashSet<String>();
 
     /**
      * Adds a name to the set of loggable classes

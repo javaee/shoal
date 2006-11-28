@@ -195,9 +195,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         //LOG.log(Level.FINEST, "Processing Health Message..");
         //discard loopback messages
         if (!hm.getSrcID().equals(myID)) {
-            final Iterator it = hm.getEntries().iterator();
-            while (it.hasNext()) {
-                final HealthMessage.Entry entry = (HealthMessage.Entry) it.next();
+            for (HealthMessage.Entry entry1 : hm.getEntries()) {
+                final HealthMessage.Entry entry = (HealthMessage.Entry) entry1;
                 synchronized (cache) {
                     cache.put(entry.id, entry);
                 }
@@ -263,7 +262,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      *
      * @param state specified state can be
      *              ALIVE|SLEEP|HIBERNATING|SHUTDOWN|DEAD
-     * @param id
+     * @param id node ID to report on
      */
     public void reportMyState(final byte state, final PeerID id) {
 
@@ -322,7 +321,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * message is multicast to the group
      *
      * @param peerid Peer ID to send massage to
-     * @param msg
+     * @param msg the message to send
      */
     private void send(final PeerID peerid, final Message msg) {
         try {
@@ -411,18 +410,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     private static StructuredTextDocument getStructuredDocument(
             final MessageElement msgElement) throws IOException {
-        final StructuredTextDocument doc = (StructuredTextDocument)
-                StructuredDocumentFactory
-                        .newStructuredDocument(
-                                MimeMediaType.XMLUTF8,
-                                msgElement.getStream());
-
-        return doc;
+        return (StructuredTextDocument) StructuredDocumentFactory.newStructuredDocument(MimeMediaType.XMLUTF8,
+                                                                                            msgElement.getStream());
     }
 
 
     private void notifyLocalListeners(final String state, final SystemAdvertisement adv) {
-        //System.out.println("Notifying listeners");
         if (state.equals(states[INDOUBT])) {
             manager.getClusterViewManager().setInDoubtPeerState(adv);
         } else if (state.equals(states[ALIVE])) {
@@ -496,7 +489,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     //if there is a record, then get the number of
                     //retries performed in an earlier iteration
                     if (stateTable.containsKey(entry.id)) {
-                        retries = stateTable.get(entry.id).intValue();
+                        retries = stateTable.get(entry.id);
                     }
                     try {
                         timeDiff = System.currentTimeMillis() -
@@ -539,7 +532,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         if (canProcessInDoubt(entry)) {
                             // if max retries have not been reached, then
                             //place the record in the stateTable
-                            stateTable.put(entry.id, new Integer(++retries));
+                            stateTable.put(entry.id, ++retries);
                             LOG.log(Level.FINE, "For PID = " + entry.id +
                                     "; Time Diff = " + timeDiff + "; maxTime = "
                                     + maxTime);

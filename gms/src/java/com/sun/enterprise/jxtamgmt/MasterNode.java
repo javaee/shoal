@@ -70,7 +70,6 @@ import java.util.logging.Logger;
  */
 class MasterNode implements PipeMsgListener, Runnable {
     private static final Logger LOG = JxtaUtil.getLogger(MasterNode.class.getName());
-    private final PeerGroup group;
     private final ClusterManager manager;
     private InputPipe inputPipe;
     private OutputPipe outputPipe;
@@ -119,7 +118,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     MasterNode(final ClusterManager manager,
                final long timeout,
                final int interval) {
-        this.group = manager.getNetPeerGroup();
+        PeerGroup group = manager.getNetPeerGroup();
         pipeService = group.getPipeService();
         myID = group.getPeerID();
         myName = group.getPeerName();
@@ -400,6 +399,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (msgElement != null) {
                     final ClusterViewEvent cvEvent =
                             (ClusterViewEvent) getObjectFromByteArray(msgElement);
+                    assert newLocalView != null;
                     if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                         LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
                         sendSelfNodeAdvertisement(null, null);
@@ -691,7 +691,6 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // using an incremental timeout interval ex. 800, 1200, 2400,
                 // 4800, 9600 ms for iteration periods, then revert to 800
                 count++;
-                continue;
             } else {
                 break;
             }

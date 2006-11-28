@@ -108,6 +108,7 @@ public class NiceLogFormatter extends Formatter {
 
     /**
      * Sun One AppServer SE/EE can override to specify their product version
+     * @return product ID
      */
     protected String getProductId() {
         return PRODUCT_VERSION;
@@ -117,6 +118,8 @@ public class NiceLogFormatter extends Formatter {
     /**
      * Sun One Appserver SE/EE? can override to specify their product specific
      * key value pairs.
+     * @param buf  buffer
+     * @param record  log record
      */
     protected void getNameValuePairs(StringBuilder buf, LogRecord record) {
 
@@ -155,6 +158,8 @@ public class NiceLogFormatter extends Formatter {
     /**
      * Note: This method is not synchronized, we are assuming that the
      * synchronization will happen at the Log Handler.publish( ) method.
+     * @param record  log record
+     * @return the log message
      */
     private String uniformLogFormat(LogRecord record) {
 
@@ -250,7 +255,7 @@ public class NiceLogFormatter extends Formatter {
         if (loggerName == null) {
             return null;
         }
-        ResourceBundle rb = (ResourceBundle) loggerResourceBundleTable.get(
+        ResourceBundle rb = loggerResourceBundleTable.get(
                 loggerName);
 
         if (rb == null) {

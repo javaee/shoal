@@ -355,10 +355,8 @@ public class SystemAdvertisement extends Advertisement
             setName(elem.getTextValue());
         } else if (elem.getName().equals(OSNameTag)) {
             setOSName(elem.getTextValue());
-            return;
         } else if (elem.getName().equals(OSVersionTag)) {
             setOSVersion(elem.getTextValue());
-            return;
         } else if (elem.getName().equals(OSarchTag)) {
             setOSArch(elem.getTextValue());
         } else if (elem.getName().equals(ipTag)) {

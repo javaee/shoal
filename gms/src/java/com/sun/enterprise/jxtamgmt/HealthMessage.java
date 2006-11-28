@@ -293,15 +293,7 @@ public class HealthMessage {
 
         @Override
         public boolean equals(final Object obj) {
-            final boolean retval;
-            if (this == obj) {
-                retval = true;
-            } else if (obj == null) {
-                retval = false;
-            } else {
-                retval = id.equals(obj);
-            }
-            return retval;
+            return  this == obj || obj != null && id.equals(obj);
         }
 
         public String toString() {
