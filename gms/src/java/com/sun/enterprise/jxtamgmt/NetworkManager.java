@@ -199,7 +199,8 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerGroupID getPeerGroupID(final String groupName) {
-        return IDFactory.newPeerGroupID(groupName, hash(PREFIX + groupName.toUpperCase()));
+        return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
+                                       hash(PREFIX + groupName.toUpperCase()));
     }
     /**
      * Returns the HealthMonitor PipeID, used for health monitoring purposes.
