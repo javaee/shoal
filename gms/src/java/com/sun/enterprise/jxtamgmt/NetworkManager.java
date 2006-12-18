@@ -24,7 +24,6 @@ package com.sun.enterprise.jxtamgmt;
 
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.exception.PeerGroupException;
-import net.jxta.id.ID;
 import net.jxta.id.IDFactory;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
@@ -41,7 +40,6 @@ import net.jxta.rendezvous.RendezvousListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;

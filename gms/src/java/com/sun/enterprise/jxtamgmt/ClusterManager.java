@@ -382,7 +382,11 @@ public class ClusterManager implements PipeMsgListener {
                 AdvertisementFactory.newAdvertisement(
                         PipeAdvertisement.getAdvertisementType());
         pipeAdv.setPipeID(getNetworkManager().getAppServicePipeID());
-        pipeAdv.setType(PipeService.PropagateType);//TODO: figure out a way to dynamically create non propagate type pipes so that messages can be sent without knowing about multicast enablement or otherwise.
+        //TODO: figure out a way to dynamically create non propagate type
+        // pipes so that messages can be sent without knowing about multicast
+        // enablement or otherwise.
+        //This todo does not apply as propagated pipe maybe dynmically used as unicast, and used as such
+        pipeAdv.setType(PipeService.PropagateType);
         return pipeAdv;
     }
 

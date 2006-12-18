@@ -34,8 +34,7 @@ import java.util.logging.Logger;
  */
 public class ClusterViewManager {
     private static final Logger LOG = JxtaUtil.getLogger(ClusterViewManager.class.getName());
-    private TreeMap<String, SystemAdvertisement> view =
-            new TreeMap<String, SystemAdvertisement>();
+    private TreeMap<String, SystemAdvertisement> view = new TreeMap<String, SystemAdvertisement>();
     private SystemAdvertisement advertisement = null;
     private SystemAdvertisement masterAdvertisement = null;
     private List<ClusterViewEventListener> cvListeners =

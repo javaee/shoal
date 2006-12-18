@@ -118,7 +118,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     /**
      * Creates a Message containing this node's state
      *
-     * @param state
+     * @param state member state
      * @return a Message containing this node's state
      */
     private Message createHealthMessage(final byte state) {
@@ -196,7 +196,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         //discard loopback messages
         if (!hm.getSrcID().equals(myID)) {
             for (HealthMessage.Entry entry1 : hm.getEntries()) {
-                final HealthMessage.Entry entry = (HealthMessage.Entry) entry1;
+                final HealthMessage.Entry entry = entry1;
                 synchronized (cache) {
                     cache.put(entry.id, entry);
                 }
