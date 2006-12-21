@@ -368,7 +368,7 @@ public class NetworkManager implements RendezvousListener {
             final File userHome = new File(home, instanceName);
             clearCache(userHome);
         } catch (Throwable th) {
-            //ignored
+           LOG.log(Level.FINEST, th.getLocalizedMessage());
         }
         stopped = true;
     }
