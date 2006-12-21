@@ -190,6 +190,7 @@ public class NetworkManager implements RendezvousListener {
         return IDFactory.newPeerID(getInfraPeerGroupID(),
                 hash(PREFIX + instanceName.toUpperCase()));
     }
+
     /**
      * Given a instance name, it returns a name encoded PeerID to for binding to specific instance.
      *
@@ -198,8 +199,9 @@ public class NetworkManager implements RendezvousListener {
      */
     public PeerGroupID getPeerGroupID(final String groupName) {
         return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
-                                       hash(PREFIX + groupName.toUpperCase()));
+                hash(PREFIX + groupName.toUpperCase()));
     }
+
     /**
      * Returns the HealthMonitor PipeID, used for health monitoring purposes.
      *
@@ -358,12 +360,16 @@ public class NetworkManager implements RendezvousListener {
         if (stopped && !started) {
             return;
         }
-        rendezvous.removeListener(this);
-        netPeerGroup.stopApp();
-        netPeerGroup.unref();
-        netPeerGroup = null;
-        final File userHome = new File(home, instanceName);
-        clearCache(userHome);
+        try {
+            rendezvous.removeListener(this);
+            netPeerGroup.stopApp();
+            netPeerGroup.unref();
+            netPeerGroup = null;
+            final File userHome = new File(home, instanceName);
+            clearCache(userHome);
+        } catch (Throwable th) {
+            //ignored
+        }
         stopped = true;
     }
 
