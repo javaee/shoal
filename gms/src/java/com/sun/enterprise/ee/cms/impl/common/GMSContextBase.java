@@ -42,7 +42,7 @@ public abstract class GMSContextBase implements GMSContext{
             GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     protected String memberType;
     protected GMSMember gmsMember;
-    protected ArrayList<String> suspectList;
+    protected final ArrayList<String> suspectList;
     protected final Long startTime;
     protected boolean shuttingDown = false;
     protected final ShutdownHelper shutdownHelper;
@@ -53,7 +53,7 @@ public abstract class GMSContextBase implements GMSContext{
         this.serverToken= serverToken;
         this.groupName=groupName;
         this.memberType = getMemberType(memberType);
-        startTime = new Long(System.currentTimeMillis());
+        startTime = System.currentTimeMillis();
         gmsMember = new GMSMember(serverToken, this.memberType, groupName,
                                   startTime);
         suspectList = new ArrayList<String>();
