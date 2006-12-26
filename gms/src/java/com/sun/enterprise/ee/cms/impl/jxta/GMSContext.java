@@ -42,23 +42,20 @@ public class GMSContext extends GMSContextBase {
     private ArrayBlockingQueue<MessagePacket> messageQueue;
     private static final int MAX_MSGS_IN_QUEUE = 500;
     private ViewWindow viewWindow;
-    private MessageWindow messageWindow;
     private GroupCommunicationProvider groupCommunicationProvider;
     private DistributedStateCache distributedStateCache;
     private GroupHandle gh;
+    private Properties configProperties;
 
     public GMSContext(final String serverToken, final String groupName,
                final GroupManagementService.MemberType memberType, 
                final Properties configProperties)
     {
         super(serverToken, groupName, memberType);
+        this.configProperties=configProperties;
         groupCommunicationProvider =
                 new GroupCommunicationProviderImpl(groupName);
 
-        final Map<String, String> idMap = new HashMap<String, String>();
-        idMap.put(CustomTagNames.MEMBER_TYPE.toString(), memberType.toString() );
-        idMap.put(CustomTagNames.GROUP_NAME.toString(), groupName);
-        idMap.put(CustomTagNames.START_TIME.toString(), startTime.toString());
         viewQueue = new ArrayBlockingQueue<EventPacket>(MAX_VIEWS_IN_QUEUE,
                                                  Boolean.TRUE );
 
@@ -66,9 +63,7 @@ public class GMSContext extends GMSContextBase {
         messageQueue = new ArrayBlockingQueue<MessagePacket> (MAX_MSGS_IN_QUEUE,
                                                               Boolean.TRUE);
 
-        messageWindow = new MessageWindow(groupName, messageQueue);
-        groupCommunicationProvider.initializeGroupCommunicationProvider(
-                                serverToken, groupName, idMap, configProperties);
+        MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
 
         gh = new GroupHandleImpl(groupName, serverToken);
         final Thread viewWindowThread =
@@ -77,6 +72,9 @@ public class GMSContext extends GMSContextBase {
                 new Thread(messageWindow,"MessageWindowThread");
         messageWindowThread.start();
         viewWindowThread.start();
+        //TODO: consider untying the Dist State Cache creation from GMSContext.
+        // It should be driven independent of GMSContext through a factory as
+        // other impls of this interface can exist
         createDistributedStateCache();
         logger.log(Level.INFO,"Initialized Group Communication System....");
     }
@@ -102,6 +100,13 @@ public class GMSContext extends GMSContextBase {
     }
 
     public void join () throws GMSException {
+        final Map<String, String> idMap = new HashMap<String, String>();
+        idMap.put(CustomTagNames.MEMBER_TYPE.toString(), memberType );
+        idMap.put(CustomTagNames.GROUP_NAME.toString(), groupName);
+        idMap.put(CustomTagNames.START_TIME.toString(), startTime.toString());
+
+        groupCommunicationProvider.initializeGroupCommunicationProvider(
+                                serverToken, groupName, idMap, configProperties);
         groupCommunicationProvider.join();
     }
 
