@@ -22,17 +22,16 @@
  */
  package com.sun.enterprise.ee.cms.tests;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.client.*;
-import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+ import com.sun.enterprise.ee.cms.core.*;
+ import com.sun.enterprise.ee.cms.impl.client.*;
+ import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
-import static java.lang.Thread.currentThread;
-import static java.lang.Thread.sleep;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+ import static java.lang.Thread.sleep;
+ import java.util.Map;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
 
-/**
+ /**
  * This is a mock object that exists to demonstrate a GMS client.
  * This client is started by the mock ApplicationServer object which results in
  * this client retrieving an instance of GroupManagementService in order to
@@ -49,8 +48,7 @@ import java.util.logging.Logger;
  */
 public class GMSClientService implements Runnable, CallBack{
     private GroupManagementService gms;
-    private GroupHandle gh;
-    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private Thread flag;
     private String memberToken;
     private boolean sendMessages;
@@ -84,25 +82,26 @@ public class GMSClientService implements Runnable, CallBack{
     }
     
     public void run() {
-        gh = gms.getGroupHandle();
+        GroupHandle gh = gms.getGroupHandle();
         while((gh.isFenced( serviceName, memberToken))){
             try {
                 logger.log(Level.FINEST, "Waiting for fence to be lowered");
                 sleep(2000);
             }
             catch ( InterruptedException e ) {
-
+                logger.log(Level.WARNING, "Thread interrupted:"+
+                        e.getLocalizedMessage());
             }
         }
         logger.log(Level.INFO, serviceName+":"+memberToken+
                                ": is not fenced now, starting GMSclient:"+
                                serviceName);
-        final Thread thisThread = currentThread();
+        //final Thread thisThread = currentThread();
         logger.log(Level.INFO, "DUMPING:"+
                    gms.getAllMemberDetails(IIOP_MEMBER_DETAILS_KEY));
         //if this client is being stopped by the parent thread through call
         // to stopClient(), this flag will be null.
-        while(flag == thisThread)
+        /*while(flag == thisThread)
         {
             try {
                 sleep(10000);
@@ -123,7 +122,7 @@ public class GMSClientService implements Runnable, CallBack{
             } catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getMessage());
             }
-        }
+        } */
     }
 
     public synchronized void processNotification(final Signal notification){
@@ -135,12 +134,8 @@ public class GMSClientService implements Runnable, CallBack{
                 .append(notification.toString())
                 .append("] has been processed")
                 .toString());
-        if(notification instanceof JoinNotificationSignal){
-            serverToken =
-                    notification.getMemberToken();
-            extractMemberDetails( notification, serverToken );
-        }
-        else if( notification instanceof FailureRecoverySignal){
+        if( notification instanceof FailureRecoverySignal)
+        {
             try {
                 notification.acquire();
                 extractMemberDetails( notification, notification.getMemberToken() );
@@ -156,6 +151,16 @@ public class GMSClientService implements Runnable, CallBack{
             catch ( InterruptedException e ) {
                 logger.log(Level.INFO, e.getLocalizedMessage());
             }
+        }
+        else if(notification instanceof JoinNotificationSignal ||
+                notification instanceof FailureNotificationSignal ||
+                notification instanceof PlannedShutdownSignal ||
+                notification instanceof FailureSuspectedSignal)
+        {
+            serverToken =
+                    notification.getMemberToken();
+            extractMemberDetails( notification, serverToken );
+
         }
     }
 
