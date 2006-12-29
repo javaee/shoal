@@ -88,6 +88,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private static final String NAMESPACE = "HEALTH";
     private static final String cacheLock = "cacheLock";
     private static final String verifierLock = "verifierLock";
+
+    private Message aliveMsg = null;
     //private ShutdownHook shutdownHook;
 
     /**
@@ -136,6 +138,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         msg.addMessageElement(NAMESPACE, new TextDocumentMessageElement(tag,
                 (XMLDocument) hm.getDocument(MimeMediaType.XMLUTF8), null));
         return msg;
+    }
+
+    private Message getAliveMessage() {
+        if(aliveMsg == null){
+            aliveMsg = createHealthMessage(ALIVE);
+        }
+        return aliveMsg;
     }
 
     /**
@@ -265,10 +274,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param id node ID to report on
      */
     public void reportMyState(final byte state, final PeerID id) {
-
-        final Message msg = createHealthMessage(state);
-        //System.out.println("Reporting my state");
-        send(id, msg);
+        if(state == ALIVE) {
+            send(id, getAliveMessage());
+        }
+        else {            
+            //System.out.println("Reporting my state");
+            send(id, createHealthMessage(state));
+        }
     }
 
     void reportOtherPeerState(final byte state, final SystemAdvertisement adv) {
