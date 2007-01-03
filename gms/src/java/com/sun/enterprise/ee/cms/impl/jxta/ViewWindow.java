@@ -49,11 +49,10 @@ class ViewWindow implements
     private GMSContext ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private int size = 100;  // 100 is some default.
-    private List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
+    private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
     private List<Signal> signals = new Vector<Signal>();
-    private Signal[] activeSignals;
-    private List<String> currentCoreMembers = new ArrayList<String>();
-    private List<String> allCurrentMembers = new ArrayList<String>();
+    private final List<String> currentCoreMembers = new ArrayList<String>();
+    private final List<String> allCurrentMembers = new ArrayList<String>();
     private static final String CORETYPE = "CORE";
     //This is for DSC cache syncups so that member details are locally available
     //to GMS clients when they ask for it with the Join signals.
@@ -95,7 +94,9 @@ class ViewWindow implements
                  }
                  else {
                     Thread.sleep(VIEW_WAIT_TIMEOUT);
-                    continue;
+                 }
+                 if(ctx.isShuttingDown()){
+                     break;
                  }
              }
              catch ( InterruptedException e ) {
@@ -115,7 +116,7 @@ class ViewWindow implements
             logger.log(Level.INFO,
                        "Analyzing new membership snapshot received as "+
            "part of event : "+packet.getClusterViewEvent().toString());
-            activeSignals = analyzeViewChange (packet);
+            Signal[] activeSignals = analyzeViewChange(packet);
 
             if(activeSignals.length != 0)
                 getGMSContext().getRouter().queueSignals(new SignalPacket(activeSignals));
@@ -164,7 +165,6 @@ class ViewWindow implements
                                   .append( member.getStartTime() ).toString());
             }
         }
-        view = null;
         logger.log(Level.INFO, sb.toString());
         return (ArrayList<GMSMember>)tokens;
     }
@@ -214,7 +214,7 @@ class ViewWindow implements
         }
         else if (events.equals( ClusterViewEvents.MASTER_CHANGE_EVENT))
         {
-            analyzeMasterChangeView(packet);
+            //analyzeMasterChangeView(packet);
         }
         else if (events.equals( ClusterViewEvents.CLUSTER_STOP_EVENT) ||
                 events.equals( ClusterViewEvents.PEER_STOP_EVENT))
