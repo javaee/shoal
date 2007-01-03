@@ -31,38 +31,38 @@ import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import java.util.*;
 
 /**
- * This is the entry point to GMS for both the module in parent application
- * that is initiating GMS module and by client modules that need to interact
- * with GMS for group events or send or receive messages.<br>
- * GMSFactory provides the interface for starting GMS module by returning a
- * GroupManagementService instance and for retrieving the said
- * GroupManagementService instance by clients.<br>
- * GroupManagementService provides APIs for adding and removing
- * registrations for Group Events and Message Events, in addition to providing
- * a reference to the GroupHandle, and API for announcing the impending shutdown of
- * this parent process.
+ * <p>This is the entry point to GMS for the parent application that is
+ * initiating GMS module and by client components in the parent app that need to
+ * interact with GMS for group events or send or receive messages.</p>
+ * <p>GMSFactory is the interface for starting GMS module through the
+ * startGMSModule() api which returns a GroupManagementService instance, and for
+ * retrieving the said GroupManagementService instance by any client components.</p>
  *
- * Example for parent lifecycle module to start GMS:
+ * <p>The GroupManagementService instance provides APIs for registering clients
+ * who wish to be notified of Group Events and Message Events, and in addition
+ * provides a reference to GroupHandle, and and api for announcing the impending
+ * shutdown of this parent process.</p>
+ *
+ * <p>Example for parent lifecycle module to start GMS:<br>
  * <code>final Runnable gms = GMSFactory.startGMSModule(serverName, groupName,
-                                            memberType, properties);
- * final Thread gservice = new Thread(gms, "GMSThread");
-   gservice.start();
- * </code>
+                                            memberType, properties);<br>
+ * final Thread gservice = new Thread(gms, "GMSThread");<br>
+   gservice.start();<br>
+ * </code></p>
  *
- * Example for parent lifecycle module to shutdown GMS:
+ * <p>Example for parent lifecycle module to shutdown GMS:<br>
  * <code>
- * gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
- * or
- * gms.shutdown(GMSConstants.shutdownType.GROUP_SHUTDOWN);
- * </code>
- * Registration Example for clients that want to consume group events and
+ * gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN); <br>
+ * or<br>
+ * gms.shutdown(GMSConstants.shutdownType.GROUP_SHUTDOWN);<br>
+ * </code></p>
+ * <p>Registration Example for clients that want to consume group events and
  * message events:<br>
  * <code>
- * GroupManagementService gms = GMSFactory.getGMSModule(groupName);
- * gms.addActionFactory(myfailureNotificationActionFactoryImpl); 
- * </code>
+ * GroupManagementService gms = GMSFactory.getGMSModule(groupName);<br>
+ * gms.addActionFactory(myfailureNotificationActionFactoryImpl); <br>
+ * </code></p>
   * @author Shreedhar Ganapathy
-  * Date: June, 10, 2006
   * @version $Revision$
   */
  
