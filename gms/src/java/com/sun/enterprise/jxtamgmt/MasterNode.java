@@ -403,15 +403,14 @@ class MasterNode implements PipeMsgListener, Runnable {
                     if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                         LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
                         sendSelfNodeAdvertisement(null, null);
-                    } else {
-                        if (seqID < clusterViewManager.getMasterViewID()) {
-                            LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
-                            return true;
-                        }
-                        clusterViewManager.setMasterViewID(seqID);
-                        //update the view once the the master node includes this node
-                        clusterViewManager.addToView(newLocalView, true, cvEvent);
                     }
+                    if (seqID < clusterViewManager.getMasterViewID()) {
+                        LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                        return true;
+                    }
+                    clusterViewManager.setMasterViewID(seqID);
+                    //update the view once the the master node includes this node
+                    clusterViewManager.addToView(newLocalView, true, cvEvent);
                 } else {
                     LOG.log(Level.WARNING, "New View Received without corresponding ViewChangeEvent details");
                     //TODO according to the implementation MasterNode does not include VIEW_CHANGE_EVENT
