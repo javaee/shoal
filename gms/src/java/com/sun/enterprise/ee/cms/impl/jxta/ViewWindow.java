@@ -214,7 +214,7 @@ class ViewWindow implements
         }
         else if (events.equals( ClusterViewEvents.MASTER_CHANGE_EVENT))
         {
-            //analyzeMasterChangeView(packet);
+            analyzeMasterChangeView(packet);
         }
         else if (events.equals( ClusterViewEvents.CLUSTER_STOP_EVENT) ||
                 events.equals( ClusterViewEvents.PEER_STOP_EVENT))
