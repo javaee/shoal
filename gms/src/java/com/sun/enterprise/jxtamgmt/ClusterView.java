@@ -127,7 +127,7 @@ public class ClusterView {
      *
      * @return The viewSize
      */
-    public synchronized int getViewSize() {
+    public synchronized int getSize() {
         return view.size();
     }
 

@@ -36,6 +36,7 @@ import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -363,7 +364,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     /**
      * Processes a MasterNode announcement.
      *
-     * @param msg the Message
+     * @param msg    the Message
      * @param source the source node SystemAdvertisement
      * @return true if the message is a MasterNode announcement message
      * @throws IOException if and io error occurs
@@ -386,13 +387,9 @@ class MasterNode implements PipeMsgListener, Runnable {
                         (ArrayList<SystemAdvertisement>)
                                 getObjectFromByteArray(msgElement);
                 if (newLocalView != null) {
-                    if (source.getName() != null) {
-                        LOG.log(Level.FINER, "Received an authoritative view from "
-                                + source.getName() + ", reseting local view containing "
-                                + newLocalView.size());
-                    } else {
-                        LOG.log(Level.FINER, "Received an authoritative view, reseting local view containing :" + newLocalView.size());
-                    }
+                    LOG.log(Level.FINER, MessageFormat.format("Received an authoritative view from {0}, of size {1}" +
+                            " resetting local view containing {2}",
+                            source.getName(), newLocalView.size(), clusterViewManager.getLocalView().getSize()));
                 }
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
@@ -429,7 +426,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     /**
      * Processes a MasterNode response.
      *
-     * @param msg the Message
+     * @param msg    the Message
      * @param source the source node SystemAdvertisement
      * @return true if the message is a master node response message
      * @throws IOException if and io error occurs
@@ -481,7 +478,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * Processes a cluster change event. This results in adding the new
      * members to the cluster view, and subsequenlty in application notification.
      *
-     * @param msg the Message
+     * @param msg    the Message
      * @param source the source node SystemAdvertisement
      * @return true if the message is a change event message
      * @throws IOException if and io error occurs
@@ -523,8 +520,8 @@ class MasterNode implements PipeMsgListener, Runnable {
      * Processes a Masternode Query message. This results in a master node
      * response if this node is a master node.
      *
-     * @param msg      the Message
-     * @param adv      the source node SystemAdvertisement
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
      * @return true if the message is a query message
      * @throws IOException if and io error occurs
      */
@@ -546,9 +543,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             routeControl.addRoute(route);
         }
 
-        LOG.log(Level.FINER, "Received a MasterNode Query from :");
-        LOG.log(Level.FINER, "Name :" + adv.getName());
-        LOG.log(Level.FINER, "ID :" + adv.getID());
+        LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         if (isMaster() && masterAssigned) {
             final ClusterViewEvent cvEvent = new ClusterViewEvent(
                     ADD_EVENT, adv);
@@ -575,15 +570,12 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (msgElement == null) {
             return false;
         }
-        LOG.log(Level.FINER, "Received a MasterNode Collision from :");
-        LOG.log(Level.FINER, "Name :" + adv.getName());
-        LOG.log(Level.FINER, "ID :" + adv.getID());
+        LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Collision from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         final SystemAdvertisement madv = manager.getSystemAdvertisement();
         LOG.log(Level.FINER, "Candidate Master :" + madv.getName());
         if (madv.getID().toString().compareTo(adv.getID().toString()) >= 0) {
             LOG.log(Level.FINER, "Affirming Master Node role");
             synchronized (MASTERLOCK) {
-                masterViewID.incrementAndGet();
                 announceMaster(manager.getSystemAdvertisement());
                 MASTERLOCK.notifyAll();
             }
@@ -617,7 +609,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (adv != null) {
                     if (isMaster() && masterAssigned) {
                         clusterViewManager.add(adv);
-                    } else if (discoveryInProgress){
+                    } else if (discoveryInProgress) {
                         discoveryView.add(adv);
                     }
                 }
@@ -647,8 +639,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
             }
-            LOG.log(Level.FINER, "ClusterViewManager contains " +
-                    clusterViewManager.getViewSize() + " entries");
+            LOG.log(Level.FINER, MessageFormat.format("ClusterViewManager contains {0} entries", clusterViewManager.getViewSize()));
         } else {
             LOG.log(Level.FINER, "Started : " + isStarted());
         }
@@ -659,8 +650,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         final ClusterViewEvent cvEvent = new ClusterViewEvent(
                 ClusterViewEvents.MASTER_CHANGE_EVENT,
                 adv);
-        LOG.log(Level.FINER, "Announcing Master Node designation");
-        LOG.log(Level.FINER, "Local view contains " + clusterViewManager.getViewSize() + " entries");
+        clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+        LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains {0} entries", clusterViewManager.getViewSize()));
         sendNewView(cvEvent, msg, (masterAssigned && isMaster()));
     }
 
@@ -723,18 +714,18 @@ class MasterNode implements PipeMsgListener, Runnable {
             if (discoveryInProgress) {
                 List<SystemAdvertisement> list = discoveryView.getView();
                 final ClusterViewEvent cvEvent =
-                   new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+                        new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
                 clusterViewManager.addToView(list, true, cvEvent);
             } else {
                 final ClusterViewEvent cvEvent =
-                   new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+                        new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
                 clusterViewManager.notifyListeners(cvEvent);
             }
 
         }
         discoveryView.clear();
         discoveryView.add(sysAdv);
-        synchronized(MASTERLOCK) {
+        synchronized (MASTERLOCK) {
             if (madv.getID().equals(myID)) {
                 masterAssigned = true;
                 // this thread's job is done
@@ -868,28 +859,30 @@ class MasterNode implements PipeMsgListener, Runnable {
             sendNewView(event, msg, true);
         }
     }
+
     /**
-     *  Adds a long to a message
+     * Adds a long to a message
      *
-     * @param  message    The message to add to
-     * @param  nameSpace  The namespace of the element to add. a null value assumes default namespace.
-     * @param  elemName   Name of the Element.
-     * @param  data       The feature to be added to the LongToMessage attribute
+     * @param message   The message to add to
+     * @param nameSpace The namespace of the element to add. a null value assumes default namespace.
+     * @param elemName  Name of the Element.
+     * @param data      The feature to be added to the LongToMessage attribute
      */
     private static void addLongToMessage(Message message, String nameSpace, String elemName, long data) {
         message.addMessageElement(nameSpace,
                 new StringMessageElement(elemName,
-                Long.toString(data),
-                null));
+                        Long.toString(data),
+                        null));
     }
+
     /**
-     *  Returns an long from a message
+     * Returns an long from a message
      *
-     * @param  message                    The message to retrieve from
-     * @param  nameSpace                  The namespace of the element to get.
-     * @param  elemName                   Name of the Element.
-     * @return                            The long value
-     * @exception  NumberFormatException  If the String does not contain a parsable int.
+     * @param message   The message to retrieve from
+     * @param nameSpace The namespace of the element to get.
+     * @param elemName  Name of the Element.
+     * @return The long value
+     * @throws NumberFormatException If the String does not contain a parsable int.
      */
     private static long getLongFromMessage(Message message, String nameSpace, String elemName) throws NumberFormatException {
         return Long.parseLong(message.getMessageElement(nameSpace, elemName).toString());
