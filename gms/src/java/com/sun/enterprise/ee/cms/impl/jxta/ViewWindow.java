@@ -231,7 +231,7 @@ class ViewWindow implements
 
     private void analyzeMasterChangeView ( final EventPacket packet ) {
         if(views.size() > 1 &&
-                packet.getClusterView().getViewSize() !=
+                packet.getClusterView().getSize() !=
                     views.get( views.size()-2).size())
         {
             determineAndAddNewMemberJoins();
@@ -523,7 +523,7 @@ class ViewWindow implements
     private void addNewMemberJoins ( final EventPacket packet ) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
-        if(packet.getClusterView().getViewSize() > 1){
+        if(packet.getClusterView().getSize() > 1){
             // TODO: Figure out a better way to sync
             syncDSC( token );
         }
