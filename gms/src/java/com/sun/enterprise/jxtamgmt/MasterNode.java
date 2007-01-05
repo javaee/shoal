@@ -397,7 +397,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
-                    if (seqID < clusterViewManager.getMasterViewID()) {
+                    if (seqID <= clusterViewManager.getMasterViewID()) {
                         LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
                         return true;
                     }
@@ -453,7 +453,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
                     long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
-                    if (seqID < clusterViewManager.getMasterViewID()) {
+                    if (seqID <= clusterViewManager.getMasterViewID()) {
                         LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
                         return true;
                     }
@@ -496,7 +496,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null && cvEvent != null) {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
-                if (seqID < clusterViewManager.getMasterViewID()) {
+                if (seqID <= clusterViewManager.getMasterViewID()) {
                     LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
                     return true;
                 }
