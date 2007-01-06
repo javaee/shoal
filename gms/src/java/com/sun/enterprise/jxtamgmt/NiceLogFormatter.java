@@ -88,7 +88,7 @@ public class NiceLogFormatter extends Formatter {
 
     private static final SimpleDateFormat dateFormatter =
             new SimpleDateFormat(RFC_3339_DATE_FORMAT);
-    private static final String PRODUCT_VERSION = "JxtaMgmt";
+    private static final String PRODUCT_VERSION = "Shoal";
 
     public NiceLogFormatter() {
         super();
