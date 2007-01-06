@@ -52,7 +52,7 @@ public class NiceLogFormatter extends Formatter {
     private Date date = new Date();
     private static boolean LOG_SOURCE_IN_KEY_VALUE = true;
 
-    private static boolean RECORD_NUMBER_IN_KEY_VALUE = true;
+    private static boolean RECORD_NUMBER_IN_KEY_VALUE = false;
 
     static {
         String logSource = System.getProperty(
@@ -175,7 +175,7 @@ public class NiceLogFormatter extends Formatter {
             recordBuffer.append(FIELD_SEPARATOR);
 
             recordBuffer.append(record.getLevel()).append(FIELD_SEPARATOR);
-            recordBuffer.append(getProductId()).append(FIELD_SEPARATOR);
+            //recordBuffer.append(getProductId()).append(FIELD_SEPARATOR);
             recordBuffer.append(record.getLoggerName()).append(FIELD_SEPARATOR);
 
             recordBuffer.append("_ThreadID").append(NV_SEPARATOR);
@@ -188,10 +188,12 @@ public class NiceLogFormatter extends Formatter {
             // See 6316018. ClassName and MethodName information should be
             // included for FINER and FINEST log levels.
             Level level = record.getLevel();
+            String className = record.getSourceClassName();
+            className = className.substring(className.lastIndexOf("."), className.length());
             if (LOG_SOURCE_IN_KEY_VALUE ||
                     (level.intValue() <= Level.FINE.intValue())) {
                 recordBuffer.append("ClassName").append(NV_SEPARATOR);
-                recordBuffer.append(record.getSourceClassName());
+                recordBuffer.append(className);
                 recordBuffer.append(NVPAIR_SEPARATOR);
                 recordBuffer.append("MethodName").append(NV_SEPARATOR);
                 recordBuffer.append(record.getSourceMethodName());

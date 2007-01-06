@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  * @version $Revision$
  */
 public class GMSLogDomain  {
-    public static final String GMS_LOGGER = "javax.ee.enterprise.system.gms";
+    public static final String GMS_LOGGER = "Shoal GMS Logger";
     private static Logger gmsLogger = null;
     public static Logger getLogger(final String loggerName){
         if(gmsLogger == null ){
