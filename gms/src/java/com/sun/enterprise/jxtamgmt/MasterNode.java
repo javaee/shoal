@@ -370,8 +370,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @throws IOException if and io error occurs
      */
     boolean processMasterNodeAnnouncement(final Message msg,
-                                          final SystemAdvertisement source)
-            throws IOException {
+                                          final SystemAdvertisement source) throws IOException {
 
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERNODE);
         if (msgElement == null) {
@@ -669,7 +668,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     void startMasterNodeDiscovery() {
         int count = 0;
         //assumes self as master node
-        synchronized (this) {
+        synchronized(this) {
             clusterViewManager.start();
         }
         if (masterAssigned) {
@@ -699,6 +698,9 @@ class MasterNode implements PipeMsgListener, Runnable {
      * then a master node announcement is made to assert such state
      */
     void appointMasterNode() {
+        if (masterAssigned) {
+            return;
+        }
         final SystemAdvertisement madv;
         if (discoveryInProgress) {
             madv = discoveryView.getMasterCandidate();
