@@ -269,7 +269,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      *
      * @param state specified state can be
      *              ALIVE|SLEEP|HIBERNATING|SHUTDOWN|DEAD
-     * @param id node ID to report on
+     * @param id destination node ID, if null broadcast to group
      */
     public void reportMyState(final byte state, final PeerID id) {
         if(state == ALIVE) {
@@ -465,6 +465,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             if (tmpThread != null) {
                 tmpThread.interrupt();
             }
+            synchronized (verifierLock) {
+                verifierLock.notify();
+            }
         }
 
         public void run() {
@@ -588,7 +591,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 try {
                     synchronized (verifierLock) {
                         verifierLock.wait();
-                        verify();
+                        if (!stop) {
+                            verify();
+                        }
                     }
                 } catch (InterruptedException ex) {
                     LOG.log(Level.FINEST,
