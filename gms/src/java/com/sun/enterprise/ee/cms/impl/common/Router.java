@@ -244,7 +244,7 @@ public class Router{
         FailureNotificationAction a;
         FailureNotificationSignal fns;
         logger.log(Level.INFO,"Sending FailureNotificationSignals to register" +
-                "ed Actions...");
+                "ed Actions. Member: "+signal.getMemberToken()+"...");
         synchronized(failureNotificationAF){
             for(FailureNotificationActionFactory fnaf: failureNotificationAF)
             {
@@ -275,7 +275,7 @@ public class Router{
         FailureSuspectedAction a;
         FailureSuspectedSignal fss;
         logger.log(Level.INFO,"Sending FailureSuspectedSignals to register" +
-                "ed Actions...");
+                "ed Actions. Member:"+signal.getMemberToken()+"...");
         synchronized(failureSuspectedAF){
             for(FailureSuspectedActionFactory fsaf: failureSuspectedAF)
             {
@@ -321,7 +321,8 @@ public class Router{
         //that would register for join notifications.
         if(isJoinNotificationAFRegistered()){
             logger.log(Level.FINE,
-                  "Sending JoinNotificationSignals to registered Actions...");
+                  "Sending JoinNotificationSignals to registered Actions, Member"
+                          +signal.getMemberToken()+"...");
             synchronized(joinNotificationAF){
                 for(JoinNotificationActionFactory jnaf : joinNotificationAF) {
                     a = (JoinNotificationAction) jnaf.produceAction();
@@ -344,7 +345,8 @@ public class Router{
         PlannedShutdownSignal pss;
         logger.log(Level.INFO,
                 "Sending PlannedShutdownSignals to registered Actions "+
-                "for shutdownType "+signal.getEventSubType()+" ...");
+                "for shutdownType "+signal.getEventSubType()+" Member: "+
+                        signal.getMemberToken()+"...");
         synchronized(plannedShutdownAF){
             for(PlannedShutdownActionFactory psaf : plannedShutdownAF) {
                 a = (PlannedShutdownAction) psaf.produceAction();
