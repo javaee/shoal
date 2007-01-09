@@ -25,11 +25,11 @@ package com.sun.enterprise.jxtamgmt;
 
 import net.jxta.id.ID;
 
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.text.MessageFormat;
 
 /**
  * TODO: Stop should send out stop event to all members followed by notifications
@@ -269,12 +269,11 @@ public class ClusterViewManager {
         if (id == null) {
             return -1;
         }
-        final Iterator<String> it = view.keySet().iterator();
         final String idStr = id.toString();
         int index = 0;
         String key;
-        while (it.hasNext()) {
-            key = it.next();
+        for (String s : view.keySet()) {
+            key = s;
             if (key.equals(idStr)) {
                 return index;
             }

@@ -91,15 +91,15 @@ class MasterNode implements PipeMsgListener, Runnable {
     private ClusterView discoveryView;
     private final AtomicLong masterViewID = new AtomicLong();
     //Collision control
-    private static final String CCNTL = "CCNTL";
     final String MASTERLOCK = new String("MASTERLOCK");
-    private static final String MASTERNODE = "MN";
-    private static final String MASTERQUERY = "MQ";
-    private static final String NODERESPONSE = "NR";
-    private static final String NAMESPACE = "MASTER";
-    private static final String NODEADV = "NAD";
-    private static final String ROUTEADV = "ROUTE";
-    private static final String AMASTERVIEW = "AMV";
+    private static final String         CCNTL = "CCNTL";
+    private static final String    MASTERNODE = "MN";
+    private static final String   MASTERQUERY = "MQ";
+    private static final String  NODERESPONSE = "NR";
+    private static final String     NAMESPACE = "MASTER";
+    private static final String       NODEADV = "NAD";
+    private static final String      ROUTEADV = "ROUTE";
+    private static final String   AMASTERVIEW = "AMV";
     private static final String MASTERVIEWSEQ = "SEQ";
 
     private int interval = 6;
@@ -343,8 +343,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEADV);
         if (msgElement == null) {
             // no need to go any further
-            LOG.log(Level.WARNING, "Received an unknown message");
-            LOG.log(Level.FINER, "No NODEADV message element");
+            LOG.log(Level.WARNING, "Missing NODEADV message element");
             JxtaUtil.printMessageStats(msg, false);
             return null;
         }
@@ -354,9 +353,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 msgElement.getMimeType(), msgElement.getStream());
         final SystemAdvertisement adv = new SystemAdvertisement(asDoc);
         if (!adv.getID().equals(myID)) {
-            LOG.log(Level.FINER, "Received a System advertisment :");
-            LOG.log(Level.FINER, "Name :" + adv.getName());
-            LOG.log(Level.FINER, "ID :" + adv.getID());
+            LOG.log(Level.FINER, "Received a System advertisment Name :" + adv.getName());
         }
         return adv;
     }
@@ -376,9 +373,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (msgElement == null) {
             return false;
         }
-        LOG.log(Level.FINER, "Received a Master Node Announcement from :");
-        LOG.log(Level.FINER, "Name :" + source.getName());
-        LOG.log(Level.FINER, "ID :" + source.getID());
+        LOG.log(Level.FINER, "Received a Master Node Announcement from Name :" + source.getName());
         if (checkMaster(source)) {
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null) {
@@ -434,12 +429,10 @@ class MasterNode implements PipeMsgListener, Runnable {
                                       final SystemAdvertisement source) throws IOException {
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODERESPONSE);
         if (msgElement != null) {
-            LOG.log(Level.FINE, "Received a MasterNode Response from :");
-            LOG.log(Level.FINE, "Name :" + source.getName());
-            LOG.log(Level.FINE, "ID :" + source.getID());
-
+            LOG.log(Level.FINE, "Received a MasterNode Response from Name :" + source.getName());
             clusterViewManager.setMaster(source, true);
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
+            masterAssigned = true;
             if (msgElement != null) {
                 LOG.log(Level.FINER, "Received a VIEW_CHANGE_EVENT from : " + source.getName());
                 final ArrayList<SystemAdvertisement> newLocalView =
@@ -533,11 +526,10 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
         if (routeElement != null && routeControl != null) {
-            final StructuredDocument asDoc;
-            asDoc = StructuredDocumentFactory.newStructuredDocument(
+            final XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
                     msgElement.getMimeType(), msgElement.getStream());
             final RouteAdvertisement route = (RouteAdvertisement)
-                    AdvertisementFactory.newAdvertisement((TextElement) asDoc);
+                    AdvertisementFactory.newAdvertisement(asDoc);
 
             routeControl.addRoute(route);
         }
@@ -630,8 +622,7 @@ class MasterNode implements PipeMsgListener, Runnable {
 
                 // generate the node add event
                 if (isMaster() && masterAssigned) {
-                    final ClusterViewEvent cvEvent = new ClusterViewEvent(
-                            ADD_EVENT, adv);
+                    final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
                     sendNewView(cvEvent, createMasterResponse(myID), true);
                 }
             } catch (IOException e) {
@@ -752,11 +743,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             if (peerid != null) {
                 // Unicast datagram
                 // create a op pipe to the destination peer
-                if (name != null) {
-                    LOG.log(Level.FINER, "Unicasting Message to :" + name);
-                } else {
-                    LOG.log(Level.FINER, "Unicasting Message to :" + peerid.toString());
-                }
+                LOG.log(Level.FINER, "Unicasting Message to :" + name);
                 final OutputPipe output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
                 output.send(msg);
                 output.close();

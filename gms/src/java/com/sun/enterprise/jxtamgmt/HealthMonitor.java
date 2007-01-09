@@ -33,6 +33,7 @@ import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -73,20 +74,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private Thread fdThread = null;
 
     private InDoubtPeerDetector inDoubtPeerDetector;
-    private String[] states =
-            {"starting", "started", "alive", "clusterstopping", "peerstopping",
-                    "stopped", "dead", "indoubt"};
-    private static final byte STARTING = 0;
-    private static final byte STARTED = 1;
+    private String[] states = {"starting", "started", "alive",
+                               "clusterstopping", "peerstopping",
+                               "stopped", "dead", "indoubt"};
     private static final byte ALIVE = 2;
     private static final byte CLUSTERSTOPPING = 3;
     private static final byte PEERSTOPPING = 4;
     private static final byte STOPPED = 5;
     private static final byte DEAD = 6;
     private static final byte INDOUBT = 7;
-    private static final String HEALTHM = "HM";
-    private static final String NAMESPACE = "HEALTH";
-    private static final String cacheLock = "cacheLock";
+    private static final String      HEALTHM = "HM";
+    private static final String    NAMESPACE = "HEALTH";
+    private static final String    cacheLock = "cacheLock";
     private static final String verifierLock = "verifierLock";
 
     private Message aliveMsg = null;
@@ -177,8 +176,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     final Message.ElementIterator iter = msg.getMessageElements();
                     while (iter.hasNext()) {
                         msgElement = (MessageElement) iter.next();
-                        if (msgElement != null &&
-                                msgElement.getElementName().equals(HEALTHM)) {
+                        if (msgElement != null && msgElement.getElementName().equals(HEALTHM)) {
                             process(getHealthMessage(msgElement));
                         }
                     }
@@ -262,7 +260,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * Clears the cache
      */
     public synchronized void clearCache() {
-        //System.out.println("Clearing cache");
+        LOG.log(Level.FINEST, "Clearing cache");
         cache.clear();
     }
 
@@ -278,14 +276,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             send(id, getAliveMessage());
         }
         else {            
-            //System.out.println("Reporting my state");
             send(id, createHealthMessage(state));
         }
     }
 
     void reportOtherPeerState(final byte state, final SystemAdvertisement adv) {
         final Message msg = createMessage(state, HEALTHM, adv);
-        //System.out.println("Reporting other's state");
+        LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} healthstate as {1}", adv.getName(), state));
         send(null, msg);
     }
 
@@ -368,16 +365,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // create output
                 outputPipe = pipeService.createOutputPipe(pipeAdv, 1);
 
-                this.thread = new Thread(this, "HealthMonitor Thread interval : "
-                        + timeout);
+                this.thread = new Thread(this, "HealthMonitor Thread interval : "+timeout);
                 thread.start();
                 inDoubtPeerDetector = new InDoubtPeerDetector();
                 inDoubtPeerDetector.start();
                 started = true;
             } catch (IOException ioe) {
-                LOG.log(Level.WARNING,
-                        "Failed to create health monitoring pipe advertisement",
-                        ioe);
+                LOG.log(Level.WARNING, "Failed to create health monitoring pipe advertisement", ioe);
             }
         }
     }
