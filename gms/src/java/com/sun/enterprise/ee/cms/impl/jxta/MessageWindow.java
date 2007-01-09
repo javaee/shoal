@@ -63,8 +63,7 @@ public class MessageWindow implements Runnable {
     }
 
     public void run() {
-        while (true) {
-            //TODO inifinte loop
+        while (!ctx.isShuttingDown()) {
             try {
                 final MessagePacket packet = messageQueue.take();
                 if (packet != null) {
