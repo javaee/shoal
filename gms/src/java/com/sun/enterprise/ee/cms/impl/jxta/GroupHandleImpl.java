@@ -338,8 +338,8 @@ public final class GroupHandleImpl implements GroupHandle {
 
     private void forceDSCSync(final DistributedStateCacheImpl dsc) {
         try {
-            final String token = getGMSContext().getViewWindow()
-                    .getAllCurrentMembers().get(0);  //TODO: Master?? BUG??
+            final String token = getGMSContext().getGroupCommunicationProvider()
+                    .getGroupLeader();
 
             logger.log(Level.FINE,
                     "Force Syncing DistributedStateCache with " + token);

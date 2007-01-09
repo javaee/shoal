@@ -104,16 +104,6 @@ public interface GroupCommunicationProvider {
             throws GMSException;
 
     /**
-     * Returns the logical name or identity token associated with the member
-     * address. The address is the underlying GCP's member identity semantic
-     * such as IP address and port or a UUID urn.
-     *
-     * @param address
-     * @return
-     */
-    String getMemberIdentityToken(Object address );
-
-    /**
      * returns a list of members that are currently alive in the group.
      * The list should contain the member identity token that GMS understands as
      * member identities.
@@ -133,4 +123,11 @@ public interface GroupCommunicationProvider {
      * @return MemberStates
      */
     MemberStates getMemberState(String memberIdentityToken);
+
+    /**
+     * Returns the Group Leader as defined by the underlying Group Communication
+     * Provider. 
+     * @return
+     */
+    String getGroupLeader();
 }

@@ -187,25 +187,6 @@ public class GroupCommunicationProviderImpl implements
     }
 
     /**
-     * Returns the logical name or identity token associated with the member
-     * address. The address is the underlying GCP's member identity semantic
-     * such as IP address and port or a UUID urn.
-     *
-     * @param address The address is the underlying GCP's member identity semantic
-     * such as IP address and port or a UUID urn.
-     * @return  the logical name or identity token associated with the member.
-     */
-    public String getMemberIdentityToken(final Object address) {
-        String retVal = null;
-        final SystemAdvertisement adv = clusterManager
-                .getSystemAdvertisementForMember((ID) address);
-        if (adv != null) {
-            retVal = adv.getName();
-        }
-        return retVal;
-    }
-
-    /**
      * Returns the address representing the peer identified by this process. The
      * address object is of the type corresponding to the underlying GCP. In
      * this case, the jxta ID of this peer is returned.
@@ -237,6 +218,10 @@ public class GroupCommunicationProviderImpl implements
                 getPeerState(
                         getAddress(memberIdentityToken)).
                 toUpperCase());
+    }
+
+    public String getGroupLeader() {
+        return clusterManager.getClusterViewManager().getMaster().getName();
     }
 
     public void handleClusterMessage(final SystemAdvertisement adv,
