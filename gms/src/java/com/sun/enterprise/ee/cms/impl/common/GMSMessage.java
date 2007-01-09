@@ -61,6 +61,6 @@ public class GMSMessage implements Serializable {
     }
 
     public long getStartTime () {
-        return startTime.longValue();
+        return startTime;
     }
 }

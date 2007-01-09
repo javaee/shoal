@@ -57,7 +57,7 @@ public class RecoveryTargetSelector {
     private RecoveryTargetSelector () {
     }
 
-    public static enum RecoverySelectorMode {SIMPLESELECT, HOSTSELECT};
+    public static enum RecoverySelectorMode {SIMPLESELECT, HOSTSELECT}
     /**
      * Uses a resolution algorithm to determine whether the member this process
      * represents is indeed responsible for performing recovery operations.

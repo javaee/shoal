@@ -2,28 +2,28 @@
  * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
  * Use is subject to license terms.
  */
- /*
- * The contents of this file are subject to the terms
- * of the Common Development and Distribution License
- * (the License).  You may not use this file except in
- * compliance with the License.
- *
- * You can obtain a copy of the license at
- * https://shoal.dev.java.net/public/CDDLv1.0.html
- *
- * See the License for the specific language governing
- * permissions and limitations under the License.
- *
- * When distributing Covered Code, include this CDDL
- * Header Notice in each file and include the License file
- * at
- * If applicable, add the following below the CDDL Header,
- * with the fields enclosed by brackets [] replaced by
- * you own identifying information:
- * "Portions Copyrighted [year] [name of copyright owner]"
- *
- * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
- */
+/*
+* The contents of this file are subject to the terms
+* of the Common Development and Distribution License
+* (the License).  You may not use this file except in
+* compliance with the License.
+*
+* You can obtain a copy of the license at
+* https://shoal.dev.java.net/public/CDDLv1.0.html
+*
+* See the License for the specific language governing
+* permissions and limitations under the License.
+*
+* When distributing Covered Code, include this CDDL
+* Header Notice in each file and include the License file
+* at
+* If applicable, add the following below the CDDL Header,
+* with the fields enclosed by brackets [] replaced by
+* you own identifying information:
+* "Portions Copyrighted [year] [name of copyright owner]"
+*
+* Copyright 2006 Sun Microsystems, Inc. All rights reserved.
+*/
 package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.*;
@@ -41,40 +41,40 @@ import java.util.logging.Logger;
 
 /**
  * Implementation of GroupHandle interface.
+ *
  * @author Shreedhar Ganapathy
- * Date: Jan 12, 2004
+ *         Date: Jan 12, 2004
  * @version $Revision$
  */
-public final class GroupHandleImpl implements GroupHandle{
+public final class GroupHandleImpl implements GroupHandle {
     private String groupName;
     private String serverToken;
     private GMSContext ctx;
     private static final Logger logger =
-            GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER);
+            GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final String REC_PROGRESS_STATE =
-                                    GroupManagementService
-                                        .RECOVERY_STATE
-                                        .RECOVERY_IN_PROGRESS.toString();
+            GroupManagementService
+                    .RECOVERY_STATE
+                    .RECOVERY_IN_PROGRESS.toString();
     private static final String REC_APPOINTED_STATE =
-                                    GroupManagementService
-                                        .RECOVERY_STATE
-                                        .RECOVERY_SERVER_APPOINTED.toString();
+            GroupManagementService
+                    .RECOVERY_STATE
+                    .RECOVERY_SERVER_APPOINTED.toString();
 
     private static final int SYNC_WAIT = 2000;
     private List<String> selfRecoveryList;
 
     public GroupHandleImpl(
             final String groupName,
-            final String serverToken )
-    {
-        this.groupName=groupName;
-        this.serverToken=serverToken;
-        this.selfRecoveryList =  new ArrayList<String>();
+            final String serverToken) {
+        this.groupName = groupName;
+        this.serverToken = serverToken;
+        this.selfRecoveryList = new ArrayList<String>();
     }
 
-    private GMSContext getGMSContext(){
-        if(ctx == null ){
-            ctx = ( GMSContext ) GMSContextFactory.getGMSContext( groupName );
+    private GMSContext getGMSContext() {
+        if (ctx == null) {
+            ctx = (GMSContext) GMSContextFactory.getGMSContext(groupName);
         }
         return ctx;
     }
@@ -82,17 +82,17 @@ public final class GroupHandleImpl implements GroupHandle{
     /**
      * Sends a message to all members of the Group. Expects a byte array as
      * parameter carrying the payload.
+     *
      * @param componentName Destination component in remote members.
-     * @param message Payload in byte array to be delivered to the destination.
+     * @param message       Payload in byte array to be delivered to the destination.
      */
     public void sendMessage(final String componentName, final byte[] message)
-            throws GMSException
-    {
+            throws GMSException {
         final GMSMessage gMsg = new GMSMessage(componentName, message,
-                                               groupName,
-                                               getGMSContext().getStartTime());
+                groupName,
+                getGMSContext().getStartTime());
         getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg,
-                                                                    false);
+                false);
     }
 
     /**
@@ -104,17 +104,16 @@ public final class GroupHandleImpl implements GroupHandle{
      * delivered to all registered components in the target member
      * instance.
      *
-     * @param targetServerToken destination member's identification
+     * @param targetServerToken   destination member's identification
      * @param targetComponentName destination member's target component
-     * @param message Payload in byte array to be delivered to the destination.
+     * @param message             Payload in byte array to be delivered to the destination.
      */
     public void sendMessage(final String targetServerToken,
                             final String targetComponentName,
-                            final byte[] message) throws GMSException
-    {
+                            final byte[] message) throws GMSException {
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message,
-                                               groupName,
-                                               getGMSContext().getStartTime());
+                groupName,
+                getGMSContext().getStartTime());
         getGMSContext().getGroupCommunicationProvider()
                 .sendMessage(targetServerToken, gMsg, false);
 
@@ -123,6 +122,7 @@ public final class GroupHandleImpl implements GroupHandle{
     /**
      * returns a DistributedStateCache object that provides the ability to
      * set and retrieve CachedStates.
+     *
      * @return DistributedStateCache
      * @see com.sun.enterprise.ee.cms.core.DistributedStateCache
      */
@@ -138,7 +138,7 @@ public final class GroupHandleImpl implements GroupHandle{
      */
     public List<String> getCurrentCoreMembers() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
-        return  viewWindow.getCurrentCoreMembers();
+        return viewWindow.getCurrentCoreMembers();
     }
 
     /**
@@ -152,12 +152,12 @@ public final class GroupHandleImpl implements GroupHandle{
         return viewWindow.getAllCurrentMembers();
     }
 
-    public List<String> getCurrentCoreMembersWithStartTimes () {
+    public List<String> getCurrentCoreMembersWithStartTimes() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
         return viewWindow.getCurrentCoreMembersWithStartTimes();
     }
 
-    public List<String> getAllCurrentMembersWithStartTimes () {
+    public List<String> getAllCurrentMembersWithStartTimes() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
         return viewWindow.getAllCurrentMembersWithStartTimes();
     }
@@ -182,43 +182,40 @@ public final class GroupHandleImpl implements GroupHandle{
      * method below.
      * <p>Raising the fence, places an entry into a distributed datastructure
      * that is accessed by other members during their startup
+     *
      * @param componentName
      * @param failedMemberToken
      * @throws GMSException
-     *
      */
-    public void raiseFence (final String componentName,
-                            final String failedMemberToken )
-            throws GMSException
-    {
-        if(!isFenced(componentName, failedMemberToken))
-        {
+    public void raiseFence(final String componentName,
+                           final String failedMemberToken)
+            throws GMSException {
+        if (!isFenced(componentName, failedMemberToken)) {
             final DistributedStateCache dsc = getGMSContext().
-                                                getDistributedStateCache();
-            dsc.addToCache( componentName,
-                            getGMSContext().getServerIdentityToken(),
-                            failedMemberToken,
-                            setStateAndTime());
-            if(fenceForSelfRecovery(failedMemberToken)){
+                    getDistributedStateCache();
+            dsc.addToCache(componentName,
+                    getGMSContext().getServerIdentityToken(),
+                    failedMemberToken,
+                    setStateAndTime());
+            if (fenceForSelfRecovery(failedMemberToken)) {
                 saveRaisedFenceState(componentName, failedMemberToken);
             }
 
             logger.log(Level.FINE, "Fence raised for member "
-                                   +failedMemberToken + " by member "
-                                   +getGMSContext().getServerIdentityToken()
-                                   + " component "+componentName);
+                    + failedMemberToken + " by member "
+                    + getGMSContext().getServerIdentityToken()
+                    + " component " + componentName);
         }
     }
 
-    private void saveRaisedFenceState (
-            final String componentName, final String failedMemberToken )
-    {
-        selfRecoveryList.add(componentName+failedMemberToken);
+    private void saveRaisedFenceState(
+            final String componentName, final String failedMemberToken) {
+        selfRecoveryList.add(componentName + failedMemberToken);
     }
 
-    private boolean fenceForSelfRecovery ( final String failedMemberToken ) {
-        return failedMemberToken.equals( getGMSContext()
-                                         .getServerIdentityToken());
+    private boolean fenceForSelfRecovery(final String failedMemberToken) {
+        return failedMemberToken.equals(getGMSContext()
+                .getServerIdentityToken());
     }
 
     /**
@@ -229,51 +226,48 @@ public final class GroupHandleImpl implements GroupHandle{
      * directly and not as part of releasing a signal. If the operation is to
      * release a signal, then the appropriate call is to signal.release() which
      * encompasses lowering the fence and other cleanups.
-     * @param componentName
+     *
+     * @param componentName target member component
      * @param failedMemberToken
      * @throws GMSException
      */
-    public void lowerFence (final String componentName,
-                            final String failedMemberToken )
-            throws GMSException
-    {   //If there is a fence for delegated recovery  or self recovery
-        if(isFenced(componentName, failedMemberToken)
+    public void lowerFence(final String componentName,
+                           final String failedMemberToken)
+            throws GMSException {   //If there is a fence for delegated recovery  or self recovery
+        if (isFenced(componentName, failedMemberToken)
                 ||
-            selfRecoveryList.contains( componentName+failedMemberToken ))
-        {
+                selfRecoveryList.contains(componentName + failedMemberToken)) {
             final DistributedStateCache dsc = getGMSContext()
-                                                .getDistributedStateCache();
-            dsc.removeFromCache( componentName,
-                                 getGMSContext().getServerIdentityToken(),
-                                 failedMemberToken);
+                    .getDistributedStateCache();
+            dsc.removeFromCache(componentName,
+                    getGMSContext().getServerIdentityToken(),
+                    failedMemberToken);
             logger.log(Level.FINE, "Fence lowered for member "
-                                   +failedMemberToken + " by member "
-                                   +getGMSContext().getServerIdentityToken()
-                                   + " component "+componentName);
+                    + failedMemberToken + " by member "
+                    + getGMSContext().getServerIdentityToken()
+                    + " component " + componentName);
             //this removes any recovery appointments that were made but were
             // not exercised by the client thus leaving an orphan entry in
             // cache.
-            removeRecoveryAppointments(dsc.getFromCache( failedMemberToken ),
-                                       failedMemberToken);
-            selfRecoveryList.remove( componentName+failedMemberToken );
+            removeRecoveryAppointments(dsc.getFromCache(failedMemberToken),
+                    failedMemberToken);
+            selfRecoveryList.remove(componentName + failedMemberToken);
         }
     }
 
-    private void removeRecoveryAppointments (
+    private void removeRecoveryAppointments(
             final Map<GMSCacheable, Object> fromCache,
-            final String failedMemberToken) throws GMSException
-    {
+            final String failedMemberToken) throws GMSException {
         final DistributedStateCache dsc = getGMSContext()
-                                            .getDistributedStateCache();
+                .getDistributedStateCache();
 
-        for( final GMSCacheable cKey : fromCache.keySet() ) {
-            if(cKey.getKey().equals(failedMemberToken)
-                &&
-               fromCache.get(cKey).toString().startsWith( REC_APPOINTED_STATE) )
-            {
-                 dsc.removeFromCache(cKey.getComponentName(),
-                                     cKey.getMemberTokenId(),
-                                     (Serializable) cKey.getKey());
+        for (final GMSCacheable cKey : fromCache.keySet()) {
+            if (cKey.getKey().equals(failedMemberToken)
+                    &&
+                    fromCache.get(cKey).toString().startsWith(REC_APPOINTED_STATE)) {
+                dsc.removeFromCache(cKey.getComponentName(),
+                        cKey.getMemberTokenId(),
+                        (Serializable) cKey.getKey());
             }
         }
     }
@@ -301,41 +295,37 @@ public final class GroupHandleImpl implements GroupHandle{
      * @return boolean
      */
     public boolean isFenced(final String componentName,
-                            final String memberToken)
-    {
+                            final String memberToken) {
         boolean retval = false;
         final DistributedStateCache dsc = getDistributedStateCache();
         final Map<GMSCacheable, Object> entries;
         final List<String> members = getAllCurrentMembers();
         int count = 0;
-        while(members.size() > 1 && !dsc.isFirstSyncDone()){
+        while (members.size() > 1 && !dsc.isFirstSyncDone()) {
             logger.log(Level.FINE, "Waiting for DSC first Sync");
             try {
                 Thread.sleep(SYNC_WAIT);
                 count++;
                 //this is 
-                if(count > 4){
-                    forceDSCSync((DistributedStateCacheImpl)dsc);
+                if (count > 4) {
+                    forceDSCSync((DistributedStateCacheImpl) dsc);
                 }
             }
-            catch ( InterruptedException e ) {
+            catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getLocalizedMessage());
             }
         }
-        entries = dsc.getFromCache( memberToken );
-        for(GMSCacheable c : entries.keySet()){
-            if(componentName.equals(c.getComponentName()))
-            {   //if this member is being recovered by someone
-                if(memberToken.equals( c.getKey() ))
-                {   //if this is an old record of a self recovery then ignore
-                    if(!memberToken.equals(c.getMemberTokenId())) {
-                        if(((String)entries.get(c))
-                                .startsWith( REC_PROGRESS_STATE))
-                        {
+        entries = dsc.getFromCache(memberToken);
+        for (GMSCacheable c : entries.keySet()) {
+            if (componentName.equals(c.getComponentName())) {   //if this member is being recovered by someone
+                if (memberToken.equals(c.getKey())) {   //if this is an old record of a self recovery then ignore
+                    if (!memberToken.equals(c.getMemberTokenId())) {
+                        if (((String) entries.get(c))
+                                .startsWith(REC_PROGRESS_STATE)) {
                             logger.log(Level.FINER,
-                                       c.toString() + " value:"+entries.get(c));
+                                    c.toString() + " value:" + entries.get(c));
                             logger.log(Level.FINER,
-                                       "Returning true for isFenced query");
+                                    "Returning true for isFenced query");
                             retval = true;
                             break;
                         }
@@ -346,43 +336,39 @@ public final class GroupHandleImpl implements GroupHandle{
         return retval;
     }
 
-    private void forceDSCSync (final DistributedStateCacheImpl dsc)
-    {
+    private void forceDSCSync(final DistributedStateCacheImpl dsc) {
         try {
             final String token = getGMSContext().getViewWindow()
-                          .getAllCurrentMembers().get( 0 );  //TODO: Master?? BUG??
+                    .getAllCurrentMembers().get(0);  //TODO: Master?? BUG??
 
             logger.log(Level.FINE,
-                       "Force Syncing DistributedStateCache with "+ token);            
-            dsc.syncCache(token, true );
+                    "Force Syncing DistributedStateCache with " + token);
+            dsc.syncCache(token, true);
         }
-        catch ( GMSException e ) {
+        catch (GMSException e) {
             logger.log(Level.WARNING,
-                       "Force Syncing of DistributedStateCache failed:"
-                       +e.getLocalizedMessage());
+                    "Force Syncing of DistributedStateCache failed:"
+                            + e.getLocalizedMessage());
         }
-    
+
     }
 
-    public boolean isMemberAlive ( final String memberToken ) {
-        if(memberToken.equals( serverToken)){
-            return true;
-        }
-        return getAllCurrentMembers().contains( memberToken);
+    public boolean isMemberAlive(final String memberToken) {
+        return memberToken.equals(serverToken) || getAllCurrentMembers().contains(memberToken);
     }
 
-    public List<String> getSuspectList () {
+    public List<String> getSuspectList() {
         return getGMSContext().getSuspectList();
     }
 
-    public String toString(){
+    public String toString() {
         return getClass().getName();
     }
 
-    private static String setStateAndTime () {
+    private static String setStateAndTime() {
         return GroupManagementService
-                    .RECOVERY_STATE
-                    .RECOVERY_IN_PROGRESS.toString() + "|" +
+                .RECOVERY_STATE
+                .RECOVERY_IN_PROGRESS.toString() + "|" +
                 System.currentTimeMillis();
 
     }

@@ -1,25 +1,25 @@
- /*
- * The contents of this file are subject to the terms
- * of the Common Development and Distribution License
- * (the License).  You may not use this file except in
- * compliance with the License.
- *
- * You can obtain a copy of the license at
- * https://shoal.dev.java.net/public/CDDLv1.0.html
- *
- * See the License for the specific language governing
- * permissions and limitations under the License.
- *
- * When distributing Covered Code, include this CDDL
- * Header Notice in each file and include the License file
- * at
- * If applicable, add the following below the CDDL Header,
- * with the fields enclosed by brackets [] replaced by
- * you own identifying information:
- * "Portions Copyrighted [year] [name of copyright owner]"
- *
- * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
- */
+/*
+* The contents of this file are subject to the terms
+* of the Common Development and Distribution License
+* (the License).  You may not use this file except in
+* compliance with the License.
+*
+* You can obtain a copy of the license at
+* https://shoal.dev.java.net/public/CDDLv1.0.html
+*
+* See the License for the specific language governing
+* permissions and limitations under the License.
+*
+* When distributing Covered Code, include this CDDL
+* Header Notice in each file and include the License file
+* at
+* If applicable, add the following below the CDDL Header,
+* with the fields enclosed by brackets [] replaced by
+* you own identifying information:
+* "Portions Copyrighted [year] [name of copyright owner]"
+*
+* Copyright 2006 Sun Microsystems, Inc. All rights reserved.
+*/
 package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.GMSException;
@@ -48,43 +48,43 @@ import java.util.logging.Logger;
  * @version $Revision$
  */
 public class GroupCommunicationProviderImpl implements
-            GroupCommunicationProvider,
-            ClusterViewEventListener,
-    ClusterMessageListener {
+        GroupCommunicationProvider,
+        ClusterViewEventListener,
+        ClusterMessageListener {
     private ClusterManager clusterManager;
     private String certPass;
     private final String groupName;
     private GMSContext ctx;
-    private Logger logger = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER);
+    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
     public GroupCommunicationProviderImpl(final String groupName) {
-        this.groupName= groupName;
-        System.setProperty( "JXTA_MGMT_LOGGER", logger.getName());
+        this.groupName = groupName;
+        System.setProperty("JXTA_MGMT_LOGGER", logger.getName());
     }
 
     private GMSContext getGMSContext() {
-        if(ctx == null ) {
-            ctx = ( GMSContext ) GMSContextFactory.getGMSContext( groupName );
+        if (ctx == null) {
+            ctx = (GMSContext) GMSContextFactory.getGMSContext(groupName);
         }
         return ctx;
     }
 
-    public void clusterViewEvent (final ClusterViewEvent clusterViewEvent,
-                                  final ClusterView clusterView ) {
-        if(!getGMSContext().isShuttingDown()) {
+    public void clusterViewEvent(final ClusterViewEvent clusterViewEvent,
+                                 final ClusterView clusterView) {
+        if (!getGMSContext().isShuttingDown()) {
             logger.log(Level.FINER, "Received Cluster View Event...");
             logger.log(Level.FINER, clusterView.getView().toString());
             final EventPacket ePacket = new EventPacket(clusterViewEvent.getEvent(),
-                                        clusterViewEvent.getAdvertisement(),
-                                        clusterView);
+                    clusterViewEvent.getAdvertisement(),
+                    clusterView);
             final ArrayBlockingQueue<EventPacket> viewQueue = getGMSContext().getViewQueue();
             try {
                 viewQueue.put(ePacket);
-            } catch ( InterruptedException e ) {
+            } catch (InterruptedException e) {
                 //TODO: Examine all InterruptedException and thread.interrupt cases for better logging.
                 logger.log(Level.WARNING, "InteruptedException occurred when " +
-                           "putting EventPacket into viewQueue:"
-                           + e.getLocalizedMessage());
+                        "putting EventPacket into viewQueue:"
+                        + e.getLocalizedMessage());
             }
         }
     }
@@ -96,46 +96,46 @@ public class GroupCommunicationProviderImpl implements
      * by the employing application. The valid property keys must be specified
      * in a datastructure that is available to the implementation and to GMS.
      *
-     * @param memberName
-     * @param groupName
-     * @param identityMap
-     * @param configProperties
+     * @param memberName member name
+     * @param groupName group name
+     * @param identityMap valid configuration properties
+     * @param configProperties configuration properties
      */
-    public void initializeGroupCommunicationProvider (final String memberName,
-            final String groupName,
-            final Map<String, String> identityMap,
-            final Map configProperties ) {
+    public void initializeGroupCommunicationProvider(final String memberName,
+                                                     final String groupName,
+                                                     final Map<String, String> identityMap,
+                                                     final Map configProperties) {
         final List<ClusterViewEventListener> cvListeners =
-            new ArrayList<ClusterViewEventListener>();
+                new ArrayList<ClusterViewEventListener>();
         cvListeners.add(this);
         final List<ClusterMessageListener> cmListeners =
-            new ArrayList<ClusterMessageListener>();
-        cmListeners.add( this );
+                new ArrayList<ClusterMessageListener>();
+        cmListeners.add(this);
         clusterManager = new ClusterManager(groupName,
-                                            memberName,
-                                            identityMap,
-                                            configProperties,
-                                            cvListeners,//View Listener
-                                            cmListeners);//MessageListener
+                memberName,
+                identityMap,
+                configProperties,
+                cvListeners,//View Listener
+                cmListeners);//MessageListener
     }
 
     /**
      * Joins the group using semantics specified by the underlying GCP system
      */
-    public void join () {
+    public void join() {
         logger.log(Level.INFO, "Starting ClusterManager...");
         clusterManager.start();
     }
 
-    public void announceClusterShutdown () {
-        clusterManager.announceStop( true);
+    public void announceClusterShutdown() {
+        clusterManager.announceStop(true);
     }
 
     /**
      * Leaves the group as a result of a planned administrative action to
      * shutdown.
      */
-    public void leave () {
+    public void leave() {
         clusterManager.stop();
     }
 
@@ -149,55 +149,58 @@ public class GroupCommunicationProviderImpl implements
      * method.
      *
      * @param targetMemberIdentityToken the destination address in the underlying group
-     *                      communication providers' addressing semantics. If
-     *                      null, the entire group would receive this message.
-     * @param message       a Serializable object that wraps the user specified
-     *                      message in order to allow remote GMS instances to
-     *                      unpack this message appropriately.
-     * @param synchronous   setting true here will call the underlying GCP's api
-     *                      that corresponds to a synchronous message, if
-     *                      available.
+     *                                  communication providers' addressing semantics. If
+     *                                  null, the entire group would receive this message.
+     * @param message                   a Serializable object that wraps the user specified
+     *                                  message in order to allow remote GMS instances to
+     *                                  unpack this message appropriately.
+     * @param synchronous               setting true here will call the underlying GCP's api
+     *                                  that corresponds to a synchronous message, if
+     *                                  available.
      */
-    public void sendMessage (final String targetMemberIdentityToken,
-                             final Serializable message,
-                             final boolean synchronous ) throws GMSException {
+    public void sendMessage(final String targetMemberIdentityToken,
+                            final Serializable message,
+                            final boolean synchronous) throws GMSException {
         //TODO: support synchronous mode for now the boolean is ignored and message sent asynchronously
         try {
-            final ID id = ( ID ) getAddress( targetMemberIdentityToken);
-            logger.log(Level.FINER, "sending message to PeerID: "+id);
+            final ID id = getAddress(targetMemberIdentityToken);
+            logger.log(Level.FINER, "sending message to PeerID: " + id);
             clusterManager.send(id, message);
-        } catch ( IOException e ) {
+        } catch (IOException e) {
             throw new GMSException(
-                new StringBuffer()
-                .append( "IOException thrown when sending message" )
-                .toString(), e );
+                    new StringBuffer()
+                            .append("IOException thrown when sending message")
+                            .toString(), e);
         }
     }
 
     /**
      * Provides the address object corresponding to the underlying GCP's Address
      * object. In this case the jxta ID of the named peer is returned
+
+     * @param memberIdentityToken ID of the named peer
      *
      * @return Object  - representing address of a given member.
      */
-    ID getAddress ( final String memberIdentityToken ) {
-        return clusterManager.getClusterViewManager().getID( memberIdentityToken);
+    ID getAddress(final String memberIdentityToken) {
+        return clusterManager.getClusterViewManager().getID(memberIdentityToken);
     }
 
     /**
-        * Returns the logical name or identity token associated with the member
-        * address. The address is the underlying GCP's member identity semantic
-        * such as IP address and port or a UUID urn.
-        *
-        * @param address
-        * @return
-        */
-    public String getMemberIdentityToken(final Object address ) {
+     * Returns the logical name or identity token associated with the member
+     * address. The address is the underlying GCP's member identity semantic
+     * such as IP address and port or a UUID urn.
+     *
+     * @param address The address is the underlying GCP's member identity semantic
+     * such as IP address and port or a UUID urn.
+     * @return  the logical name or identity token associated with the member.
+     */
+    public String getMemberIdentityToken(final Object address) {
         String retVal = null;
-        final SystemAdvertisement adv  = clusterManager
-                                         .getSystemAdvertisementForMember((ID)address );
-        if(adv != null) {
-            retVal =  adv.getName();
+        final SystemAdvertisement adv = clusterManager
+                .getSystemAdvertisementForMember((ID) address);
+        if (adv != null) {
+            retVal = adv.getName();
         }
         return retVal;
     }
@@ -209,7 +212,7 @@ public class GroupCommunicationProviderImpl implements
      *
      * @return Object - representing this peer's address.
      */
-    public Object getLocalAddress () {
+    public Object getLocalAddress() {
         return clusterManager.getSystemAdvertisement().getID();
     }
 
@@ -218,33 +221,33 @@ public class GroupCommunicationProviderImpl implements
      *
      * @return list of current live members
      */
-    public List<String> getMembers () {//TODO: BUG. This will result in viewID increment.
+    public List<String> getMembers() {//TODO: BUG. This will result in viewID increment.
         return clusterManager.
-               getClusterViewManager().
-               getLocalView().
-               getPeerNamesInView();
+                getClusterViewManager().
+                getLocalView().
+                getPeerNamesInView();
     }
 
-    public boolean isGroupLeader () {
+    public boolean isGroupLeader() {
         return clusterManager.isMaster();
     }
 
-    public MemberStates getMemberState ( final String memberIdentityToken ) {
-        return MemberStates.valueOf( clusterManager.
-                                         getPeerState(
-                                            getAddress(memberIdentityToken)).
-                                     toUpperCase());
+    public MemberStates getMemberState(final String memberIdentityToken) {
+        return MemberStates.valueOf(clusterManager.
+                getPeerState(
+                        getAddress(memberIdentityToken)).
+                toUpperCase());
     }
 
     public void handleClusterMessage(final SystemAdvertisement adv,
-                                     final Object message ) {
+                                     final Object message) {
         try {
             logger.log(Level.FINER, "Received AppMessage Notification, placing in message queue");
-            getGMSContext().getMessageQueue().put( new MessagePacket( adv, message ));
-        } catch ( InterruptedException e ) {
-            logger.log( Level.WARNING, "Interrupted Exception occured while "+
-                        "adding message to Shoal MessageQueue:"+
-                        e.getLocalizedMessage());
+            getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
+        } catch (InterruptedException e) {
+            logger.log(Level.WARNING, "Interrupted Exception occured while " +
+                    "adding message to Shoal MessageQueue:" +
+                    e.getLocalizedMessage());
         }
     }
 }

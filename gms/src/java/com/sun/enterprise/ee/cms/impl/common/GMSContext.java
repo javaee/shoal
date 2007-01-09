@@ -53,7 +53,8 @@ public interface GMSContext {
     public String getServerIdentityToken();
 
     /**
-     * returns the name of the group this context represents
+     * returns the name of the group this context represents.
+     * @return  the name of the group.
      */
     public String getGroupName();
 

@@ -48,8 +48,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     private Router router;
 
     //Logging related stuff
-    private static final Logger logger =  GMSLogDomain.getLogger(
-                                                    GMSLogDomain.GMS_LOGGER);
+    private static final Logger logger =  GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
 
     /**
