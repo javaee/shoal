@@ -155,24 +155,22 @@ public class ClusterViewManager {
      * failure occurs.
      *
      * @param id Instance ID
+     * @return SystemAdvertisement removed  or null if not in view.
      */
-    void remove(final ID id) {
+    SystemAdvertisement remove(final ID id) {
+        SystemAdvertisement advertisement = null;
         if (containsKey(id)) {
             viewLock.lock();
-            final SystemAdvertisement advertisement = view.remove(id.toString());
+            advertisement =  view.remove(id.toString());
             viewLock.unlock();
 
             LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   "
                     + advertisement.getID().toString());
-
-            notifyListeners(
-                    new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT,
-                            advertisement));
         } else {
-            LOG.log(Level.FINEST, "Skipping removal of " + advertisement.getName()
-                    + "   " + advertisement.getID().toString()
+            LOG.log(Level.FINEST, "Skipping removal of " + id
                     + " Not in view");
         }
+        return advertisement;
     }
 
     public boolean containsKey(final ID id) {
