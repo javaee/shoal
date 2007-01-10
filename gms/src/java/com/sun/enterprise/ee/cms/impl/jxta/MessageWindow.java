@@ -63,7 +63,7 @@ public class MessageWindow implements Runnable {
     }
 
     public void run() {
-        while (!ctx.isShuttingDown()) {
+        while (!getGMSContext().isShuttingDown()) {
             try {
                 final MessagePacket packet = messageQueue.take();
                 if (packet != null) {
