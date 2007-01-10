@@ -504,7 +504,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         cacheLock.wait(timeout);
                         //LOG.log(Level.FINEST, "Analyzing cache for health...");
                         //get the copy of the states cache
-                        processCacheUpdate();
+                        if(!stop){
+                            processCacheUpdate();
+                        }
                     } catch (InterruptedException ex) {
                         LOG.log(Level.FINEST, ex.getLocalizedMessage());
                     }
