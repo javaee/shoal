@@ -504,7 +504,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         cacheLock.wait(timeout);
                         //LOG.log(Level.FINEST, "Analyzing cache for health...");
                         //get the copy of the states cache
-                        processCacheUpdate(getCacheCopy());
+                        processCacheUpdate();
                     } catch (InterruptedException ex) {
                         LOG.log(Level.FINEST, ex.getLocalizedMessage());
                     }
@@ -512,11 +512,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             }
         }
 
-        private void processCacheUpdate(
-                final Map<PeerID, HealthMessage.Entry> cacheCopy) {
+        private void processCacheUpdate() {
             int retries = 0;
             long timeDiff;
-
+            final Map<PeerID, HealthMessage.Entry> cacheCopy = getCacheCopy();
             //for each peer id
             for (HealthMessage.Entry entry : cacheCopy.values()) {
                 if (entry.state.equals(states[ALIVE])) {
