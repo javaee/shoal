@@ -62,15 +62,7 @@ public class GMSContext extends GMSContextBase {
         messageQueue = new ArrayBlockingQueue<MessagePacket>(MAX_MSGS_IN_QUEUE,
                 Boolean.TRUE);
 
-        MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
-
         gh = new GroupHandleImpl(groupName, serverToken);
-        final Thread viewWindowThread =
-                new Thread(viewWindow, "ViewWindowThread");
-        final Thread messageWindowThread =
-                new Thread(messageWindow, "MessageWindowThread");
-        messageWindowThread.start();
-        viewWindowThread.start();
         //TODO: consider untying the Dist State Cache creation from GMSContext.
         // It should be driven independent of GMSContext through a factory as
         // other impls of this interface can exist
@@ -99,6 +91,15 @@ public class GMSContext extends GMSContextBase {
     }
 
     public void join() throws GMSException {
+        final Thread viewWindowThread =
+                new Thread(viewWindow, "ViewWindowThread");
+        MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
+
+        final Thread messageWindowThread =
+                new Thread(messageWindow, "MessageWindowThread");
+        messageWindowThread.start();
+        viewWindowThread.start();
+
         final Map<String, String> idMap = new HashMap<String, String>();
         idMap.put(CustomTagNames.MEMBER_TYPE.toString(), memberType);
         idMap.put(CustomTagNames.GROUP_NAME.toString(), groupName);
