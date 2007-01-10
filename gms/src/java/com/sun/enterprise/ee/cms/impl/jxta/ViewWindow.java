@@ -30,6 +30,7 @@ import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
 import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 
 import java.io.Serializable;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
@@ -82,16 +83,13 @@ class ViewWindow implements
 
     public void run() {
 
-        while (true) {
+        while (!getGMSContext().isShuttingDown()) {
             try {
                 final EventPacket packet = viewQueue.take();
                 if (packet != null) {
                     newViewObserved(packet);
                 } else {
                     Thread.sleep(VIEW_WAIT_TIMEOUT);
-                }
-                if (ctx.isShuttingDown()) {
-                    break;
                 }
             }
             catch (InterruptedException e) {
@@ -302,8 +300,9 @@ class ViewWindow implements
                 }
             }
             //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
-            logger.log(Level.INFO, "Received PlannedShutdownEvent Announcement from Instance " + token + " with Shutdown type=" +
-                    shutdownType);
+            logger.log(Level.INFO, MessageFormat.format(
+                    "Received PlannedShutdownEvent Announcement from Instance " +
+                            "{0} with Shutdown type={1}", token, shutdownType));
             signals.add(new PlannedShutdownSignalImpl(token,
                     advert.getCustomTagValue(
                             CustomTagNames.GROUP_NAME.toString()),
@@ -349,7 +348,8 @@ class ViewWindow implements
             final String type = advert.getCustomTagValue(
                     CustomTagNames.MEMBER_TYPE.toString());
             if (type.equalsIgnoreCase(CORETYPE)) {
-                logger.log(Level.INFO, "The following member has failed: " + token);
+                logger.log(Level.INFO, MessageFormat.format("The following member" +
+                        " has failed: {0}", token));
                 generateFailureRecoverySignals(views.get(views.size() - 2),
                         token,
                         advert.getCustomTagValue(
