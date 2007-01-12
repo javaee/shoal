@@ -576,6 +576,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (madv.getID().toString().compareTo(adv.getID().toString()) >= 0) {
             LOG.log(Level.FINER, "Affirming Master Node role");
             synchronized (MASTERLOCK) {
+                //Ensure the view SeqID is incremented by 2
+                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
                 announceMaster(manager.getSystemAdvertisement());
                 MASTERLOCK.notifyAll();
             }
@@ -706,6 +708,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             clusterViewManager.setMaster(madv, false);
         } else {
             clusterViewManager.setMaster(madv, false);
+            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             // generate view change event
             if (discoveryInProgress) {
                 List<SystemAdvertisement> list = discoveryView.getView();
