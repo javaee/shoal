@@ -291,11 +291,19 @@ public class HealthMessage {
             this.timestamp = Long.toString(timestamp);
         }
 
-        @Override
+        /**
+         * {@inheritDoc}
+         */
         public boolean equals(final Object obj) {
             return  this == obj || obj != null && id.equals(obj);
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        public int hashCode() {
+            return adv.getID().hashCode() * 45191 + state.hashCode();
+        }
         public String toString() {
             return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " +
                     timestamp;
