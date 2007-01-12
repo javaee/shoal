@@ -539,6 +539,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             final ClusterViewEvent cvEvent = new ClusterViewEvent(
                     ADD_EVENT, adv);
             sendNewView(cvEvent, createMasterResponse(myID), true);
+            clusterViewManager.notifyListeners(cvEvent);
         }
         return true;
     }
