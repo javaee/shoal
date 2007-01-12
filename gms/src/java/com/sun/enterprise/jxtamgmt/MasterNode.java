@@ -95,7 +95,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String         CCNTL = "CCNTL";
     private static final String    MASTERNODE = "MN";
     private static final String   MASTERQUERY = "MQ";
-    private static final String  NODERESPONSE = "NR";
+    private static final String MASTERNODERESPONSE = "NR";
     private static final String     NAMESPACE = "MASTER";
     private static final String       NODEADV = "NAD";
     private static final String      ROUTEADV = "ROUTE";
@@ -237,10 +237,15 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @param masterID the MasterNode ID
      * @return a message containing a MasterResponse element
+     * @param announcement if true, creates an anouncement type message, otherwise it creates a response type.
      */
-    private Message createMasterResponse(final ID masterID) {
+    private Message createMasterResponse(boolean announcement, final ID masterID) {
         final Message msg = createSelfNodeAdvertisement();
-        final MessageElement el = new StringMessageElement(MASTERNODE, masterID.toString(), null);
+        String type = MASTERNODE;
+        if (!announcement) {
+            type = MASTERNODERESPONSE;
+        }
+        final MessageElement el = new StringMessageElement(type, masterID.toString(), null);
         msg.addMessageElement(NAMESPACE, el);
         LOG.log(Level.FINER, "Created a Master Response Message with masterId = " + masterID.toString());
         return msg;
@@ -389,7 +394,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
                     if (seqID <= clusterViewManager.getMasterViewID()) {
-                        LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                        LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
+                                    " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
                         return true;
                     }
                     final ClusterViewEvent cvEvent =
@@ -427,7 +433,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     boolean processMasterNodeResponse(final Message msg,
                                       final SystemAdvertisement source) throws IOException {
-        MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODERESPONSE);
+        MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERNODERESPONSE);
         if (msgElement != null) {
             LOG.log(Level.FINE, "Received a MasterNode Response from Name :" + source.getName());
             clusterViewManager.setMaster(source, true);
@@ -443,7 +449,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (msgElement != null) {
                     long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                     if (seqID <= clusterViewManager.getMasterViewID()) {
-                        LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                        LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
+                                    " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
                         return true;
                     }
                     final ClusterViewEvent cvEvent = (ClusterViewEvent)
@@ -486,7 +493,8 @@ class MasterNode implements PipeMsgListener, Runnable {
             if (msgElement != null && cvEvent != null) {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
-                    LOG.log(Level.FINER, "Received an older clusterView sequence. discarding old view");
+                    LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
+                                " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
                     return true;
                 }
                 final ArrayList<SystemAdvertisement> newLocalView =
@@ -538,7 +546,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (isMaster() && masterAssigned) {
             final ClusterViewEvent cvEvent = new ClusterViewEvent(
                     ADD_EVENT, adv);
-            sendNewView(cvEvent, createMasterResponse(myID), true);
+            sendNewView(cvEvent, createMasterResponse(false, myID), true);
             clusterViewManager.notifyListeners(cvEvent);
         }
         return true;
@@ -620,12 +628,6 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (processChangeEvent(msg, adv)) {
                     return;
                 }
-
-                // generate the node add event
-                if (isMaster() && masterAssigned) {
-                    final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-                    sendNewView(cvEvent, createMasterResponse(myID), true);
-                }
             } catch (IOException e) {
                 e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
@@ -637,7 +639,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     }
 
     private void announceMaster(SystemAdvertisement adv) {
-        final Message msg = createMasterResponse(adv.getID());
+        final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(
                 ClusterViewEvents.MASTER_CHANGE_EVENT,
                 adv);
@@ -873,11 +875,16 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param message   The message to retrieve from
      * @param nameSpace The namespace of the element to get.
      * @param elemName  Name of the Element.
-     * @return The long value
+     * @return The long value, -1 if element does not exist in the message
      * @throws NumberFormatException If the String does not contain a parsable int.
      */
     private static long getLongFromMessage(Message message, String nameSpace, String elemName) throws NumberFormatException {
-        return Long.parseLong(message.getMessageElement(nameSpace, elemName).toString());
+        String seqStr = message.getMessageElement(nameSpace, elemName).toString();
+        if (seqStr != null) {
+            return Long.parseLong(message.getMessageElement(nameSpace, elemName).toString());
+        } else {
+            return -1;
+        }
     }
 }
 
