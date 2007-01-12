@@ -723,8 +723,10 @@ class MasterNode implements PipeMsgListener, Runnable {
                 masterAssigned = true;
                 // this thread's job is done
                 LOG.log(Level.FINER, "Assuming Master Node designation ...");
-                //broadcast we are the masternode
-                announceMaster(manager.getSystemAdvertisement());
+                //broadcast we are the masternode if view size is more than one
+                if(clusterViewManager.getViewSize() > 1){
+                    announceMaster(manager.getSystemAdvertisement());
+                }
                 MASTERLOCK.notifyAll();
             }
         }
