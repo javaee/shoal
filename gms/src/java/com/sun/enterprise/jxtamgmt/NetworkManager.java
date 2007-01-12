@@ -75,9 +75,8 @@ public class NetworkManager implements RendezvousListener {
     /**
      * The infrastructure PeerGroup ID.
      */
-    public static PeerGroupID INFRAPGID;
-    private static PipeID socketID = null;
-    private static PipeID pipeID = null;
+    private final PipeID socketID;
+    private final PipeID pipeID;
 
     /**
      * JxtaSocket Pipe ID seed.
