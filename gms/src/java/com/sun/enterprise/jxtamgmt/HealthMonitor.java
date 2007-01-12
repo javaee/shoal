@@ -390,7 +390,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // create output
                 outputPipe = pipeService.createOutputPipe(pipeAdv, 1);
 
-                this.thread = new Thread(this, "HealthMonitor Thread interval : "+timeout);
+                this.thread = new Thread(this, "HealthMonitor");
                 thread.start();
                 inDoubtPeerDetector = new InDoubtPeerDetector();
                 inDoubtPeerDetector.start();
