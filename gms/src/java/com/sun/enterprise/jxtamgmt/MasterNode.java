@@ -832,7 +832,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         } catch (IOException ioe) {
             LOG.log(Level.SEVERE, "Failed to create service input pipe", ioe);
         }
-        thread = new Thread(this, "MasterNode Thread interval : " + timeout * interval);
+        thread = new Thread(this, "MasterNode");
         thread.setDaemon(true);
         thread.start();
     }
