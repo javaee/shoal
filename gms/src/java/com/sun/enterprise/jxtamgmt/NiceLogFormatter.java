@@ -175,7 +175,7 @@ public class NiceLogFormatter extends Formatter {
             recordBuffer.append(FIELD_SEPARATOR);
 
             recordBuffer.append(record.getLevel()).append(FIELD_SEPARATOR);
-            //recordBuffer.append(getProductId()).append(FIELD_SEPARATOR);
+            recordBuffer.append(getProductId()).append(FIELD_SEPARATOR);
             recordBuffer.append(record.getLoggerName()).append(FIELD_SEPARATOR);
 
             recordBuffer.append("_ThreadID").append(NV_SEPARATOR);
@@ -189,7 +189,7 @@ public class NiceLogFormatter extends Formatter {
             // included for FINER and FINEST log levels.
             Level level = record.getLevel();
             String className = record.getSourceClassName();
-            className = className.substring(className.lastIndexOf("."), className.length());
+            className = className.substring(className.lastIndexOf(".")+1, className.length());
             if (LOG_SOURCE_IN_KEY_VALUE ||
                     (level.intValue() <= Level.FINE.intValue())) {
                 recordBuffer.append("ClassName").append(NV_SEPARATOR);
