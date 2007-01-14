@@ -599,10 +599,18 @@ class ViewWindow implements
     }
 
     public List<String> getCurrentCoreMembersWithStartTimes() {
-        return currentCoreMembers;
+        List<String> ret = new ArrayList<String>();
+        synchronized(currentCoreMembers){
+            ret.addAll(currentCoreMembers);
+        }
+        return ret;
     }
 
     public List<String> getAllCurrentMembersWithStartTimes() {
-        return allCurrentMembers;
+        List<String> ret = new ArrayList<String>();
+        synchronized(allCurrentMembers){
+            ret.addAll(allCurrentMembers);
+        }
+        return ret;
     }
 }
