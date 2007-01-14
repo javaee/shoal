@@ -501,7 +501,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
                     LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
-                                " Current sequence :{2} discarding out of sequence view",
+                                " Current sequence :{1} discarding out of sequence view",
                                 seqID, clusterViewManager.getMasterViewID()));
                     return true;
                 }
@@ -869,6 +869,8 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public void viewChanged(final ClusterViewEvent event) {
         if (isMaster() && masterAssigned) {
+            //increment the view seqID
+            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             Message msg = createSelfNodeAdvertisement();
             sendNewView(null, event, msg, true);
         }
