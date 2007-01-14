@@ -79,7 +79,6 @@ class MasterNode implements PipeMsgListener, Runnable {
     private boolean discoveryInProgress = false;
     private ID myID = ID.nullID;
     private final SystemAdvertisement sysAdv;
-    private String myName = "";
     private PipeAdvertisement pipeAdv = null;
     private final PipeService pipeService;
     private final MessageElement sysAdvElement;
@@ -122,7 +121,6 @@ class MasterNode implements PipeMsgListener, Runnable {
         PeerGroup group = manager.getNetPeerGroup();
         pipeService = group.getPipeService();
         myID = group.getPeerID();
-        myName = group.getPeerName();
         this.timeout = timeout;
         this.interval = interval;
         this.manager = manager;
@@ -226,8 +224,11 @@ class MasterNode implements PipeMsgListener, Runnable {
     private Message createMasterQuery() {
         final Message msg = createSelfNodeAdvertisement();
         final MessageElement el = new StringMessageElement(MASTERQUERY, "query", null);
-
         msg.addMessageElement(NAMESPACE, el);
+        if (routeAdvElement != null && routeControl != null) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
+        }
+
         LOG.log(Level.FINER, "Created a Master Node Query Message ");
         return msg;
     }
@@ -544,8 +545,10 @@ class MasterNode implements PipeMsgListener, Runnable {
 
         LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         if (isMaster() && masterAssigned) {
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(
-                    ADD_EVENT, adv);
+            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+            if(!clusterViewManager.containsKey(adv.getID())){
+                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            }
             sendNewView(cvEvent, createMasterResponse(false, myID), true);
             clusterViewManager.notifyListeners(cvEvent);
         }
@@ -642,11 +645,11 @@ class MasterNode implements PipeMsgListener, Runnable {
 
     private void announceMaster(SystemAdvertisement adv) {
         final Message msg = createMasterResponse(true, adv.getID());
-        final ClusterViewEvent cvEvent = new ClusterViewEvent(
-                ClusterViewEvents.MASTER_CHANGE_EVENT,
-                adv);
+        final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
+        //increment seq id
         clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-        LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains {0} entries", clusterViewManager.getViewSize()));
+        LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains" +
+                "                                      {0} entries", clusterViewManager.getViewSize()));
         sendNewView(cvEvent, msg, (masterAssigned && isMaster()));
     }
 
@@ -712,12 +715,10 @@ class MasterNode implements PipeMsgListener, Runnable {
             // generate view change event
             if (discoveryInProgress) {
                 List<SystemAdvertisement> list = discoveryView.getView();
-                final ClusterViewEvent cvEvent =
-                        new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
                 clusterViewManager.addToView(list, true, cvEvent);
             } else {
-                final ClusterViewEvent cvEvent =
-                        new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
                 clusterViewManager.notifyListeners(cvEvent);
             }
 
