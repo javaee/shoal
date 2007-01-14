@@ -534,8 +534,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
         if (routeElement != null && routeControl != null) {
-            final XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
-                    msgElement.getMimeType(), msgElement.getStream());
+            XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
+                    routeElement.getMimeType(), routeElement.getStream());
             final RouteAdvertisement route = (RouteAdvertisement)
                     AdvertisementFactory.newAdvertisement(asDoc);
 
