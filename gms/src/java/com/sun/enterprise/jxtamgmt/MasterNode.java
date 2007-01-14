@@ -247,6 +247,9 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         final MessageElement el = new StringMessageElement(type, masterID.toString(), null);
         msg.addMessageElement(NAMESPACE, el);
+        if (routeAdvElement != null && routeControl != null) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
+        }
         LOG.log(Level.FINER, "Created a Master Response Message with masterId = " + masterID.toString());
         return msg;
     }
@@ -377,6 +380,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (msgElement == null) {
             return false;
         }
+        processRoute(msg);
         LOG.log(Level.FINER, "Received a Master Node Announcement from Name :" + source.getName());
         if (checkMaster(source)) {
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
@@ -435,6 +439,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERNODERESPONSE);
         if (msgElement != null) {
             LOG.log(Level.FINE, "Received a MasterNode Response from Name :" + source.getName());
+            processRoute(msg);
             clusterViewManager.setMaster(source, true);
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             masterAssigned = true;
@@ -537,15 +542,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (msgElement == null || adv == null) {
             return false;
         }
-        final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
-        if (routeElement != null && routeControl != null) {
-            XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
-                    routeElement.getMimeType(), routeElement.getStream());
-            final RouteAdvertisement route = (RouteAdvertisement)
-                    AdvertisementFactory.newAdvertisement(asDoc);
-            routeControl.addRoute(route);
-        }
-
+        processRoute(msg);
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
@@ -554,6 +551,22 @@ class MasterNode implements PipeMsgListener, Runnable {
             sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
         }
         return true;
+    }
+
+    private void processRoute(final Message msg) {
+        try {
+        final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
+        if (routeElement != null && routeControl != null) {
+            XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
+                    routeElement.getMimeType(), routeElement.getStream());
+            final RouteAdvertisement route = (RouteAdvertisement)
+                    AdvertisementFactory.newAdvertisement(asDoc);
+            routeControl.addRoute(route);
+        }
+        } catch (IOException io) {
+            io.printStackTrace();
+            LOG.log(Level.WARNING, io.getLocalizedMessage());
+        }
     }
 
     /**
