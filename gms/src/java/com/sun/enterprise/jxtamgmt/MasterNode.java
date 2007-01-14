@@ -354,8 +354,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
 
         final StructuredDocument asDoc;
-        asDoc = StructuredDocumentFactory.newStructuredDocument(
-                msgElement.getMimeType(), msgElement.getStream());
+        asDoc = StructuredDocumentFactory.newStructuredDocument(msgElement.getMimeType(), msgElement.getStream());
         final SystemAdvertisement adv = new SystemAdvertisement(asDoc);
         if (!adv.getID().equals(myID)) {
             LOG.log(Level.FINER, "Received a System advertisment Name :" + adv.getName());
@@ -440,23 +439,27 @@ class MasterNode implements PipeMsgListener, Runnable {
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             masterAssigned = true;
             if (msgElement != null) {
-                LOG.log(Level.FINER, "Received a VIEW_CHANGE_EVENT from : " + source.getName());
                 final ArrayList<SystemAdvertisement> newLocalView =
                         (ArrayList<SystemAdvertisement>)
                                 getObjectFromByteArray(msgElement);
-                LOG.log(Level.FINER, "New view contains: " + newLocalView.size());
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
                     long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                     if (seqID <= clusterViewManager.getMasterViewID()) {
-                        LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
-                                    " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
+                        LOG.log(Level.FINER,
+                                MessageFormat.format("Received an older clusterView sequence {0} of size :{1}" +
+                                    " Current sequence :{2} discarding out of sequence view",
+                                        seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
                         return true;
+                    } else {
+                        LOG.log(Level.FINER,
+                                MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}",
+                                        source.getName(), seqID, newLocalView.size()));
                     }
                     final ClusterViewEvent cvEvent = (ClusterViewEvent)
                             getObjectFromByteArray(msgElement);
                     if (!newLocalView.contains(manager.getSystemAdvertisement())) {
-                        LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
+                        LOG.log(Level.FINER, "Received view does not contain self. Publishing self");
                         sendSelfNodeAdvertisement(source.getID(), null);
                         //update the view once the the master node includes this node
                         return true;
@@ -488,21 +491,23 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (msgElement != null) {
             final ClusterViewEvent cvEvent = (ClusterViewEvent)
                     getObjectFromByteArray(msgElement);
-            LOG.log(Level.FINER, "Recevied a VIEW_CHANGE_EVENT : " + cvEvent.getEvent().toString());
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null && cvEvent != null) {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
                     LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
-                                " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
+                                " Current sequence :{2} discarding out of sequence view",
+                                seqID, clusterViewManager.getMasterViewID()));
                     return true;
                 }
                 final ArrayList<SystemAdvertisement> newLocalView =
                         (ArrayList<SystemAdvertisement>)
                                 getObjectFromByteArray(msgElement);
-                LOG.log(Level.FINER, "Recevied a new view of size :" + newLocalView.size());
+                LOG.log(Level.FINER,
+                        MessageFormat.format("Recevied a new view of size :{0}, event :{1}",
+                                newLocalView.size(), cvEvent.getEvent().toString()));
                 if (!newLocalView.contains(manager.getSystemAdvertisement())) {
-                    LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
+                    LOG.log(Level.FINER, "Received ClusterViewManager does not contain self. Publishing Self");
                     sendSelfNodeAdvertisement(source.getID(), null);
                     //update the view once the the master node includes this node
                     return true;
@@ -538,18 +543,20 @@ class MasterNode implements PipeMsgListener, Runnable {
                     routeElement.getMimeType(), routeElement.getStream());
             final RouteAdvertisement route = (RouteAdvertisement)
                     AdvertisementFactory.newAdvertisement(asDoc);
-
             routeControl.addRoute(route);
         }
 
-        LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         if (isMaster() && masterAssigned) {
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            if(!clusterViewManager.containsKey(adv.getID())){
+            LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+            if (!clusterViewManager.containsKey(adv.getID())) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
                 clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
+            } else {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                sendNewView(adv.getID(), cvEvent, createMasterResponse(false, myID), true);
             }
-            sendNewView(cvEvent, createMasterResponse(false, myID), true);
-            clusterViewManager.notifyListeners(cvEvent);
         }
         return true;
     }
@@ -649,7 +656,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
         LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains" +
                 "                                      {0} entries", clusterViewManager.getViewSize()));
-        sendNewView(cvEvent, msg, (masterAssigned && isMaster()));
+        sendNewView(null, cvEvent, msg, (masterAssigned && isMaster()));
     }
 
     /**
@@ -773,9 +780,11 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @param event       The ClusterViewEvent object containing details of the event.
      * @param msg         The message to send
+     * @param toID        receipient ID
      * @param includeView if true view will be included in the message
      */
-    void sendNewView(final ClusterViewEvent event,
+    void sendNewView(final ID toID,
+                     final ClusterViewEvent event,
                      final Message msg,
                      final boolean includeView) {
         if (includeView) {
@@ -789,7 +798,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         null);
         msg.addMessageElement(NAMESPACE, cvEvent);
         LOG.log(Level.FINER, "Sending new authoritative cluster view to group, events :" + event.getEvent().toString());
-        send(null, null, msg);
+        send(toID, null, msg);
     }
 
     /**
@@ -853,7 +862,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     public void viewChanged(final ClusterViewEvent event) {
         if (isMaster() && masterAssigned) {
             Message msg = createSelfNodeAdvertisement();
-            sendNewView(event, msg, true);
+            sendNewView(null, event, msg, true);
         }
     }
 
