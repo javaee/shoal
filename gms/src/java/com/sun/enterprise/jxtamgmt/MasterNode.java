@@ -548,15 +548,10 @@ class MasterNode implements PipeMsgListener, Runnable {
 
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            if (!clusterViewManager.containsKey(adv.getID())) {
-                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                clusterViewManager.notifyListeners(cvEvent);
-                sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
-            } else {
-                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-                sendNewView(adv.getID(), cvEvent, createMasterResponse(false, myID), true);
-            }
+            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            clusterViewManager.notifyListeners(cvEvent);
+            sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
         }
         return true;
     }
