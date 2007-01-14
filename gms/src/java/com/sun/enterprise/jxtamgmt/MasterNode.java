@@ -136,8 +136,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             RouteAdvertisement route = routeControl.getMyLocalRoute();
             if (route != null) {
                 routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
-                        (XMLDocument) manager.getSystemAdvertisement()
-                                .getDocument(MimeMediaType.XMLUTF8), null);
+                        (XMLDocument) route.getDocument(MimeMediaType.XMLUTF8), null);
             }
         }
 
