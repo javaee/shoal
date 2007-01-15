@@ -31,7 +31,10 @@ import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 
 import java.io.Serializable;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -91,28 +94,25 @@ class ViewWindow implements
                 } else {
                     Thread.sleep(VIEW_WAIT_TIMEOUT);
                 }
-            }
-            catch (InterruptedException e) {
-                logger.log(Level.WARNING,
-                        "InterruptedException while taking from ViewQueue:"
-                                + e.getLocalizedMessage());
+            } catch (InterruptedException e) {
+                logger.log(Level.WARNING, "InterruptedException while taking from ViewQueue :" + e.getLocalizedMessage());
             }
         }
     }
 
     private void newViewObserved(final EventPacket packet) {
         synchronized (views) {
-            views.add(
-                    getMemberTokens(packet)
-            );
-            if (views.size() > size) views.remove(0);
-            logger.log(Level.INFO,
-                    "Analyzing new membership snapshot received as " +
-                            "part of event : " + packet.getClusterViewEvent().toString());
+            views.add(getMemberTokens(packet));
+            if (views.size() > size) {
+                views.remove(0);
+            }
+            logger.log(Level.INFO, MessageFormat.format("Analyzing new membership snapshot received as part" +
+                    " of event : {0}", packet.getClusterViewEvent().toString()));
             Signal[] activeSignals = analyzeViewChange(packet);
 
-            if (activeSignals.length != 0)
+            if (activeSignals.length != 0) {
                 getGMSContext().getRouter().queueSignals(new SignalPacket(activeSignals));
+            }
         }
     }
 
@@ -125,7 +125,6 @@ class ViewWindow implements
         }
         final List<GMSMember> tokens = new ArrayList<GMSMember>(); // contain list of GMSMember objects.
         ClusterView view = packet.getClusterView();
-        final Iterator<SystemAdvertisement> members = view.getView().iterator();
         GMSMember member;
         SystemAdvertisement advert;
         int count = 0;
@@ -134,8 +133,8 @@ class ViewWindow implements
                         new StringBuffer()
                                 .append("GMS View Change Received: Members in view ")
                                 .append("(before change analysis) are :\n").toString());
-        while (members.hasNext()) {
-            advert = members.next();
+        for (SystemAdvertisement systemAdvertisement : view.getView()) {
+            advert = systemAdvertisement;
             member = getGMSMember(advert);
             member.setSnapShotId(view.getClusterViewId());
             sb.append(++count)
@@ -453,8 +452,7 @@ class ViewWindow implements
                             RecoveryTargetSelector.setRecoverySelectionState(
                                     getGMSContext().getServerIdentityToken(), (String) c.getKey(),
                                     getGMSContext().getGroupName());
-                        }
-                        catch (GMSException e) {
+                        } catch (GMSException e) {
                             logger.log(Level.WARNING, e.getLocalizedMessage());
                         }
                     }
@@ -508,8 +506,7 @@ class ViewWindow implements
                         Long.valueOf(advert.getCustomTagValue(
                                 CustomTagNames.START_TIME.toString())));
             }
-        }
-        catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
                     new StringBuffer().append("The SystemAdvertisement did ")
                             .append("not contain the ").append(
@@ -549,15 +546,12 @@ class ViewWindow implements
                 while (!dsc.isFirstSyncDone()) {
                     Thread.sleep(SYNCWAITMILLIS);
                 }
-            }
-            catch (GMSException e) {
+            } catch (GMSException e) {
                 logger.log(Level.WARNING, "GMSException during DSC sync" +
                         e.getLocalizedMessage());
-            }
-            catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getLocalizedMessage());
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 logger.log(Level.WARNING, e.getLocalizedMessage());
                 e.printStackTrace();
             }
@@ -600,7 +594,7 @@ class ViewWindow implements
 
     public List<String> getCurrentCoreMembersWithStartTimes() {
         List<String> ret = new ArrayList<String>();
-        synchronized(currentCoreMembers){
+        synchronized (currentCoreMembers) {
             ret.addAll(currentCoreMembers);
         }
         return ret;
@@ -608,7 +602,7 @@ class ViewWindow implements
 
     public List<String> getAllCurrentMembersWithStartTimes() {
         List<String> ret = new ArrayList<String>();
-        synchronized(allCurrentMembers){
+        synchronized (allCurrentMembers) {
             ret.addAll(allCurrentMembers);
         }
         return ret;
