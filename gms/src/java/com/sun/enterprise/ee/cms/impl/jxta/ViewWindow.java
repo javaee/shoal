@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -85,11 +86,9 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
 
         while (!getGMSContext().isShuttingDown()) {
             try {
-                final EventPacket packet = viewQueue.take();
+                final EventPacket packet = viewQueue.poll(VIEW_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
                 if (packet != null) {
                     newViewObserved(packet);
-                } else {
-                    Thread.sleep(VIEW_WAIT_TIMEOUT);
                 }
             } catch (InterruptedException e) {
                 logger.log(Level.WARNING, "InterruptedException while taking from ViewQueue :" + e.getLocalizedMessage());
