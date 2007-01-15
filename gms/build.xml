@@ -131,29 +131,30 @@
     <!-- javadoc -->
     <target name="gms-javadocs">
         <javadoc packagenames="com.sun.enterprise.ee.cms.*"
-            sourcepath="${src.dir}"
+            sourcepath="${src.dir}:${tests.dir}"
             destdir="${javadocs.dir}"
-            version="false"
+            version="true"
             use="true"
             private="false"
-            windowtitle="Group Management Service Framework"
-            doctitle="Group Management Service Framework"
+            windowtitle="Shoal Group Management Service Framework"
+            doctitle="Shoal Group Management Service Framework"
             bottom="Copyright © 2003   Copyright 2004 Sun Microsystems, Inc. All rights reserved. 
-                    SUN PROPRIETARY/CONFIDENTIAL. Use is subject to license terms." >
+                    Use is subject to license terms." >
 
             <link href="http://java.sun.com/j2se/1.5/docs/api/" />
 
-            <group title="Core Interfaces and Implementations"
-                packages="com.sun.enterprise.ee.cms.core:com.sun.enterprise.ee.cms.core.*"/>
-                
-            <group title="Lifecycle Implementation for Application Server Binding"
-                packages="com.sun.enterprise.ee.cms.lifecycle:com.sun.enterprise.ee.cms.lifecycle.*" />
+            <group title="Core Client Interfaces and Implementations"
+                packages="com.sun.enterprise.ee.cms.core:com.sun.enterprise.ee.cms.core.*, 
+                    com.sun.enterprise.ee.cms.impl.client:com.sun.enterprise.ee.cms.impl.client.*"/>
+            
+            <group title="Service Provider Interface" 
+                packages="com.sun.enterprise.ee.cms.spi:com.sun.enterprise.ee.cms.spi.*"/>
+            
+            <group title="Jxta SPI Implementation" 
+                packages="com.sun.enterprise.ee.cms.impl.jxta:com.sun.enterprise.ee.cms.impl.jxta.*"/>
 
-            <group title="Logging Implementation for Application Server Binding"
-                packages="com.sun.enterprise.ee.cms.logging:com.sun.enterprise.ee.cms.logging.*"/>
-                
             <group title="Demonstration Example"
-                packages="com.sun.enterprise.ee.cms.demos:com.sun.enterprise.ee.cms.demos.*"/>
+                packages="com.sun.enterprise.ee.cms.tests:com.sun.enterprise.ee.cms.tests.*"/>
                 
             <classpath>
                 <path refid="compile.classpath"/>              
