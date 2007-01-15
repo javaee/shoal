@@ -45,9 +45,7 @@ import java.util.logging.Logger;
  *         Date: Jun 26, 2006
  * @version $Revision$
  */
-class ViewWindow implements
-        com.sun.enterprise.ee.cms.impl.common.ViewWindow,
-        Runnable {
+class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Runnable {
     private GMSContext ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private int size = 100;  // 100 is some default.
@@ -71,8 +69,7 @@ class ViewWindow implements
     private final ArrayBlockingQueue<EventPacket> viewQueue;
     private final String groupName;
 
-    ViewWindow(final String groupName,
-               final ArrayBlockingQueue<EventPacket> viewQueue) {
+    ViewWindow(final String groupName, final ArrayBlockingQueue<EventPacket> viewQueue) {
         this.groupName = groupName;
         this.viewQueue = viewQueue;
     }
@@ -165,8 +162,7 @@ class ViewWindow implements
         return (ArrayList<GMSMember>) tokens;
     }
 
-    private GMSMember getGMSMember(
-            final SystemAdvertisement systemAdvertisement) {
+    private GMSMember getGMSMember(final SystemAdvertisement systemAdvertisement) {
         GMSMember member;
         try {
             member = new GMSMember(systemAdvertisement.getName(),
@@ -179,8 +175,7 @@ class ViewWindow implements
                                     getCustomTagValue(
                                     CustomTagNames.START_TIME
                                             .toString())));
-        }
-        catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
                     new StringBuffer()
                             .append("SystemAdvertisement did not contain one of the ")
@@ -263,7 +258,9 @@ class ViewWindow implements
     }
 
     private void determineAndAddFailureSignals(final EventPacket packet) {
-        if (views.size() < 2) return;
+        if (views.size() < 2) {
+            return;
+        }
         final List<GMSMember> oldMembership = views.get(views.size() - 2);
         String token;
         for (GMSMember member : oldMembership) {
@@ -275,8 +272,7 @@ class ViewWindow implements
     private void analyzeAndFireFailureSignals(final GMSMember member,
                                               final String token,
                                               final EventPacket packet) {
-        if (member.getMemberType().equalsIgnoreCase(CORETYPE) &&
-                !getCurrentCoreMembers().contains(token)) {
+        if (member.getMemberType().equalsIgnoreCase(CORETYPE) && !getCurrentCoreMembers().contains(token)) {
             logger.log(Level.INFO, "gms.failureEventReceived", token);
             addFailureSignals(packet);
             getGMSContext().removeFromSuspectList(token);
@@ -308,8 +304,7 @@ class ViewWindow implements
                     Long.valueOf(advert.getCustomTagValue(
                             CustomTagNames.START_TIME.toString())),
                     shutdownType));
-        }
-        catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
                     new StringBuffer().append("The SystemAdvertisement did ")
                             .append("not contain the ").append(
@@ -330,8 +325,7 @@ class ViewWindow implements
                                     CustomTagNames.GROUP_NAME.toString()),
                             Long.valueOf(advert.getCustomTagValue(
                                     CustomTagNames.START_TIME.toString()))));
-        }
-        catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
                     new StringBuffer().append("The SystemAdvertisement did ")
                             .append("not contain the ").append(
@@ -365,8 +359,7 @@ class ViewWindow implements
                                             CustomTagNames.START_TIME.toString()))));
                 }
             }
-        }
-        catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
                     new StringBuffer().append("The SystemAdvertisement did ")
                             .append("not contain the ").append(
@@ -375,18 +368,17 @@ class ViewWindow implements
         }
     }
 
-    private void generateFailureRecoverySignals(
-            final List<GMSMember> oldMembership, final String token,
-            final String groupName, final Long startTime) {
+    private void generateFailureRecoverySignals(final List<GMSMember> oldMembership,
+                                                final String token,
+                                                final String groupName,
+                                                final Long startTime) {
+
         final Router router = getGMSContext().getRouter();
         //if Recovery notification is registered then
         if (router.isFailureRecoveryAFRegistered()) {
             logger.log(Level.FINE, "Determining the recovery server..");
             //determine if we are recovery server
-            if (RecoveryTargetSelector.resolveRecoveryTarget(
-                    null,
-                    oldMembership,
-                    token, getGMSContext())) {
+            if (RecoveryTargetSelector.resolveRecoveryTarget( null, oldMembership, token, getGMSContext())) {
                 //this is a list containing failed members who were in the
                 //process of being recovered.i.e. state was RECOVERY_IN_PROGRESS
                 final List<String> recInProgressMembers =
@@ -394,8 +386,7 @@ class ViewWindow implements
                 //this is a list of failed members (who are still dead)
                 // for whom the failed member here was appointed as recovery
                 // server.
-                final List<String> recApptsHeldByFailedMember =
-                        getRecApptsHeldByFailedMember(token);
+                final List<String> recApptsHeldByFailedMember = getRecApptsHeldByFailedMember(token);
                 for (final String comp : router.getFailureRecoveryComponents()) {
                     logger.log(Level.FINE, new StringBuffer()
                             .append("adding failure recovery signal for component=")
@@ -428,13 +419,11 @@ class ViewWindow implements
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);
         for (GMSCacheable c : entries.keySet()) {
             //if this failed member was appointed for recovering someone else
-            if (token.equals(c.getMemberTokenId())
-                    && !token.equals(c.getKey())) {
+            if (token.equals(c.getMemberTokenId()) && !token.equals(c.getKey())) {
                 final Object entry = entries.get(c);
                 if (entry instanceof String) {
-                    if (((String) entry).startsWith(REC_APPOINTED_STATE)
-                            && //if the target member is already up dont include that
-                            !currentCoreMembers.contains(c.getKey())) {
+                    if (((String) entry).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(c.getKey())) {
+                        //if the target member is already up dont include that
                         logger.log(Level.FINER, new StringBuffer()
                                 .append("Failed Member ")
                                 .append(token)
@@ -467,10 +456,10 @@ class ViewWindow implements
         final List<String> tokens = new ArrayList<String>();
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);
+
         for (GMSCacheable c : entries.keySet()) {
             //if this member is recovering someone else
-            if (token.equals(c.getMemberTokenId())
-                    && !token.equals(c.getKey())) {
+            if (token.equals(c.getMemberTokenId()) && !token.equals(c.getKey())) {
                 final Object entry = entries.get(c);
                 if (entry instanceof String) {
                     if (((String) entry).startsWith(REC_PROGRESS_STATE)) {
@@ -531,8 +520,7 @@ class ViewWindow implements
         final DistributedStateCacheImpl dsc;
         // if coordinator, call dsc to sync with this member
         if (isCoordinator()) {
-            logger.log(Level.FINE, "I am coordinator, performing sync ops on "
-                    + token);
+            logger.log(Level.FINE, "I am coordinator, performing sync ops on " + token);
             try {
                 dsc = (DistributedStateCacheImpl) getGMSContext().getDistributedStateCache();
                 logger.log(Level.FINER, "got DSC ref " + dsc.toString());
