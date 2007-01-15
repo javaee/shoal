@@ -29,6 +29,7 @@ package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
+import java.text.MessageFormat;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Set;
@@ -243,8 +244,9 @@ public class Router{
     {
         FailureNotificationAction a;
         FailureNotificationSignal fns;
-        logger.log(Level.INFO,"Sending FailureNotificationSignals to register" +
-                "ed Actions. Member: "+signal.getMemberToken()+"...");
+        logger.log(Level.INFO, MessageFormat.format(
+                "Sending FailureNotificationSignals to registered Actions. " +
+                        "Member: {0}...", signal.getMemberToken()));
         synchronized(failureNotificationAF){
             for(FailureNotificationActionFactory fnaf: failureNotificationAF)
             {
@@ -259,8 +261,8 @@ public class Router{
         final FailureRecoveryAction a;
         final FailureRecoverySignal frs;
         logger.log(Level.INFO,
-               "Sending FailureRecoveryNotification to component "+
-               signal.getComponentName());
+                MessageFormat.format("Sending FailureRecoveryNotification to " +
+                        "component {0}", signal.getComponentName()));
         synchronized(failureRecoveryAF){
                 final FailureRecoveryActionFactory fraf =
                         failureRecoveryAF.get( signal.getComponentName());
@@ -274,8 +276,8 @@ public class Router{
     {
         FailureSuspectedAction a;
         FailureSuspectedSignal fss;
-        logger.log(Level.INFO,"Sending FailureSuspectedSignals to register" +
-                "ed Actions. Member:"+signal.getMemberToken()+"...");
+        logger.log(Level.INFO, MessageFormat.format("Sending FailureSuspectedSignals to " +
+                "registered Actions. Member:{0}...", signal.getMemberToken()));
         synchronized(failureSuspectedAF){
             for(FailureSuspectedActionFactory fsaf: failureSuspectedAF)
             {
@@ -321,8 +323,8 @@ public class Router{
         //that would register for join notifications.
         if(isJoinNotificationAFRegistered()){
             logger.log(Level.FINE,
-                  "Sending JoinNotificationSignals to registered Actions, Member"
-                          +signal.getMemberToken()+"...");
+                    MessageFormat.format("Sending JoinNotificationSignals to " +
+                            "registered Actions, Member {0}...", signal.getMemberToken()));
             synchronized(joinNotificationAF){
                 for(JoinNotificationActionFactory jnaf : joinNotificationAF) {
                     a = (JoinNotificationAction) jnaf.produceAction();
@@ -344,9 +346,9 @@ public class Router{
         PlannedShutdownAction a;
         PlannedShutdownSignal pss;
         logger.log(Level.INFO,
-                "Sending PlannedShutdownSignals to registered Actions "+
-                "for shutdownType "+signal.getEventSubType()+" Member: "+
-                        signal.getMemberToken()+"...");
+                MessageFormat.format("Sending PlannedShutdownSignals to " +
+                        "registered Actions for shutdownType {0} Member: {1}...",
+                        signal.getEventSubType(), signal.getMemberToken()));
         synchronized(plannedShutdownAF){
             for(PlannedShutdownActionFactory psaf : plannedShutdownAF) {
                 a = (PlannedShutdownAction) psaf.produceAction();
@@ -428,8 +430,8 @@ public class Router{
     }
 
     public Set<String> getFailureRecoveryComponents () {
-        logger.log(Level.FINEST, "Router Returning failure rec comps="+
-                                 failureRecoveryAF.keySet());
+        logger.log(Level.FINEST, MessageFormat.format("Router Returning failure " +
+                "recovery components={0}", failureRecoveryAF.keySet()));
         return failureRecoveryAF.keySet();
     }
 
