@@ -202,23 +202,22 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         //LOG.log(Level.FINEST, "Processing Health Message..");
         //discard loopback messages
         if (!hm.getSrcID().equals(myID)) {
-            for (HealthMessage.Entry entry1 : hm.getEntries()) {
-                final HealthMessage.Entry entry = entry1;
+            for (HealthMessage.Entry entry : hm.getEntries()) {
                 synchronized (cache) {
                     cache.put(entry.id, entry);
                 }
-                if (entry.state.equals(states[CLUSTERSTOPPING]) ||
-                        entry.state.equals(states[PEERSTOPPING])) {
+                if(entry.state.equals(states[PEERSTOPPING])){
+                    handlePeerStopEvent(entry.adv);
+                }
+                else if( entry.state.equals(states[CLUSTERSTOPPING])){
                     notifyLocalListeners(entry.state, entry.adv);
-
-                    if(entry.state.equals(PEERSTOPPING)){
-                        handlePeerStopEvent(entry.adv);
-                    }
-                } else if (entry.state.equals(states[INDOUBT]) ||
-                        entry.state.equals(states[DEAD])) {
+                }
+                else if (entry.state.equals(states[INDOUBT]) ||
+                    entry.state.equals(states[DEAD])) {
                     if (entry.id.equals(myID)) {
                         reportMyState(ALIVE, hm.getSrcID());
-                    } else {
+                    }
+                    else {
                         if (entry.state.equals(states[INDOUBT])) {
                             synchronized (indoubtListLock) {
                                 indoubtPeerList.add(entry.id);
@@ -253,22 +252,23 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private void handlePeerStopEvent(final SystemAdvertisement stoppingPeerAdv) {
-
-        if(masterNode.isMaster() && masterNode.isMasterAssigned()){
+        LOG.log(Level.FINEST, MessageFormat.format("Handling Peer Stop Event for peer :{0}", stoppingPeerAdv.getName()));
+        if(stoppingPeerAdv.getID().equals(masterNode.getMasterNodeID())){
+            //if masternode is resigning, remove master node from view and start discovery
+            LOG.log(Level.FINER, MessageFormat.format("Removing master node {0} " +
+                    "from view as it has stopped.", stoppingPeerAdv.getName()));
+            removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
+            masterNode.resetMaster();
+            masterNode.appointMasterNode();
+        }
+        else if(masterNode.isMaster() && masterNode.isMasterAssigned()){
             removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
             LOG.log(Level.FINE, "Announcing Peer Stop Event of " +
-                    stoppingPeerAdv.getName() + " ...");
+                    stoppingPeerAdv.getName() + " to group ...");
             final ClusterViewEvent cvEvent = new ClusterViewEvent(
                     ClusterViewEvents.PEER_STOP_EVENT, stoppingPeerAdv);
             masterNode.viewChanged(cvEvent);
         }
-        else if(stoppingPeerAdv.getID().equals(masterNode.getMasterNodeID())){
-            //if masternode is resigning, remove master node from view and start discovery
-            removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
-            masterNode.appointMasterNode();
-
-        }
-
     }
 
     private Map<PeerID, HealthMessage.Entry> getCacheCopy() {
@@ -547,7 +547,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update
             //timestamp from this peer id, by more than the
             //the specified max timeout
-            if (timeDiff > maxTime) {
+            if (timeDiff > maxTime && !stop) {
                 LOG.log(Level.FINEST, "timeDiff > maxTime");
                 if (retries >= maxRetries) {
                     if (canProcessInDoubt(entry)) {
