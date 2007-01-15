@@ -26,15 +26,6 @@
  */
 package com.sun.enterprise.ee.cms.tests;
 
-/**
- * This is an example used to demonstrate the application layer that controls the
- * lifecycle of the GMS module. It also provides an example of the actions taken
- * in response to a recover call from the GMS layer.
- * @author Shreedhar Ganapathy"
- * Date: ${DATE}
- * @version $Revision$
- */
-
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
@@ -52,6 +43,13 @@ import java.util.logging.ErrorManager;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * This is an example used to demonstrate the application layer that controls the
+ * lifecycle of the GMS module. It also provides an example of the actions taken
+ * in response to a recover call from the GMS layer.
+ * @author Shreedhar Ganapathy"
+ * @version $Revision$
+ */
 public class ApplicationServer implements Runnable{
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
