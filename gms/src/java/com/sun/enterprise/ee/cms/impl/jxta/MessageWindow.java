@@ -28,7 +28,9 @@ import com.sun.enterprise.ee.cms.impl.common.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 
+import java.text.MessageFormat;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -65,13 +67,10 @@ public class MessageWindow implements Runnable {
     public void run() {
         while (!getGMSContext().isShuttingDown()) {
             try {
-                final MessagePacket packet = messageQueue.take();
+                final MessagePacket packet = messageQueue.poll(MESSAGE_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
                 if (packet != null) {
-                    logger.log(Level.FINER,
-                            "Handling received message .... ");
+                    logger.log(Level.FINER,"Processing received message .... ");
                     newMessageReceived(packet);
-                } else {
-                    wait(MESSAGE_WAIT_TIMEOUT);
                 }
             } catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getLocalizedMessage());
@@ -93,14 +92,12 @@ public class MessageWindow implements Runnable {
     private void handleDSCMessage(final DSCMessage dMsg,
                                   final String token) {
 
-        logger.log(Level.FINER, "DSCMessageReceived:From " + token);
         final String ops = dMsg.getOperation();
-        logger.log(Level.FINER, "DSCMessageReceived:Operation=" + ops);
+        logger.log(Level.FINER, MessageFormat.format("DSCMessageReceived from :{0}, Operation :{1}", token, ops));
         final DistributedStateCacheImpl dsc =
                 (DistributedStateCacheImpl) getGMSContext().getDistributedStateCache();
         if (ops.equals(DSCMessage.OPERATION.ADD.toString())) {
-            logger.log(Level.FINER, "Adding Message: " + dMsg.getKey()
-                    + ":" + dMsg.getValue());
+            logger.log(Level.FINER, "Adding Message: " + dMsg.getKey()+ ":" + dMsg.getValue());
             dsc.addToLocalCache(dMsg.getKey(), dMsg.getValue());
         } else if (ops.equals(DSCMessage.OPERATION.REMOVE.toString())) {
             logger.log(Level.FINER, "Removing Values with Key: " + dMsg.getKey());
@@ -108,16 +105,14 @@ public class MessageWindow implements Runnable {
         } else if (ops.equals(DSCMessage.OPERATION.ADDALLLOCAL.toString())) {
             if (dMsg.isCoordinator()) {
                 try {
-                    logger.log(Level.FINER,
-                            "Syncing local cache with group ...");
+                    logger.log(Level.FINER,"Syncing local cache with group ...");
                     dsc.addAllToRemoteCache();
                     logger.log(Level.FINER, "done with local to group sync...");
                 }
                 catch (GMSException e) {
                     logger.log(Level.WARNING, e.getLocalizedMessage());
                 }
-                logger.log(Level.FINER,
-                        "adding group cache state to local cache..");
+                logger.log(Level.FINER,"adding group cache state to local cache..");
                 dsc.addAllToLocalCache(dMsg.getCache());
             }
         } else if (ops.equals(DSCMessage.OPERATION.ADDALLREMOTE.toString())) {
@@ -146,9 +141,7 @@ public class MessageWindow implements Runnable {
 
     private void writeLog(final String sender, final GMSMessage message) {
         final String localId = getGMSContext().getServerIdentityToken();
-        logger.log(Level.FINER, "Sender:" + sender + ", Receiver:" +
-                localId + ", TargetComponent:" +
-                message.getComponentName() +
-                ", Message:" + new String(message.getMessage()));
+        logger.log(Level.FINER, MessageFormat.format("Sender:{0}, Receiver :{1}, TargetComponent :{2}, Message :{3}",
+                sender, localId, message.getComponentName(), new String(message.getMessage())));
     }
 }
