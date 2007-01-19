@@ -184,5 +184,17 @@ public interface GroupHandle {
      * @return boolean
      */
     boolean isMemberAlive(String memberToken);
+
+    /**
+     * Return the leader of the group
+     * @return String representing the member identity token of the group leader
+     */
+    String getGroupLeader();
+
+    /**
+     * This is a check to find out if this peer is a group leader.
+     * @return true if this peer is the group leader
+     */
+    boolean isGroupLeader();
 }
 

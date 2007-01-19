@@ -357,6 +357,14 @@ public final class GroupHandleImpl implements GroupHandle {
         return memberToken.equals(serverToken) || getAllCurrentMembers().contains(memberToken);
     }
 
+    public String getGroupLeader() {
+        return getGMSContext().getGroupCommunicationProvider().getGroupLeader();
+    }
+
+    public boolean isGroupLeader() {
+        return getGMSContext().getGroupCommunicationProvider().isGroupLeader();
+    }
+
     public List<String> getSuspectList() {
         return getGMSContext().getSuspectList();
     }
