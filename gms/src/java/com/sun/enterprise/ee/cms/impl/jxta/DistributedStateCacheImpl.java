@@ -75,7 +75,7 @@ import java.util.logging.Logger;
  * @version $Revision$
  */
 public class DistributedStateCacheImpl implements DistributedStateCache {
-    private ConcurrentHashMap<GMSCacheable, Object> cache =
+    private final ConcurrentHashMap<GMSCacheable, Object> cache =
             new ConcurrentHashMap<GMSCacheable, Object>();
     private GMSContext ctx = null;
     //singleton in each process
@@ -281,10 +281,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         }
     }
 
-    public Map getAllCache() {
-        final Map<GMSCacheable, Object> temp =
-                new ConcurrentHashMap<GMSCacheable, Object>(cache);
-        return temp;
+    public Map<GMSCacheable, Object> getAllCache() {
+        return new ConcurrentHashMap<GMSCacheable, Object>(cache);
     }
 
     public Map<Serializable, Serializable> getFromCacheForPattern(
