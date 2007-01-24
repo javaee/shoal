@@ -405,6 +405,7 @@ public class SystemAdvertisement extends Advertisement
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean equals(final Object obj) {
         boolean retVal = false;
         if (this == obj) {
@@ -415,6 +416,22 @@ public class SystemAdvertisement extends Advertisement
         }
 
         return retVal;
+    }
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public int hashCode() {
+
+        int result = 17;
+
+        result = 37 * result + getID().hashCode();
+        String name = getName();
+
+        if (name != null) {
+            result = 37 * result + name.hashCode();
+        }
+        return result;
     }
 
     /**
