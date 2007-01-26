@@ -190,7 +190,7 @@ public class GMSFactory {
      */
     public static boolean isGMSEnabled (final String groupName) {
         final Boolean val = gmsEnabledMap.get( groupName );
-        return !(val == null || val == Boolean.FALSE);
+        return !(val == null || val.equals(Boolean.FALSE));
     }
 
     /**
