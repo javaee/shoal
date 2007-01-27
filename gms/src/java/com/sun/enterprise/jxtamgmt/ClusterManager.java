@@ -356,9 +356,7 @@ public class ClusterManager implements PipeMsgListener {
 
         if (peerid != null) {
             final OutputPipe output =
-                    pipeService.
-                            createOutputPipe(pipeAdv,
-                                    Collections.singleton(peerid), 1000);
+                    pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID)peerid), 1000);
             output.send(message);
             output.close();
         } else {

@@ -58,14 +58,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     //This is for DSC cache syncups so that member details are locally available
     //to GMS clients when they ask for it with the Join signals.
     private static final int SYNCWAITMILLIS = 7000;
-    private static final String REC_PROGRESS_STATE =
-            GroupManagementService
-                    .RECOVERY_STATE
-                    .RECOVERY_IN_PROGRESS.toString();
-    private static final String REC_APPOINTED_STATE =
-            GroupManagementService
-                    .RECOVERY_STATE
-                    .RECOVERY_SERVER_APPOINTED.toString();
+    private static final String REC_PROGRESS_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_IN_PROGRESS.toString();
+    private static final String REC_APPOINTED_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_SERVER_APPOINTED.toString();
     private static final int VIEW_WAIT_TIMEOUT = 2000;
     private final ArrayBlockingQueue<EventPacket> viewQueue;
     private final String groupName;
@@ -450,8 +444,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         return tokens;
     }
 
-    private List<String> getRecoveriesInProgressByFailedMember(
-            final String token) {
+    private List<String> getRecoveriesInProgressByFailedMember(final String token) {
         final List<String> tokens = new ArrayList<String>();
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);

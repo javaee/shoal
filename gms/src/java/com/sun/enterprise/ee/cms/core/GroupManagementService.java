@@ -168,9 +168,9 @@ public interface GroupManagementService {
      * is about to be shutdown as part of a planned shutdown operation for the
      * given shutdown type. The given shutdown type is specified by GMSConstants
      *
+
      */
     void shutdown(GMSConstants.shutdownType shutdownType);
-
     /**
      * Enables the client to update the Member Details shared datastructure
      * The implementation of this api updates an existing datastructure that is

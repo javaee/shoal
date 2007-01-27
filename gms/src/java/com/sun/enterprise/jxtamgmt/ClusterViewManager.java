@@ -86,17 +86,20 @@ public class ClusterViewManager {
     void add(final SystemAdvertisement advertisement) {
 
         viewLock.lock();
-        if (!view.containsKey(advertisement.getID().toString())) {
-            LOG.log(Level.FINER, new StringBuffer().append("Adding ")
-                    .append(advertisement.getName())
-                    .append("   ")
-                    .append(advertisement.getID().toString())
-                    .toString());
+        try {
+            if (!view.containsKey(advertisement.getID().toString())) {
+                LOG.log(Level.FINER, new StringBuffer().append("Adding ")
+                        .append(advertisement.getName())
+                        .append("   ")
+                        .append(advertisement.getID().toString())
+                        .toString());
 
-            view.put(advertisement.getID().toString(), advertisement);
-            LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
+                view.put(advertisement.getID().toString(), advertisement);
+                LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
+            }
+        } finally {
+            viewLock.unlock();
         }
-        viewLock.unlock();
     }
 
     /**
@@ -109,8 +112,11 @@ public class ClusterViewManager {
         if (!advertisement.equals(masterAdvertisement)) {
             masterAdvertisement = advertisement;
             viewLock.lock();
-            view.put(masterAdvertisement.getID().toString(), masterAdvertisement);
-            viewLock.unlock();
+            try {
+                view.put(masterAdvertisement.getID().toString(), masterAdvertisement);
+            } finally {
+                viewLock.unlock();
+            }
             if (notify) {
                 notifyListeners(new ClusterViewEvent(
                         ClusterViewEvents.MASTER_CHANGE_EVENT,
@@ -124,6 +130,7 @@ public class ClusterViewManager {
                                 .append(advertisement.getName()).append(' ')
                                 .append(advertisement.getID()).toString());
             }
+
         }
     }
 
@@ -145,8 +152,11 @@ public class ClusterViewManager {
     public SystemAdvertisement get(final ID id) {
         final SystemAdvertisement adv;
         viewLock.lock();
-        adv = view.get(id.toString());
-        viewLock.unlock();
+        try {
+            adv = view.get(id.toString());
+        } finally {
+            viewLock.unlock();
+        }
         return adv;
     }
 
@@ -161,8 +171,11 @@ public class ClusterViewManager {
         SystemAdvertisement advertisement = null;
         if (containsKey(id)) {
             viewLock.lock();
-            advertisement =  view.remove(id.toString());
-            viewLock.unlock();
+            try {
+                advertisement = view.remove(id.toString());
+            } finally {
+                viewLock.unlock();
+            }
 
             LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   "
                     + advertisement.getID().toString());
@@ -174,9 +187,13 @@ public class ClusterViewManager {
     }
 
     public boolean containsKey(final ID id) {
+        final boolean contains;
         viewLock.lock();
-        final boolean contains = view.containsKey(id.toString());
-        viewLock.unlock();
+        try {
+            contains = view.containsKey(id.toString());
+        } finally {
+            viewLock.unlock();
+        }
 
         return contains;
     }
@@ -187,9 +204,13 @@ public class ClusterViewManager {
     void reset() {
         LOG.log(Level.FINEST, "Resetting View");
         viewLock.lock();
-        view.clear();
-        view.put(advertisement.getID().toString(), advertisement);
-        viewLock.unlock();
+        try {
+            view.clear();
+
+            view.put(advertisement.getID().toString(), advertisement);
+        } finally {
+            viewLock.unlock();
+        }
     }
 
     /**
@@ -200,8 +221,11 @@ public class ClusterViewManager {
     public ClusterView getLocalView() {
         final TreeMap<String, SystemAdvertisement> temp;
         viewLock.lock();
-        temp =  (TreeMap<String, SystemAdvertisement>) view.clone();
-        viewLock.unlock();
+        try {
+            temp = (TreeMap<String, SystemAdvertisement>) view.clone();
+        } finally {
+            viewLock.unlock();
+        }
         LOG.log(Level.FINEST, "returning new ClusterView with view size:" + view.size());
         return new ClusterView(temp, viewId++);
     }
@@ -212,9 +236,14 @@ public class ClusterViewManager {
      * @return The viewSize
      */
     public int getViewSize() {
+        int size;
+
         viewLock.lock();
-        int size =  view.size();
-        viewLock.unlock();
+        try {
+            size = view.size();
+        } finally {
+            viewLock.unlock();
+        }
         return size;
     }
 
@@ -227,8 +256,11 @@ public class ClusterViewManager {
         final SystemAdvertisement adv;
         final String id = view.firstKey();
         viewLock.lock();
-        adv = view.get(id);
-        viewLock.unlock();
+        try {
+            adv = view.get(id);
+        } finally {
+            viewLock.unlock();
+        }
         LOG.log(Level.FINER,
                 new StringBuffer().append("Returning Master Candidate Node :")
                         .append(adv.getName()).append(' ').append(adv.getID())
@@ -284,14 +316,17 @@ public class ClusterViewManager {
         ID id = nameTable.get(name);
         if (id == null) {
             viewLock.lock();
-            for (final SystemAdvertisement adv : view.values()) {
-                if (adv.getName().equals(name)) {
-                    id = adv.getID();
-                    nameTable.put(name, id);
-                    break;
+            try {
+                for (final SystemAdvertisement adv : view.values()) {
+                    if (adv.getName().equals(name)) {
+                        id = adv.getID();
+                        nameTable.put(name, id);
+                        break;
+                    }
                 }
+            } finally {
+                viewLock.unlock();
             }
-            viewLock.unlock();
 
         }
         return id;
@@ -320,22 +355,25 @@ public class ClusterViewManager {
         if (authoritative) {
             boolean changed = false;
             viewLock.lock();
-            if (!newView.contains(manager.getSystemAdvertisement())) {
-                view.put(manager.getSystemAdvertisement().getID().toString(),
-                        manager.getSystemAdvertisement());
-            }
-            for (SystemAdvertisement elem : newView) {
-                LOG.log(Level.FINER,
-                        new StringBuffer().append("Adding ")
-                                .append(elem.getID()).append(" to view")
-                                .toString());
-                if (!view.containsKey(elem.getID().toString())) {
-                    changed = true;
+            try {
+                if (!newView.contains(manager.getSystemAdvertisement())) {
+                    view.put(manager.getSystemAdvertisement().getID().toString(),
+                            manager.getSystemAdvertisement());
                 }
-                // Always add the wire version of the adv
-                view.put(elem.getID().toString(), elem);
+                for (SystemAdvertisement elem : newView) {
+                    LOG.log(Level.FINER,
+                            new StringBuffer().append("Adding ")
+                                    .append(elem.getID()).append(" to view")
+                                    .toString());
+                    if (!view.containsKey(elem.getID().toString())) {
+                        changed = true;
+                    }
+                    // Always add the wire version of the adv
+                    view.put(elem.getID().toString(), elem);
+                }
+            } finally {
+                viewLock.unlock();
             }
-            viewLock.unlock();
             if (changed) {
                 //only if there are changes that we notify
                 notifyListeners(cvEvent);
@@ -358,7 +396,6 @@ public class ClusterViewManager {
         }
         notifyListeners(new ClusterViewEvent(ClusterViewEvents.IN_DOUBT_EVENT, adv));
     }
-
 
     public void setPeerStoppingState(final SystemAdvertisement adv) {
         if (adv == null) {

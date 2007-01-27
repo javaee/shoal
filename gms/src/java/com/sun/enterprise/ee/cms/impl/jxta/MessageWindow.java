@@ -51,8 +51,7 @@ public class MessageWindow implements Runnable {
     private ArrayBlockingQueue<MessagePacket> messageQueue;
     private final String groupName;
 
-    public MessageWindow(final String groupName,
-                         final ArrayBlockingQueue<MessagePacket> messageQueue) {
+    public MessageWindow(final String groupName, final ArrayBlockingQueue<MessagePacket> messageQueue) {
         this.groupName = groupName;
         this.messageQueue = messageQueue;
     }
@@ -82,6 +81,7 @@ public class MessageWindow implements Runnable {
         final Object message = packet.getMessage();
         final SystemAdvertisement adv = packet.getAdvertisement();
         final String sender = adv.getName();
+
         if (message instanceof GMSMessage) {
             handleGMSMessage((GMSMessage) message, sender);
         } else if (message instanceof DSCMessage) {
@@ -89,8 +89,7 @@ public class MessageWindow implements Runnable {
         }
     }
 
-    private void handleDSCMessage(final DSCMessage dMsg,
-                                  final String token) {
+    private void handleDSCMessage(final DSCMessage dMsg, final String token) {
 
         final String ops = dMsg.getOperation();
         logger.log(Level.FINER, MessageFormat.format("DSCMessageReceived from :{0}, Operation :{1}", token, ops));
@@ -108,8 +107,7 @@ public class MessageWindow implements Runnable {
                     logger.log(Level.FINER,"Syncing local cache with group ...");
                     dsc.addAllToRemoteCache();
                     logger.log(Level.FINER, "done with local to group sync...");
-                }
-                catch (GMSException e) {
+                } catch (GMSException e) {
                     logger.log(Level.WARNING, e.getLocalizedMessage());
                 }
                 logger.log(Level.FINER,"adding group cache state to local cache..");
@@ -123,8 +121,7 @@ public class MessageWindow implements Runnable {
         }*/
     }
 
-    private void handleGMSMessage(final GMSMessage gMsg,
-                                  final String sender) {
+    private void handleGMSMessage(final GMSMessage gMsg, final String sender) {
         if (getRouter().isMessageAFRegistered()) {
             writeLog(sender, gMsg);
             final MessageSignal ms = new MessageSignalImpl(

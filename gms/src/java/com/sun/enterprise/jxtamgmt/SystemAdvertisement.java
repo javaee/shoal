@@ -23,7 +23,15 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.*;
+import net.jxta.document.Advertisement;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.Attributable;
+import net.jxta.document.Document;
+import net.jxta.document.Element;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredTextDocument;
+import net.jxta.document.TextElement;
 import static net.jxta.document.StructuredDocumentFactory.newStructuredDocument;
 import net.jxta.id.ID;
 
@@ -34,8 +42,6 @@ import java.net.URI;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A SystemAdvertisement is described as follows <p/>
@@ -66,9 +72,8 @@ public class SystemAdvertisement extends Advertisement
     private String osname;
     private String osversion;
     private String osarch;
-    private Map<String, String> customTags = null;
+    private HashMap<String, String> customTags = null;
 
-    private static final Logger LOG = JxtaUtil.getLogger(SystemAdvertisement.class.getName());
     private static final String OSNameTag = "OSName";
     private static final String OSVersionTag = "OSVer";
     private static final String OSarchTag = "osarch";
@@ -193,6 +198,9 @@ public class SystemAdvertisement extends Advertisement
             customTags = new HashMap<String, String>();
         }
         customTags.putAll(tags);
+    }
+    public Map<String, String> getCustomTags() {
+        return (HashMap<String, String>) customTags.clone();
     }
 
     public void setCustomTag(final String tag, final String value) {
@@ -323,26 +331,30 @@ public class SystemAdvertisement extends Advertisement
     }
 
     /**
-     * Clone this advertisement
-     *
-     * @return Object an object of class SVRAdvertisement that is a
-     *         deep-enough copy of this one.
+     *  {@inheritDoc}
      */
     @Override
-    public Object clone() throws CloneNotSupportedException {
-        Object ret = null;
-        // All members are either immutable or never modified nor allowed to
-        // be modified: all accessors return clones. IDs are known to be
-        // immutable but that could change. clone() them for safety; their
-        // clone method costs nothing.
+    public SystemAdvertisement clone() throws CloneNotSupportedException {
         try {
-            ret = super.clone();
-        } catch (CloneNotSupportedException impossible) {
-            LOG.log(Level.WARNING, impossible.getLocalizedMessage());
-        }
-        return ret;
-    }
+            SystemAdvertisement likeMe = (SystemAdvertisement) super.clone();
 
+            likeMe.setID(getID());
+            likeMe.setName(getName());
+            likeMe.setOSName(getName());
+            likeMe.setOSVersion(getOSVersion());
+            likeMe.setOSArch(getOSArch());
+            likeMe.setIP(getIP());
+            likeMe.setHWArch(getHWArch());
+            likeMe.setHWVendor(getHWVendor());
+            if (customTags != null && !customTags.isEmpty()) {
+                likeMe.setCustomTags(getCustomTags());
+
+            }
+            return likeMe;
+        } catch (CloneNotSupportedException impossible) {
+            throw new Error( "Object.clone() threw CloneNotSupportedException", impossible );
+        }
+    }
     /**
      * Process an individual element from the document.
      *
