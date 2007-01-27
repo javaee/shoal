@@ -42,7 +42,6 @@ public class ClusterView {
 
     private final TreeMap<String, SystemAdvertisement> view;
     private final long viewId;
-    private SystemAdvertisement masterAdvertisement = null;
 
     /**
      * Constructs the ClusterView object with a given TreeMap containing the
@@ -69,15 +68,6 @@ public class ClusterView {
         view = new TreeMap<String, SystemAdvertisement>();
         view.put(advertisement.getID().toString(), advertisement);
         this.viewId = 0;
-    }
-
-    /**
-     * Gets the master advertisement.
-     *
-     * @return SystemAdvertisement Master system adverisement
-     */
-    public synchronized SystemAdvertisement getMaster() {
-        return masterAdvertisement;
     }
 
     /**
