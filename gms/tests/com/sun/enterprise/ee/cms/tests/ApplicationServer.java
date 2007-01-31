@@ -187,12 +187,16 @@ public class ApplicationServer implements Runnable{
         } else {
             memberType = GroupManagementService.MemberType.SPECTATOR;
         }
+        Properties p = new Properties();
+        p.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(), System.getProperty("MULTICASTADDRESS","229.9.1.1"));
+        p.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
+        p.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), "2");
 
         as = new ApplicationServer(
                 System.getProperty("INSTANCEID"),
                 System.getProperty("CLUSTERNAME"),
                 memberType,
-                null);
+                p);
 
         final Thread appServ = new Thread(as, "ApplicationServer");
         appServ.start();

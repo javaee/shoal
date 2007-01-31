@@ -121,16 +121,19 @@ public class ClusterManager implements PipeMsgListener {
         NetworkManagerRegistry.add(groupName, netManager);
         systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName,
                 identityMap);
-
-        //TODO: parameterizee the timeout from props
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
         this.clusterViewManager =
                 new ClusterViewManager(getSystemAdvertisement(), this,
                         viewListeners);
-        //TODO: parameterizee the timeouts etc. from props
-        this.masterNode = new MasterNode(this, 5000, 1);
-        //TODO: parameterizee the timeout etc. from props
-        this.healthMonitor = new HealthMonitor(this, 3000, 3, 3000);
+        this.masterNode = new MasterNode(this,
+                getDiscoveryTimeout(props),
+                1);
+        
+        this.healthMonitor = new HealthMonitor(this,
+                getFailureDetectionTimeout(props),
+                getFailureDetectionRetries(props),
+                getVerifyFailureTimeout(props));
+
         pipeService = netManager.getNetPeerGroup().getPipeService();
         myID = netManager.getNetPeerGroup().getPeerID();
         try {
@@ -145,6 +148,52 @@ public class ClusterManager implements PipeMsgListener {
         sysAdvElement = new TextDocumentMessageElement(NODEADV,
                 (XMLDocument) getSystemAdvertisement()
                         .getDocument(MimeMediaType.XMLUTF8), null);
+    }
+
+    private long getDiscoveryTimeout(Map props) {
+        long discTimeout = 5000;
+        if(props != null && !props.isEmpty()){
+            Object dt = props.get(JxtaConfigConstants.DISCOVERY_TIMEOUT.toString());
+            LOG.log(Level.INFO, "DT="+dt);
+            if(dt != null) {
+                 discTimeout = Long.parseLong((String)dt);
+            }
+        }
+        return discTimeout;
+    }
+
+    private long getFailureDetectionTimeout(Map props) {
+        long failTimeout = 3000;
+        if(props!=null && !props.isEmpty()){
+            Object ft = props.get(JxtaConfigConstants.FAILURE_DETECTION_TIMEOUT.toString());
+            if(ft !=null){
+                failTimeout = Long.parseLong((String)ft);
+            }
+        }
+        return failTimeout;
+    }
+
+    private int getFailureDetectionRetries(Map props) {
+        int failRetry = 3;
+
+        if(props!=null && !props.isEmpty()){
+            Object fr = props.get(JxtaConfigConstants.FAILURE_DETECTION_RETRIES.toString());
+            if(fr != null) {
+                failRetry = Integer.parseInt((String) fr);
+          }
+        }
+        return failRetry;
+    }
+
+    private long getVerifyFailureTimeout(Map props) {
+        long verifyTimeout = 2000;
+        if(props!=null && !props.isEmpty()){
+            Object vt = props.get(JxtaConfigConstants.FAILURE_VERIFICATION_TIMEOUT.toString());
+            if(vt != null) {
+                verifyTimeout = Long.parseLong((String) vt);
+            }
+        }
+        return verifyTimeout;
     }
 
     public void addClusteMessageListener(final ClusterMessageListener listener) {

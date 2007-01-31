@@ -98,6 +98,8 @@ public class NetworkManager implements RendezvousListener {
     private static String SESSIONQUERYSEED = PREFIX + "SESSIONQ";
 
     private static String APPSERVICESEED = "APPSERVICE";
+    private String mcastAddress;
+    private int mcastPort;
 
 
     /**
@@ -121,11 +123,11 @@ public class NetworkManager implements RendezvousListener {
         this.instanceName = instanceName;
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
-        applyPropertiesSettings(properties);
+        mcastAddress = String.valueOf(properties.get( JxtaConfigConstants.MULTICASTADDRESS.toString()));
+        mcastPort = Integer.parseInt(
+                String.valueOf(properties.get(JxtaConfigConstants.MULTICASTPORT.toString())));
     }
 
-    private void applyPropertiesSettings(final Map properties) {
-    }
 
     /**
      * Returns a SHA1 hash of string.
@@ -319,6 +321,12 @@ public class NetworkManager implements RendezvousListener {
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
         config.setInfrastructureDescription(groupName + " Infrastructure Group Name");
+        if(mcastAddress != null){
+            config.setMulticastAddress(mcastAddress);
+        }
+        if(mcastPort > 0 ){
+            config.setMulticastPort(mcastPort);
+        }
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
         //hamada: this should only be uncommented for debugging purposes only

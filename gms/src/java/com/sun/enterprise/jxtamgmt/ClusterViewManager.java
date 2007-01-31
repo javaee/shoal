@@ -32,7 +32,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * TODO: Stop should send out stop event to all members followed by notifications
+ * Manages Cluster Views and notifies cluster view listeners when cluster view
+ * changes 
  */
 public class ClusterViewManager {
     private static final Logger LOG = JxtaUtil.getLogger(ClusterViewManager.class.getName());

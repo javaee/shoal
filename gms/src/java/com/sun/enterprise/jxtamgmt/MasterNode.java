@@ -34,7 +34,6 @@ import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
-import net.jxta.peer.PeerID;
 
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -122,7 +121,9 @@ class MasterNode implements PipeMsgListener, Runnable {
         PeerGroup group = manager.getNetPeerGroup();
         pipeService = group.getPipeService();
         myID = group.getPeerID();
-        this.timeout = timeout;
+        if(timeout >0){
+            this.timeout = timeout;
+        }
         this.interval = interval;
         this.manager = manager;
         sysAdv = manager.getSystemAdvertisement();
@@ -768,7 +769,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINER, "Unicasting Message to :" + name);
-                final OutputPipe output = pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID) peerid), 1);
+                final OutputPipe output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
                 output.send(msg);
                 output.close();
             } else {
