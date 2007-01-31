@@ -142,36 +142,44 @@ public class GroupCommunicationProviderImpl implements
     /**
      * Sends a message using the underlying group communication
      * providers'(GCP's) APIs. Requires the users' message to be wrapped into a
-     * GMSMessage object. Also the destination address must be specified in the
-     * underlying GCPs' addressing object type. To facilitate easy conversion
-     * between GMS addresses and underlying GCP system, the API getAddress() is
-     * provided and implementations must provide an implementation of this
-     * method.
+     * GMSMessage object.
      *
-     * @param targetMemberIdentityToken the destination address in the underlying group
-     *                                  communication providers' addressing semantics. If
-     *                                  null, the entire group would receive this message.
-     * @param message                   a Serializable object that wraps the user specified
-     *                                  message in order to allow remote GMS instances to
-     *                                  unpack this message appropriately.
-     * @param synchronous               setting true here will call the underlying GCP's api
-     *                                  that corresponds to a synchronous message, if
-     *                                  available.
+     * @param targetMemberIdentityToken The member token string that identifies
+     *                      the target member to which this message is addressed.
+     *                      The implementation is expected to provide a mapping
+     *                      the member token to the GCP's addressing semantics.
+     *                      If null, the entire group would receive this message.
+     * @param message       a Serializable object that wraps the user specified
+     *                      message in order to allow remote GMS instances to
+     *                      unpack this message appropriately.
+     * @param synchronous   setting true here will call the underlying GCP's api
+     *                      that corresponds to a synchronous message, if
+     *                      available.
+     * @throws com.sun.enterprise.ee.cms.core.GMSException
      */
     public void sendMessage(final String targetMemberIdentityToken,
                             final Serializable message,
                             final boolean synchronous) throws GMSException {
         //TODO: support synchronous mode for now the boolean is ignored and message sent asynchronously
         try {
-            final ID id = getAddress(targetMemberIdentityToken);
-            logger.log(Level.FINER, "sending message to PeerID: " + id);
-            clusterManager.send(id, message);
+            if(targetMemberIdentityToken == null){
+                clusterManager.send(null, message);//sends to whole group
+            }
+            else {
+                final ID id = getAddress(targetMemberIdentityToken);
+                logger.log(Level.FINER, "sending message to PeerID: " + id);
+                clusterManager.send(id, message);
+            }
         } catch (IOException e) {
             throw new GMSException(
                     new StringBuffer()
                             .append("IOException thrown when sending message")
                             .toString(), e);
         }
+    }
+
+    public void sendMessage(Serializable message) throws GMSException {
+        sendMessage(null, message, false);
     }
 
     /**

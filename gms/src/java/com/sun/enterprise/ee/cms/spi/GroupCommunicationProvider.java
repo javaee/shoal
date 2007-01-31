@@ -82,15 +82,13 @@ public interface GroupCommunicationProvider {
     /**
      * Sends a message using the underlying group communication
      * providers'(GCP's) APIs. Requires the users' message to be wrapped into a
-     * GMSMessage object. Also the destination address must be specified in the
-     * underlying GCPs' addressing object type. To facilitate easy conversion
-     * between GMS addresses and underlying GCP system, the API getAddress() is
-     * provided and implementations must provide an implementation of this
-     * method.
+     * GMSMessage object. 
      *
-     * @param targetMemberIdentityToken Address the destination address in the underlying group
-     *                      communication providers' addressing semantics. If
-     *                      null, the entire group would receive this message.
+     * @param targetMemberIdentityToken The member token string that identifies
+     *                      the target member to which this message is addressed.
+     *                      The implementation is expected to provide a mapping
+     *                      the member token to the GCP's addressing semantics.
+     *                      If null, the entire group would receive this message.
      * @param message       a Serializable object that wraps the user specified
      *                      message in order to allow remote GMS instances to
      *                      unpack this message appropriately.
@@ -102,6 +100,16 @@ public interface GroupCommunicationProvider {
     void sendMessage (String targetMemberIdentityToken, Serializable message,
                       boolean synchronous )
             throws GMSException;
+
+    /**
+     * Sends a message to the entire group using the underlying group communication
+     * provider's APIs. The Serializable object here is a GMSMessage Object.
+     * @param message a Serializable object that wraps the users specified
+     * message in order to allow remote GMS instances to unpack this message
+     * appropriately
+     * @throws GMSException Underlying exception is wrapped in a GMSException
+     */
+    void sendMessage (Serializable message) throws GMSException;
 
     /**
      * returns a list of members that are currently alive in the group.
