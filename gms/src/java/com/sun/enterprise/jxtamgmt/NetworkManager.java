@@ -99,7 +99,7 @@ public class NetworkManager implements RendezvousListener {
 
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
-    private int mcastPort;
+    private int mcastPort = 0;
 
 
     /**
@@ -199,8 +199,14 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerGroupID getPeerGroupID(final String groupName) {
-        return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
+        if(mcastAddress == null && mcastPort <= 0){
+            return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
                 hash(PREFIX + groupName.toUpperCase()));
+        }
+        else {
+            return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
+                hash(PREFIX + groupName.toUpperCase() + mcastAddress + mcastPort));            
+        }
     }
 
     /**
