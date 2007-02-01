@@ -123,12 +123,21 @@ public class NetworkManager implements RendezvousListener {
         this.instanceName = instanceName;
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
-        Object ma = properties.get( JxtaConfigConstants.MULTICASTADDRESS.toString());
-        if(ma != null){
-            mcastAddress = (String)ma;
+        if(properties != null && !properties.isEmpty()){
+            Object ma = properties.get( JxtaConfigConstants.MULTICASTADDRESS.toString());
+            if(ma != null){
+                mcastAddress = (String)ma;
+            }
+            Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
+            if(mp != null){
+                if(mp instanceof String){
+                    mcastPort = Integer.parseInt((String)mp);
+                }
+                else if (mp instanceof Integer){
+                    mcastPort = (Integer) mp;
+                }
+            }
         }
-        Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
-        mcastPort = Integer.parseInt((String) mp);
     }
 
 
