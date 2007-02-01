@@ -123,9 +123,12 @@ public class NetworkManager implements RendezvousListener {
         this.instanceName = instanceName;
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
-        mcastAddress = String.valueOf(properties.get( JxtaConfigConstants.MULTICASTADDRESS.toString()));
-        mcastPort = Integer.parseInt(
-                String.valueOf(properties.get(JxtaConfigConstants.MULTICASTPORT.toString())));
+        Object ma = properties.get( JxtaConfigConstants.MULTICASTADDRESS.toString());
+        if(ma != null){
+            mcastAddress = (String)ma;
+        }
+        Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
+        mcastPort = Integer.parseInt((String) mp);
     }
 
 
@@ -303,7 +306,6 @@ public class NetworkManager implements RendezvousListener {
      * Creates and starts the JXTA NetPeerGroup using a platform configuration
      * template. This class also registers a listener for rendezvous events
      *
-     * @throws PeerGroupException Description of the Exception
      * @throws IOException        Description of the Exception
      */
     public synchronized void start() throws PeerGroupException, IOException {
