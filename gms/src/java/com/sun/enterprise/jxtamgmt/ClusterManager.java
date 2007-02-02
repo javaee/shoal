@@ -72,6 +72,7 @@ public class ClusterManager implements PipeMsgListener {
     private PeerID myID;
     private static final String APPMESSAGE = "APPMESSAGE";
     private List<ClusterMessageListener> cmListeners;
+    private boolean stopping = false;
 
     /**
      * The ClusterManager is created using the instanceName,
@@ -278,6 +279,7 @@ public class ClusterManager implements PipeMsgListener {
     public synchronized void stop() {
         if (!stopped) {
             announceStop(false);
+            stopping = true;
             outputPipe.close();
             inputPipe.close();
             healthMonitor.stop();
@@ -394,26 +396,28 @@ public class ClusterManager implements PipeMsgListener {
      * @throws java.io.IOException if an io error occurs
      */
     public void send(final ID peerid, final Serializable msg) throws IOException {
-        final Message message = new Message();
-        message.addMessageElement(NAMESPACE, sysAdvElement);
-        final ByteArrayMessageElement bame =
+        if(!stopping) {
+            final Message message = new Message();
+            message.addMessageElement(NAMESPACE, sysAdvElement);
+            final ByteArrayMessageElement bame =
                 new ByteArrayMessageElement(APPMESSAGE,
                         MimeMediaType.AOS,
                         JxtaUtil.createByteArrayFromObject(msg),
                         null);
-        message.addMessageElement(NAMESPACE, bame);
+            message.addMessageElement(NAMESPACE, bame);
 
-        if (peerid != null) {
-            final OutputPipe output =
-                    pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID)peerid), 1000);
-            output.send(message);
-            output.close();
-        } else {
-            // multicast
-            LOG.log(Level.FINER, "Broadcasting Message");
-            outputPipe.send(message);
+            if (peerid != null) {
+                final OutputPipe output =
+                        pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID)peerid), 1000);
+                output.send(message);
+                output.close();
+            } else {
+                // multicast
+                LOG.log(Level.FINER, "Broadcasting Message");
+                outputPipe.send(message);
+            }
+            //JxtaUtil.printMessageStats(message, true);
         }
-        //JxtaUtil.printMessageStats(message, true);
     }
 
 
@@ -441,7 +445,7 @@ public class ClusterManager implements PipeMsgListener {
      * {@inheritDoc}
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
-        if (started) {
+        if (started && !stopping) {
             final Message msg;
             MessageElement msgElement;
             // grab the message from the event
