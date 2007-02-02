@@ -137,23 +137,6 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         addToRemoteCache(cKey, state);
     }
 
-    public void addToCache(final String componentName,
-                           final String memberTokenId,
-                           final Serializable key,
-                           final byte[] state,
-                           final List<String> targetReplicantMembers)
-            throws GMSException {
-        logger.log(Level.FINER, "Adding to DSC by local Member:" + memberTokenId +
-                ",Component:" + componentName + ",key:" + key +
-                ",State:" + state +
-                ", Replicants:" + targetReplicantMembers.toString());
-        final GMSCacheable cKey = createCompositeKey(componentName,
-                memberTokenId,
-                key);
-        addToLocalCache(cKey, state);
-        addToReplicants(cKey, state, targetReplicantMembers);
-        addToRemoteCache(cKey, targetReplicantMembers);
-    }
 
     public void addToLocalCache(
             final String componentName, final String memberTokenId,
@@ -182,6 +165,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
                                 final Object state) {
         cKey = getTrueKey(cKey);
         cache.put(cKey, state);
+        printDSCContents();
     }
 
     private void printDSCContents () {
@@ -215,19 +199,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             throws GMSException {
         final DSCMessage msg = new DSCMessage(cKey, state,
                 DSCMessage.OPERATION.ADD.toString());
-        final List<String> members = getGMSContext().getViewWindow().getAllCurrentMembers();
 
-        sendMessage(members, msg);
-    }
-
-    private void addToReplicants(final GMSCacheable cKey,
-                                 final Object state,
-                                 final List<String> targetReplicantMembers)
-            throws GMSException {
-        final DSCMessage msg = new DSCMessage(cKey, state,
-                DSCMessage.OPERATION.ADD.toString());
-        sendMessage(targetReplicantMembers, msg);
-
+        sendMessage(null, msg);
     }
 
     /*
@@ -253,8 +226,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         cKey = getTrueKey(cKey);
         final DSCMessage msg = new DSCMessage(cKey, null,
                 DSCMessage.OPERATION.REMOVE.toString());
-        final List<String> members = getGMSContext().getViewWindow().getAllCurrentMembers();
-        sendMessage(members, msg);
+        sendMessage(null, msg);
     }
 
     /*
@@ -394,10 +366,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         final DSCMessage msg = new DSCMessage(cache,
                 DSCMessage.OPERATION.ADDALLREMOTE.toString(),
                 false);
-        final List<String> members = getGMSContext().getViewWindow()
-                .getAllCurrentMembers();
-
-        sendMessage(members, msg);
+        sendMessage(null, msg);
     }
 
     /**
@@ -459,16 +428,6 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             final String componentName, final String memberTokenId,
             final Object key) {
         return new GMSCacheable(componentName, memberTokenId, key);
-    }
-
-    private synchronized void sendMessage(final List<String> members,
-                                          final DSCMessage msg)
-            throws GMSException {
-        if (members != null && !members.isEmpty()) {
-            for (String member : members) {
-                sendMessage(member, msg);
-            }
-        }
     }
 
     private synchronized void sendMessage(final String member,
