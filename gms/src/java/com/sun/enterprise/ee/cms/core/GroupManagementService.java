@@ -164,6 +164,12 @@ public interface GroupManagementService {
     GroupHandle getGroupHandle();
 
     /**
+     * Invokes the underlying group communication library's group creation and joining operations.
+     * @throws GMSException wraps any underlying exception that causes join to not occur
+     */
+    void join() throws GMSException;
+    
+    /**
      * Sends a shutdown command to the GMS indicating that the parent thread
      * is about to be shutdown as part of a planned shutdown operation for the
      * given shutdown type. The given shutdown type is specified by GMSConstants

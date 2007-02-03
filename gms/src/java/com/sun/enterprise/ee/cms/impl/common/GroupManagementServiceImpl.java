@@ -87,7 +87,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * To add MessageActionFactory instance, use the method
      * addActionFactory(MessageActionFactory maf, String componentName);
      *
-     * @param failureNotificationActionFactory 
+     * @param failureNotificationActionFactory   implementation of this interface
      *
      */
     public void addActionFactory(final FailureNotificationActionFactory failureNotificationActionFactory) {
@@ -98,8 +98,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * Registers a FailureRecoveryActionFactory instance.
      * To add MessageActionFactory instance, use the method
      * addActionFactory(MessageActionFactory maf, String componentName);
-     * @param componentName
-     * @param failureRecoveryActionFactory
+     * @param componentName   name of component
+     * @param failureRecoveryActionFactory  implmentation of this interface
      */
     public void addActionFactory(final String componentName,
                          final FailureRecoveryActionFactory failureRecoveryActionFactory) {
@@ -111,7 +111,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * To add MessageActionFactory instance, use the method
      * addActionFactory(MessageActionFactory maf, String componentName);
      *
-     * @param joinNotificationActionFactory
+     * @param joinNotificationActionFactory   implementation of this interface
      */
     public void addActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
         router.addDestination(joinNotificationActionFactory);
@@ -122,7 +122,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * To add MessageActionFactory instance, use the method
      * addActionFactory(MessageActionFactory maf, String componentName);
      *
-     * @param plannedShutdownActionFactory
+     * @param plannedShutdownActionFactory implementation of this interface
      */
     public void addActionFactory(final PlannedShutdownActionFactory plannedShutdownActionFactory) {
         router.addDestination(plannedShutdownActionFactory);
@@ -131,8 +131,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     /**
      * Registers a MessageActionFactory instance for the specified component
      * name.
-     * @param messageActionFactory
-     * @param componentName
+     * @param messageActionFactory implementation of this interface
+     * @param componentName name of component to identify target component for message delivery
      */
     public void addActionFactory(final MessageActionFactory messageActionFactory,
                                  final String componentName)
@@ -151,7 +151,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * use the method:
      * removeActionFactory(String componentName);
      *
-     * @param failureNotificationActionFactory
+     * @param failureNotificationActionFactory  implementation of this interface
      *
      */
     public void removeActionFactory(final FailureNotificationActionFactory failureNotificationActionFactory) {
@@ -163,7 +163,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * To remove a MessageActionFactory for a specific component,
      * use the method:
      * removeActionFactory(String componentName);
-     * @param componentName
+     * @param componentName name of component
      */
     public void removeFailureRecoveryActionFactory(final String componentName) {
         router.removeFailureRecoveryAFDestination( componentName );
@@ -181,7 +181,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * use the method:
      * removeActionFactory(String componentName);
      *
-     * @param joinNotificationActionFactory
+     * @param joinNotificationActionFactory implementation of this interface
      */
     public void removeActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
         router.removeDestination(joinNotificationActionFactory);
@@ -193,7 +193,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * use the method:
      * removeActionFactory(String componentName);
      *
-     * @param plannedShutdownActionFactory
+     * @param plannedShutdownActionFactory implementation of this interface
      */
     public void removeActionFactory(final PlannedShutdownActionFactory plannedShutdownActionFactory) {
         router.removeDestination(plannedShutdownActionFactory);
@@ -202,7 +202,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     /**
      * Removes a MessageActionFactory instance belonging to the
      * specified component
-     * @param componentName
+     * @param componentName    name of component
      */
     public void removeMessageActionFactory(final String componentName)
     {
@@ -279,7 +279,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * that constitute data pertaining to this member's details
      * @param serverToken - member token id for this member.
      * @param keyValuePairs - a Map containing key-value pairs
-     * @throws com.sun.enterprise.ee.cms.core.GMSException
+     * @throws com.sun.enterprise.ee.cms.core.GMSException wraps underlying exception that caused adding of member details to fail.
      */
     public void setMemberDetails ( final String serverToken,
                   final Map<? extends Object, ? extends Object> keyValuePairs)
@@ -294,7 +294,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         }
     }
 
-    private void join() throws GMSException {
+    public void join() throws GMSException {
         logger.log(Level.FINE, "Connecting to group......");
         ctx.join();
     }
@@ -318,7 +318,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
 
     /**
      * This method is used to announce that the group is about to be shutdown.
-     * @param groupName
+     * @param groupName name of group being shutdown.
      */
     public void announceGroupShutdown ( final String groupName,
                             final GMSConstants.shutdownState shutdownState) {
