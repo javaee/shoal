@@ -57,7 +57,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private static final String CORETYPE = "CORE";
     //This is for DSC cache syncups so that member details are locally available
     //to GMS clients when they ask for it with the Join signals.
-    private static final int SYNCWAITMILLIS = 7000;
+    private static final int SYNCWAITMILLIS = 3000;
     private static final String REC_PROGRESS_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_IN_PROGRESS.toString();
     private static final String REC_APPOINTED_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_SERVER_APPOINTED.toString();
     private static final int VIEW_WAIT_TIMEOUT = 2000;
