@@ -155,7 +155,6 @@ public class ClusterManager implements PipeMsgListener {
         long discTimeout = 5000;
         if(props != null && !props.isEmpty()){
             Object dt = props.get(JxtaConfigConstants.DISCOVERY_TIMEOUT.toString());
-            LOG.log(Level.INFO, "DT="+dt);
             if(dt != null) {
                  discTimeout = Long.parseLong((String)dt);
             }
