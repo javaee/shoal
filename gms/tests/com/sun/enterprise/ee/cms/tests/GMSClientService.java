@@ -96,7 +96,7 @@ public class GMSClientService implements Runnable, CallBack{
         logger.log(Level.INFO, serviceName+":"+memberToken+
                                ": is not fenced now, starting GMSclient:"+
                                serviceName);
-        //final Thread thisThread = currentThread();
+        //final Thread thisThread = Thread.currentThread();
         logger.log(Level.INFO, "DUMPING:"+
                    gms.getAllMemberDetails(IIOP_MEMBER_DETAILS_KEY));
         //if this client is being stopped by the parent thread through call
@@ -107,16 +107,16 @@ public class GMSClientService implements Runnable, CallBack{
                 sleep(10000);
                 if(sendMessages)
                 {
-                    //logger.log(Level.INFO,"Sending 10 messages");
+                    logger.log(Level.INFO,"Sending 10 messages");
                     for(int i=1; i<=10; i++){
-                        //try {
-                           //gms.getGroupHandle().sendMessage(serviceName,
-                             //           new String("Message "+ i + " from "+ serviceName)
-                              //          .getBytes());
-                        //} catch (GMSException e) {
-                          //  logger.log(Level.INFO, e.getMessage());
-                           // break;
-                        //}
+                        try {
+                           gms.getGroupHandle().getDistributedStateCache()
+                                   .addToCache(serviceName,memberToken, "Message "+i,
+                                   MessageFormat.format("Message {0} from {1}", i, serviceName));
+                        } catch (GMSException e) {
+                            logger.log(Level.INFO, e.getMessage());
+                            break;
+                        }
                     }
                 }
             } catch (InterruptedException e) {
