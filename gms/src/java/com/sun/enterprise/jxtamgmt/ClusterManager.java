@@ -58,6 +58,7 @@ public class ClusterManager implements PipeMsgListener {
     private String instanceName = null;
     private boolean started = false;
     private boolean stopped = true;
+    private boolean loopbackMessages = false;
     private final String closeLock = new String("closeLock");
     private SystemAdvertisement systemAdv = null;
 
@@ -108,6 +109,7 @@ public class ClusterManager implements PipeMsgListener {
                           final List<ClusterMessageListener> messageListeners) {
         this.groupName = groupName;
         this.instanceName = instanceName;
+        this.loopbackMessages = isLoopBackEnabled(props);
         //TODO: ability to specify additional rendezvous and also bootstrap a default rendezvous
         //TODO: revisit and document auto composition of transports
         this.netManager = new NetworkManager(groupName, instanceName, props);
@@ -149,6 +151,17 @@ public class ClusterManager implements PipeMsgListener {
         sysAdvElement = new TextDocumentMessageElement(NODEADV,
                 (XMLDocument) getSystemAdvertisement()
                         .getDocument(MimeMediaType.XMLUTF8), null);
+    }
+
+    private boolean isLoopBackEnabled(final Map props) {
+        boolean loopback = false;
+        if(props != null && !props.isEmpty()){
+            Object lp = props.get(JxtaConfigConstants.LOOPBACK.toString());
+            if(lp != null ){
+                loopback = Boolean.parseBoolean((String)lp);
+            }
+        }
+        return loopback;
     }
 
     private long getDiscoveryTimeout(Map props) {
@@ -467,9 +480,11 @@ public class ClusterManager implements PipeMsgListener {
                 final StructuredDocument asDoc = StructuredDocumentFactory.newStructuredDocument(msgElement.getMimeType(), msgElement.getStream());
                 adv = new SystemAdvertisement(asDoc);
                 final PeerID srcPeerID = (PeerID) adv.getID();
-                if (srcPeerID.equals(myID)) {
-                    LOG.log(Level.FINEST, "CLUSTERMANAGER:Discarding loopback message");
-                    return;
+                if(!loopbackMessages) {
+                    if (srcPeerID.equals(myID)) {
+                        LOG.log(Level.FINEST, "CLUSTERMANAGER:Discarding loopback message");
+                        return;
+                    }
                 }
 
                 msgElement = msg.getMessageElement(NAMESPACE, APPMESSAGE);
