@@ -191,6 +191,8 @@ public class ApplicationServer implements Runnable{
         p.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(), System.getProperty("MULTICASTADDRESS","229.9.1.1"));
         p.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
         p.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), "2");
+        //Uncomment this to receive loop back messages
+        //p.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
 
         as = new ApplicationServer(
                 System.getProperty("INSTANCEID"),
