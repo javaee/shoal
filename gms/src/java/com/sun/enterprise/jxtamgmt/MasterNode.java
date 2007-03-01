@@ -107,7 +107,9 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String CCNTL = "CCNTL";
     private static final String MASTERNODE = "MN";
     private static final String MASTERQUERY = "MQ";
-    private static final String MASTERNODERESPONSE = "NR";
+    private static final String NODEQUERY = "NQ";
+    private static final String MASTERNODERESPONSE = "MR";
+    private static final String NODERESPONSE = "NR";
     private static final String NAMESPACE = "MASTER";
     private static final String NODEADV = "NAD";
     private static final String ROUTEADV = "ROUTE";
@@ -256,10 +258,27 @@ class MasterNode implements PipeMsgListener, Runnable {
         return msg;
     }
 
+        /**
+     * Creates a Node Query Message
+     *
+     * @return a message containing a node query
+     */
+    private Message createNodeQuery() {
+        final Message msg = createSelfNodeAdvertisement();
+        final MessageElement el = new StringMessageElement(NODEQUERY, "nodequery", null);
+        msg.addMessageElement(NAMESPACE, el);
+        if (routeAdvElement != null && routeControl != null) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
+        }
+
+        LOG.log(Level.FINER, "Created a Node Query Message ");
+        return msg;
+    }
+
     /**
      * Creates a Master Response Message
      *
-     * @param masterID     the MasterNode ID
+     * @param masterID     the MasterNode ID                              3
      * @param announcement if true, creates an anouncement type message, otherwise it creates a response type.
      * @return a message containing a MasterResponse element
      */
@@ -576,6 +595,31 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         return true;
     }
+    /**
+     * Processes a Masternode Query message. This results in a master node
+     * response if this node is a master node.
+     *
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
+     * @return true if the message is a query message
+     * @throws IOException if and io error occurs
+     */
+    boolean processNodeQuery(final Message msg,
+                             final SystemAdvertisement adv) throws IOException {
+        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEQUERY);
+
+        if (msgElement == null || adv == null) {
+            return false;
+        }
+        processRoute(msg);
+        LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+        final Message response = createSelfNodeAdvertisement();
+        final MessageElement el = new StringMessageElement(NODERESPONSE, "nodequery", null);
+        msg.addMessageElement(NAMESPACE, el);
+        LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
+        send(adv.getID(), null, response);
+        return true;
+    }
 
     private void processRoute(final Message msg) {
         try {
@@ -627,6 +671,17 @@ class MasterNode implements PipeMsgListener, Runnable {
             clusterViewManager.setMaster(adv, true);
         }
         return true;
+    }
+
+    /**
+     * Probes a node. Used when a node does not exist in local view
+     * @param id node ID
+     * @throws IOException if an io error occurs sending the message
+     */
+    void probeNode(final ID id) throws IOException {
+        if (isMaster() && masterAssigned) {
+            send(id, null, createNodeQuery());
+        }
     }
 
     /**

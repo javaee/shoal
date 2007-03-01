@@ -89,13 +89,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private InDoubtPeerDetector inDoubtPeerDetector;
     private String[] states = {"starting", "started", "alive",
             "clusterstopping", "peerstopping",
-            "stopped", "dead", "indoubt"};
-    private static final byte ALIVE = 2;
-    private static final byte CLUSTERSTOPPING = 3;
-    private static final byte PEERSTOPPING = 4;
-    private static final byte STOPPED = 5;
-    private static final byte DEAD = 6;
-    private static final byte INDOUBT = 7;
+            "stopped", "dead", "indoubt", "unknown"};
+    private static final short ALIVE = 2;
+    private static final short CLUSTERSTOPPING = 4;
+    private static final short PEERSTOPPING = 8;
+    private static final short STOPPED = 16;
+    private static final short DEAD = 32;
+    private static final short INDOUBT = 64;
+    private static final short UNK = 128;
     private static final String HEALTHM = "HM";
     private static final String NAMESPACE = "HEALTH";
     private static final String cacheLock = "cacheLock";
@@ -135,11 +136,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param state member state
      * @return a Message containing this node's state
      */
-    private Message createHealthMessage(final byte state) {
+    private Message createHealthMessage(final short state) {
         return createMessage(state, HEALTHM, manager.getSystemAdvertisement());
     }
 
-    private Message createMessage(final byte state, final String tag,
+    private Message createMessage(final short state, final String tag,
                                   final SystemAdvertisement adv) {
         final Message msg = new Message();
         final HealthMessage hm = new HealthMessage();
@@ -303,7 +304,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      *              ALIVE|SLEEP|HIBERNATING|SHUTDOWN|DEAD
      * @param id    destination node ID, if null broadcast to group
      */
-    public void reportMyState(final byte state, final PeerID id) {
+    public void reportMyState(final short state, final PeerID id) {
         if (state == ALIVE) {
             send(id, getAliveMessage());
         } else {
@@ -311,7 +312,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    void reportOtherPeerState(final byte state, final SystemAdvertisement adv) {
+    void reportOtherPeerState(final short state, final SystemAdvertisement adv) {
         final Message msg = createMessage(state, HEALTHM, adv);
         LOG.log(Level.FINEST,
                 MessageFormat.format("Reporting {0} healthstate as {1}",
@@ -467,7 +468,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     public String getState(final ID id) {
-        return cache.get(id).state;
+        if (cache.containsKey(id)) {
+            return cache.get(id).state;
+        } else {
+            //todo if we had more than an ID we could have notified MasterNode of the hole
+
+            try {
+                masterNode.probeNode(id);
+            } catch (IOException e) {
+               //ignored
+            }
+            return states[UNK];
+        }
     }
 
     /**
@@ -700,7 +712,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    private void removeMasterAdv(ID id, byte state) {
+    private void removeMasterAdv(ID id, short state) {
         SystemAdvertisement ad = manager.getClusterViewManager().remove(id);
         switch (state) {
             case DEAD:

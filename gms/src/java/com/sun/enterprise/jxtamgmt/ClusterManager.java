@@ -24,7 +24,11 @@
 package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.ByteArrayMessageElement;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
@@ -33,14 +37,22 @@ import net.jxta.exception.PeerGroupException;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -131,7 +143,7 @@ public class ClusterManager implements PipeMsgListener {
         this.masterNode = new MasterNode(this,
                 getDiscoveryTimeout(props),
                 1);
-        
+
         this.healthMonitor = new HealthMonitor(this,
                 getFailureDetectionTimeout(props),
                 getFailureDetectionRetries(props),
@@ -155,10 +167,10 @@ public class ClusterManager implements PipeMsgListener {
 
     private boolean isLoopBackEnabled(final Map props) {
         boolean loopback = false;
-        if(props != null && !props.isEmpty()){
+        if (props != null && !props.isEmpty()) {
             Object lp = props.get(JxtaConfigConstants.LOOPBACK.toString());
-            if(lp != null ){
-                loopback = Boolean.parseBoolean((String)lp);
+            if (lp != null) {
+                loopback = Boolean.parseBoolean((String) lp);
             }
         }
         return loopback;
@@ -166,10 +178,10 @@ public class ClusterManager implements PipeMsgListener {
 
     private long getDiscoveryTimeout(Map props) {
         long discTimeout = 5000;
-        if(props != null && !props.isEmpty()){
+        if (props != null && !props.isEmpty()) {
             Object dt = props.get(JxtaConfigConstants.DISCOVERY_TIMEOUT.toString());
-            if(dt != null) {
-                 discTimeout = Long.parseLong((String)dt);
+            if (dt != null) {
+                discTimeout = Long.parseLong((String) dt);
             }
         }
         return discTimeout;
@@ -177,10 +189,10 @@ public class ClusterManager implements PipeMsgListener {
 
     private long getFailureDetectionTimeout(Map props) {
         long failTimeout = 3000;
-        if(props!=null && !props.isEmpty()){
+        if (props != null && !props.isEmpty()) {
             Object ft = props.get(JxtaConfigConstants.FAILURE_DETECTION_TIMEOUT.toString());
-            if(ft !=null){
-                failTimeout = Long.parseLong((String)ft);
+            if (ft != null) {
+                failTimeout = Long.parseLong((String) ft);
             }
         }
         return failTimeout;
@@ -189,20 +201,20 @@ public class ClusterManager implements PipeMsgListener {
     private int getFailureDetectionRetries(Map props) {
         int failRetry = 3;
 
-        if(props!=null && !props.isEmpty()){
+        if (props != null && !props.isEmpty()) {
             Object fr = props.get(JxtaConfigConstants.FAILURE_DETECTION_RETRIES.toString());
-            if(fr != null) {
+            if (fr != null) {
                 failRetry = Integer.parseInt((String) fr);
-          }
+            }
         }
         return failRetry;
     }
 
     private long getVerifyFailureTimeout(Map props) {
         long verifyTimeout = 2000;
-        if(props!=null && !props.isEmpty()){
+        if (props != null && !props.isEmpty()) {
             Object vt = props.get(JxtaConfigConstants.FAILURE_VERIFICATION_TIMEOUT.toString());
-            if(vt != null) {
+            if (vt != null) {
                 verifyTimeout = Long.parseLong((String) vt);
             }
         }
@@ -404,23 +416,23 @@ public class ClusterManager implements PipeMsgListener {
      * NOT TESTED YET (07 20 06)
      *
      * @param peerid the node ID
-     * @param msg the message to send
+     * @param msg    the message to send
      * @throws java.io.IOException if an io error occurs
      */
     public void send(final ID peerid, final Serializable msg) throws IOException {
-        if(!stopping) {
+        if (!stopping) {
             final Message message = new Message();
             message.addMessageElement(NAMESPACE, sysAdvElement);
             final ByteArrayMessageElement bame =
-                new ByteArrayMessageElement(APPMESSAGE,
-                        MimeMediaType.AOS,
-                        JxtaUtil.createByteArrayFromObject(msg),
-                        null);
+                    new ByteArrayMessageElement(APPMESSAGE,
+                            MimeMediaType.AOS,
+                            JxtaUtil.createByteArrayFromObject(msg),
+                            null);
             message.addMessageElement(NAMESPACE, bame);
 
             if (peerid != null) {
                 final OutputPipe output =
-                        pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID)peerid), 1000);
+                        pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID) peerid), 1000);
                 output.send(message);
                 output.close();
             } else {
@@ -480,7 +492,7 @@ public class ClusterManager implements PipeMsgListener {
                 final StructuredDocument asDoc = StructuredDocumentFactory.newStructuredDocument(msgElement.getMimeType(), msgElement.getStream());
                 adv = new SystemAdvertisement(asDoc);
                 final PeerID srcPeerID = (PeerID) adv.getID();
-                if(!loopbackMessages) {
+                if (!loopbackMessages) {
                     if (srcPeerID.equals(myID)) {
                         LOG.log(Level.FINEST, "CLUSTERMANAGER:Discarding loopback message");
                         return;
@@ -526,7 +538,7 @@ public class ClusterManager implements PipeMsgListener {
         return systemAdv;
     }
 
-    public PeerID getMyPeerId() {
+    public PeerID getNodeID() {
         return myID;
     }
 
@@ -562,7 +574,7 @@ public class ClusterManager implements PipeMsgListener {
         return sysAdv;
     }
 
-    public String getPeerState(final ID address) {
+    public String getNodeState(final ID address) {
         return getHealthMonitor().getState(address);
     }
 }
