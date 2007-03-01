@@ -72,7 +72,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private final String indoubtListLock = new String("IndoubtListLock");
     private final String threadLock = new String("threadLock");
     private final Map<PeerID, HealthMessage.Entry> cache = new HashMap<PeerID, HealthMessage.Entry>();
-    private PeerGroup group = null;
     private InputPipe inputPipe = null;
     private MasterNode masterNode = null;
     private ClusterManager manager = null;
@@ -87,9 +86,15 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private Thread fdThread = null;
 
     private InDoubtPeerDetector inDoubtPeerDetector;
-    private String[] states = {"starting", "started", "alive",
-            "clusterstopping", "peerstopping",
-            "stopped", "dead", "indoubt", "unknown"};
+    private String[] states = {"starting",
+                               "started",
+                               "alive",
+                               "clusterstopping",
+                               "peerstopping",
+                               "stopped",
+                               "dead",
+                               "indoubt",
+                               "unknown"};
     private static final short ALIVE = 2;
     private static final short CLUSTERSTOPPING = 4;
     private static final short PEERSTOPPING = 8;
@@ -121,10 +126,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         this.maxRetries = maxRetries;
         this.verifyTimeout = verifyTimeout;
         this.manager = manager;
-        this.group = manager.getNetPeerGroup();
         this.masterNode = manager.getMasterNode();
-        this.myID = group.getPeerID();
-        this.pipeService = group.getPipeService();
+        this.myID = manager.getNetPeerGroup().getPeerID();
+        this.pipeService = manager.getNetPeerGroup().getPipeService();
         this.indoubtPeerList = new Vector<PeerID>();
         //this.shutdownHook = new ShutdownHook();
         //Runtime.getRuntime().addShutdownHook(shutdownHook);
@@ -292,9 +296,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     /**
      * Clears the cache
      */
-    public synchronized void clearCache() {
+    public void clearCache() {
         LOG.log(Level.FINEST, "Clearing cache");
-        cache.clear();
+        synchronized (cache) {
+            cache.clear();
+        }
     }
 
     /**
@@ -468,11 +474,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     public String getState(final ID id) {
-        if (cache.containsKey(id)) {
-            return cache.get(id).state;
+        HealthMessage.Entry entry;
+        synchronized (cache) {
+           entry = cache.get(id);
+        }
+        if (entry != null) {
+            return entry.state;
         } else {
-            //todo if we had more than an ID we could have notified MasterNode of the hole
-
+            return states[DEAD];
+        }
+        /*
+        //disbaled for now
+        else {
             try {
                 masterNode.probeNode(id);
             } catch (IOException e) {
@@ -480,6 +493,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             }
             return states[UNK];
         }
+        */
     }
 
     /**
@@ -615,14 +629,15 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             }
 
             entry.state = states[INDOUBT];
-            cache.put(entry.id, entry);
+            synchronized(cache) {
+                cache.put(entry.id, entry);
+            }
             if (masterNode.isMaster()) {
                 //do this only when masternode is not suspect.
                 // When masternode is suspect, all members update their states
                 // anyways so no need to report
                 //Send group message announcing InDoubt State
-                LOG.log(Level.FINE, "Sending INDOUBT state message of Peer " + entry.id +
-                        " to group...");
+                LOG.log(Level.FINE, "Sending INDOUBT state message of Peer " + entry.id +" to group...");
                 reportOtherPeerState(INDOUBT, entry.adv);
             }
             notifyLocalListeners(entry.state, entry.adv);
@@ -660,7 +675,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 final ListIterator<PeerID> iter = indoubtPeerList.listIterator();
                 while (iter.hasNext()) {
                     final PeerID pid = iter.next();
-                    entry = cache.get(pid);
+                    synchronized(cache) {
+                        entry = cache.get(pid);
+                    }
                     if (entry.state.equals(states[ALIVE])) {
                         reportLiveStateToLocalListeners(pid);
                     } else {
