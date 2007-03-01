@@ -31,7 +31,7 @@ public interface ClusterMessageListener {
     /**
      * Called when a message is received from another member.
      *
-     * @param system source system advertisement
+     * @param system  source system advertisement
      * @param message the message
      */
     void handleClusterMessage(SystemAdvertisement system, Object message);

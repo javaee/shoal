@@ -123,17 +123,16 @@ public class NetworkManager implements RendezvousListener {
         this.instanceName = instanceName;
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
-        if(properties != null && !properties.isEmpty()){
-            Object ma = properties.get( JxtaConfigConstants.MULTICASTADDRESS.toString());
-            if(ma != null){
-                mcastAddress = (String)ma;
+        if (properties != null && !properties.isEmpty()) {
+            Object ma = properties.get(JxtaConfigConstants.MULTICASTADDRESS.toString());
+            if (ma != null) {
+                mcastAddress = (String) ma;
             }
             Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
-            if(mp != null){
-                if(mp instanceof String){
-                    mcastPort = Integer.parseInt((String)mp);
-                }
-                else if (mp instanceof Integer){
+            if (mp != null) {
+                if (mp instanceof String) {
+                    mcastPort = Integer.parseInt((String) mp);
+                } else if (mp instanceof Integer) {
                     mcastPort = (Integer) mp;
                 }
             }
@@ -211,13 +210,12 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerGroupID getPeerGroupID(final String groupName) {
-        if(mcastAddress == null && mcastPort <= 0){
+        if (mcastAddress == null && mcastPort <= 0) {
             return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
-                hash(PREFIX + groupName.toUpperCase()));
-        }
-        else {
+                    hash(PREFIX + groupName.toUpperCase()));
+        } else {
             return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
-                hash(PREFIX + groupName.toUpperCase() + mcastAddress + mcastPort));            
+                    hash(PREFIX + groupName.toUpperCase() + mcastAddress + mcastPort));
         }
     }
 
@@ -315,7 +313,7 @@ public class NetworkManager implements RendezvousListener {
      * Creates and starts the JXTA NetPeerGroup using a platform configuration
      * template. This class also registers a listener for rendezvous events
      *
-     * @throws IOException        Description of the Exception
+     * @throws IOException Description of the Exception
      */
     public synchronized void start() throws PeerGroupException, IOException {
         if (started) {
@@ -338,10 +336,10 @@ public class NetworkManager implements RendezvousListener {
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
         config.setInfrastructureDescription(groupName + " Infrastructure Group Name");
-        if(mcastAddress != null){
+        if (mcastAddress != null) {
             config.setMulticastAddress(mcastAddress);
         }
-        if(mcastPort > 0 ){
+        if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
@@ -392,7 +390,7 @@ public class NetworkManager implements RendezvousListener {
             final File userHome = new File(home, instanceName);
             clearCache(userHome);
         } catch (Throwable th) {
-           LOG.log(Level.FINEST, th.getLocalizedMessage());
+            LOG.log(Level.FINEST, th.getLocalizedMessage());
         }
         stopped = true;
     }

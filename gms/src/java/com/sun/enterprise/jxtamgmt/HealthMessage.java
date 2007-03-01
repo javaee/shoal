@@ -23,7 +23,16 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.*;
+import net.jxta.document.Attributable;
+import net.jxta.document.Attribute;
+import net.jxta.document.Document;
+import net.jxta.document.Element;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.StructuredDocumentUtils;
+import net.jxta.document.StructuredTextDocument;
+import net.jxta.document.TextElement;
 import net.jxta.id.IDFactory;
 import net.jxta.peer.PeerID;
 
@@ -295,7 +304,7 @@ public class HealthMessage {
          * {@inheritDoc}
          */
         public boolean equals(final Object obj) {
-            return  this == obj || obj != null && id.equals(obj);
+            return this == obj || obj != null && id.equals(obj);
         }
 
         /**
@@ -304,6 +313,7 @@ public class HealthMessage {
         public int hashCode() {
             return adv.getID().hashCode() * 45191 + state.hashCode();
         }
+
         public String toString() {
             return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " +
                     timestamp;

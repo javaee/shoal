@@ -25,13 +25,26 @@ package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.*;
-import net.jxta.endpoint.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.XMLDocument;
+import net.jxta.endpoint.ByteArrayMessageElement;
+import net.jxta.endpoint.Message;
+import net.jxta.endpoint.MessageElement;
+import net.jxta.endpoint.MessageTransport;
+import net.jxta.endpoint.StringMessageElement;
+import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
@@ -91,14 +104,14 @@ class MasterNode implements PipeMsgListener, Runnable {
     private final AtomicLong masterViewID = new AtomicLong();
     //Collision control
     final String MASTERLOCK = new String("MASTERLOCK");
-    private static final String         CCNTL = "CCNTL";
-    private static final String    MASTERNODE = "MN";
-    private static final String   MASTERQUERY = "MQ";
+    private static final String CCNTL = "CCNTL";
+    private static final String MASTERNODE = "MN";
+    private static final String MASTERQUERY = "MQ";
     private static final String MASTERNODERESPONSE = "NR";
-    private static final String     NAMESPACE = "MASTER";
-    private static final String       NODEADV = "NAD";
-    private static final String      ROUTEADV = "ROUTE";
-    private static final String   AMASTERVIEW = "AMV";
+    private static final String NAMESPACE = "MASTER";
+    private static final String NODEADV = "NAD";
+    private static final String ROUTEADV = "ROUTE";
+    private static final String AMASTERVIEW = "AMV";
     private static final String MASTERVIEWSEQ = "SEQ";
 
     private int interval = 6;
@@ -121,7 +134,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         PeerGroup group = manager.getNetPeerGroup();
         pipeService = group.getPipeService();
         myID = group.getPeerID();
-        if(timeout >0){
+        if (timeout > 0) {
             this.timeout = timeout;
         }
         this.interval = interval;
@@ -131,7 +144,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         sysAdvElement = new TextDocumentMessageElement(NODEADV,
                 (XMLDocument) manager.getSystemAdvertisement()
                         .getDocument(MimeMediaType.XMLUTF8), null);
-
+        //used to ensure up to date routes are used
         MessageTransport endpointRouter = (group.getEndpointService()).getMessageTransport("jxta");
         if (endpointRouter != null) {
             routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
@@ -177,6 +190,15 @@ class MasterNode implements PipeMsgListener, Runnable {
                             " .... attempting to resolve");
             send(systemAdv.getID(), systemAdv.getName(),
                     createMasterCollisionMessage());
+
+            //TODO add code to ensure whether this node should remain as master or resign (basically noop)
+            if (manager.getNodeID().toString().compareTo(systemAdv.getID().toString()) >= 0) {
+                LOG.log(Level.FINER, "Affirming Master Node role");
+            } else {
+                LOG.log(Level.FINER, "Resigning Master Node role in anticipation of a master node announcement");
+                clusterViewManager.setMaster(systemAdv, false);
+            }
+
             return false;
         } else {
             clusterViewManager.setMaster(systemAdv, true);
@@ -237,9 +259,9 @@ class MasterNode implements PipeMsgListener, Runnable {
     /**
      * Creates a Master Response Message
      *
-     * @param masterID the MasterNode ID
-     * @return a message containing a MasterResponse element
+     * @param masterID     the MasterNode ID
      * @param announcement if true, creates an anouncement type message, otherwise it creates a response type.
+     * @return a message containing a MasterResponse element
      */
     private Message createMasterResponse(boolean announcement, final ID masterID) {
         final Message msg = createSelfNodeAdvertisement();
@@ -400,7 +422,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (msgElement != null) {
                     if (seqID <= clusterViewManager.getMasterViewID()) {
                         LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
-                                    " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
+                                " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
                         return true;
                     }
                     final ClusterViewEvent cvEvent =
@@ -455,7 +477,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                     if (seqID <= clusterViewManager.getMasterViewID()) {
                         LOG.log(Level.FINER,
                                 MessageFormat.format("Received an older clusterView sequence {0} of size :{1}" +
-                                    " Current sequence :{2} discarding out of sequence view",
+                                        " Current sequence :{2} discarding out of sequence view",
                                         seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
                         return true;
                     } else {
@@ -503,8 +525,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
                     LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
-                                " Current sequence :{1} discarding out of sequence view",
-                                seqID, clusterViewManager.getMasterViewID()));
+                            " Current sequence :{1} discarding out of sequence view",
+                            seqID, clusterViewManager.getMasterViewID()));
                     return true;
                 }
                 final ArrayList<SystemAdvertisement> newLocalView =
@@ -557,14 +579,14 @@ class MasterNode implements PipeMsgListener, Runnable {
 
     private void processRoute(final Message msg) {
         try {
-        final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
-        if (routeElement != null && routeControl != null) {
-            XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
-                    routeElement.getMimeType(), routeElement.getStream());
-            final RouteAdvertisement route = (RouteAdvertisement)
-                    AdvertisementFactory.newAdvertisement(asDoc);
-            routeControl.addRoute(route);
-        }
+            final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
+            if (routeElement != null && routeControl != null) {
+                XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
+                        routeElement.getMimeType(), routeElement.getStream());
+                final RouteAdvertisement route = (RouteAdvertisement)
+                        AdvertisementFactory.newAdvertisement(asDoc);
+                routeControl.addRoute(route);
+            }
         } catch (IOException io) {
             io.printStackTrace();
             LOG.log(Level.WARNING, io.getLocalizedMessage());
@@ -683,7 +705,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     void startMasterNodeDiscovery() {
         int count = 0;
         //assumes self as master node
-        synchronized(this) {
+        synchronized (this) {
             clusterViewManager.start();
         }
         if (masterAssigned) {
@@ -747,7 +769,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // this thread's job is done
                 LOG.log(Level.FINER, "Assuming Master Node designation ...");
                 //broadcast we are the masternode if view size is more than one
-                if(clusterViewManager.getViewSize() > 1){
+                if (clusterViewManager.getViewSize() > 1) {
                     announceMaster(manager.getSystemAdvertisement());
                 }
                 MASTERLOCK.notifyAll();

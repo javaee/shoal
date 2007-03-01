@@ -30,9 +30,9 @@ import net.jxta.document.Document;
 import net.jxta.document.Element;
 import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocument;
+import static net.jxta.document.StructuredDocumentFactory.newStructuredDocument;
 import net.jxta.document.StructuredTextDocument;
 import net.jxta.document.TextElement;
-import static net.jxta.document.StructuredDocumentFactory.newStructuredDocument;
 import net.jxta.id.ID;
 
 import java.io.IOException;
@@ -199,6 +199,7 @@ public class SystemAdvertisement extends Advertisement
         }
         customTags.putAll(tags);
     }
+
     public Map<String, String> getCustomTags() {
         return (HashMap<String, String>) customTags.clone();
     }
@@ -331,7 +332,7 @@ public class SystemAdvertisement extends Advertisement
     }
 
     /**
-     *  {@inheritDoc}
+     * {@inheritDoc}
      */
     @Override
     public SystemAdvertisement clone() throws CloneNotSupportedException {
@@ -352,9 +353,10 @@ public class SystemAdvertisement extends Advertisement
             }
             return likeMe;
         } catch (CloneNotSupportedException impossible) {
-            throw new Error( "Object.clone() threw CloneNotSupportedException", impossible );
+            throw new Error("Object.clone() threw CloneNotSupportedException", impossible);
         }
     }
+
     /**
      * Process an individual element from the document.
      *
@@ -429,8 +431,9 @@ public class SystemAdvertisement extends Advertisement
 
         return retVal;
     }
+
     /**
-     *  {@inheritDoc}
+     * {@inheritDoc}
      */
     @Override
     public int hashCode() {

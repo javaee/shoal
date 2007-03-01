@@ -28,7 +28,11 @@ import net.jxta.endpoint.StringMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;

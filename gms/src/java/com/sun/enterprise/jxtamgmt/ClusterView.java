@@ -79,6 +79,7 @@ public class ClusterView {
     public synchronized SystemAdvertisement get(final ID id) {
         return view.get(id.toString());
     }
+
     /**
      * Adds a system advertisement to the view.
      *
@@ -172,13 +173,16 @@ public class ClusterView {
         }
         return retval;
     }
+
     /**
      * Returns the cluster view ID
+     *
      * @return the view id
      */
     public long getClusterViewId() {
         return viewId;
     }
+
     /**
      * Removes all of the elements from this set (optional operation).
      */

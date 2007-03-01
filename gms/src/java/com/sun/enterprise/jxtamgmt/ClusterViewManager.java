@@ -26,14 +26,18 @@ package com.sun.enterprise.jxtamgmt;
 import net.jxta.id.ID;
 
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Manages Cluster Views and notifies cluster view listeners when cluster view
- * changes 
+ * changes
  */
 public class ClusterViewManager {
     private static final Logger LOG = JxtaUtil.getLogger(ClusterViewManager.class.getName());

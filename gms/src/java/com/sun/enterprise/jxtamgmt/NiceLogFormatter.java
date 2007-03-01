@@ -27,9 +27,16 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.logging.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.logging.ErrorManager;
 import java.util.logging.Formatter;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
 
 /**
  * NiceLogFormatter conforms to the logging format defined by the
@@ -108,6 +115,7 @@ public class NiceLogFormatter extends Formatter {
 
     /**
      * Sun One AppServer SE/EE can override to specify their product version
+     *
      * @return product ID
      */
     protected String getProductId() {
@@ -118,8 +126,9 @@ public class NiceLogFormatter extends Formatter {
     /**
      * Sun One Appserver SE/EE? can override to specify their product specific
      * key value pairs.
-     * @param buf  buffer
-     * @param record  log record
+     *
+     * @param buf    buffer
+     * @param record log record
      */
     protected void getNameValuePairs(StringBuilder buf, LogRecord record) {
 
@@ -158,7 +167,8 @@ public class NiceLogFormatter extends Formatter {
     /**
      * Note: This method is not synchronized, we are assuming that the
      * synchronization will happen at the Log Handler.publish( ) method.
-     * @param record  log record
+     *
+     * @param record log record
      * @return the log message
      */
     private String uniformLogFormat(LogRecord record) {
@@ -189,7 +199,7 @@ public class NiceLogFormatter extends Formatter {
             // included for FINER and FINEST log levels.
             Level level = record.getLevel();
             String className = record.getSourceClassName();
-            className = className.substring(className.lastIndexOf(".")+1, className.length());
+            className = className.substring(className.lastIndexOf(".") + 1, className.length());
             if (LOG_SOURCE_IN_KEY_VALUE ||
                     (level.intValue() <= Level.FINE.intValue())) {
                 recordBuffer.append("ClassName").append(NV_SEPARATOR);

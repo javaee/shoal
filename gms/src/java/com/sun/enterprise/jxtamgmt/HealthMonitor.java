@@ -22,19 +22,32 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.StructuredTextDocument;
+import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,17 +88,17 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     private InDoubtPeerDetector inDoubtPeerDetector;
     private String[] states = {"starting", "started", "alive",
-                               "clusterstopping", "peerstopping",
-                               "stopped", "dead", "indoubt"};
+            "clusterstopping", "peerstopping",
+            "stopped", "dead", "indoubt"};
     private static final byte ALIVE = 2;
     private static final byte CLUSTERSTOPPING = 3;
     private static final byte PEERSTOPPING = 4;
     private static final byte STOPPED = 5;
     private static final byte DEAD = 6;
     private static final byte INDOUBT = 7;
-    private static final String      HEALTHM = "HM";
-    private static final String    NAMESPACE = "HEALTH";
-    private static final String    cacheLock = "cacheLock";
+    private static final String HEALTHM = "HM";
+    private static final String NAMESPACE = "HEALTH";
+    private static final String cacheLock = "cacheLock";
     private static final String verifierLock = "verifierLock";
 
     private Message aliveMsg = null;
@@ -140,7 +153,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private Message getAliveMessage() {
-        if(aliveMsg == null){
+        if (aliveMsg == null) {
             aliveMsg = createHealthMessage(ALIVE);
         }
         return aliveMsg;
@@ -206,18 +219,15 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 synchronized (cache) {
                     cache.put(entry.id, entry);
                 }
-                if(entry.state.equals(states[PEERSTOPPING])){
+                if (entry.state.equals(states[PEERSTOPPING])) {
                     handlePeerStopEvent(entry.adv);
-                }
-                else if( entry.state.equals(states[CLUSTERSTOPPING])){
+                } else if (entry.state.equals(states[CLUSTERSTOPPING])) {
                     notifyLocalListeners(entry.state, entry.adv);
-                }
-                else if (entry.state.equals(states[INDOUBT]) ||
-                    entry.state.equals(states[DEAD])) {
+                } else if (entry.state.equals(states[INDOUBT]) ||
+                        entry.state.equals(states[DEAD])) {
                     if (entry.id.equals(myID)) {
                         reportMyState(ALIVE, hm.getSrcID());
-                    }
-                    else {
+                    } else {
                         if (entry.state.equals(states[INDOUBT])) {
                             synchronized (indoubtListLock) {
                                 indoubtPeerList.add(entry.id);
@@ -253,15 +263,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     private void handlePeerStopEvent(final SystemAdvertisement stoppingPeerAdv) {
         LOG.log(Level.FINEST, MessageFormat.format("Handling Peer Stop Event for peer :{0}", stoppingPeerAdv.getName()));
-        if(stoppingPeerAdv.getID().equals(masterNode.getMasterNodeID())){
+        if (stoppingPeerAdv.getID().equals(masterNode.getMasterNodeID())) {
             //if masternode is resigning, remove master node from view and start discovery
             LOG.log(Level.FINER, MessageFormat.format("Removing master node {0} " +
                     "from view as it has stopped.", stoppingPeerAdv.getName()));
             removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
             masterNode.resetMaster();
             masterNode.appointMasterNode();
-        }
-        else if(masterNode.isMaster() && masterNode.isMasterAssigned()){
+        } else if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
             removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
             LOG.log(Level.FINE, "Announcing Peer Stop Event of " +
                     stoppingPeerAdv.getName() + " to group ...");
@@ -292,13 +301,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      *
      * @param state specified state can be
      *              ALIVE|SLEEP|HIBERNATING|SHUTDOWN|DEAD
-     * @param id destination node ID, if null broadcast to group
+     * @param id    destination node ID, if null broadcast to group
      */
     public void reportMyState(final byte state, final PeerID id) {
-        if(state == ALIVE) {
+        if (state == ALIVE) {
             send(id, getAliveMessage());
-        }
-        else {            
+        } else {
             send(id, createHealthMessage(state));
         }
     }
@@ -355,7 +363,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * message is multicast to the group
      *
      * @param peerid Peer ID to send massage to
-     * @param msg the message to send
+     * @param msg    the message to send
      */
     private void send(final PeerID peerid, final Message msg) {
         try {
@@ -442,7 +450,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private static StructuredTextDocument getStructuredDocument(
             final MessageElement msgElement) throws IOException {
         return (StructuredTextDocument) StructuredDocumentFactory.newStructuredDocument(MimeMediaType.XMLUTF8,
-                                                                                            msgElement.getStream());
+                msgElement.getStream());
     }
 
 
@@ -504,7 +512,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         cacheLock.wait(timeout);
                         //LOG.log(Level.FINEST, "Analyzing cache for health...");
                         //get the copy of the states cache
-                        if(!stop){
+                        if (!stop) {
                             processCacheUpdate();
                         }
                     } catch (InterruptedException ex) {
@@ -695,17 +703,17 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private void removeMasterAdv(ID id, byte state) {
         SystemAdvertisement ad = manager.getClusterViewManager().remove(id);
         switch (state) {
-            case DEAD :
+            case DEAD:
                 manager.getClusterViewManager().notifyListeners(
-                    new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT,ad));
+                        new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, ad));
                 break;
-            case PEERSTOPPING :
+            case PEERSTOPPING:
                 manager.getClusterViewManager().notifyListeners(
-                    new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT,ad));
+                        new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, ad));
                 break;
-            default :
+            default:
                 LOG.log(Level.FINEST,
-                        MessageFormat.format("Invalid State for removing adv from view{0}", state));                
+                        MessageFormat.format("Invalid State for removing adv from view{0}", state));
 
         }
     }
