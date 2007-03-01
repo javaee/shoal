@@ -223,9 +223,7 @@ public class GroupCommunicationProviderImpl implements
 
     public MemberStates getMemberState(final String memberIdentityToken) {
         return MemberStates.valueOf(clusterManager.
-                getPeerState(
-                        getAddress(memberIdentityToken)).
-                toUpperCase());
+                getNodeState(getAddress(memberIdentityToken)).toUpperCase());
     }
 
     public String getGroupLeader() {
