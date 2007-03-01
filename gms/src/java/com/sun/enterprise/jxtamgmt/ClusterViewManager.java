@@ -27,9 +27,7 @@ import net.jxta.id.ID;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -49,7 +47,6 @@ public class ClusterViewManager {
     private long viewId = 0;
     private long masterViewID = 0;
     private ClusterManager manager;
-    private Map<String, ID> nameTable = new HashMap<String, ID>();
     private ReentrantLock viewLock = new ReentrantLock();
 
     /**
@@ -318,23 +315,7 @@ public class ClusterViewManager {
     }
 
     public ID getID(final String name) {
-        ID id = nameTable.get(name);
-        if (id == null) {
-            viewLock.lock();
-            try {
-                for (final SystemAdvertisement adv : view.values()) {
-                    if (adv.getName().equals(name)) {
-                        id = adv.getID();
-                        nameTable.put(name, id);
-                        break;
-                    }
-                }
-            } finally {
-                viewLock.unlock();
-            }
-
-        }
-        return id;
+        return manager.getID(name);
     }
 
     /**

@@ -577,5 +577,14 @@ public class ClusterManager implements PipeMsgListener {
     public String getNodeState(final ID address) {
         return getHealthMonitor().getState(address);
     }
+
+    /**
+     * Returns name encoded ID
+     * @param name to name to encode
+     * @return name encoded ID
+     */
+    public ID getID(final String name) {
+        return netManager.getPeerID(name);
+    }
 }
 
