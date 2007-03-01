@@ -166,7 +166,7 @@ public class GroupCommunicationProviderImpl implements
                 clusterManager.send(null, message);//sends to whole group
             }
             else {
-                final ID id = getAddress(targetMemberIdentityToken);
+                final ID id = clusterManager.getID(targetMemberIdentityToken);
                 logger.log(Level.FINER, "sending message to PeerID: " + id);
                 clusterManager.send(id, message);
             }
@@ -180,18 +180,6 @@ public class GroupCommunicationProviderImpl implements
 
     public void sendMessage(Serializable message) throws GMSException {
         sendMessage(null, message, false);
-    }
-
-    /**
-     * Provides the address object corresponding to the underlying GCP's Address
-     * object. In this case the jxta ID of the named peer is returned
-
-     * @param memberIdentityToken ID of the named peer
-     *
-     * @return Object  - representing address of a given member.
-     */
-    ID getAddress(final String memberIdentityToken) {
-        return clusterManager.getClusterViewManager().getID(memberIdentityToken);
     }
 
     /**
@@ -222,8 +210,8 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public MemberStates getMemberState(final String memberIdentityToken) {
-        return MemberStates.valueOf(clusterManager.
-                getNodeState(getAddress(memberIdentityToken)).toUpperCase());
+        //TODO/FIXME lowercase is always recommended over uppercase for non localized strings
+        return MemberStates.valueOf(clusterManager.getNodeState(clusterManager.getID(memberIdentityToken)).toUpperCase());
     }
 
     public String getGroupLeader() {
