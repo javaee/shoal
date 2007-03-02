@@ -224,6 +224,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 synchronized (cache) {
                     cache.put(entry.id, entry);
                 }
+                if(!manager.getClusterViewManager().containsKey(entry.id)){
+                    try {
+                        masterNode.probeNode(entry.id);
+                    } catch (IOException e) {
+                        //ignored
+                    }
+                }
                 if (entry.state.equals(states[PEERSTOPPING])) {
                     handlePeerStopEvent(entry.adv);
                 } else if (entry.state.equals(states[CLUSTERSTOPPING])) {
@@ -483,17 +490,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         } else {
             return states[DEAD];
         }
-        /*
-        //disbaled for now
-        else {
-            try {
-                masterNode.probeNode(id);
-            } catch (IOException e) {
-               //ignored
-            }
-            return states[UNK];
-        }
-        */
     }
 
     /**
@@ -506,13 +502,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         private static final long buffer = 500;
         private final long maxTime = timeout + buffer;
         private final Map<ID, Integer> stateTable = new HashMap<ID, Integer>();
-        private FailureVerifier fverifier;
 
         void start() {
             final Thread fdThread = new Thread(this, "InDoubtPeerDetector Thread");
             LOG.log(Level.FINE, "Starting InDoubtPeerDetector Thread");
             fdThread.start();
-            fverifier = new FailureVerifier();
+            FailureVerifier fverifier = new FailureVerifier();
             final Thread fvThread = new Thread(fverifier, "FailureVerifier Thread");
             LOG.log(Level.FINE, "Starting FailureVerifier Thread");
             fvThread.start();

@@ -303,6 +303,12 @@ public class ClusterManager implements PipeMsgListener {
     public synchronized void stop() {
         if (!stopped) {
             announceStop(false);
+            //allow the above announcement to go through the wire.
+            try {
+                wait(500);
+            } catch (InterruptedException e) {
+                //ignored
+            }
             stopping = true;
             outputPipe.close();
             inputPipe.close();

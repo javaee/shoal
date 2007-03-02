@@ -800,10 +800,10 @@ class MasterNode implements PipeMsgListener, Runnable {
             madv = clusterViewManager.getMasterCandidate();
         }
 
-        if (!madv.getID().equals(myID)) {
-            clusterViewManager.setMaster(madv, false);
-        } else {
-            clusterViewManager.setMaster(madv, false);
+        //avoid notifying listeners
+        clusterViewManager.setMaster(madv, false);
+        masterAssigned=true;
+        if (madv.getID().equals(myID)) {
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             // generate view change event
             if (discoveryInProgress) {
@@ -820,7 +820,6 @@ class MasterNode implements PipeMsgListener, Runnable {
         discoveryView.add(sysAdv);
         synchronized (MASTERLOCK) {
             if (madv.getID().equals(myID)) {
-                masterAssigned = true;
                 // this thread's job is done
                 LOG.log(Level.FINER, "Assuming Master Node designation ...");
                 //broadcast we are the masternode if view size is more than one
