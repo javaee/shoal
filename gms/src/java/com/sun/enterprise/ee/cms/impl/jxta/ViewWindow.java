@@ -523,17 +523,13 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 logger.log(Level.FINER, "Syncing...");
                 dsc.syncCache(token, true);
                 logger.log(Level.FINER, "Sync request sent..");
-                while (!dsc.isFirstSyncDone()) {
-                    Thread.sleep(SYNCWAITMILLIS);
-                }
             } catch (GMSException e) {
                 logger.log(Level.WARNING, "GMSException during DSC sync" +
                         e.getLocalizedMessage());
             } catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getLocalizedMessage());
             } catch (Exception e) {
-                logger.log(Level.WARNING, e.getLocalizedMessage());
-                e.printStackTrace();
+                logger.log(Level.WARNING, "Exception during DSC sync:"+e);
             }
         }
     }
