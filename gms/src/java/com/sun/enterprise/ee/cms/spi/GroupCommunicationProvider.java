@@ -49,8 +49,8 @@ public interface GroupCommunicationProvider {
      * by the employing application. The valid property keys must be specified
      * in a datastructure that is available to the implementation and to GMS.
      *
-     * @param memberName
-     * @param groupName
+     * @param memberName   member name
+     * @param groupName    name of group
      * @param identityMap      - additional member identity params specified
      *                         through key-value pairs.
      * @param configProperties - properties that the employing applications
@@ -68,16 +68,18 @@ public interface GroupCommunicationProvider {
     void join ();
 
     /**
-     * Sends an annouuncement to the group that a cluster wide shutdown is
+     * Sends an announcement to the group that a cluster wide shutdown is
      * impending
+     * @param gmsMessage an object that encapsulates the application's Message  
      */
-    void announceClusterShutdown();
+    void announceClusterShutdown(GMSMessage gmsMessage);
 
     /**
      * Leaves the group as a result of a planned administrative action to
      * shutdown.
+     * @param isClusterShutdown - true if we are leaving as part of a cluster wide shutdown
      */
-    void leave ();
+    void leave (boolean isClusterShutdown);
 
     /**
      * Sends a message using the underlying group communication
@@ -95,7 +97,7 @@ public interface GroupCommunicationProvider {
      * @param synchronous   setting true here will call the underlying GCP's api
      *                      that corresponds to a synchronous message, if
      *                      available.
-     * @throws com.sun.enterprise.ee.cms.core.GMSException
+     * @throws com.sun.enterprise.ee.cms.core.GMSException wraps the underlying exception 
      */
     void sendMessage (String targetMemberIdentityToken, Serializable message,
                       boolean synchronous )
@@ -129,13 +131,14 @@ public interface GroupCommunicationProvider {
     /**
      * Returns the member state as defined in the Enum MemberStates
      * @return MemberStates
+     * @param memberIdentityToken identity of member.
      */
     MemberStates getMemberState(String memberIdentityToken);
 
     /**
      * Returns the Group Leader as defined by the underlying Group Communication
      * Provider. 
-     * @return
+     * @return   String
      */
     String getGroupLeader();
 }
