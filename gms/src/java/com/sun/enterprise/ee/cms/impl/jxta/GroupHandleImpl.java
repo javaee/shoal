@@ -28,9 +28,9 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
-import com.sun.enterprise.ee.cms.impl.common.GMSMessage;
 import com.sun.enterprise.ee.cms.impl.common.ViewWindow;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.GMSMessage;
 
 import java.io.Serializable;
 import java.util.ArrayList;
