@@ -24,11 +24,7 @@
 package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocument;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.XMLDocument;
+import net.jxta.document.*;
 import net.jxta.endpoint.ByteArrayMessageElement;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
@@ -37,22 +33,14 @@ import net.jxta.exception.PeerGroupException;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -299,16 +287,11 @@ public class ClusterManager implements PipeMsgListener {
 
     /**
      * Stops the ClusterManager and all it's services
+     * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
      */
-    public synchronized void stop() {
+    public synchronized void stop(final boolean isClusterShutdown) {
         if (!stopped) {
-            announceStop(false);
-            //allow the above announcement to go through the wire.
-            try {
-                wait(500);
-            } catch (InterruptedException e) {
-                //ignored
-            }
+            announceStop(isClusterShutdown);
             stopping = true;
             outputPipe.close();
             inputPipe.close();
@@ -409,7 +392,7 @@ public class ClusterManager implements PipeMsgListener {
             synchronized (closeLock) {
                 closeLock.wait();
             }
-            stop();
+            stop(false);
             LOG.log(Level.FINER, "Good Bye");
         } catch (InterruptedException e) {
             LOG.log(Level.WARNING, e.getLocalizedMessage());
@@ -419,7 +402,6 @@ public class ClusterManager implements PipeMsgListener {
     /**
      * Send a message to a specific node or the group. In the case where the id
      * is null the message is sent to the entire group
-     * NOT TESTED YET (07 20 06)
      *
      * @param peerid the node ID
      * @param msg    the message to send
