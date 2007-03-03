@@ -25,6 +25,7 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.jxtamgmt.*;
@@ -127,16 +128,20 @@ public class GroupCommunicationProviderImpl implements
         clusterManager.start();
     }
 
-    public void announceClusterShutdown() {
-        clusterManager.announceStop(true);
+    public void announceClusterShutdown(final GMSMessage gmsMessage) {
+        try {
+            clusterManager.send(null, gmsMessage);
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "IOException occured while announcing cluster shutdown:"+e);
+        }
     }
 
     /**
      * Leaves the group as a result of a planned administrative action to
      * shutdown.
      */
-    public void leave() {
-        clusterManager.stop();
+    public void leave(final boolean isClusterShutdown) {
+        clusterManager.stop(isClusterShutdown);
     }
 
     /**
