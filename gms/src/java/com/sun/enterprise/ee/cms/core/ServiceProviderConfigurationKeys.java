@@ -15,5 +15,7 @@ public enum ServiceProviderConfigurationKeys {
     FAILURE_DETECTION_RETRIES,
     FAILURE_VERIFICATION_TIMEOUT,
     DISCOVERY_TIMEOUT,
-    LOOPBACK
+    LOOPBACK,
+    VIRTUAL_MULTICAST_ENABLED,//true, if the underlying network does not support multicast, and the group comm lib supports simulated multicast through other protocols
+    VIRTUAL_MULTICAST_URI // typically an interface address of the initial rendezvous peer that is known to all joining members. 
 }
