@@ -25,6 +25,7 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
+import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 
 import java.util.*;
@@ -111,7 +112,13 @@ public class GMSContext extends GMSContextBase {
     }
 
     public void leave(final GMSConstants.shutdownType shutdownType) {
-        groupCommunicationProvider.leave();
+        if(shutdownHelper.isGroupBeingShutdown(groupName)){
+            groupCommunicationProvider.leave(true);
+            shutdownHelper.removeFromGroupShutdownList(groupName);
+        }
+        else {
+            groupCommunicationProvider.leave(false);
+        }
     }
 
     public long getStartTime() {
@@ -120,7 +127,10 @@ public class GMSContext extends GMSContextBase {
 
     public void announceGroupShutdown(final String groupName,
                                       final GMSConstants.shutdownState shutdownState) {
-        groupCommunicationProvider.announceClusterShutdown();
+        groupCommunicationProvider.
+                announceClusterShutdown(
+                        new GMSMessage(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString(), null,
+                                groupName, null));
     }
 
     public boolean addToSuspectList(final String token) {
