@@ -22,32 +22,18 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.StructuredTextDocument;
-import net.jxta.document.XMLDocument;
+import net.jxta.document.*;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
-import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -193,7 +179,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 if (msg != null) {
                     final Message.ElementIterator iter = msg.getMessageElements();
                     while (iter.hasNext()) {
-                        msgElement = (MessageElement) iter.next();
+                        msgElement = iter.next();
                         if (msgElement != null && msgElement.getElementName().equals(HEALTHM)) {
                             process(getHealthMessage(msgElement));
                         }
@@ -231,11 +217,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         //ignored
                     }
                 }
-                if (entry.state.equals(states[PEERSTOPPING])) {
-                    handlePeerStopEvent(entry.adv);
-                } else if (entry.state.equals(states[CLUSTERSTOPPING])) {
-                    notifyLocalListeners(entry.state, entry.adv);
-                } else if (entry.state.equals(states[INDOUBT]) ||
+                if(entry.state.equals(states[PEERSTOPPING]) ||
+                         entry.state.equals(states[CLUSTERSTOPPING])){
+                    handleStopEvent(entry.adv, entry.state);
+                }
+                if (entry.state.equals(states[INDOUBT]) ||
                         entry.state.equals(states[DEAD])) {
                     if (entry.id.equals(myID)) {
                         reportMyState(ALIVE, hm.getSrcID());
@@ -266,6 +252,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     synchronized (indoubtListLock) {
                         if (indoubtPeerList.contains(entry.id)) {
                             indoubtPeerList.remove(entry.id);
+//TODO: send an Add Event here (or a NoLongerInDoubt event) as clients need to know that the peer is not suspected anymore
                         }
                     }
                 }
@@ -273,21 +260,34 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    private void handlePeerStopEvent(final SystemAdvertisement stoppingPeerAdv) {
-        LOG.log(Level.FINEST, MessageFormat.format("Handling Peer Stop Event for peer :{0}", stoppingPeerAdv.getName()));
-        if (stoppingPeerAdv.getID().equals(masterNode.getMasterNodeID())) {
+    private void handleStopEvent(final SystemAdvertisement stoppingPeerAdv, final String state) {
+        LOG.log(Level.FINEST, MessageFormat.format("Handling Stop Event for peer :{0}",
+                stoppingPeerAdv.getName()));
+        short stateByte = PEERSTOPPING;
+        if(state.equals(states[CLUSTERSTOPPING])){
+            stateByte = CLUSTERSTOPPING;
+        }
+        if(stoppingPeerAdv.getID().equals(masterNode.getMasterNodeID())){
             //if masternode is resigning, remove master node from view and start discovery
             LOG.log(Level.FINER, MessageFormat.format("Removing master node {0} " +
                     "from view as it has stopped.", stoppingPeerAdv.getName()));
-            removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
+            removeMasterAdv(stoppingPeerAdv.getID(), stateByte);
             masterNode.resetMaster();
             masterNode.appointMasterNode();
-        } else if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
-            removeMasterAdv(stoppingPeerAdv.getID(), PEERSTOPPING);
+        }
+        else if(masterNode.isMaster() && masterNode.isMasterAssigned()){
+            removeMasterAdv(stoppingPeerAdv.getID(), stateByte);
             LOG.log(Level.FINE, "Announcing Peer Stop Event of " +
                     stoppingPeerAdv.getName() + " to group ...");
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(
+            final ClusterViewEvent cvEvent ;
+            if(state.equals(states[CLUSTERSTOPPING])){
+                cvEvent = new ClusterViewEvent(
+                    ClusterViewEvents.CLUSTER_STOP_EVENT, stoppingPeerAdv);
+            }
+            else {
+                cvEvent = new ClusterViewEvent(
                     ClusterViewEvents.PEER_STOP_EVENT, stoppingPeerAdv);
+            }
             masterNode.viewChanged(cvEvent);
         }
     }
@@ -351,13 +351,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     //System.out.println("Resetting actualto :"+actualto+"  to timeout :"+timeout);
                 }
                 reportMyState(ALIVE, null);
+//TODO : The following seems to be unneccesary. Can we remove this?
                 if (masterNode.isMaster()) {
                     actualto = timeout - masterDelta;
                     synchronized (threadLock) {
                         threadLock.wait(masterDelta);
                     }
                 }
-
+//END TODO
                 if (stop) {
                     // if asked to stop, exit
                     reportMyState(STOPPED, null);
@@ -726,19 +727,24 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     private void removeMasterAdv(ID id, short state) {
         SystemAdvertisement ad = manager.getClusterViewManager().remove(id);
-        switch (state) {
-            case DEAD:
-                manager.getClusterViewManager().notifyListeners(
-                        new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, ad));
-                break;
-            case PEERSTOPPING:
-                manager.getClusterViewManager().notifyListeners(
+        if(ad != null){
+            switch (state) {
+                case DEAD :
+                    manager.getClusterViewManager().notifyListeners(
+                        new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT,ad));
+                    break;
+                case PEERSTOPPING :
+                    manager.getClusterViewManager().notifyListeners(
                         new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, ad));
-                break;
-            default:
-                LOG.log(Level.FINEST,
-                        MessageFormat.format("Invalid State for removing adv from view{0}", state));
+                    break;
+                default :
+                    LOG.log(Level.FINEST,
+                            MessageFormat.format("Invalid State for removing adv from view{0}", state));
 
+            }
+        }
+        else {
+            LOG.log(Level.WARNING, states[state]+" peer: " +id+" does not exist in my ClusterView");
         }
     }
 /*
