@@ -82,12 +82,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                                "indoubt",
                                "unknown"};
     private static final short ALIVE = 2;
-    private static final short CLUSTERSTOPPING = 4;
-    private static final short PEERSTOPPING = 8;
-    private static final short STOPPED = 16;
-    private static final short DEAD = 32;
-    private static final short INDOUBT = 64;
-    private static final short UNK = 128;
+    private static final short CLUSTERSTOPPING = 3;
+    private static final short PEERSTOPPING = 4;
+    private static final short STOPPED = 5;
+    private static final short DEAD = 6;
+    private static final short INDOUBT = 7;
+    private static final short UNK = 8;
     private static final String HEALTHM = "HM";
     private static final String NAMESPACE = "HEALTH";
     private static final String cacheLock = "cacheLock";
