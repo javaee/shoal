@@ -22,10 +22,12 @@
 */
 package com.sun.enterprise.ee.cms.impl.jxta;
 
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.MessageSignal;
 import com.sun.enterprise.ee.cms.impl.common.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 
 import java.text.MessageFormat;
@@ -122,13 +124,19 @@ public class MessageWindow implements Runnable {
     }
 
     private void handleGMSMessage(final GMSMessage gMsg, final String sender) {
-        if (getRouter().isMessageAFRegistered()) {
-            writeLog(sender, gMsg);
-            final MessageSignal ms = new MessageSignalImpl(
-                    gMsg.getMessage(), gMsg.getComponentName(), sender,
-                    gMsg.getGroupName(), gMsg.getStartTime());
-            final SignalPacket signalPacket = new SignalPacket(ms);
-            getRouter().queueSignal(signalPacket);
+        if(gMsg.getComponentName().equals(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString())){
+            final ShutdownHelper sh = GMSContextFactory.getGMSContext(gMsg.getGroupName()).getShutdownHelper();
+            sh.addToGroupShutdownList(gMsg.getGroupName());
+        }
+        else {
+            if (getRouter().isMessageAFRegistered()) {
+                writeLog(sender, gMsg);
+                final MessageSignal ms = new MessageSignalImpl(
+                        gMsg.getMessage(), gMsg.getComponentName(), sender,
+                        gMsg.getGroupName(), gMsg.getStartTime());
+                final SignalPacket signalPacket = new SignalPacket(ms);
+                getRouter().queueSignal(signalPacket);
+            }
         }
     }
 
@@ -136,7 +144,7 @@ public class MessageWindow implements Runnable {
         return getGMSContext().getRouter();
     }
 
-    private void writeLog(final String sender, final GMSMessage message) {
+    private void writeLog(final String sender, final com.sun.enterprise.ee.cms.spi.GMSMessage message) {
         final String localId = getGMSContext().getServerIdentityToken();
         logger.log(Level.FINER, MessageFormat.format("Sender:{0}, Receiver :{1}, TargetComponent :{2}, Message :{3}",
                 sender, localId, message.getComponentName(), new String(message.getMessage())));
