@@ -22,14 +22,18 @@
  */
 
 package com.sun.enterprise.ee.cms.impl.common;
+
+import com.sun.enterprise.ee.cms.core.DistributedStateCache;
 import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
 import com.sun.enterprise.ee.cms.core.SignalAcquireException;
 import com.sun.enterprise.ee.cms.core.SignalReleaseException;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -123,8 +127,18 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * @return Map <Serializable, Serializable> 
      */
     public Map<Serializable, Serializable> getMemberDetails ( ) {
-        return ctx.getDistributedStateCache()
-                .getFromCacheForPattern(MEMBER_DETAILS, memberToken );
+        Map<Serializable, Serializable>ret = new HashMap<Serializable, Serializable>();
+        if(ctx == null) {
+            ctx = GMSContextFactory.getGMSContext(groupName);
+        }
+        DistributedStateCache dsc = ctx.getDistributedStateCache();
+        if(dsc != null){
+            ret = dsc.getFromCacheForPattern(MEMBER_DETAILS, memberToken );
+        }
+        else {
+            logger.log(Level.WARNING, "Could not get an instance of Distributed State Cache to fetch member details for  "+memberToken) ;
+        }
+        return ret;
     }
 
     /**
