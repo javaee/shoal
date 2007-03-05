@@ -28,6 +28,7 @@ import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
@@ -113,10 +114,12 @@ public class GMSContext extends GMSContextBase {
 
     public void leave(final GMSConstants.shutdownType shutdownType) {
         if(shutdownHelper.isGroupBeingShutdown(groupName)){
+            logger.log(Level.INFO, MessageFormat.format("Leaving GMS group {0} with shutdown type set to GroupShutdown", groupName));
             groupCommunicationProvider.leave(true);
             shutdownHelper.removeFromGroupShutdownList(groupName);
         }
         else {
+            logger.log(Level.INFO, MessageFormat.format("Leaving GMS group {0} with shutdown type set to InstanceShutdown", groupName));
             groupCommunicationProvider.leave(false);
         }
     }

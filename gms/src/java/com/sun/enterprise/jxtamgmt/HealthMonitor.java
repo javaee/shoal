@@ -737,6 +737,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     manager.getClusterViewManager().notifyListeners(
                         new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, ad));
                     break;
+                case CLUSTERSTOPPING :
+                    manager.getClusterViewManager().notifyListeners(
+                        new ClusterViewEvent(ClusterViewEvents.CLUSTER_STOP_EVENT, ad));
+                    break;
                 default :
                     LOG.log(Level.FINEST,
                             MessageFormat.format("Invalid State for removing adv from view{0}", state));
