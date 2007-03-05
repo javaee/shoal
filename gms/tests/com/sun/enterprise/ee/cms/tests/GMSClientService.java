@@ -109,7 +109,7 @@ public class GMSClientService implements Runnable, CallBack{
                 if(sendMessages)
                 {
                     logger.log(Level.INFO,"Sending 10 messages");
-                    for(int i=1; i<=3; i++){
+                    for(int i=1; i<=10; i++){
                         try {
                            gms.getGroupHandle().getDistributedStateCache()
                                    .addToCache(serviceName,memberToken, "Message "+i,
