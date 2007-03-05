@@ -52,19 +52,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     // Default health reporting period
     private long timeout = 60 * 60 * 1000L;
     private long verifyTimeout = 10 * 1000L;
-    private long masterDelta = 1000L;
+    private final long masterDelta = 1000L;
     private int maxRetries = 3;
-    private List<PeerID> indoubtPeerList;
+    private final List<PeerID> indoubtPeerList;
     private final String indoubtListLock = new String("IndoubtListLock");
     private final String threadLock = new String("threadLock");
     private final Map<PeerID, HealthMessage.Entry> cache = new HashMap<PeerID, HealthMessage.Entry>();
-    private InputPipe inputPipe = null;
     private MasterNode masterNode = null;
     private ClusterManager manager = null;
-    private PeerID myID;
+    private final PeerID myID;
     private OutputPipe outputPipe = null;
     private PipeAdvertisement pipeAdv = null;
-    private PipeService pipeService;
+    private final PipeService pipeService;
     private boolean started = false;
     private boolean stop = false;
 
@@ -72,7 +71,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private Thread fdThread = null;
 
     private InDoubtPeerDetector inDoubtPeerDetector;
-    private String[] states = {"starting",
+    private final String[] states = {"starting",
                                "started",
                                "alive",
                                "clusterstopping",
@@ -301,23 +300,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     /**
-     * Clears the cache
-     */
-    public void clearCache() {
-        LOG.log(Level.FINEST, "Clearing cache");
-        synchronized (cache) {
-            cache.clear();
-        }
-    }
-
-    /**
      * Reports on the wire the specified state
      *
      * @param state specified state can be
      *              ALIVE|SLEEP|HIBERNATING|SHUTDOWN|DEAD
      * @param id    destination node ID, if null broadcast to group
      */
-    public void reportMyState(final short state, final PeerID id) {
+    private void reportMyState(final short state, final PeerID id) {
         if (state == ALIVE) {
             send(id, getAliveMessage());
         } else {
@@ -325,7 +314,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    void reportOtherPeerState(final short state, final SystemAdvertisement adv) {
+    private void reportOtherPeerState(final short state, final SystemAdvertisement adv) {
         final Message msg = createMessage(state, HEALTHM, adv);
         LOG.log(Level.FINEST,
                 MessageFormat.format("Reporting {0} healthstate as {1}",
@@ -409,7 +398,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // create the pipe advertisement, to be used in creating the pipe
                 pipeAdv = createPipeAdv();
                 // create input
-                inputPipe = pipeService.createInputPipe(pipeAdv, this);
+                InputPipe inputPipe = pipeService.createInputPipe(pipeAdv, this);
                 // create output
                 outputPipe = pipeService.createOutputPipe(pipeAdv, 1);
 
@@ -641,7 +630,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private class FailureVerifier implements Runnable {
-        private long buffer = 500;
+        private final long buffer = 500;
 
         public void run() {
             while (!stop) {
