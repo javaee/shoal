@@ -211,6 +211,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 if(!manager.getClusterViewManager().containsKey(entry.id)){
                     try {
+                        LOG.log(Level.INFO, "Probing ID = "+entry.id+", name="+entry.adv.getName());
                         masterNode.probeNode(entry.id);
                     } catch (IOException e) {
                         //ignored
@@ -318,7 +319,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         final Message msg = createMessage(state, HEALTHM, adv);
         LOG.log(Level.FINEST,
                 MessageFormat.format("Reporting {0} healthstate as {1}",
-                        adv.getName(), state));
+                        adv.getName(), states[state]));
         send(null, msg);
     }
 
