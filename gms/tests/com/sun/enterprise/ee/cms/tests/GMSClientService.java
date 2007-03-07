@@ -27,7 +27,6 @@
  import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
  import static java.lang.Thread.sleep;
- import java.text.MessageFormat;
  import java.util.Map;
  import java.util.logging.Level;
  import java.util.logging.Logger;
@@ -97,9 +96,10 @@ public class GMSClientService implements Runnable, CallBack{
         logger.log(Level.INFO, serviceName+":"+memberToken+
                                ": is not fenced now, starting GMSclient:"+
                                serviceName);
-        final Thread thisThread = Thread.currentThread();
         logger.log(Level.INFO, "DUMPING:"+
                    gms.getAllMemberDetails(IIOP_MEMBER_DETAILS_KEY));
+/*        final Thread thisThread = Thread.currentThread();
+
         //if this client is being stopped by the parent thread through call
         // to stopClient(), this flag will be null.
         while(flag == thisThread)
@@ -123,7 +123,7 @@ public class GMSClientService implements Runnable, CallBack{
             } catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getMessage());
             }
-        } 
+        } */
     }
 
     public synchronized void processNotification(final Signal notification){
