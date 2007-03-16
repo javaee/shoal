@@ -73,6 +73,7 @@ public interface Signal {
      * In the case of a JoinNotificationSignal or GracefulShutdownSignal, the
      * member token would be the member who joined or is being gracefully
      * shutdown, respectively.
+     * @return   returns the identity token of the member
      */
     String getMemberToken();
 
