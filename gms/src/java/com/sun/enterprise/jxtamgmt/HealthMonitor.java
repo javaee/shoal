@@ -347,11 +347,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 }
 //END TODO
-                if (stop) {
-                    // if asked to stop, exit
-                    reportMyState(STOPPED, null);
-                    break;
-                }
+//by hamada: what was it intended for
             }
         } catch (Throwable all) {
             LOG.log(Level.WARNING, "Uncaught Throwable in thread :" +
@@ -437,12 +433,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * Stops this service
      */
     void stop() {
+        reportMyState(STOPPED, null);
         LOG.log(Level.FINE, "Stopping HealthMonitor");
         stop = true;
         started = false;
+        final Thread tmpThread = thread;
+        thread = null;
+        if (tmpThread != null) {
+            tmpThread.interrupt();
+        }
+        inDoubtPeerDetector.stop();
         inputPipe.close();
         outputPipe.close();
-        inDoubtPeerDetector.stop();
     }
 
     private static HealthMessage getHealthMessage(final MessageElement msgElement) throws IOException {
