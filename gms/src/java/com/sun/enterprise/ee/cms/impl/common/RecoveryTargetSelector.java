@@ -132,7 +132,9 @@ public class RecoveryTargetSelector {
         final String self = ctx.getServerIdentityToken();
         final List<String> liveCache = getMemberTokens(viewCache,
                                                        ctx.getSuspectList());
+        logger.log(Level.FINE, "LiveCache = "+liveCache);
         final List<String> vCache = getCoreMembers(viewCache);
+        logger.log(Level.FINE, "vCache = "+vCache);
 
         for( int i=0; i<vCache.size(); i++ ) {
             final String member;
