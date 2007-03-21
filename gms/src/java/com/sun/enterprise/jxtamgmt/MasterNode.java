@@ -841,8 +841,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 outputPipe.send(msg);
             }
         } catch (IOException io) {
-            io.printStackTrace();
-            LOG.log(Level.SEVERE, "Failed to send message", io);
+            LOG.log(Level.FINEST, "Failed to send message", io);
         }
     }
 
