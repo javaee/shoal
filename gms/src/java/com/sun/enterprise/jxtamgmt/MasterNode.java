@@ -565,8 +565,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message is a query message
      * @throws IOException if and io error occurs
      */
-    boolean processMasterNodeQuery(final Message msg,
-                                   final SystemAdvertisement adv) throws IOException {
+    boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
 
         if (msgElement == null || adv == null) {
@@ -591,8 +590,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message is a query message
      * @throws IOException if and io error occurs
      */
-    boolean processNodeQuery(final Message msg,
-                             final SystemAdvertisement adv) throws IOException {
+    boolean processNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEQUERY);
 
         if (msgElement == null || adv == null) {
@@ -601,13 +599,36 @@ class MasterNode implements PipeMsgListener, Runnable {
         processRoute(msg);
         LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         final Message response = createSelfNodeAdvertisement();
-        final MessageElement el = new StringMessageElement(NODERESPONSE, "nodequery", null);
+        final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
         msg.addMessageElement(NAMESPACE, el);
         LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
         send(adv.getID(), null, response);
         return true;
     }
+    /**
+     * Processes a Node Response message.
+     *
+     * @param msg the Message
+     * @param adv the source node SystemAdvertisement
+     * @return true if the message is a response message
+     * @throws IOException if and io error occurs
+     */
+    boolean processNodeResponse(final Message msg, final SystemAdvertisement adv) throws IOException {
+        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
 
+        if (msgElement == null || adv == null) {
+            return false;
+        }
+        processRoute(msg);
+        if (isMaster() && masterAssigned) {
+            LOG.log(Level.FINER, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            clusterViewManager.notifyListeners(cvEvent);
+            sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
+        }
+        return true;
+    }
     private void processRoute(final Message msg) {
         try {
             final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
@@ -711,6 +732,12 @@ class MasterNode implements PipeMsgListener, Runnable {
                     return;
                 }
                 if (processChangeEvent(msg, adv)) {
+                    return;
+                }
+                if (processNodeQuery(msg, adv)) {
+                    return;
+                }
+                if (processNodeResponse(msg, adv)) {
                     return;
                 }
             } catch (IOException e) {

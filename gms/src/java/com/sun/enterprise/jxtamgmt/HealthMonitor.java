@@ -212,7 +212,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 if (!manager.getClusterViewManager().containsKey(entry.id)) {
                     try {
-                        LOG.log(Level.INFO, "Probing ID = " + entry.id + ", name=" + entry.adv.getName());
+                        LOG.log(Level.INFO, "Probing ID = " + entry.id + ", name = " + entry.adv.getName());
                         masterNode.probeNode(entry.id);
                     } catch (IOException e) {
                         //ignored
