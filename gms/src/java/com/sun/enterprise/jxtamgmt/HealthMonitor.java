@@ -348,8 +348,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
 //END TODO
 //by hamada: what was it intended for
+//by Shreedhar : Came with the old original code from control station
             }
-        } catch (Throwable all) {
+        }
+        catch ( InterruptedException e ){
+            //ignore as this happens on shutdown.
+            //TODO: handle shutdown more gracefully
+        }
+        catch (Throwable all) {
             LOG.log(Level.WARNING, "Uncaught Throwable in thread :" +
                     Thread.currentThread().getName(), all);
         } finally {
