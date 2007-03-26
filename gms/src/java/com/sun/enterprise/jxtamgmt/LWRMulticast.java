@@ -192,13 +192,11 @@ public class LWRMulticast implements PipeMsgListener {
                 ackMessage(id, element);
                 try {
                     if (msgListener != null) {
-                        //System.out.println("Calling message listener");
                         LOG.log(Level.FINEST, "Calling message listener");
                         msgListener.pipeMsgEvent(event);
                     }
                 } catch (Throwable th) {
-                    LOG.log(Level.FINEST, "Exception occurred while calling message listener");
-                    th.printStackTrace();
+                    LOG.log(Level.FINEST, "Exception occurred while calling message listener", th);
                 }
             }
         }
@@ -212,8 +210,7 @@ public class LWRMulticast implements PipeMsgListener {
      */
     private void processAck(PeerID id, String seq) {
         LOG.log(Level.FINEST, "Processing ack for message sequence " + seq);
-        //System.out.println("Processing ack for message sequence "+seq);
-        if (!ackSet.contains(id)) {
+        if (!ackSet.contains(id) && Long.parseLong(seq) == this.sequence.longValue()) {
             ackSet.add(id);
             if (ackSet.size() >= threshold) {
                 synchronized (ackLock) {
@@ -231,15 +228,9 @@ public class LWRMulticast implements PipeMsgListener {
      */
     private void ackMessage(PeerID id, MessageElement seq) {
         LOG.log(Level.FINEST, "Ack'ing message Sequence :" + seq.toString());
-        //System.out.println("Ack'ing message Sequence :"+seq.toString());
-        //System.out.println("                      To :"+id.toString());
-
         Message msg = new Message();
         msg.addMessageElement(NAMESPACE, srcElement);
-        msg.addMessageElement(NAMESPACE,
-                new StringMessageElement(ACKTAG,
-                        seq.toString(),
-                        null));
+        msg.addMessageElement(NAMESPACE, new StringMessageElement(ACKTAG, seq.toString(), null));
         try {
             send(id, msg);
         } catch (IOException io) {
@@ -312,10 +303,7 @@ public class LWRMulticast implements PipeMsgListener {
         MessageElement sel = msg.getMessageElement(NAMESPACE, SRCIDTAG);
         if (sel != null) {
             try {
-                addrStr = new String(sel.getBytes(false),
-                        0,
-                        (int) sel.getByteLength(),
-                        "UTF8");
+                addrStr = new String(sel.getBytes(false), 0, (int) sel.getByteLength(), "UTF8");
             } catch (UnsupportedEncodingException uee) {
                 LOG.log(Level.FINEST, "Encoding Error occured " + uee.toString());
             }
@@ -327,32 +315,33 @@ public class LWRMulticast implements PipeMsgListener {
     }
 
     /**
-     * Send a message.
-     * This method will block until ack's upto to the specified threshold
-     * have been receieved or the timeout has been reached.
+     * Send a message to the predefined set of nodes, and expect a minimum of specified acks.
+     *
+     * This method blocks until ack's upto to the specified threshold
+     * have been received or the timeout has been reached.
      * A call to getAckList() returns a list of ack source peer ID's
      *
      * @param msg       the message to send
-     * @param threshold the number of ack expected
+     * @param threshold the minimun of ack expected, 0 indicates none are expected
      * @throws IOException if an i/o error occurs, or SocketTimeoutException
      *                     if the threshold is not met within timeout
      */
     public void send(Message msg, int threshold) throws IOException {
-        if (threshold <= 0) {
-            throw new IllegalArgumentException("Invalid threshold " + threshold + " must be > 0");
+        if (threshold < 0) {
+            throw new IllegalArgumentException("Invalid threshold " + threshold + " must be >= 0");
         }
 
         this.threshold = threshold;
         ackList.clear();
         msg.addMessageElement(NAMESPACE, srcElement);
         long seq = sequence.getAndIncrement();
-        msg.addMessageElement(NAMESPACE, new StringMessageElement(SEQTAG,
-                Long.toString(seq),
-                null));
+        msg.addMessageElement(NAMESPACE, new StringMessageElement(SEQTAG, Long.toString(seq), null));
 
         LOG.log(Level.FINEST, "Sending message sequence #: " + seq + " Threshold :" + threshold);
-        //System.out.println("Sending message sequence #: "+seq+" Threshold :"+threshold);
         send((PeerID) null, msg);
+        if (threshold == 0) {
+            return;
+        }
         synchronized (ackLock) {
             try {
                 ackLock.wait(timeout);
@@ -402,7 +391,7 @@ public class LWRMulticast implements PipeMsgListener {
      * @param msg the message to send
      * @throws IOException if an i/o error occurs
      */
-    public void send(Set ids, Message msg) throws IOException {
+    public void send(Set<PeerID> ids, Message msg) throws IOException {
         checkState();
         this.threshold = ids.size();
         ackList.clear();
