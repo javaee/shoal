@@ -138,7 +138,7 @@ public class LWRMulticastSenderTest implements PipeMsgListener {
             mcast = new LWRMulticast(netPeerGroup, pipeAdv, client);
             for (int i = 0; i < 5 ; i++) {
                 Message msg = new Message();
-                msg.addMessageElement(new StringMessageElement(GRAMTAG, "Message"+i, null));
+                msg.addMessageElement(NAMESPACE, new StringMessageElement(GRAMTAG, "Message"+i, null));
                 mcast.send(msg, 1);
                 Set ack = mcast.getAckList();
                 System.out.println("Received "+ ack.size()+" ack's");

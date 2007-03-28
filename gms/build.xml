@@ -35,6 +35,13 @@
     <property file="./project.properties"/>
     <property file="./build.properties"/>
 
+    <!--
+	See if we have the GroupLayout class to build the test UI
+    -->
+    <available classname="javax.swing.GroupLayout" property="build.testui"/>
+    <condition property="build.excludes" value="" else="**/LWRMulticastTestUI.java">
+	<istrue value="${build.testui}"/>
+    </condition>
   
     <!-- all -->
     <target name="all" depends="clean, compile, assemble"
@@ -95,7 +102,7 @@
                 <path refid="compile.classpath"/>              
             </classpath>
             <include name="**/*.java"/>
-            <exclude name="**/LWRMulticastTestUI.java"/>
+            <exclude name="${build.excludes}"/>
         </javac>
 
     </target>
@@ -163,4 +170,35 @@
         </javadoc>    
     </target>
 
+    <target name="test-sender" depends="build" description="Run LWRMulticastSenderTest">
+        <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastSenderTest" fork="true">
+            <classpath>
+                <path refid="compile.classpath"/>              
+                <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
+            </classpath>
+	</java>
+    </target>
+
+    <target name="test-rec" depends="build" description="Run LWRMulticastRecTest">
+        <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastRecTest" fork="true">
+            <classpath>
+                <path refid="compile.classpath"/>              
+                <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
+            </classpath>
+	</java>
+    </target>
+
+    <target name="test-ui" depends="build" description="Run LWRMulticastTestUI">
+	<fail message="LWRMulticastTestUI needs Java 6 or above to run">
+	    <condition>
+		<isfalse value="${build.testui}"/>
+	    </condition>
+	</fail>
+        <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastTestUI" fork="true">
+            <classpath>
+                <path refid="compile.classpath"/>              
+                <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
+            </classpath>
+	</java>
+    </target>
 </project>
