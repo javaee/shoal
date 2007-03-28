@@ -25,13 +25,26 @@ package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.*;
-import net.jxta.endpoint.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.XMLDocument;
+import net.jxta.endpoint.ByteArrayMessageElement;
+import net.jxta.endpoint.Message;
+import net.jxta.endpoint.MessageElement;
+import net.jxta.endpoint.MessageTransport;
+import net.jxta.endpoint.StringMessageElement;
+import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
@@ -39,7 +52,9 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -108,7 +123,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     private long timeout = 10 * 1000L;
     private static final String VIEW_CHANGE_EVENT = "VCE";
     private RouteControl routeControl = null;
-
+    private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
+    
     /**
      * Constructor for the MasterNode object
      *
@@ -859,9 +875,16 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINER, "Unicasting Message to :" + name + "ID="+peerid);
-                final OutputPipe output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                final OutputPipe output;
+                if (!pipeCache.containsKey(peerid)) {
+                    // Unicast datagram
+                    // create a op pipe to the destination peer
+                    output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                    pipeCache.put(peerid, output);
+                } else {
+                    output = pipeCache.get(peerid);
+                }
                 output.send(msg);
-                output.close();
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
@@ -924,6 +947,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         LOG.log(Level.FINER, "Stopping MasterNode");
         outputPipe.close();
         inputPipe.close();
+        pipeCache.clear();
         discoveryView.clear();
         thread = null;
         masterAssigned = false;

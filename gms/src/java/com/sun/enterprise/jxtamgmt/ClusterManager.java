@@ -74,6 +74,7 @@ public class ClusterManager implements PipeMsgListener {
     private static final String APPMESSAGE = "APPMESSAGE";
     private List<ClusterMessageListener> cmListeners;
     private boolean stopping = false;
+    private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
     /**
      * The ClusterManager is created using the instanceName,
@@ -295,6 +296,7 @@ public class ClusterManager implements PipeMsgListener {
             stopping = true;
             outputPipe.close();
             inputPipe.close();
+            pipeCache.clear();
             healthMonitor.stop();
             masterNode.stop();
             netManager.stop();
@@ -419,10 +421,16 @@ public class ClusterManager implements PipeMsgListener {
             message.addMessageElement(NAMESPACE, bame);
 
             if (peerid != null) {
-                final OutputPipe output =
-                        pipeService.createOutputPipe(pipeAdv, Collections.singleton((PeerID) peerid), 1000);
+                final OutputPipe output;
+                if (!pipeCache.containsKey(peerid)) {
+                    // Unicast datagram
+                    // create a op pipe to the destination peer
+                    output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                    pipeCache.put(peerid, output);
+                } else {
+                    output = pipeCache.get(peerid);
+                }
                 output.send(message);
-                output.close();
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");

@@ -94,6 +94,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private static final String verifierLock = "verifierLock";
 
     private Message aliveMsg = null;
+    private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
+
     //private ShutdownHook shutdownHook;
 
     /**
@@ -200,7 +202,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param hm Health message to process
      */
     private void process(final HealthMessage hm) {//TODO:SG: REFACTORING CANDIDATE
-        //System.out.println("Processing Health Message..");
         //LOG.log(Level.FINEST, "Processing Health Message..");
         //discard loopback messages
         if (!hm.getSrcID().equals(myID)) {
@@ -321,19 +322,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     //System.out.println("Resetting actualto :"+actualto+"  to timeout :"+timeout);
                 }
                 reportMyState(ALIVE, null);
-//TODO : The following seems to be unneccesary. Can we remove this?
-                if (masterNode.isMaster()) {
-                    actualto = timeout - masterDelta;
-                    synchronized (threadLock) {
-                        threadLock.wait(masterDelta);
-                    }
-                }
-//END TODO
-//by hamada: what was it intended for
-//by Shreedhar : Came with the old original code from control station
             }
         }
-        catch ( InterruptedException e ){
+        catch (InterruptedException e){
             //ignore as this happens on shutdown.
             //TODO: handle shutdown more gracefully
         }
@@ -357,9 +348,16 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINE, "Unicasting Message to :" + peerid.toString());
-                final OutputPipe output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                final OutputPipe output;
+                if (!pipeCache.containsKey(peerid)) {
+                    // Unicast datagram
+                    // create a op pipe to the destination peer
+                    output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                    pipeCache.put(peerid, output);
+                } else {
+                    output = pipeCache.get(peerid);
+                }
                 output.send(msg);
-                output.close();
             } else {
                 outputPipe.send(msg);
             }
@@ -429,6 +427,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         inDoubtPeerDetector.stop();
         inputPipe.close();
         outputPipe.close();
+        pipeCache.clear();
     }
 
     private static HealthMessage getHealthMessage(final MessageElement msgElement) throws IOException {

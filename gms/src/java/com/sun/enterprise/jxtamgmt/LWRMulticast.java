@@ -22,10 +22,18 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
+import net.jxta.endpoint.MessageTransport;
 import net.jxta.endpoint.StringMessageElement;
+import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
+import net.jxta.impl.endpoint.router.EndpointRouter;
+import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.InputPipe;
@@ -34,6 +42,7 @@ import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.pipe.PipeMsgListener;
 import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -41,6 +50,8 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -82,13 +93,19 @@ public class LWRMulticast implements PipeMsgListener {
     private transient boolean closed = false;
     private transient boolean bound = false;
 
-    private transient int timeout = 60000;
+    private  transient long padding = 250;
+    private transient long timeout = 5000 + padding;
     private transient MessageElement srcElement = null;
     private transient AtomicLong sequence = new AtomicLong();
     private final static String ackLock = new String("ackLock");
     private transient int threshold = 0;
     private transient Set<PeerID> ackSet = new HashSet<PeerID>();
     private transient Set<PeerID> ackList = new HashSet<PeerID>();
+    private transient Map<PeerID, OutputPipe> pipeCache = new Hashtable<PeerID, OutputPipe>();
+    private RouteControl routeControl = null;
+    private MessageElement routeAdvElement = null;
+    private static final String ROUTEADV = "ROUTE";
+
     /**
      * The application message listener
      */
@@ -108,6 +125,16 @@ public class LWRMulticast implements PipeMsgListener {
                         PipeMsgListener msgListener) throws IOException {
         super();
         joinGroup(group, pipeAd, msgListener);
+        MessageTransport endpointRouter = (group.getEndpointService()).getMessageTransport("jxta");
+        if (endpointRouter != null) {
+            routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
+            RouteAdvertisement route = routeControl.getMyLocalRoute();
+            if (route != null) {
+                routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
+                        (XMLDocument) route.getDocument(MimeMediaType.XMLUTF8), null);
+            }
+        }
+
     }
 
     /**
@@ -200,6 +227,7 @@ public class LWRMulticast implements PipeMsgListener {
                 }
             }
         }
+        processRoute(message);
     }
 
     /**
@@ -210,11 +238,11 @@ public class LWRMulticast implements PipeMsgListener {
      */
     private void processAck(PeerID id, String seq) {
         LOG.log(Level.FINEST, "Processing ack for message sequence " + seq);
-        if (!ackSet.contains(id) && Long.parseLong(seq) == this.sequence.longValue()) {
+        if (!ackSet.contains(id)) {
             ackSet.add(id);
             if (ackSet.size() >= threshold) {
                 synchronized (ackLock) {
-                    ackLock.notify();
+                    ackLock.notifyAll();
                 }
             }
         }
@@ -252,7 +280,7 @@ public class LWRMulticast implements PipeMsgListener {
      *
      * @return The soTimeout value
      */
-    public synchronized int getSoTimeout() {
+    public synchronized long getSoTimeout() {
         return timeout;
     }
 
@@ -264,9 +292,9 @@ public class LWRMulticast implements PipeMsgListener {
      * @param timeout The new soTimeout value
      * @throws IOException if an I/O error occurs
      */
-    public synchronized void setSoTimeout(int timeout) throws IOException {
+    public synchronized void setSoTimeout(long timeout) throws IOException {
         checkState();
-        this.timeout = timeout;
+        this.timeout = timeout + padding;
     }
 
     /**
@@ -297,6 +325,19 @@ public class LWRMulticast implements PipeMsgListener {
      * @param msg message
      * @return The source value
      */
+    public static long getSequenceID(Message msg) {
+        MessageElement sel = msg.getMessageElement(NAMESPACE, SEQTAG);
+        if (sel != null) {
+            return Long.parseLong(sel.toString());
+        }
+        return -1;
+    }
+        /**
+     * returns the source peer id of a message
+     *
+     * @param msg message
+     * @return The source value
+     */
     public static PeerID getSource(Message msg) {
         String addrStr = null;
         PeerID id = null;
@@ -313,10 +354,9 @@ public class LWRMulticast implements PipeMsgListener {
         }
         return id;
     }
-
     /**
      * Send a message to the predefined set of nodes, and expect a minimum of specified acks.
-     *
+     * <p/>
      * This method blocks until ack's upto to the specified threshold
      * have been received or the timeout has been reached.
      * A call to getAckList() returns a list of ack source peer ID's
@@ -329,6 +369,9 @@ public class LWRMulticast implements PipeMsgListener {
     public void send(Message msg, int threshold) throws IOException {
         if (threshold < 0) {
             throw new IllegalArgumentException("Invalid threshold " + threshold + " must be >= 0");
+        }
+        if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
         }
 
         this.threshold = threshold;
@@ -353,10 +396,11 @@ public class LWRMulticast implements PipeMsgListener {
             } catch (InterruptedException ie) {
                 LOG.log(Level.FINEST, "Interrupted " + ie.toString());
             }
-            if (ackSet.size() < threshold) {
-                ackList = new HashSet<PeerID>(ackSet);
-                ackSet.clear();
-                throw new SocketTimeoutException("Failed to receive minimum acknowledments of " + threshold + " received :" + ackSet.size());
+            ackList = new HashSet<PeerID>(ackSet);
+            ackSet.clear();
+
+            if (ackList.size() < threshold) {
+                throw new SocketTimeoutException("Failed to receive minimum acknowledments of " + threshold + " received :" + ackList.size());
             }
         }
     }
@@ -370,13 +414,22 @@ public class LWRMulticast implements PipeMsgListener {
      */
     private void send(PeerID pid, Message msg) throws IOException {
         checkState();
+        OutputPipe op;
+        if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
+        }
+
         LOG.log(Level.FINEST, "Sending a message");
         if (pid != null) {
-            // Unicast datagram
-            // create a op pipe to the destination peer
-            OutputPipe op = pipeSvc.createOutputPipe(pipeAdv, Collections.singleton(pid), 1000);
+            if (!pipeCache.containsKey(pid)) {
+                // Unicast datagram
+                // create a op pipe to the destination peer
+                op = pipeSvc.createOutputPipe(pipeAdv, Collections.singleton(pid), 1000);
+                pipeCache.put(pid, op);
+            } else {
+                op = pipeCache.get(pid);
+            }
             op.send(msg);
-            op.close();
         } else {
             // multicast
             outputPipe.send(msg);
@@ -396,6 +449,9 @@ public class LWRMulticast implements PipeMsgListener {
         this.threshold = ids.size();
         ackList.clear();
         ackSet.clear();
+        if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
+        }
 
         LOG.log(Level.FINEST, "Sending a message");
         if (!ids.isEmpty()) {
@@ -424,5 +480,19 @@ public class LWRMulticast implements PipeMsgListener {
         }
     }
 
+    private void processRoute(final Message msg) {
+        try {
+            final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
+            if (routeElement != null && routeControl != null) {
+                XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
+                        routeElement.getMimeType(), routeElement.getStream());
+                final RouteAdvertisement route = (RouteAdvertisement)
+                        AdvertisementFactory.newAdvertisement(asDoc);
+                routeControl.addRoute(route);
+            }
+        } catch (IOException io) {
+            LOG.log(Level.WARNING, io.getLocalizedMessage(), io);
+        }
+    }
 }
 
