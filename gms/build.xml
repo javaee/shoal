@@ -95,6 +95,7 @@
                 <path refid="compile.classpath"/>              
             </classpath>
             <include name="**/*.java"/>
+            <exclude name="**/LWRMulticastTestUI.java"/>
         </javac>
 
     </target>
