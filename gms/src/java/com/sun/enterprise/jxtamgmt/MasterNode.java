@@ -630,7 +630,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @throws IOException if and io error occurs
      */
     boolean processNodeResponse(final Message msg, final SystemAdvertisement adv) throws IOException {
-        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
+        final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODERESPONSE);
 
         if (msgElement == null || adv == null) {
             return false;
