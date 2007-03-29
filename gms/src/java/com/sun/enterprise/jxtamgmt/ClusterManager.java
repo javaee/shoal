@@ -509,12 +509,9 @@ public class ClusterManager implements PipeMsgListener {
         }
     }
 
-    private void notifyMessageListeners(
-            final SystemAdvertisement senderSystemAdvertisement,
-            final Object appMessage) {
+    private void notifyMessageListeners(final SystemAdvertisement senderSystemAdvertisement, final Object appMessage) {
         for (ClusterMessageListener listener : cmListeners) {
-            listener.handleClusterMessage(senderSystemAdvertisement,
-                    appMessage);
+            listener.handleClusterMessage(senderSystemAdvertisement, appMessage);
         }
     }
 
@@ -563,8 +560,7 @@ public class ClusterManager implements PipeMsgListener {
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));
         sysAdv.setOSArch(System.getProperty("os.arch"));
-        sysAdv.setHWArch(System.getProperty("HOSTTYPE",
-                System.getProperty("os.arch")));
+        sysAdv.setHWArch(System.getProperty("HOSTTYPE", System.getProperty("os.arch")));
         sysAdv.setHWVendor(System.getProperty("java.vm.vendor"));
         sysAdv.setCustomTags(customTags);
         return sysAdv;
