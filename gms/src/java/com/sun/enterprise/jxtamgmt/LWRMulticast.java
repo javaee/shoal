@@ -412,7 +412,7 @@ public class LWRMulticast implements PipeMsgListener {
      * @param msg the message to send
      * @throws IOException if an i/o error occurs
      */
-    private void send(PeerID pid, Message msg) throws IOException {
+    public void send(PeerID pid, Message msg) throws IOException {
         checkState();
         OutputPipe op;
         if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
