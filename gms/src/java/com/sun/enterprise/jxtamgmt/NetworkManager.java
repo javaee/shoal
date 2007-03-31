@@ -51,15 +51,17 @@ import java.util.logging.Logger;
  * instance name, it encodes a node Peer ID, and provides utilities to derive Peer ID's
  * from an instance name.  Given an instance name, this allows any node to
  * independently interpolate a Peer ID.
+ *
  * TODO:REVISIT FOR REFACTORING AND ADDED REQUIRMENTS.
- * TODO: WHEN SPECIFYING INSTANCENAME IN EACH METHOD, IS IT THE INTENTION THAT THE CONSUMING APP COULD POTENTIALLY PROVIDE DIFFERENT INSTANCE NAMES AT DIFFERENT TIMES DURING A GIVEN LIFETIME OF THE APP? WHAT IMPACT WOULD THERE BE IF WE REMOVE INSTANCENAME FROM THE PARAMETERS OF THESE METHODS AND BASE INSTANCE NAME FROM THE CONSTRUCTOR'S CONSTRUCTION FROM PROPERTIES OBJECT?
+ * TODO: WHEN SPECIFYING INSTANCENAME IN EACH METHOD, IS IT THE INTENTION THAT THE CONSUMING APP COULD POTENTIALLY
+ * TODO: PROVIDE DIFFERENT INSTANCE NAMES AT DIFFERENT TIMES DURING A GIVEN LIFETIME OF THE APP? WHAT IMPACT WOULD THERE
+ * TODO:BE IF WE REMOVE INSTANCENAME FROM THE PARAMETERS OF THESE METHODS AND BASE INSTANCE NAME FROM THE CONSTRUCTOR'S
+ * TODO: CONSTRUCTION FROM PROPERTIES OBJECT?
  * TODO: Why are most methods public? Should they not be private or package private? Is this exposed to outside callers?
  *
- * @author Mohamed Abdelaziz (hamada)
- *         $Date    December 17, 2005
  */
-
 public class NetworkManager implements RendezvousListener {
+
     private static final Logger LOG = JxtaUtil.getLogger();
     private static MessageDigest digest;
     private static PeerGroup netPeerGroup;
@@ -71,10 +73,6 @@ public class NetworkManager implements RendezvousListener {
     private static final String PREFIX = "SHOAL";
     private static final String connectLock = "connectLock";
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
-
-    /**
-     * The infrastructure PeerGroup ID.
-     */
     private final PipeID socketID;
     private final PipeID pipeID;
 
@@ -100,7 +98,6 @@ public class NetworkManager implements RendezvousListener {
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
     private int mcastPort = 0;
-
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -199,8 +196,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerID getPeerID(final String instanceName) {
-        return IDFactory.newPeerID(getInfraPeerGroupID(),
-                hash(PREFIX + instanceName.toUpperCase()));
+        return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
     }
 
     /**
@@ -225,8 +221,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The HealthPipe Pipe ID
      */
     public PipeID getHealthPipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(),
-                hash(HEALTHSEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(HEALTHSEED.toUpperCase()));
     }
 
     /**
@@ -235,8 +230,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The MasterPipe PipeID
      */
     public PipeID getMasterPipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(),
-                hash(MASTERSEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(MASTERSEED.toUpperCase()));
     }
 
     /**
@@ -245,8 +239,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The SessionQuery PipeID
      */
     public PipeID getSessionQueryPipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(),
-                hash(SESSIONQUERYSEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(SESSIONQUERYSEED.toUpperCase()));
     }
 
     /**
@@ -256,8 +249,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The Application Service Pipe ID
      */
     public PipeID getAppServicePipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(),
-                hash(APPSERVICESEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(APPSERVICESEED.toUpperCase()));
     }
 
     /**
@@ -266,8 +258,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName pipe name
      * @return PipeAdvertisement of type Unicast, and of name instanceName
      */
-    private PipeAdvertisement getTemplatePipeAdvertisement(
-            final String instanceName) {
+    private PipeAdvertisement getTemplatePipeAdvertisement(final String instanceName) {
         final PipeAdvertisement advertisement = (PipeAdvertisement)
                 AdvertisementFactory.newAdvertisement(PipeAdvertisement.getAdvertisementType());
         advertisement.setType(PipeService.UnicastType);
@@ -314,6 +305,7 @@ public class NetworkManager implements RendezvousListener {
      * template. This class also registers a listener for rendezvous events
      *
      * @throws IOException Description of the Exception
+     * @throws PeerGroupException if the NetPeerGroup fails to initialize
      */
     public synchronized void start() throws PeerGroupException, IOException {
         if (started) {
@@ -333,6 +325,8 @@ public class NetworkManager implements RendezvousListener {
         config.setDescription("Created by Jxta Cluster Management NetworkManager");
         config.setTcpStartPort(9700);
         config.setTcpEndPort(9999);
+        // allow for upto 64K datagrams
+        config.setMulticastSize(64*1024);
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
         config.setInfrastructureDescription(groupName + " Infrastructure Group Name");
@@ -413,7 +407,6 @@ public class NetworkManager implements RendezvousListener {
      */
     public void waitForRendezvousConncection(final long timeout) {
         if (!rendezvous.isConnectedToRendezVous()) {
-            //System.out.println("Waiting for Rendezvous Connection");
             try {
                 if (!rendezvous.isConnectedToRendezVous()) {
                     synchronized (connectLock) {
