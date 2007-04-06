@@ -323,7 +323,7 @@ public class NetworkManager implements RendezvousListener {
         config.setName(instanceName);
         //config.setPrincipal(instanceName);
         config.setDescription("Created by Jxta Cluster Management NetworkManager");
-        config.setTcpStartPort(9700);
+        config.setTcpStartPort(9701);
         config.setTcpEndPort(9999);
         // allow for upto 64K datagrams
         config.setMulticastSize(64*1024);
