@@ -26,21 +26,13 @@ import net.jxta.document.AdvertisementFactory;
 import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocumentFactory;
 import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.Message;
-import net.jxta.endpoint.MessageElement;
-import net.jxta.endpoint.MessageTransport;
-import net.jxta.endpoint.StringMessageElement;
-import net.jxta.endpoint.TextDocumentMessageElement;
+import net.jxta.endpoint.*;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
@@ -48,11 +40,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -93,7 +81,7 @@ public class LWRMulticast implements PipeMsgListener {
     private transient boolean closed = false;
     private transient boolean bound = false;
 
-    private  transient long padding = 250;
+    private transient long padding = 250;
     private transient long timeout = 5000 + padding;
     private transient MessageElement srcElement = null;
     private transient AtomicLong sequence = new AtomicLong();
@@ -105,6 +93,7 @@ public class LWRMulticast implements PipeMsgListener {
     private RouteControl routeControl = null;
     private MessageElement routeAdvElement = null;
     private static final String ROUTEADV = "ROUTE";
+    private long t0 = System.currentTimeMillis();
 
     /**
      * The application message listener
@@ -242,6 +231,7 @@ public class LWRMulticast implements PipeMsgListener {
             ackSet.add(id);
             if (ackSet.size() >= threshold) {
                 synchronized (ackLock) {
+                    //System.out.println("Received an ack in :" + (System.currentTimeMillis() - t0));
                     ackLock.notifyAll();
                 }
             }
@@ -332,7 +322,8 @@ public class LWRMulticast implements PipeMsgListener {
         }
         return -1;
     }
-        /**
+
+    /**
      * returns the source peer id of a message
      *
      * @param msg message
@@ -354,6 +345,7 @@ public class LWRMulticast implements PipeMsgListener {
         }
         return id;
     }
+
     /**
      * Send a message to the predefined set of nodes, and expect a minimum of specified acks.
      * <p/>
@@ -373,19 +365,18 @@ public class LWRMulticast implements PipeMsgListener {
         if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
             msg.addMessageElement(NAMESPACE, routeAdvElement);
         }
-
+        t0 = System.currentTimeMillis();
         this.threshold = threshold;
-        ackList.clear();
         msg.addMessageElement(NAMESPACE, srcElement);
         long seq = sequence.getAndIncrement();
         msg.addMessageElement(NAMESPACE, new StringMessageElement(SEQTAG, Long.toString(seq), null));
-
-        LOG.log(Level.FINEST, "Sending message sequence #: " + seq + " Threshold :" + threshold);
-        send((PeerID) null, msg);
-        if (threshold == 0) {
-            return;
-        }
         synchronized (ackLock) {
+            ackList.clear();
+            LOG.log(Level.FINEST, "Sending message sequence #: " + seq + " Threshold :" + threshold);
+            send((PeerID) null, msg);
+            if (threshold == 0) {
+                return;
+            }
             try {
                 ackLock.wait(timeout);
                 if (ackSet.size() >= threshold) {
