@@ -615,8 +615,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         processRoute(msg);
         LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         final Message response = createSelfNodeAdvertisement();
-        final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
-        msg.addMessageElement(NAMESPACE, el);
+        final MessageElement nodeResponse = new StringMessageElement(NODERESPONSE, "noderesponse", null);
+        msg.addMessageElement(NAMESPACE, nodeResponse);
         LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
         send(adv.getID(), null, response);
         if (isMaster() && masterAssigned) {
@@ -679,8 +679,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message was indeed a collision message
      * @throws IOException if and io error occurs
      */
-    boolean processMasterNodeCollision(final Message msg,
-                                       final SystemAdvertisement adv) throws IOException {
+    boolean processMasterNodeCollision(final Message msg, final SystemAdvertisement adv) throws IOException {
 
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, CCNTL);
         if (msgElement == null) {
@@ -912,10 +911,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param toID        receipient ID
      * @param includeView if true view will be included in the message
      */
-    void sendNewView(final ID toID,
-                     final ClusterViewEvent event,
-                     final Message msg,
-                     final boolean includeView) {
+    void sendNewView(final ID toID, final ClusterViewEvent event, final Message msg, final boolean includeView) {
         if (includeView) {
             addAuthoritativeView(msg);
         }
