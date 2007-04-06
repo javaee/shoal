@@ -57,7 +57,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private final List<PeerID> indoubtPeerList;
     private final String indoubtListLock = new String("IndoubtListLock");
     private final String threadLock = new String("threadLock");
-    private final Map<PeerID, HealthMessage.Entry> cache = new HashMap<PeerID, HealthMessage.Entry>();
+    private final HashMap<PeerID, HealthMessage.Entry> cache = new HashMap<PeerID, HealthMessage.Entry>();
     private MasterNode masterNode = null;
     private ClusterManager manager = null;
     private final PeerID myID;
@@ -276,11 +276,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private Map<PeerID, HealthMessage.Entry> getCacheCopy() {
-        final Map<PeerID, HealthMessage.Entry> h;
         synchronized (cache) {
-            h = new HashMap<PeerID, HealthMessage.Entry>(cache);
+            return (Map<PeerID, HealthMessage.Entry>)cache.clone();
         }
-        return h;
     }
 
     /**
