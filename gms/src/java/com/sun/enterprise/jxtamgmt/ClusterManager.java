@@ -443,6 +443,11 @@ public class ClusterManager implements PipeMsgListener {
 
     /**
      * Returns a pipe advertisement for Cluster messaging of propagate type
+     * eventhough this is a propagated pipe is can be used as unicast as well.
+     * <p/>
+     * This is done by :
+     * <p/>
+     * output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
      *
      * @return a pipe advertisement for Cluster messaging
      */
@@ -453,10 +458,6 @@ public class ClusterManager implements PipeMsgListener {
                 AdvertisementFactory.newAdvertisement(
                         PipeAdvertisement.getAdvertisementType());
         pipeAdv.setPipeID(getNetworkManager().getAppServicePipeID());
-        //TODO: figure out a way to dynamically create non propagate type
-        // pipes so that messages can be sent without knowing about multicast
-        // enablement or otherwise.
-        //This todo does not apply as propagated pipe maybe dynmically used as unicast, and used as such
         pipeAdv.setType(PipeService.PropagateType);
         return pipeAdv;
     }
