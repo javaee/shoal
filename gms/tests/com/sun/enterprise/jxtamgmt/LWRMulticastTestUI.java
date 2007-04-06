@@ -26,14 +26,13 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
-import com.sun.enterprise.jxtamgmt.LWRMulticast;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.Message.ElementIterator;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.pipe.PipeMsgListener;
 
-import javax.swing.*;
+import javax.swing.SpinnerNumberModel;
 import java.text.MessageFormat;
 
 /**
