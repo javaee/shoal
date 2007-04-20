@@ -284,6 +284,7 @@ public class ClusterManager implements PipeMsgListener {
      */
     public void announceStop(final boolean isClusterShutdown) {
         healthMonitor.announceStop(isClusterShutdown);
+        stopping = true;
     }
 
     /**
@@ -293,7 +294,6 @@ public class ClusterManager implements PipeMsgListener {
     public synchronized void stop(final boolean isClusterShutdown) {
         if (!stopped) {
             announceStop(isClusterShutdown);
-            stopping = true;
             outputPipe.close();
             inputPipe.close();
             pipeCache.clear();
@@ -443,11 +443,6 @@ public class ClusterManager implements PipeMsgListener {
 
     /**
      * Returns a pipe advertisement for Cluster messaging of propagate type
-     * eventhough this is a propagated pipe is can be used as unicast as well.
-     * <p/>
-     * This is done by :
-     * <p/>
-     * output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
      *
      * @return a pipe advertisement for Cluster messaging
      */
@@ -578,6 +573,10 @@ public class ClusterManager implements PipeMsgListener {
      */
     public ID getID(final String name) {
         return netManager.getPeerID(name);
+    }
+
+    boolean isStopping(){
+        return stopping;
     }
 }
 

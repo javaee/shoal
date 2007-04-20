@@ -25,36 +25,19 @@ package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocument;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.ByteArrayMessageElement;
-import net.jxta.endpoint.Message;
-import net.jxta.endpoint.MessageElement;
-import net.jxta.endpoint.MessageTransport;
-import net.jxta.endpoint.StringMessageElement;
-import net.jxta.endpoint.TextDocumentMessageElement;
+import net.jxta.document.*;
+import net.jxta.endpoint.*;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -615,8 +598,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         processRoute(msg);
         LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         final Message response = createSelfNodeAdvertisement();
-        final MessageElement nodeResponse = new StringMessageElement(NODERESPONSE, "noderesponse", null);
-        msg.addMessageElement(NAMESPACE, nodeResponse);
+        final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
+        msg.addMessageElement(NAMESPACE, el);
         LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
         send(adv.getID(), null, response);
         if (isMaster() && masterAssigned) {
@@ -679,7 +662,8 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message was indeed a collision message
      * @throws IOException if and io error occurs
      */
-    boolean processMasterNodeCollision(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processMasterNodeCollision(final Message msg,
+                                       final SystemAdvertisement adv) throws IOException {
 
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, CCNTL);
         if (msgElement == null) {
@@ -719,6 +703,10 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
 
+        if(manager.isStopping()){
+            return ;
+        }
+        
         if (isStarted()) {
             final Message msg;
             // grab the message from the event
@@ -911,7 +899,10 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param toID        receipient ID
      * @param includeView if true view will be included in the message
      */
-    void sendNewView(final ID toID, final ClusterViewEvent event, final Message msg, final boolean includeView) {
+    void sendNewView(final ID toID,
+                     final ClusterViewEvent event,
+                     final Message msg,
+                     final boolean includeView) {
         if (includeView) {
             addAuthoritativeView(msg);
         }
