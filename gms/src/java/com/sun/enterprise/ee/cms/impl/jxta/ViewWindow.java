@@ -265,6 +265,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private void analyzeAndFireFailureSignals(final GMSMember member,
                                               final String token,
                                               final EventPacket packet) {
+
         if (member.getMemberType().equalsIgnoreCase(CORETYPE) && !getCurrentCoreMembers().contains(token)) {
             logger.log(Level.INFO, "gms.failureEventReceived", token);
             addFailureSignals(packet);
@@ -351,6 +352,9 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                                     Long.valueOf(advert.getCustomTagValue(
                                             CustomTagNames.START_TIME.toString()))));
                 }
+
+		logger.fine("removing newly added node from the suspected list..." + token);
+		getGMSContext().removeFromSuspectList(token);
             }
         } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
@@ -499,6 +503,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private void addJoinNotificationSignal(final String token,
                                            final String groupName,
                                            final long startTime) {
+
         logger.log(Level.FINE, "adding join signal");
         signals.add(new JoinNotificationSignalImpl(token,
                 getCurrentCoreMembers(),
