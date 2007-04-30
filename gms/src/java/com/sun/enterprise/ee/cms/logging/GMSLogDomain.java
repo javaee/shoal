@@ -40,10 +40,14 @@ import java.util.logging.Logger;
  */
 public class GMSLogDomain  {
     public static final String GMS_LOGGER = "ShoalLogger";
+    public static final String RESOURCE_BUNDLE = "LogStrings";     
+    public static final String LOG_STRINGS = "com.sun.enterprise.ee.cms.logging." + RESOURCE_BUNDLE;
+    
     private static Logger gmsLogger = null;
+    
     public static Logger getLogger(final String loggerName){
         if(gmsLogger == null ){
-            gmsLogger =  Logger.getLogger( loggerName );
+            gmsLogger =  Logger.getLogger( loggerName,  LOG_STRINGS);
         }
         return gmsLogger;
     }

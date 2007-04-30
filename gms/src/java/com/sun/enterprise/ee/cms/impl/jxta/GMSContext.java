@@ -69,7 +69,7 @@ public class GMSContext extends GMSContextBase {
         // It should be driven independent of GMSContext through a factory as
         // other impls of this interface can exist
         createDistributedStateCache();
-        logger.log(Level.INFO, "Initialized Group Communication System....");
+        logger.log(Level.INFO,  "gms.init");
     }
 
     protected void createDistributedStateCache() {

@@ -136,7 +136,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
             ret = dsc.getFromCacheForPattern(MEMBER_DETAILS, memberToken );
         }
         else {
-            logger.log(Level.WARNING, "Could not get an instance of Distributed State Cache to fetch member details for  "+memberToken) ;
+            logger.log(Level.WARNING, "no.instance.dsc", new Object[] {memberToken}) ;
         }
         return ret;
     }
