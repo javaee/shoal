@@ -704,6 +704,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     public void pipeMsgEvent(final PipeMsgEvent event) {
 
         if(manager.isStopping()){
+            LOG.log(Level.FINE, "Since this Peer is Stopping, returning without processing incoming master node message. ");
             return ;
         }
         

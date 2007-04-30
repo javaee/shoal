@@ -283,8 +283,8 @@ public class ClusterManager implements PipeMsgListener {
      *                          this peer only.
      */
     public void announceStop(final boolean isClusterShutdown) {
-        healthMonitor.announceStop(isClusterShutdown);
         stopping = true;
+        healthMonitor.announceStop(isClusterShutdown);        
     }
 
     /**
