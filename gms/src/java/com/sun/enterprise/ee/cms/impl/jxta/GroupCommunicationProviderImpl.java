@@ -83,9 +83,8 @@ public class GroupCommunicationProviderImpl implements
                 viewQueue.put(ePacket);
             } catch (InterruptedException e) {
                 //TODO: Examine all InterruptedException and thread.interrupt cases for better logging.
-                logger.log(Level.WARNING, "InteruptedException occurred when " +
-                        "putting EventPacket into viewQueue:"
-                        + e.getLocalizedMessage());
+                logger.log(Level.WARNING, "interruptedexception.occurred",
+                        new Object[] {e.getLocalizedMessage()});
             }
         }
     }
@@ -124,7 +123,7 @@ public class GroupCommunicationProviderImpl implements
      * Joins the group using semantics specified by the underlying GCP system
      */
     public void join() {
-        logger.log(Level.INFO, "Starting ClusterManager...");
+        logger.log(Level.INFO, "starting.cluster");
         clusterManager.start();
     }
 
@@ -132,7 +131,7 @@ public class GroupCommunicationProviderImpl implements
         try {
             clusterManager.send(null, gmsMessage);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "IOException occured while announcing cluster shutdown:"+e);
+            logger.log(Level.WARNING, "ioexception.occurred.put.eventpacket", new Object[] {e});
         }
     }
 
@@ -229,9 +228,8 @@ public class GroupCommunicationProviderImpl implements
             logger.log(Level.FINER, "Received AppMessage Notification, placing in message queue");
             getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
         } catch (InterruptedException e) {
-            logger.log(Level.WARNING, "Interrupted Exception occured while " +
-                    "adding message to Shoal MessageQueue:" +
-                    e.getLocalizedMessage());
+            logger.log(Level.WARNING, "interruptedexception.occurred.add.message", new Object[]
+            {e.getLocalizedMessage()});
         }
     }
 }

@@ -244,9 +244,8 @@ public class Router{
     {
         FailureNotificationAction a;
         FailureNotificationSignal fns;
-        logger.log(Level.INFO, MessageFormat.format(
-                "Sending FailureNotificationSignals to registered Actions. " +
-                        "Member: {0}...", signal.getMemberToken()));
+        logger.log(Level.INFO, "failurenotificationsignals.send.member", 
+                    new Object[] {signal.getMemberToken()});                
         synchronized(failureNotificationAF){
             for(FailureNotificationActionFactory fnaf: failureNotificationAF)
             {
@@ -260,9 +259,8 @@ public class Router{
     void notifyFailureRecoveryAction(final FailureRecoverySignal signal) {
         final FailureRecoveryAction a;
         final FailureRecoverySignal frs;
-        logger.log(Level.INFO,
-                MessageFormat.format("Sending FailureRecoveryNotification to " +
-                        "component {0}", signal.getComponentName()));
+        logger.log(Level.INFO,"failurenotificationsignals.send.component", 
+                    new Object[]{signal.getComponentName()});               
         synchronized(failureRecoveryAF){
                 final FailureRecoveryActionFactory fraf =
                         failureRecoveryAF.get( signal.getComponentName());
@@ -276,8 +274,8 @@ public class Router{
     {
         FailureSuspectedAction a;
         FailureSuspectedSignal fss;
-        logger.log(Level.INFO, MessageFormat.format("Sending FailureSuspectedSignals to " +
-                "registered Actions. Member:{0}...", signal.getMemberToken()));
+        logger.log(Level.INFO, "failuresuspectedsignals.send.member", 
+                    new Object[] {signal.getMemberToken()});
         synchronized(failureSuspectedAF){
             for(FailureSuspectedActionFactory fsaf: failureSuspectedAF)
             {
@@ -306,10 +304,8 @@ public class Router{
                         a.consumeSignal(signal);
                     }
                     catch(ActionException e){
-                        logger.log(Level.WARNING, 
-                                new StringBuffer("ActionException:")
-                                .append(e.getLocalizedMessage())
-                                .toString());
+                        logger.log(Level.WARNING, "action.exception", new Object[] {
+                                e.getLocalizedMessage()});                             
                     }
                 }
             }
@@ -345,10 +341,8 @@ public class Router{
     void notifyPlannedShutdownAction(final PlannedShutdownSignal signal) {
         PlannedShutdownAction a;
         PlannedShutdownSignal pss;
-        logger.log(Level.INFO,
-                MessageFormat.format("Sending PlannedShutdownSignals to " +
-                        "registered Actions for shutdownType {0} Member: {1}...",
-                        signal.getEventSubType(), signal.getMemberToken()));
+        logger.log(Level.INFO, "plannedshutdownsignals.send.member",
+                        new Object[] {signal.getEventSubType(), signal.getMemberToken()});
         synchronized(plannedShutdownAF){
             for(PlannedShutdownActionFactory psaf : plannedShutdownAF) {
                 a = (PlannedShutdownAction) psaf.produceAction();

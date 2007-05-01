@@ -239,9 +239,9 @@ public class ClusterManager implements PipeMsgListener {
                     public void clusterViewEvent(
                             final ClusterViewEvent event,
                             final ClusterView view) {
-                        LOG.log(Level.INFO, "Event:" + event.getEvent().toString());
-                        LOG.log(Level.INFO, "Peer Involved:" + event.getAdvertisement().toString());
-                        LOG.log(Level.INFO, "View:" + view.getPeerNamesInView().toString());
+                        LOG.log(Level.INFO, "event.message", new Object[] {event.getEvent().toString()});
+                        LOG.log(Level.INFO, "peer.involved", new Object[] {event.getAdvertisement().toString()});
+                        LOG.log(Level.INFO, "view.message",new Object[] {view.getPeerNamesInView().toString()});
                     }
                 });
         mListeners.add(
@@ -321,7 +321,7 @@ public class ClusterManager implements PipeMsgListener {
             try {
                 inputPipe = pipeService.createInputPipe(pipeAdv, this);
             } catch (IOException ioe) {
-                LOG.log(Level.SEVERE, "Failed to create service input pipe", ioe);
+                LOG.log(Level.SEVERE, "serviceinputpipe.failure", new Object[] {ioe});
             }
         }
     }
@@ -468,7 +468,7 @@ public class ClusterManager implements PipeMsgListener {
             try {
                 msg = event.getMessage();
                 if (msg == null) {
-                    LOG.log(Level.WARNING, "Received a null message");
+                    LOG.log(Level.WARNING, "null.message");
                     return;
                 }
                 //JxtaUtil.printMessageStats(msg, true);
@@ -476,7 +476,7 @@ public class ClusterManager implements PipeMsgListener {
                 msgElement = msg.getMessageElement(NAMESPACE, NODEADV);
                 if (msgElement == null) {
                     // no need to go any further
-                    LOG.log(Level.WARNING, "Received an unknown message");
+                    LOG.log(Level.WARNING, "unknown.message");
                     return;
                 }
 
@@ -551,7 +551,7 @@ public class ClusterManager implements PipeMsgListener {
             sysAdv.setIP(InetAddress.getLocalHost().getHostAddress());
         }
         catch (UnknownHostException ignored) {
-            LOG.log(Level.WARNING, "Failed to obtain IP address", ignored);
+            LOG.log(Level.WARNING, "ipaddress.failure", new Object[] {ignored});
         }
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));

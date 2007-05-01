@@ -96,8 +96,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             if (views.size() > size) {
                 views.remove(0);
             }
-            logger.log(Level.INFO, MessageFormat.format("Analyzing new membership snapshot received as part" +
-                    " of event : {0}", packet.getClusterViewEvent().toString()));
+            logger.log(Level.INFO, "membership.snapshot.analysis", 
+                        new Object[] {packet.getClusterViewEvent().toString()});
             Signal[] activeSignals = analyzeViewChange(packet);
 
             if (activeSignals.length != 0) {
@@ -289,9 +289,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 }
             }
             //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
-            logger.log(Level.INFO, MessageFormat.format(
-                    "Received PlannedShutdownEvent Announcement from Instance " +
-                            "{0} with Shutdown type={1}", token, shutdownType));
+            logger.log(Level.INFO, "plannedshutdownevent.announcement", 
+                        new Object[] {token, shutdownType});
             signals.add(new PlannedShutdownSignalImpl(token,
                     advert.getCustomTagValue(
                             CustomTagNames.GROUP_NAME.toString()),
@@ -299,11 +298,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                             CustomTagNames.START_TIME.toString())),
                     shutdownType));
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,
-                    new StringBuffer().append("The SystemAdvertisement did ")
-                            .append("not contain the ").append(
-                            e.getLocalizedMessage())
-                            .append(" custom tag value:").toString());
+            logger.log(Level.WARNING,"systemadv.not.contain.customtag", 
+                        new Object[] {e.getLocalizedMessage()});
         }
     }
 
@@ -320,11 +316,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                             Long.valueOf(advert.getCustomTagValue(
                                     CustomTagNames.START_TIME.toString()))));
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,
-                    new StringBuffer().append("The SystemAdvertisement did ")
-                            .append("not contain the ").append(
-                            e.getLocalizedMessage())
-                            .append(" custom tag value:").toString());
+            logger.log(Level.WARNING,"systemadv.not.contain.customtag", 
+                        new Object[] {e.getLocalizedMessage()});               
         }
     }
 
@@ -335,8 +328,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             final String type = advert.getCustomTagValue(
                     CustomTagNames.MEMBER_TYPE.toString());
             if (type.equalsIgnoreCase(CORETYPE)) {
-                logger.log(Level.INFO, MessageFormat.format("The following member" +
-                        " has failed: {0}", token));
+                logger.log(Level.INFO, "member.failed", new Object[] {token});
                 generateFailureRecoverySignals(views.get(views.size() - 2),
                         token,
                         advert.getCustomTagValue(
@@ -357,11 +349,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
 		getGMSContext().removeFromSuspectList(token);
             }
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,
-                    new StringBuffer().append("The SystemAdvertisement did ")
-                            .append("not contain the ").append(
-                            e.getLocalizedMessage())
-                            .append(" custom tag value:").toString());
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag", 
+                        new Object[] {e.getLocalizedMessage()});               
         }
     }
 

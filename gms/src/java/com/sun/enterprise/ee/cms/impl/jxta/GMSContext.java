@@ -114,12 +114,12 @@ public class GMSContext extends GMSContextBase {
 
     public void leave(final GMSConstants.shutdownType shutdownType) {
         if(shutdownHelper.isGroupBeingShutdown(groupName)){
-            logger.log(Level.INFO, MessageFormat.format("Leaving GMS group {0} with shutdown type set to GroupShutdown", groupName));
+            logger.log(Level.INFO, "shutdown.groupshutdown", new Object[] {groupName});
             groupCommunicationProvider.leave(true);
             shutdownHelper.removeFromGroupShutdownList(groupName);
         }
         else {
-            logger.log(Level.INFO, MessageFormat.format("Leaving GMS group {0} with shutdown type set to InstanceShutdown", groupName));
+            logger.log(Level.INFO, "shutdown.instanceshutdown", new Object[] {groupName});
             groupCommunicationProvider.leave(false);
         }
     }
