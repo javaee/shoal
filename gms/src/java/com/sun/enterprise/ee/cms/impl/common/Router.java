@@ -62,7 +62,7 @@ public class Router{
 
     private final Vector<JoinNotificationActionFactory> joinNotificationAF =
             new Vector<JoinNotificationActionFactory>();
-    private Vector<FailureSuspectedActionFactory> failureSuspectedAF =
+    private final Vector<FailureSuspectedActionFactory> failureSuspectedAF =
             new Vector<FailureSuspectedActionFactory>();
 
     private final QueueHelper queHelper;
