@@ -171,6 +171,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * {@inheritDoc}
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
+        //if this peer is stopping, then stop processing incoming health messages.
+        if(manager.isStopping()){
+            return;
+        }
         if (started) {
             final Message msg;
             MessageElement msgElement;
@@ -506,7 +510,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         cacheLock.wait(timeout);
                         //LOG.log(Level.FINEST, "Analyzing cache for health...");
                         //get the copy of the states cache
-                        if (!stop) {
+                        if (!manager.isStopping()) {
                             processCacheUpdate();
                         }
                     } catch (InterruptedException ex) {
