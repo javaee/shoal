@@ -28,7 +28,6 @@ import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 
-import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
@@ -69,7 +68,7 @@ public class GMSContext extends GMSContextBase {
         // It should be driven independent of GMSContext through a factory as
         // other impls of this interface can exist
         createDistributedStateCache();
-        logger.log(Level.INFO,  "gms.init");
+        logger.log(Level.FINE,  "gms.init");
     }
 
     protected void createDistributedStateCache() {

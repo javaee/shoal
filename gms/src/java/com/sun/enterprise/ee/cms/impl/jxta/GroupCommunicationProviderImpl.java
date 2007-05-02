@@ -123,7 +123,7 @@ public class GroupCommunicationProviderImpl implements
      * Joins the group using semantics specified by the underlying GCP system
      */
     public void join() {
-        logger.log(Level.INFO, "starting.cluster");
+        logger.log(Level.FINE, "starting.cluster");
         clusterManager.start();
     }
 
@@ -131,7 +131,7 @@ public class GroupCommunicationProviderImpl implements
         try {
             clusterManager.send(null, gmsMessage);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "ioexception.occurred.put.eventpacket", new Object[] {e});
+            logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[] {e});
         }
     }
 
@@ -228,8 +228,9 @@ public class GroupCommunicationProviderImpl implements
             logger.log(Level.FINER, "Received AppMessage Notification, placing in message queue");
             getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
         } catch (InterruptedException e) {
-            logger.log(Level.WARNING, "interruptedexception.occurred.add.message", new Object[]
-            {e.getLocalizedMessage()});
+            logger.log(Level.WARNING, "Interrupted Exception occured while " +
+                    "adding message to Shoal MessageQueue:" +
+                    e.getLocalizedMessage());
         }
     }
 }
