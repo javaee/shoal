@@ -667,7 +667,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     reportOtherPeerState(DEAD, adv);
                 }
                 final boolean masterFailed= (masterNode.getMasterNodeID()).equals(entry.id);
-                if (masterNode.isMaster()) {
+                if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
                     LOG.log(Level.FINE, MessageFormat.format("Removing System Advertisement :{0}", entry.id.toString()));
                     removeMasterAdv(entry, DEAD);
                     LOG.log(Level.FINE, MessageFormat.format("Announcing Failure Event of {0} ...", entry.id));
