@@ -666,18 +666,19 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     LOG.log(Level.FINE, MessageFormat.format("Reporting Failed Node {0}", entry.id.toString()));
                     reportOtherPeerState(DEAD, adv);
                 }
-                final ID masterId = masterNode.getMasterNodeID();
-                if (masterNode.isMaster() || masterId.equals(entry.id)) {
+                final boolean masterFailed= (masterNode.getMasterNodeID()).equals(entry.id);
+                if (masterNode.isMaster()) {
                     LOG.log(Level.FINE, MessageFormat.format("Removing System Advertisement :{0}", entry.id.toString()));
                     removeMasterAdv(entry, DEAD);
-                }
-                if (masterNode.isMaster()) {
                     LOG.log(Level.FINE, MessageFormat.format("Announcing Failure Event of {0} ...", entry.id));
                     final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, adv);
                     masterNode.viewChanged(cvEvent);
-                } else if (masterId.equals(entry.id)) {
+                } else if (masterFailed) {
                     //remove the failed node
+                    LOG.log(Level.FINE, MessageFormat.format("Master Failed. Removing System Advertisement :{0}", entry.id.toString()));
+                    removeMasterAdv(entry, DEAD);                    
                     //manager.getClusterViewManager().remove(entry.id);
+                    masterNode.resetMaster();
                     masterNode.appointMasterNode();
                 }
             }
