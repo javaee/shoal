@@ -366,6 +366,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     void resetMaster() {
         LOG.log(Level.FINER, "Resetting Master view");
+        clusterViewManager.setMasterViewID(0);
         masterAssigned = false;
     }
 
