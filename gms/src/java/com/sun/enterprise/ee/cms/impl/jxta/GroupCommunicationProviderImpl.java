@@ -175,10 +175,8 @@ public class GroupCommunicationProviderImpl implements
                 clusterManager.send(id, message);
             }
         } catch (IOException e) {
-            throw new GMSException(
-                    new StringBuffer()
-                            .append("IOException thrown when sending message")
-                            .toString(), e);
+            throw new GMSException(e);
+
         }
     }
 
