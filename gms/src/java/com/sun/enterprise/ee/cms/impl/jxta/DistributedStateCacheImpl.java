@@ -490,8 +490,12 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         final DSCMessage msg = new DSCMessage(temp,
                 DSCMessage.OPERATION.ADDALLLOCAL.toString(),
                 isCoordinator);
-        logger.log(Level.FINER, "Sending sync message from DistributedStateCache to member "+memberToken);
-        sendMessage(memberToken, msg);
+        if(!memberToken.equals(ctx.getServerIdentityToken())){
+            logger.log(Level.FINER, "Sending sync message from DistributedStateCache " +
+
+                    "to member "+memberToken);
+            sendMessage(memberToken, msg);
+        }
         if (isCoordinator) {
             firstSyncDone = true;
         }
