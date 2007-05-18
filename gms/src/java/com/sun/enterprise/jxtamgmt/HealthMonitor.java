@@ -129,7 +129,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @return a Message containing this node's state
      */
     private Message createHealthMessage(final short state) {
-        return createMessage(state, HEALTHM, manager.getSystemAdvertisement());
+        Message msg = createMessage(state, HEALTHM, manager.getSystemAdvertisement());
+        masterNode.addRoute(msg);
+        return msg;
     }
 
     private Message createMessage(final short state, final String tag,
@@ -182,6 +184,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // grab the message from the event
                 msg = event.getMessage();
                 if (msg != null) {
+                    masterNode.processRoute(msg);
                     final Message.ElementIterator iter = msg.getMessageElements();
                     while (iter.hasNext()) {
                         msgElement = iter.next();
