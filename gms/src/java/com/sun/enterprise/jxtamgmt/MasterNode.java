@@ -25,19 +25,36 @@ package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.*;
-import net.jxta.endpoint.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.XMLDocument;
+import net.jxta.endpoint.ByteArrayMessageElement;
+import net.jxta.endpoint.Message;
+import net.jxta.endpoint.MessageElement;
+import net.jxta.endpoint.MessageTransport;
+import net.jxta.endpoint.StringMessageElement;
+import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -107,7 +124,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String VIEW_CHANGE_EVENT = "VCE";
     private RouteControl routeControl = null;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
-    
+
     /**
      * Constructor for the MasterNode object
      *
@@ -150,7 +167,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             outputPipe = pipeService.createOutputPipe(pipeAdv, 0);
         } catch (IOException io) {
             io.printStackTrace();
-            LOG.log(Level.WARNING, "master.pipe.failure", new Object[] {io});
+            LOG.log(Level.WARNING, "master.pipe.failure", new Object[]{io});
         }
     }
 
@@ -236,15 +253,18 @@ class MasterNode implements PipeMsgListener, Runnable {
         final Message msg = createSelfNodeAdvertisement();
         final MessageElement el = new StringMessageElement(MASTERQUERY, "query", null);
         msg.addMessageElement(NAMESPACE, el);
-        if (routeAdvElement != null && routeControl != null) {
-            msg.addMessageElement(NAMESPACE, routeAdvElement);
-        }
-
+        addRoute(msg);
         LOG.log(Level.FINER, "Created a Master Node Query Message ");
         return msg;
     }
 
-        /**
+    void addRoute(Message msg) {
+        if (routeAdvElement != null && routeControl != null) {
+            msg.addMessageElement(NAMESPACE, routeAdvElement);
+        }
+    }
+
+    /**
      * Creates a Node Query Message
      *
      * @return a message containing a node query
@@ -581,6 +601,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         return true;
     }
+
     /**
      * Processes a Masternode Query message. This results in a master node
      * response if this node is a master node.
@@ -612,6 +633,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         return true;
     }
+
     /**
      * Processes a Node Response message.
      *
@@ -636,7 +658,8 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         return true;
     }
-    private void processRoute(final Message msg) {
+
+    void processRoute(final Message msg) {
         try {
             final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
             if (routeElement != null && routeControl != null) {
@@ -690,6 +713,7 @@ class MasterNode implements PipeMsgListener, Runnable {
 
     /**
      * Probes a node. Used when a node does not exist in local view
+     *
      * @param id node ID
      * @throws IOException if an io error occurs sending the message
      */
@@ -704,11 +728,11 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
 
-        if(manager.isStopping()){
+        if (manager.isStopping()) {
             LOG.log(Level.FINE, "Since this Peer is Stopping, returning without processing incoming master node message. ");
-            return ;
+            return;
         }
-        
+
         if (isStarted()) {
             final Message msg;
             // grab the message from the event
@@ -828,7 +852,7 @@ class MasterNode implements PipeMsgListener, Runnable {
 
         //avoid notifying listeners
         clusterViewManager.setMaster(madv, false);
-        masterAssigned=true;
+        masterAssigned = true;
         if (madv.getID().equals(myID)) {
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             // generate view change event
@@ -870,7 +894,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             if (peerid != null) {
                 // Unicast datagram
                 // create a op pipe to the destination peer
-                LOG.log(Level.FINER, "Unicasting Message to :" + name + "ID="+peerid);
+                LOG.log(Level.FINER, "Unicasting Message to :" + name + "ID=" + peerid);
                 final OutputPipe output;
                 if (!pipeCache.containsKey(peerid)) {
                     // Unicast datagram
