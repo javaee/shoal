@@ -317,7 +317,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         if(retval.isEmpty()){
             try {
                 syncCache(ctx.getGroupCommunicationProvider().getGroupLeader(),true);
-                wait(3000);
+                Thread.sleep(3000);
                 retval.putAll( getFromCacheForPattern(componentName, memberToken));
             } catch (GMSException e) {
                 logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
