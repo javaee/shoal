@@ -321,7 +321,7 @@ public class ClusterManager implements PipeMsgListener {
             try {
                 inputPipe = pipeService.createInputPipe(pipeAdv, this);
             } catch (IOException ioe) {
-                LOG.log(Level.SEVERE, "serviceinputpipe.failure", new Object[] {ioe});
+                LOG.log(Level.SEVERE, "Failed to create service input pipe: " + ioe);
             }
         }
     }
@@ -468,7 +468,7 @@ public class ClusterManager implements PipeMsgListener {
             try {
                 msg = event.getMessage();
                 if (msg == null) {
-                    LOG.log(Level.WARNING, "null.message");
+                    LOG.log(Level.WARNING, "Received a null message");
                     return;
                 }
                 //JxtaUtil.printMessageStats(msg, true);
@@ -476,7 +476,7 @@ public class ClusterManager implements PipeMsgListener {
                 msgElement = msg.getMessageElement(NAMESPACE, NODEADV);
                 if (msgElement == null) {
                     // no need to go any further
-                    LOG.log(Level.WARNING, "unknown.message");
+                    LOG.log(Level.WARNING, "Received an unknown message");
                     return;
                 }
 
@@ -551,7 +551,7 @@ public class ClusterManager implements PipeMsgListener {
             sysAdv.setIP(InetAddress.getLocalHost().getHostAddress());
         }
         catch (UnknownHostException ignored) {
-            LOG.log(Level.WARNING, "ipaddress.failure", new Object[] {ignored});
+            LOG.log(Level.WARNING, "Failed to obtain IP address :" + ignored);
         }
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));

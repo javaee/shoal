@@ -167,7 +167,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             outputPipe = pipeService.createOutputPipe(pipeAdv, 0);
         } catch (IOException io) {
             io.printStackTrace();
-            LOG.log(Level.WARNING, "master.pipe.failure", new Object[]{io});
+            LOG.log(Level.WARNING, "Failed to create master outputPipe : " + io);
         }
     }
 
@@ -401,7 +401,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEADV);
         if (msgElement == null) {
             // no need to go any further
-            LOG.log(Level.WARNING, "missing.nodeadv");
+            LOG.log(Level.WARNING, "Missing NODEADV message element");
             JxtaUtil.printMessageStats(msg, false);
             return null;
         }
@@ -463,7 +463,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                     clusterViewManager.setMasterViewID(seqID);
                     clusterViewManager.addToView(newLocalView, true, cvEvent);
                 } else {
-                    LOG.log(Level.WARNING, "view.without.viewchangeevent");
+                    LOG.log(Level.WARNING, "New View Received without corresponding ViewChangeEvent details");
                     //TODO according to the implementation MasterNode does not include VIEW_CHANGE_EVENT
                     //when it announces a Authortative master view
                     //throw new IOException("New View Received without corresponding ViewChangeEvent details");
@@ -738,7 +738,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             // grab the message from the event
             msg = event.getMessage();
             if (msg == null) {
-                LOG.log(Level.WARNING, "null.message");
+                LOG.log(Level.WARNING, "Received a null message");
                 return;
             }
             try {
@@ -990,7 +990,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             started = true;
             inputPipe = pipeService.createInputPipe(pipeAdv, this);
         } catch (IOException ioe) {
-            LOG.log(Level.SEVERE, "serviceinputpipe.failure", ioe);
+            LOG.log(Level.SEVERE, "Failed to create service input pipe" + ioe);
         }
         thread = new Thread(this, "MasterNode");
         thread.setDaemon(true);

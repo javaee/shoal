@@ -195,7 +195,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
-                LOG.log(Level.WARNING, "ioexception.healthmonitor", new Object[] {ex.getLocalizedMessage()});
+                LOG.log(Level.WARNING, "HealthMonitor:Caught IOException : " + ex.getLocalizedMessage());
             } catch (Throwable e) {
                 e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
@@ -218,7 +218,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 if (!manager.getClusterViewManager().containsKey(entry.id)) {
                     try {
-                        LOG.log(Level.INFO, "probing.id", new Object[] {entry.id, entry.adv.getName()});
+                        LOG.log(Level.INFO, "Probing ID = " + entry.id + ", name = " + entry.adv.getName());
                         masterNode.probeNode(entry.id);
                     } catch (IOException e) {
                         //ignored
@@ -334,7 +334,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //TODO: handle shutdown more gracefully
         }
         catch (Throwable all) {
-            LOG.log(Level.WARNING, "uncaught.throwable", new Object[] {Thread.currentThread().getName(), all});
+            LOG.log(Level.WARNING, "Uncaught Throwable in thread " + Thread.currentThread().getName() + ":" + all);
         } finally {
             thread = null;
         }
@@ -392,7 +392,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 inDoubtPeerDetector.start();
                 started = true;
             } catch (IOException ioe) {
-                LOG.log(Level.WARNING, "health.monitor.pipe.adv.failure", new Object[] {ioe});
+                LOG.log(Level.WARNING, "Failed to create health monitoring pipe advertisement :" + ioe);
             }
         }
     }
@@ -539,7 +539,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         timeDiff = System.currentTimeMillis() - Long.parseLong(entry.timestamp);
                         determineInDoubtPeers(timeDiff, retries, entry);
                     } catch (NumberFormatException nfe) {
-                        LOG.log(Level.WARNING, "exception.timestamp", new Object[] {nfe.getLocalizedMessage()});
+                        LOG.log(Level.WARNING, "Exception occurred during time stamp conversion : " + nfe.getLocalizedMessage());
                     }
                 }
             }
@@ -708,7 +708,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     LOG.log(Level.FINEST, MessageFormat.format("Invalid State for removing adv from view{0}", state));
             }
         } else {
-            LOG.log(Level.WARNING, "clusterview.notexist", new Object[] {states[state], entry.id });
+            LOG.log(Level.WARNING, states[state] + " peer: " + entry.id + " does not exist in local ClusterView");
         }
     }
 /*
