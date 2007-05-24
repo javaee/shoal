@@ -26,9 +26,9 @@ package com.sun.enterprise.jxtamgmt;
 import net.jxta.id.ID;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,7 +42,7 @@ public class ClusterView {
 
     private final TreeMap<String, SystemAdvertisement> view;
     private final long viewId;
-
+    private ReentrantLock viewLock = new ReentrantLock(true);
     /**
      * Constructs the ClusterView object with a given TreeMap containing the
      * system advertisements of members in the group. The membership is sorted
@@ -66,7 +66,13 @@ public class ClusterView {
      */
     ClusterView(SystemAdvertisement advertisement) {
         view = new TreeMap<String, SystemAdvertisement>();
-        view.put(advertisement.getID().toString(), advertisement);
+        viewLock.lock();
+        try{
+            view.put(advertisement.getID().toString(), advertisement);
+        }
+        finally{
+            viewLock.unlock();
+        }
         this.viewId = 0;
     }
 
@@ -76,7 +82,7 @@ public class ClusterView {
      * @param id instance id
      * @return Returns the SystemAdvertisement associated with id
      */
-    public synchronized SystemAdvertisement get(final ID id) {
+    public SystemAdvertisement get(final ID id) {
         return view.get(id.toString());
     }
 
@@ -85,12 +91,26 @@ public class ClusterView {
      *
      * @param adv adds a system advertisement to the view
      */
-    public synchronized void add(final SystemAdvertisement adv) {
-        view.put(adv.getID().toString(), adv);
+    public void add(final SystemAdvertisement adv) {
+        viewLock.lock();
+        try{
+            view.put(adv.getID().toString(), adv);
+        }
+        finally {
+            viewLock.unlock();
+        }
     }
 
-    public synchronized boolean containsKey(final ID id) {
-        return view.containsKey(id.toString());
+    public boolean containsKey(final ID id) {
+        boolean hasKey = false;
+        viewLock.lock();
+        try{
+            hasKey = view.containsKey(id.toString());
+        }
+        finally{
+            viewLock.unlock();
+        }
+        return hasKey;
     }
 
     /**
@@ -99,8 +119,16 @@ public class ClusterView {
      *
      * @return List - list of system advertisements
      */
-    public synchronized List<SystemAdvertisement> getView() {
-        return new ArrayList<SystemAdvertisement>(view.values());
+    public List<SystemAdvertisement> getView() {
+        List<SystemAdvertisement> viewCopy;
+        viewLock.lock();
+        try{
+            viewCopy =  new ArrayList<SystemAdvertisement>(view.values());
+        }
+        finally{
+            viewLock.unlock();
+        }
+        return viewCopy;
     }
 
     /**
@@ -109,8 +137,16 @@ public class ClusterView {
      *
      * @return List
      */
-    public synchronized List<String> getPeerNamesInView() {
-        return new ArrayList<String>(view.keySet());
+    public List<String> getPeerNamesInView() {
+        List<String> peerNamesList;
+        viewLock.lock();
+        try{
+            peerNamesList = new ArrayList<String>(view.keySet());
+        }
+        finally {
+            viewLock.unlock();
+        }
+        return peerNamesList;
     }
 
     /**
@@ -118,8 +154,16 @@ public class ClusterView {
      *
      * @return The viewSize
      */
-    public synchronized int getSize() {
-        return view.size();
+    public int getSize() {
+        int size = 0;
+        viewLock.lock();
+        try {
+            size = view.size();
+        }
+        finally {
+            viewLock.unlock();
+        }
+        return size;
     }
 
     /**
@@ -128,13 +172,19 @@ public class ClusterView {
      * @return the top node on the list
      */
     public SystemAdvertisement getMasterCandidate() {
-        final String id = view.firstKey();
-        final SystemAdvertisement adv = view.get(id);
-        LOG.log(Level.FINE,
-                new StringBuffer().append("Returning Master Candidate Node :")
-                        .append(adv.getName()).append(' ').append(adv.getID())
-                        .toString());
-        return adv;
+        viewLock.lock();
+        try {
+            final String id = view.firstKey();
+            final SystemAdvertisement adv = view.get(id);
+            LOG.log(Level.FINE,
+                    new StringBuffer().append("Returning Master Candidate Node :")
+                            .append(adv.getName()).append(' ').append(adv.getID())
+                            .toString());
+            return adv;
+        }
+        finally {
+            viewLock.unlock();
+        }
     }
 
     /**
@@ -146,32 +196,6 @@ public class ClusterView {
     public boolean isFirst(SystemAdvertisement advertisement) {
         final String id = view.firstKey();
         return advertisement.getID().toString().equals(id);
-    }
-
-    /**
-     * the index of id this view, or -1 if this view does not contain this
-     * element.
-     *
-     * @param id id
-     * @return the index of id this view, or -1 if this view does not
-     *         contain this element.
-     */
-    public int indexOf(final ID id) {
-        int retval = -1;
-        if (id != null) {
-            final Iterator<String> it = view.keySet().iterator();
-            final String idStr = id.toString();
-            int index = 0;
-            while (it.hasNext()) {
-                if (it.next().equals(idStr)) {
-                    retval = index;
-                }
-                index++;
-            }
-        } else {
-            retval = -1;
-        }
-        return retval;
     }
 
     /**
@@ -187,7 +211,13 @@ public class ClusterView {
      * Removes all of the elements from this set (optional operation).
      */
     public void clear() {
-        view.clear();
+        viewLock.lock();
+        try{
+            view.clear();
+        }
+        finally {
+            viewLock.unlock();
+        }
     }
 }
 
