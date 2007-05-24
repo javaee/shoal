@@ -289,23 +289,16 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         final Map<Serializable, Serializable> retval =
                 new Hashtable<Serializable, Serializable>();
 
-        if (componentName == null && memberToken == null) {
+        if (componentName == null || memberToken == null) {
             return retval;
         }
         cacheLock.lock();
         try{
             for (GMSCacheable c : cache.keySet()) {
-                if (componentName != null) {
-                    if (componentName.equals(c.getComponentName())) {
-                        if (memberToken != null) {
-                            if (memberToken.equals(c.getMemberTokenId())) {
-                                retval.put((Serializable) c.getKey(),
-                                        (Serializable) cache.get(c));
-                            }
-                        } else {
-                            retval.put((Serializable) c.getKey(),
-                                    (Serializable) cache.get(c));
-                        }
+                if (componentName.equals(c.getComponentName())) {
+                    if (memberToken.equals(c.getMemberTokenId())) {
+                        retval.put((Serializable) c.getKey(),
+                                (Serializable) cache.get(c));
                     }
                 }
             }
@@ -314,15 +307,30 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             cacheLock.unlock();
         }
 
-        if(retval.isEmpty()){
-            try {
-                syncCache(ctx.getGroupCommunicationProvider().getGroupLeader(),true);
-                Thread.sleep(3000);
-                retval.putAll( getFromCacheForPattern(componentName, memberToken));
-            } catch (GMSException e) {
-                logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
-            } catch (InterruptedException e) {
-                //ignore
+        if(!retval.isEmpty()){
+            return retval;
+        }
+        else{
+            if(!memberToken.equals(ctx.getServerIdentityToken())){
+                cacheLock.lock();
+                ConcurrentHashMap<GMSCacheable, Object> temp;
+                try {
+                    temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
+                }
+                finally {
+                    cacheLock.unlock();
+                }
+                DSCMessage msg = new DSCMessage(temp,
+                        DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
+                try{
+                    sendMessage(memberToken, msg);
+                    Thread.sleep(3000);
+                    retval.putAll( getFromCacheForPattern(componentName, memberToken));
+                } catch (GMSException e) {
+                    logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
+                } catch (InterruptedException e) {
+                    //ignore
+                }
             }
         }
         return retval;
