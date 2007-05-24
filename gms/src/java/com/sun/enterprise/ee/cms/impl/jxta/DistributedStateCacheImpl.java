@@ -80,14 +80,11 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     private final ConcurrentHashMap<GMSCacheable, Object> cache =
             new ConcurrentHashMap<GMSCacheable, Object>();
     private GMSContext ctx = null;
-    //singleton in each process
-    private static DistributedStateCacheImpl instance;
     private final Logger logger =
             GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private boolean firstSyncDone = false;
     private static final Map<String, DistributedStateCacheImpl> ctxCache =
             new HashMap<String, DistributedStateCacheImpl>();
-    private static final byte[] BYTE = new byte[]{};
     private final String groupName;
     private ReentrantLock cacheLock = new ReentrantLock();
 
@@ -98,6 +95,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
 
     //return the only instance we want to return
     static DistributedStateCache getInstance(final String groupName) {
+        DistributedStateCacheImpl instance;
         if (ctxCache.get(groupName) == null) {
             instance = new DistributedStateCacheImpl(groupName);
             ctxCache.put(groupName, instance);
