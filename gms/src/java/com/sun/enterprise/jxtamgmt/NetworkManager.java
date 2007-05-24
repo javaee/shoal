@@ -314,8 +314,6 @@ public class NetworkManager implements RendezvousListener {
 
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
-        //LOG.log(Level.DEBUG,"Starting instance :"+instanceName);
-        //ConfigurationFactory.setPeerID(IDFactory.newPeerID(PeerGroupID.defaultNetPeerGroupID));
         // Configure the peer name
         final NetworkConfigurator config = new NetworkConfigurator();
         config.setHome(userHome);
@@ -338,8 +336,6 @@ public class NetworkManager implements RendezvousListener {
         }
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
-        //hamada: this should only be uncommented for debugging purposes only
-        //netPeerGroup.startApp(null);
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
         started = true;
