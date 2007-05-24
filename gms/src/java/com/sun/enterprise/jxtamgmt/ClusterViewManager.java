@@ -368,9 +368,8 @@ public class ClusterViewManager {
     }
 
     void notifyListeners(final ClusterViewEvent event) {
-        LOG.log(Level.FINER, "Notifying the " + event.getEvent().toString() +
-                " to listeners, peer in event is " +
-                event.getAdvertisement().getName());
+        LOG.log(Level.FINER, MessageFormat.format("Notifying the {0} to listeners, peer in event is {1}",
+                    event.getEvent().toString(), event.getAdvertisement().getName()));
         for (ClusterViewEventListener elem : cvListeners) {
             elem.clusterViewEvent(event, getLocalView());
         }
