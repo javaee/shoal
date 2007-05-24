@@ -32,6 +32,7 @@ import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.impl.common.DSCMessage;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 
 import java.io.Serializable;
 import java.util.*;
@@ -312,24 +313,27 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         }
         else{
             if(!memberToken.equals(ctx.getServerIdentityToken())){
-                cacheLock.lock();
-                ConcurrentHashMap<GMSCacheable, Object> temp;
-                try {
-                    temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-                }
-                finally {
-                    cacheLock.unlock();
-                }
-                DSCMessage msg = new DSCMessage(temp,
-                        DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
-                try{
-                    sendMessage(memberToken, msg);
-                    Thread.sleep(3000);
-                    retval.putAll( getFromCacheForPattern(componentName, memberToken));
-                } catch (GMSException e) {
-                    logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
-                } catch (InterruptedException e) {
-                    //ignore
+                MemberStates state = ctx.getGroupCommunicationProvider().getMemberState(memberToken);
+                if(state.equals(MemberStates.ALIVE)) {
+                    cacheLock.lock();
+                    ConcurrentHashMap<GMSCacheable, Object> temp;
+                    try {
+                        temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
+                    }
+                    finally {
+                        cacheLock.unlock();
+                    }
+                    DSCMessage msg = new DSCMessage(temp,
+                            DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
+                    try{
+                        sendMessage(memberToken, msg);
+                        Thread.sleep(3000);
+                        retval.putAll( getFromCacheForPattern(componentName, memberToken));
+                    } catch (GMSException e) {
+                        logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
+                    } catch (InterruptedException e) {
+                        //ignore
+                    }
                 }
             }
         }
