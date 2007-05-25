@@ -659,7 +659,6 @@ class MasterNode implements PipeMsgListener, Runnable {
             io.printStackTrace();
             LOG.log(Level.WARNING, io.getLocalizedMessage());
         }
-        System.out.println("Returning from processRoute");
     }
 
     /**
