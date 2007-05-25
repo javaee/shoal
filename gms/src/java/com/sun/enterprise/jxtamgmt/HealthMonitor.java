@@ -191,12 +191,15 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // grab the message from the event
                 msg = event.getMessage();
                 if (msg != null) {
-                    masterNode.processRoute(msg);
                     final Message.ElementIterator iter = msg.getMessageElements();
                     while (iter.hasNext()) {
                         msgElement = iter.next();
                         if (msgElement != null && msgElement.getElementName().equals(HEALTHM)) {
-                            process(getHealthMessage(msgElement));
+                            HealthMessage hm = getHealthMessage(msgElement);
+                            if (!hm.getSrcID().equals(localPeerID)) {
+                                masterNode.processRoute(msg);
+                            }
+                            process(hm);
                         }
                     }
                 }
