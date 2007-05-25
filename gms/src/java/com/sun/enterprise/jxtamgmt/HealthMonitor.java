@@ -22,21 +22,13 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.StructuredTextDocument;
-import net.jxta.document.XMLDocument;
+import net.jxta.document.*;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
@@ -545,7 +537,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //the specified max timeout
             if (!stop) {
                 LOG.log(Level.FINEST, "timeDiff > maxTime");
-                if (computeMissedBeat(entry) >= maxMissedBeats) {
+                if (computeMissedBeat(entry) > maxMissedBeats) {
                     if (canProcessInDoubt(entry)) {
                         LOG.log(Level.FINEST, "Designating InDoubtState");
                         designateInDoubtState(entry);
@@ -600,7 +592,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             while (!stop) {
                 try {
                     synchronized (verifierLock) {
-                        //TODO: why is this wait needed?, this can add to the verification timeout
                         verifierLock.wait();
                         if (!stop) {
                             verify();
