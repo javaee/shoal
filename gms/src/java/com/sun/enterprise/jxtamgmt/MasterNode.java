@@ -92,7 +92,7 @@ class MasterNode implements PipeMsgListener, Runnable {
 
     private boolean masterAssigned = false;
     private boolean discoveryInProgress = false;
-    private ID myID = ID.nullID;
+    private ID localNodeID = ID.nullID;
     private final SystemAdvertisement sysAdv;
     private PipeAdvertisement pipeAdv = null;
     private final PipeService pipeService;
@@ -138,7 +138,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                final int interval) {
         PeerGroup group = manager.getNetPeerGroup();
         pipeService = group.getPipeService();
-        myID = group.getPeerID();
+        localNodeID = group.getPeerID();
         if (timeout > 0) {
             this.timeout = timeout;
         }
@@ -226,7 +226,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     private Message createMasterCollisionMessage() {
         final Message msg = createSelfNodeAdvertisement();
-        final MessageElement el = new StringMessageElement(CCNTL, myID.toString(), null);
+        final MessageElement el = new StringMessageElement(CCNTL, localNodeID.toString(), null);
         msg.addMessageElement(NAMESPACE, el);
         LOG.log(Level.FINER, "Created a Master Collision Message");
         return msg;
@@ -409,7 +409,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         final StructuredDocument asDoc;
         asDoc = StructuredDocumentFactory.newStructuredDocument(msgElement.getMimeType(), msgElement.getStream());
         final SystemAdvertisement adv = new SystemAdvertisement(asDoc);
-        if (!adv.getID().equals(myID)) {
+        if (!adv.getID().equals(localNodeID)) {
             LOG.log(Level.FINER, "Received a System advertisment Name :" + adv.getName());
         }
         return adv;
@@ -559,7 +559,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         (ArrayList<SystemAdvertisement>)
                                 getObjectFromByteArray(msgElement);
                 LOG.log(Level.FINER,
-                        MessageFormat.format("Recevied a new view of size :{0}, event :{1}",
+                        MessageFormat.format("Received a new view of size :{0}, event :{1}",
                                 newLocalView.size(), cvEvent.getEvent().toString()));
                 if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                     LOG.log(Level.FINER, "Received ClusterViewManager does not contain self. Publishing Self");
@@ -597,7 +597,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
+            sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
         }
         return true;
     }
@@ -619,17 +619,19 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         processRoute(msg);
         LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-        final Message response = createSelfNodeAdvertisement();
-        final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
-        response.addMessageElement(NAMESPACE, el);
-        LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
-        send(adv.getID(), null, response);
+
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINER, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
+            sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
+        } else {
+            final Message response = createSelfNodeAdvertisement();
+            final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
+            response.addMessageElement(NAMESPACE, el);
+            LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());            
+            send(adv.getID(), null, response);
         }
         return true;
     }
@@ -654,7 +656,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, createMasterResponse(false, myID), true);
+            sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
         }
         return true;
     }
@@ -743,7 +745,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             }
             try {
                 final SystemAdvertisement adv = processNodeAdvertisement(msg);
-                if (adv != null && adv.getID().equals(myID)) {
+                if (adv != null && adv.getID().equals(localNodeID)) {
                     LOG.log(Level.FINEST, "Discarding loopback message");
                     return;
                 }
@@ -853,7 +855,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         //avoid notifying listeners
         clusterViewManager.setMaster(madv, false);
         masterAssigned = true;
-        if (madv.getID().equals(myID)) {
+        if (madv.getID().equals(localNodeID)) {
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             // generate view change event
             if (discoveryInProgress) {
@@ -869,7 +871,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         discoveryView.clear();
         discoveryView.add(sysAdv);
         synchronized (MASTERLOCK) {
-            if (madv.getID().equals(myID)) {
+            if (madv.getID().equals(localNodeID)) {
                 // this thread's job is done
                 LOG.log(Level.FINER, "Assuming Master Node designation ...");
                 //broadcast we are the masternode if view size is more than one
