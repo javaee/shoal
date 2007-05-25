@@ -716,12 +716,13 @@ class MasterNode implements PipeMsgListener, Runnable {
     /**
      * Probes a node. Used when a node does not exist in local view
      *
-     * @param id node ID
+     * @param entry node entry
      * @throws IOException if an io error occurs sending the message
      */
-    void probeNode(final ID id) throws IOException {
+    void probeNode(final HealthMessage.Entry entry) throws IOException {
         if (isMaster() && masterAssigned) {
-            send(id, null, createNodeQuery());
+            LOG.log(Level.INFO, "Probing ID = " + entry.id + ", name = " + entry.adv.getName());
+            send(entry.id, null, createNodeQuery());
         }
     }
 

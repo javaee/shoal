@@ -62,8 +62,6 @@ public class HealthMessage {
     private static final String entryTag = "Entry";
     private static final String srcTag = "src";
     private static final String stateTag = "state";
-    private static final String timestampTag = "timestamp";
-    /*private static final Logger LOG = JxtaUtil.getLogger(HealthMessage.class.getName());*/
 
     /**
      * Default Constructor
@@ -131,7 +129,6 @@ public class HealthMessage {
             e = adv.createElement(entryTag);
             adv.appendChild(e);
             ((Attributable) e).addAttribute(stateTag, entry.state);
-            ((Attributable) e).addAttribute(timestampTag, entry.timestamp);
             StructuredTextDocument doc = (StructuredTextDocument) entry.adv.getDocument(asMimeType);
             StructuredDocumentUtils.copyElements(adv, e, doc);
         }
@@ -281,7 +278,7 @@ public class HealthMessage {
         /**
          * Entry timestamp
          */
-        String timestamp;
+        long timestamp;
 
         /**
          * Creates a Entry with id and state
@@ -297,7 +294,7 @@ public class HealthMessage {
             this.state = state;
             this.adv = adv;
             this.id = (PeerID) adv.getID();
-            this.timestamp = Long.toString(timestamp);
+            this.timestamp = timestamp;
         }
 
         /**
