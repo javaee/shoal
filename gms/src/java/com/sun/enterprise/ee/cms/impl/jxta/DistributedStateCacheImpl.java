@@ -37,7 +37,6 @@ import com.sun.enterprise.ee.cms.spi.MemberStates;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import static java.util.logging.Level.FINER;
 import java.util.logging.Logger;
@@ -86,7 +85,6 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     private static final Map<String, DistributedStateCacheImpl> ctxCache =
             new HashMap<String, DistributedStateCacheImpl>();
     private final String groupName;
-    private ReentrantLock cacheLock = new ReentrantLock();
 
     //private constructor for single instantiation
     private DistributedStateCacheImpl(final String groupName) {
@@ -165,14 +163,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     public void addToLocalCache(GMSCacheable cKey,
                                 final Object state) {
         cKey = getTrueKey(cKey);
-        cacheLock.lock();
-        try{
-            logger.log(Level.FINEST, "Adding cKey="+cKey.toString()+" state="+state.toString());
-            cache.put(cKey, state);
-        }
-        finally{
-            cacheLock.unlock();
-        }
+        logger.log(Level.FINEST, "Adding cKey="+cKey.toString()+" state="+state.toString());
+        cache.put(cKey, state);
         printDSCContents();
     }
 
@@ -191,13 +183,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     private String getDSCContents() {
         final StringBuffer buf = new StringBuffer();
         final ConcurrentHashMap<GMSCacheable, Object> copy;
-        cacheLock.lock();
-        try{
-            copy = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-        }
-        finally{
-            cacheLock.unlock();
-        }
+        copy = new ConcurrentHashMap<GMSCacheable, Object>(cache);
         for (GMSCacheable c : copy.keySet()) {
             buf.append(c.hashCode()).append(" key=")
                     .append(c.toString())
@@ -232,13 +218,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
 
     void removeFromLocalCache(GMSCacheable cKey) {
         cKey = getTrueKey(cKey);
-        cacheLock.lock();
-        try{
-            cache.remove(cKey);
-        }
-        finally{
-            cacheLock.unlock();
-        }
+        cache.remove(cKey);
     }
 
     private void removeFromRemoteCache(GMSCacheable cKey)
@@ -260,15 +240,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             GMSCacheable cKey = createCompositeKey(componentName, memberTokenId,
                     key);
             cKey = getTrueKey(cKey);
-            final Object ret;
-            cacheLock.lock();
-            try{
-                ret = cache.get(cKey);
-            }
-            finally{
-                cacheLock.unlock();
-            }
-            return ret;
+            return cache.get(cKey);
         } else {  //TODO: Localize
             throw new GMSException(
                     new StringBuffer().append(
@@ -292,19 +264,13 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         if (componentName == null || memberToken == null) {
             return retval;
         }
-        cacheLock.lock();
-        try{
-            for (GMSCacheable c : cache.keySet()) {
-                if (componentName.equals(c.getComponentName())) {
-                    if (memberToken.equals(c.getMemberTokenId())) {
-                        retval.put((Serializable) c.getKey(),
-                                (Serializable) cache.get(c));
-                    }
+        for (GMSCacheable c : cache.keySet()) {
+            if (componentName.equals(c.getComponentName())) {
+                if (memberToken.equals(c.getMemberTokenId())) {
+                    retval.put((Serializable) c.getKey(),
+                            (Serializable) cache.get(c));
                 }
             }
-        }
-        finally{
-            cacheLock.unlock();
         }
 
         if(!retval.isEmpty()){
@@ -314,14 +280,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             if(!memberToken.equals(ctx.getServerIdentityToken())){
                 MemberStates state = ctx.getGroupCommunicationProvider().getMemberState(memberToken);
                 if(state.equals(MemberStates.ALIVE)) {
-                    cacheLock.lock();
-                    ConcurrentHashMap<GMSCacheable, Object> temp;
-                    try {
-                        temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-                    }
-                    finally {
-                        cacheLock.unlock();
-                    }
+                    ConcurrentHashMap<GMSCacheable, Object>
+                    temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
                     DSCMessage msg = new DSCMessage(temp,
                             DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
                     try{
@@ -342,75 +302,57 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     public Map<GMSCacheable, Object> getFromCache(final Object key) {
         final Map<GMSCacheable, Object> retval =
                 new Hashtable<GMSCacheable, Object>();
-        cacheLock.lock();
-        try{
-            for (GMSCacheable c : cache.keySet()) {
-                if (key.equals(c.getComponentName())
-                        ||
-                        key.equals(c.getMemberTokenId())
-                        ||
-                        key.equals(c.getKey())) {
-                    retval.put(c, cache.get(c));
-                }
+        for (GMSCacheable c : cache.keySet()) {
+            if (key.equals(c.getComponentName())
+                    ||
+                    key.equals(c.getMemberTokenId())
+                    ||
+                    key.equals(c.getKey())) {
+                retval.put(c, cache.get(c));
             }
-        }
-        finally{
-            cacheLock.unlock();
         }
         return retval;
     }
 
     public boolean contains(final Object key) {
         boolean retval = false;
-        cacheLock.lock();
-        try {
-            for (GMSCacheable c : cache.keySet()) {
-                logger.log(FINER,
-                        new StringBuffer()
-                                .append("key=")
-                                .append(key)
-                                .append(" underlying key=")
-                                .append(c.getKey())
-                                .toString());
-                if (key.equals(c.getKey())) {
-                    retval = true;
-                }
+        for (GMSCacheable c : cache.keySet()) {
+            logger.log(FINER,
+                    new StringBuffer()
+                            .append("key=")
+                            .append(key)
+                            .append(" underlying key=")
+                            .append(c.getKey())
+                            .toString());
+            if (key.equals(c.getKey())) {
+                retval = true;
             }
-        }
-        finally {
-            cacheLock.unlock();
         }
         return retval;
     }
 
     public boolean contains(final String componentName, final Object key) {
         boolean retval = false;
-        cacheLock.lock();
-        try{
-            for (GMSCacheable c : cache.keySet()) {
-                logger.log(FINER,
-                        new StringBuffer()
-                                .append("comp=")
-                                .append(componentName)
-                                .append(" underlying comp=")
-                                .append(c.getComponentName())
-                                .toString());
-                logger.log(FINER,
-                        new StringBuffer()
-                                .append("key=")
-                                .append(key)
-                                .append(" underlying key=")
-                                .append(c.getKey())
-                                .toString());
-                if (key.equals(c.getKey())
-                        &&
-                        componentName.equals(c.getComponentName())) {
-                    retval = true;
-                }
+        for (GMSCacheable c : cache.keySet()) {
+            logger.log(FINER,
+                    new StringBuffer()
+                            .append("comp=")
+                            .append(componentName)
+                            .append(" underlying comp=")
+                            .append(c.getComponentName())
+                            .toString());
+            logger.log(FINER,
+                    new StringBuffer()
+                            .append("key=")
+                            .append(key)
+                            .append(" underlying key=")
+                            .append(c.getKey())
+                            .toString());
+            if (key.equals(c.getKey())
+                    &&
+                    componentName.equals(c.getComponentName())) {
+                retval = true;
             }
-        }
-        finally{
-            cacheLock.unlock();
         }
         return retval;
     }
@@ -422,33 +364,22 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
      * @param map - containing a GMSCacheable as key and an Object as value.
      */
     void addAllToLocalCache(final Map<GMSCacheable, Object> map) {
-        cacheLock.lock();
-        try{
-            if (map!= null && map.size() > 0) {
-                for(GMSCacheable cKey : map.keySet()){
-                    cKey = getTrueKey(cKey);
-                    if(map.get(cKey) != null){
-                        cache.put(cKey, map.get(cKey));
-                    }
+        if (map!= null && map.size() > 0) {
+            for(GMSCacheable cKey : map.keySet()){
+                cKey = getTrueKey(cKey);
+                if(map.get(cKey) != null){
+                    cache.put(cKey, map.get(cKey));
                 }
             }
-            firstSyncDone = true;
         }
-        finally{
-            cacheLock.unlock();
-        }
+        firstSyncDone = true;
         logger.log(FINER, "done adding all to Distributed State Cache");
     }
 
     void addAllToRemoteCache()
             throws GMSException {
         ConcurrentHashMap<GMSCacheable, Object> temp;
-        cacheLock.lock();
-        try{
-            temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-        }finally{
-            cacheLock.unlock();
-        }
+        temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
         final DSCMessage msg = new DSCMessage(temp,
                 DSCMessage.OPERATION.ADDALLREMOTE.toString(),
                 false);
@@ -480,14 +411,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     Hashtable<GMSCacheable, Object> getAllEntries() {
         final Hashtable<GMSCacheable, Object> temp =
                 new Hashtable<GMSCacheable, Object>();
-        cacheLock.lock();
-        try{
-            for (GMSCacheable key : cache.keySet()) {
-                temp.put(key, cache.get(key));
-            }
-        }
-        finally{
-            cacheLock.unlock();
+        for (GMSCacheable key : cache.keySet()) {
+            temp.put(key, cache.get(key));
         }
         return temp;
     }
@@ -495,13 +420,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     void syncCache(final String memberToken,
                    final boolean isCoordinator) throws GMSException {
         final ConcurrentHashMap<GMSCacheable, Object> temp;
-        cacheLock.lock();
-        try{
-            temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-        }
-        finally{
-            cacheLock.unlock();
-        }
+        temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
 
         final DSCMessage msg = new DSCMessage(temp,
                 DSCMessage.OPERATION.ADDALLLOCAL.toString(),
@@ -519,14 +438,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
 
     private GMSCacheable getTrueKey(GMSCacheable cKey) {
         final Set<GMSCacheable> keys;
-        cacheLock.lock();
-        try{
-            keys = cache.keySet();
-        }
-        finally{
-         cacheLock.unlock();
-        }
-
+        keys = cache.keySet();
+        
         for (GMSCacheable comp : keys) {
             if (comp.equals(cKey)) {
                 cKey = comp;
@@ -560,12 +473,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
      * later lives of the group.
      */
     public void removeAll() {
-        cacheLock.lock();
-        try{
-            cache.clear();
-        }finally{
-            cacheLock.unlock();
-        }
+        cache.clear();
     }
 
     public void removeAllForMember(final String memberToken) {
@@ -574,32 +482,4 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             removeFromLocalCache(key);
         }
     }
-
-/*    public byte[] getStateFromRemoteMember (final String componentName,
-                                            final String remoteMemberToken,
-                                            final Serializable key ) {
-
-        final IpAddress dest;
-        final ViewWindow viewWindow = getGMSContext().getViewWindow();
-        dest =  ( IpAddress ) viewWindow.getMemberTokenAddress( remoteMemberToken );
-        byte[] state = BYTE;
-        try {
-            final MethodCall method =
-                    new MethodCall("getKeyState",
-                                   new Object[]{componentName,  key },
-                                   new Class[]{String.class, Serializable.class});
-            state = ( byte[] ) getGMSContext().getRPCDispatcher()
-                                .callRemoteMethod(dest,
-                                      method,
-                                      GroupRequest.GET_FIRST, 0);
-        }
-        catch ( TimeoutException e ) {
-            logger.log(Level.WARNING, e.getLocalizedMessage());
-        }
-        catch ( SuspectedException e ) {
-            logger.log(Level.WARNING, e.getLocalizedMessage());
-        }
-        return state;
-    }
-*/
 }
