@@ -167,6 +167,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         cKey = getTrueKey(cKey);
         cacheLock.lock();
         try{
+            logger.log(Level.FINEST, "Adding cKey="+cKey.toString()+" state="+state.toString());
             cache.put(cKey, state);
         }
         finally{
@@ -423,8 +424,13 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     void addAllToLocalCache(final Map<GMSCacheable, Object> map) {
         cacheLock.lock();
         try{
-            if (map.size() > 0) {
-                cache.putAll(map);
+            if (map!= null && map.size() > 0) {
+                for(GMSCacheable cKey : map.keySet()){
+                    cKey = getTrueKey(cKey);
+                    if(map.get(cKey) != null){
+                        cache.put(cKey, map.get(cKey));
+                    }
+                }
             }
             firstSyncDone = true;
         }
@@ -516,15 +522,16 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         cacheLock.lock();
         try{
             keys = cache.keySet();
-            for (GMSCacheable comp : keys) {
-                if (comp.equals(cKey)) {
-                    cKey = comp;
-                    break;
-                }
-            }
         }
         finally{
-            cacheLock.unlock();
+         cacheLock.unlock();
+        }
+
+        for (GMSCacheable comp : keys) {
+            if (comp.equals(cKey)) {
+                cKey = comp;
+                break;
+            }
         }
         return cKey;
     }
