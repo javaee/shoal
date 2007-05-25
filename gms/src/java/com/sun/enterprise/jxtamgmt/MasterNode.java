@@ -621,7 +621,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         final Message response = createSelfNodeAdvertisement();
         final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
-        msg.addMessageElement(NAMESPACE, el);
+        response.addMessageElement(NAMESPACE, el);
         LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
         send(adv.getID(), null, response);
         if (isMaster() && masterAssigned) {
