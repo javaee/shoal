@@ -67,12 +67,31 @@ public class GMSCacheable implements Serializable, Comparator{
      */
     public boolean equals(final GMSCacheable o){
         boolean retval = false;
-        if(this.componentName.equals(o.componentName)
-                &&
-        (this.memberTokenId.equals(o.memberTokenId))
-                &&
-        (this.key.equals(o.key)))
+        boolean componentNameEqual = false;
+        boolean memberTokenIdEqual = false;
+        boolean keyEqual = false;
+        if(this.componentName == null){
+            if(o.componentName == null){
+                componentNameEqual = true;
+            }
+        }
+        else if (this.componentName.equals(o.componentName)) {
+            componentNameEqual = true;
+        }
+        if(this.memberTokenId == null){
+            if(o.memberTokenId == null){
+               memberTokenIdEqual = true;
+            }
+        }
+        else if(this.memberTokenId.equals(o.memberTokenId)){
+            memberTokenIdEqual = true;
+        }
+        if(this.key.equals(o.key))
         {
+            keyEqual = true;
+        }
+
+        if(componentNameEqual && memberTokenIdEqual && keyEqual){
             retval = true;
         }
         return retval;
