@@ -24,7 +24,11 @@
 package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocument;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.ByteArrayMessageElement;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
@@ -33,14 +37,23 @@ import net.jxta.exception.PeerGroupException;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -239,9 +252,9 @@ public class ClusterManager implements PipeMsgListener {
                     public void clusterViewEvent(
                             final ClusterViewEvent event,
                             final ClusterView view) {
-                        LOG.log(Level.INFO, "event.message", new Object[] {event.getEvent().toString()});
-                        LOG.log(Level.INFO, "peer.involved", new Object[] {event.getAdvertisement().toString()});
-                        LOG.log(Level.INFO, "view.message",new Object[] {view.getPeerNamesInView().toString()});
+                        LOG.log(Level.INFO, "event.message", new Object[]{event.getEvent().toString()});
+                        LOG.log(Level.INFO, "peer.involved", new Object[]{event.getAdvertisement().toString()});
+                        LOG.log(Level.INFO, "view.message", new Object[]{view.getPeerNamesInView().toString()});
                     }
                 });
         mListeners.add(
@@ -284,11 +297,12 @@ public class ClusterManager implements PipeMsgListener {
      */
     public void announceStop(final boolean isClusterShutdown) {
         stopping = true;
-        healthMonitor.announceStop(isClusterShutdown);        
+        healthMonitor.announceStop(isClusterShutdown);
     }
 
     /**
      * Stops the ClusterManager and all it's services
+     *
      * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
      */
     public synchronized void stop(final boolean isClusterShutdown) {
@@ -421,7 +435,7 @@ public class ClusterManager implements PipeMsgListener {
             message.addMessageElement(NAMESPACE, bame);
 
             if (peerid != null) {
-                final OutputPipe output;
+                OutputPipe output;
                 if (!pipeCache.containsKey(peerid)) {
                     // Unicast datagram
                     // create a op pipe to the destination peer
@@ -429,6 +443,10 @@ public class ClusterManager implements PipeMsgListener {
                     pipeCache.put(peerid, output);
                 } else {
                     output = pipeCache.get(peerid);
+                    if (output.isClosed()) {
+                        output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                        pipeCache.put(peerid, output);
+                    }
                 }
                 output.send(message);
             } else {
@@ -568,6 +586,7 @@ public class ClusterManager implements PipeMsgListener {
 
     /**
      * Returns name encoded ID
+     *
      * @param name to name to encode
      * @return name encoded ID
      */
@@ -575,7 +594,7 @@ public class ClusterManager implements PipeMsgListener {
         return netManager.getPeerID(name);
     }
 
-    boolean isStopping(){
+    boolean isStopping() {
         return stopping;
     }
 }
