@@ -43,6 +43,7 @@ public class ClusterView {
     private final TreeMap<String, SystemAdvertisement> view;
     private final long viewId;
     private ReentrantLock viewLock = new ReentrantLock(true);
+
     /**
      * Constructs the ClusterView object with a given TreeMap containing the
      * system advertisements of members in the group. The membership is sorted
@@ -51,8 +52,7 @@ public class ClusterView {
      * @param advertisements the Map of advertisements ordered by Peer ID sort
      * @param viewId         View ID
      */
-    ClusterView(final TreeMap<String, SystemAdvertisement> advertisements,
-                final long viewId) {
+    ClusterView(final TreeMap<String, SystemAdvertisement> advertisements, final long viewId) {
         view = new TreeMap<String, SystemAdvertisement>(advertisements);
         this.viewId = viewId;
     }
@@ -67,10 +67,9 @@ public class ClusterView {
     ClusterView(SystemAdvertisement advertisement) {
         view = new TreeMap<String, SystemAdvertisement>();
         viewLock.lock();
-        try{
+        try {
             view.put(advertisement.getID().toString(), advertisement);
-        }
-        finally{
+        } finally {
             viewLock.unlock();
         }
         this.viewId = 0;
@@ -93,10 +92,9 @@ public class ClusterView {
      */
     public void add(final SystemAdvertisement adv) {
         viewLock.lock();
-        try{
+        try {
             view.put(adv.getID().toString(), adv);
-        }
-        finally {
+        } finally {
             viewLock.unlock();
         }
     }
@@ -104,10 +102,9 @@ public class ClusterView {
     public boolean containsKey(final ID id) {
         boolean hasKey = false;
         viewLock.lock();
-        try{
+        try {
             hasKey = view.containsKey(id.toString());
-        }
-        finally{
+        } finally {
             viewLock.unlock();
         }
         return hasKey;
@@ -122,10 +119,9 @@ public class ClusterView {
     public List<SystemAdvertisement> getView() {
         List<SystemAdvertisement> viewCopy;
         viewLock.lock();
-        try{
-            viewCopy =  new ArrayList<SystemAdvertisement>(view.values());
-        }
-        finally{
+        try {
+            viewCopy = new ArrayList<SystemAdvertisement>(view.values());
+        } finally {
             viewLock.unlock();
         }
         return viewCopy;
@@ -140,10 +136,9 @@ public class ClusterView {
     public List<String> getPeerNamesInView() {
         List<String> peerNamesList;
         viewLock.lock();
-        try{
+        try {
             peerNamesList = new ArrayList<String>(view.keySet());
-        }
-        finally {
+        } finally {
             viewLock.unlock();
         }
         return peerNamesList;
@@ -159,8 +154,7 @@ public class ClusterView {
         viewLock.lock();
         try {
             size = view.size();
-        }
-        finally {
+        } finally {
             viewLock.unlock();
         }
         return size;
@@ -181,8 +175,7 @@ public class ClusterView {
                             .append(adv.getName()).append(' ').append(adv.getID())
                             .toString());
             return adv;
-        }
-        finally {
+        } finally {
             viewLock.unlock();
         }
     }
@@ -212,10 +205,9 @@ public class ClusterView {
      */
     public void clear() {
         viewLock.lock();
-        try{
+        try {
             view.clear();
-        }
-        finally {
+        } finally {
             viewLock.unlock();
         }
     }
