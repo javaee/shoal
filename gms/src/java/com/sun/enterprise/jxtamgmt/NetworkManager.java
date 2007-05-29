@@ -98,7 +98,7 @@ public class NetworkManager implements RendezvousListener {
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
     private int mcastPort = 0;
-
+    private NetPeerGroupFactory factory;
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
      * of the JXTA platform.  In addition, it provides logical addressing by means of name
@@ -334,10 +334,11 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
-        NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
+        factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
+        stopped = false;
         started = true;
     }
 
@@ -383,6 +384,7 @@ public class NetworkManager implements RendezvousListener {
             LOG.log(Level.FINEST, th.getLocalizedMessage());
         }
         stopped = true;
+        started = false;
     }
 
     /**
