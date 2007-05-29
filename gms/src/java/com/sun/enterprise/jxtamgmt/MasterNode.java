@@ -395,7 +395,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @param msg the Message
      * @return true if the message is a MasterNode announcement message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     SystemAdvertisement processNodeAdvertisement(final Message msg) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEADV);
@@ -421,10 +421,9 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg    the Message
      * @param source the source node SystemAdvertisement
      * @return true if the message is a MasterNode announcement message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
-    boolean processMasterNodeAnnouncement(final Message msg,
-                                          final SystemAdvertisement source) throws IOException {
+    boolean processMasterNodeAnnouncement(final Message msg, final SystemAdvertisement source) throws IOException {
 
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERNODE);
         if (msgElement == null) {
@@ -482,7 +481,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg    the Message
      * @param source the source node SystemAdvertisement
      * @return true if the message is a master node response message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     boolean processMasterNodeResponse(final Message msg,
                                       final SystemAdvertisement source) throws IOException {
@@ -538,7 +537,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg    the Message
      * @param source the source node SystemAdvertisement
      * @return true if the message is a change event message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     boolean processChangeEvent(final Message msg,
                                final SystemAdvertisement source) throws IOException {
@@ -583,7 +582,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg the Message
      * @param adv the source node SystemAdvertisement
      * @return true if the message is a query message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
@@ -609,7 +608,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg the Message
      * @param adv the source node SystemAdvertisement
      * @return true if the message is a query message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     boolean processNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEQUERY);
@@ -642,7 +641,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg the Message
      * @param adv the source node SystemAdvertisement
      * @return true if the message is a response message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     boolean processNodeResponse(final Message msg, final SystemAdvertisement adv) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODERESPONSE);
@@ -686,7 +685,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param msg the Message
      * @param adv the source node SystemAdvertisement
      * @return true if the message was indeed a collision message
-     * @throws IOException if and io error occurs
+     * @throws IOException if an io error occurs
      */
     boolean processMasterNodeCollision(final Message msg,
                                        final SystemAdvertisement adv) throws IOException {
@@ -898,7 +897,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINER, "Unicasting Message to :" + name + "ID=" + peerid);
-                final OutputPipe output;
+                OutputPipe output;
                 if (!pipeCache.containsKey(peerid)) {
                     // Unicast datagram
                     // create a op pipe to the destination peer
@@ -906,6 +905,10 @@ class MasterNode implements PipeMsgListener, Runnable {
                     pipeCache.put(peerid, output);
                 } else {
                     output = pipeCache.get(peerid);
+                    if (output.isClosed()) {
+                        output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                        pipeCache.put(peerid, output);
+                    }
                 }
                 output.send(msg);
             } else {
@@ -1023,10 +1026,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param data      The feature to be added to the LongToMessage attribute
      */
     private static void addLongToMessage(Message message, String nameSpace, String elemName, long data) {
-        message.addMessageElement(nameSpace,
-                new StringMessageElement(elemName,
-                        Long.toString(data),
-                        null));
+        message.addMessageElement(nameSpace, new StringMessageElement(elemName, Long.toString(data), null));
     }
 
     /**

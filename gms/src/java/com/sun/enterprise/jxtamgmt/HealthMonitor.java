@@ -22,13 +22,21 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.*;
+import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
+import net.jxta.document.StructuredDocumentFactory;
+import net.jxta.document.StructuredTextDocument;
+import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
@@ -101,12 +109,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     /**
      * Constructor for the HealthMonitor object
      *
-     * @param manager       the ClusterManager
-     * @param maxMissedBeats    Maximum retries before failure
-     * @param verifyTimeout timeout in milliseconds that the health monitor
-     *                      waits before finalizing that the in doubt peer is dead.
-     * @param timeout       in milliseconds that the health monitor waits before
-     *                      retrying an indoubt peer's availability.
+     * @param manager        the ClusterManager
+     * @param maxMissedBeats Maximum retries before failure
+     * @param verifyTimeout  timeout in milliseconds that the health monitor
+     *                       waits before finalizing that the in doubt peer is dead.
+     * @param timeout        in milliseconds that the health monitor waits before
+     *                       retrying an indoubt peer's availability.
      */
     public HealthMonitor(final ClusterManager manager, final long timeout,
                          final int maxMissedBeats, final long verifyTimeout) {
@@ -338,7 +346,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINE, "Unicasting Message to :" + peerid.toString());
-                final OutputPipe output;
+                OutputPipe output;
                 if (!pipeCache.containsKey(peerid)) {
                     // Unicast datagram
                     // create a op pipe to the destination peer
@@ -346,6 +354,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     pipeCache.put(peerid, output);
                 } else {
                     output = pipeCache.get(peerid);
+                    if (output.isClosed()) {
+                        output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                        pipeCache.put(peerid, output);
+                    }
                 }
                 output.send(msg);
             } else {
@@ -507,6 +519,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
         /**
          * computes the number of heart beats missed based on an entry's timestamp
+         *
          * @param entry the Health entry
          * @return the number heart beats missed
          */
