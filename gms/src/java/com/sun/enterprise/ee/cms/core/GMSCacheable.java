@@ -30,86 +30,87 @@ import java.util.Comparator;
  * Support class for DistributedStateCacheImpl. This class provides an
  * encapsulation for the details that represent a composite key for the
  * cache.
+ *
  * @author Shreedhar Ganapathy
  *         Date: May 9, 2005
  * @version $Revision$
  */
-public class GMSCacheable implements Serializable, Comparator{
+public class GMSCacheable implements Serializable, Comparator {
     private final String componentName;
     private final String memberTokenId;
     private final Object key;
 
-    public GMSCacheable(final String componentName, final String memberTokenId,
-                 final Serializable key)
-    {
+    public GMSCacheable(final String componentName, final String memberTokenId, final Serializable key) {
         this.componentName = componentName;
         this.memberTokenId = memberTokenId;
         this.key = key;
     }
 
-    public GMSCacheable(final String componentName, final String memberTokenId,
-                 final Object key)
-    {
+    public GMSCacheable(final String componentName, final String memberTokenId, final Object key) {
         this.componentName = componentName;
         this.memberTokenId = memberTokenId;
         this.key = key;
     }
 
-    public int compare ( final Object o, final Object o1 ) {
+    public int compare(final Object o, final Object o1) {
         return 0;
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public int hashCode() {
+        return key.hashCode() * 17 + componentName.toLowerCase().hashCode() + memberTokenId.toLowerCase().hashCode();
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
      * We compare the contents of the GMSCacheable argument passed in with
      * the contents of this instance and determine if they are the same.
-     * @param o
-     * @return boolean
      */
-    public boolean equals(final GMSCacheable o){
+    public boolean equals(final GMSCacheable o) {
         boolean retval = false;
         boolean componentNameEqual = false;
         boolean memberTokenIdEqual = false;
         boolean keyEqual = false;
-        if(this.componentName == null){
-            if(o.componentName == null){
+        if (this.componentName == null) {
+            if (o.componentName == null) {
                 componentNameEqual = true;
             }
-        }
-        else if (this.componentName.equals(o.componentName)) {
+        } else if (this.componentName.equals(o.componentName)) {
             componentNameEqual = true;
         }
-        if(this.memberTokenId == null){
-            if(o.memberTokenId == null){
-               memberTokenIdEqual = true;
+        if (this.memberTokenId == null) {
+            if (o.memberTokenId == null) {
+                memberTokenIdEqual = true;
             }
-        }
-        else if(this.memberTokenId.equals(o.memberTokenId)){
+        } else if (this.memberTokenId.equals(o.memberTokenId)) {
             memberTokenIdEqual = true;
         }
-        if(this.key.equals(o.key))
-        {
+        if (this.key.equals(o.key)) {
             keyEqual = true;
         }
 
-        if(componentNameEqual && memberTokenIdEqual && keyEqual){
+        if (componentNameEqual && memberTokenIdEqual && keyEqual) {
             retval = true;
         }
         return retval;
     }
 
-    public String getComponentName(){
+    public String getComponentName() {
         return componentName;
     }
 
-    public String getMemberTokenId(){
+    public String getMemberTokenId() {
         return memberTokenId;
     }
 
-    public Object getKey(){
-        return  key;
+    public Object getKey() {
+        return key;
     }
 
-    public String toString(){
-        return "GMSMember:"+memberTokenId+":Component:"+componentName+":key:"+key;
+    public String toString() {
+        return "GMSMember:" + memberTokenId + ":Component:" + componentName + ":key:" + key;
     }
 }
