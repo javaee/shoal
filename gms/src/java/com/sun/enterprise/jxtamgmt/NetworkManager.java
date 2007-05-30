@@ -36,6 +36,7 @@ import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
+import net.jxta.logging.Logging;
 
 import java.io.File;
 import java.io.IOException;
@@ -115,7 +116,7 @@ public class NetworkManager implements RendezvousListener {
     public NetworkManager(final String groupName,
                           final String instanceName,
                           final Map properties) {
-
+        System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
         this.groupName = groupName;
         this.instanceName = instanceName;
         socketID = getSocketID(instanceName);
