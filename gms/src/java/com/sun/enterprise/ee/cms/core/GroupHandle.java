@@ -45,8 +45,9 @@ public interface GroupHandle {
      * carrying the payload. Specifying a null component name would
      * result in the message being delivered to all registered
      * components in the target member instance. 
-     * @param targetComponentName
-     * @param message
+     * @param targetComponentName target name
+     * @param message the message to send
+     * @throws GMSException
      */
     void sendMessage(String targetComponentName, byte[] message) throws GMSException;
 
@@ -58,9 +59,10 @@ public interface GroupHandle {
      * a null component name would result in the message being
      * delivered to all registered components in the target member
      * instance. 
-     * @param targetServerToken
-     * @param targetComponentName
-     * @param message
+     * @param targetServerToken targetServerToken representing the recipient member's id
+     * @param targetComponentName target name
+     * @param message the message to send
+     * @throws GMSException
      */
      void sendMessage(String targetServerToken, String targetComponentName,
                       byte[] message) throws GMSException;

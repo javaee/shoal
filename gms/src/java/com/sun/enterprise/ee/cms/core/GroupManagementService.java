@@ -49,8 +49,7 @@ public interface GroupManagementService {
      * These are possible recovery states used by GMS's recovery selection
      * and failure fencing functions
      */
-    public static enum RECOVERY_STATE { RECOVERY_SERVER_APPOINTED,
-        RECOVERY_IN_PROGRESS }
+    public static enum RECOVERY_STATE { RECOVERY_SERVER_APPOINTED, RECOVERY_IN_PROGRESS }
 
   
     /**

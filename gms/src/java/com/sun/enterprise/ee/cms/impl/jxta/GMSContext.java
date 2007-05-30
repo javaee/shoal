@@ -60,8 +60,7 @@ public class GMSContext extends GMSContextBase {
                 Boolean.TRUE);
 
         viewWindow = new ViewWindow(groupName, viewQueue);
-        messageQueue = new ArrayBlockingQueue<MessagePacket>(MAX_MSGS_IN_QUEUE,
-                Boolean.TRUE);
+        messageQueue = new ArrayBlockingQueue<MessagePacket>(MAX_MSGS_IN_QUEUE, Boolean.TRUE);
 
         gh = new GroupHandleImpl(groupName, serverToken);
         //TODO: consider untying the Dist State Cache creation from GMSContext.

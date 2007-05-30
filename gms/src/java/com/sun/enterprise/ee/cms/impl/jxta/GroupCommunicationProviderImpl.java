@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.text.MessageFormat;
 
 /**
  * Implements the GroupCommunicationProvider interface to plug in
@@ -226,9 +227,8 @@ public class GroupCommunicationProviderImpl implements
             logger.log(Level.FINER, "Received AppMessage Notification, placing in message queue");
             getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
         } catch (InterruptedException e) {
-            logger.log(Level.WARNING, "Interrupted Exception occured while " +
-                    "adding message to Shoal MessageQueue:" +
-                    e.getLocalizedMessage());
+            logger.log(Level.WARNING,
+                    MessageFormat.format("Interrupted Exception occured while adding message to Shoal MessageQueue :{0}", e.getLocalizedMessage()));
         }
     }
 }

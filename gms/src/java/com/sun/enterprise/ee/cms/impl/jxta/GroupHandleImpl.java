@@ -86,13 +86,9 @@ public final class GroupHandleImpl implements GroupHandle {
      * @param componentName Destination component in remote members.
      * @param message       Payload in byte array to be delivered to the destination.
      */
-    public void sendMessage(final String componentName, final byte[] message)
-            throws GMSException {
-        final GMSMessage gMsg = new GMSMessage(componentName, message,
-                groupName,
-                getGMSContext().getStartTime());
-        getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg,
-                false);
+    public void sendMessage(final String componentName, final byte[] message) throws GMSException {
+        final GMSMessage gMsg = new GMSMessage(componentName, message, groupName, getGMSContext().getStartTime());
+        getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, false);
     }
 
     /**

@@ -1,7 +1,6 @@
 package com.sun.enterprise.shoal;
 
 import com.sun.enterprise.ee.cms.core.CallBack;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.GMSFactory;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
@@ -10,6 +9,7 @@ import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
 import com.sun.enterprise.ee.cms.core.MessageSignal;
 import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
 import com.sun.enterprise.ee.cms.core.Signal;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
 
@@ -18,14 +18,14 @@ import java.util.Properties;
 /**
  * @author Rafael Barbosa
  */
-public class ShoalMessagingTest implements Runnable, CallBack {
+public class TestShoal implements Runnable, CallBack {
     String serviceName = "service";
     GroupManagementService gms;
     private final Object sendMessagesSignal = new Object();
     private int nbOfMembers = 2;
     int total_msgs_received = 0;
 
-    public ShoalMessagingTest() {
+    public TestShoal() {
         Properties props = new Properties();
         props.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
         gms = (GroupManagementService) GMSFactory.startGMSModule(System.getProperty("INSTANCEID"), "group", MemberType.CORE, props);
@@ -68,13 +68,13 @@ public class ShoalMessagingTest implements Runnable, CallBack {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        synchronized (sendMessagesSignal) {
-            try {
-                sendMessagesSignal.wait(30000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            synchronized (sendMessagesSignal) {
+                try {
+                    sendMessagesSignal.wait(60000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        }
         // run is complete shutdown the instance
         gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
     }
@@ -113,7 +113,7 @@ public class ShoalMessagingTest implements Runnable, CallBack {
     }
 
     public static void main(String[] args) {
-        Thread t = new Thread(new ShoalMessagingTest());
+        Thread t = new Thread(new TestShoal());
         t.start();
     }
 }

@@ -132,9 +132,8 @@ public class MessageWindow implements Runnable {
         else {
             if (getRouter().isMessageAFRegistered()) {
                 writeLog(sender, gMsg);
-                final MessageSignal ms = new MessageSignalImpl(
-                        gMsg.getMessage(), gMsg.getComponentName(), sender,
-                        gMsg.getGroupName(), gMsg.getStartTime());
+                final MessageSignal ms = new MessageSignalImpl(gMsg.getMessage(), gMsg.getComponentName(), sender,
+                                                                             gMsg.getGroupName(), gMsg.getStartTime());
                 final SignalPacket signalPacket = new SignalPacket(ms);
                 getRouter().queueSignal(signalPacket);
             }

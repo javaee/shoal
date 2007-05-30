@@ -95,6 +95,10 @@ public abstract class GMSContextBase implements GMSContext {
 
     protected abstract void createDistributedStateCache();
 
+    /**
+     * Return <code>true</code> if shutting down
+     * @return
+     */
     public boolean isShuttingDown() {
         return shuttingDown;
     }
