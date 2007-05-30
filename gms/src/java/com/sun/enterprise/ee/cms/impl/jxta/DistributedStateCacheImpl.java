@@ -365,12 +365,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
      */
     void addAllToLocalCache(final Map<GMSCacheable, Object> map) {
         if (map!= null && map.size() > 0) {
-            for(GMSCacheable cKey : map.keySet()){
-                cKey = getTrueKey(cKey);
-                if(map.get(cKey) != null){
-                    cache.put(cKey, map.get(cKey));
-                }
-            }
+            cache.putAll(map);
         }
         firstSyncDone = true;
         logger.log(FINER, "done adding all to Distributed State Cache");

@@ -68,32 +68,36 @@ public class GMSCacheable implements Serializable, Comparator {
      * <p/>
      * We compare the contents of the GMSCacheable argument passed in with
      * the contents of this instance and determine if they are the same.
+     * @override
      */
-    public boolean equals(final GMSCacheable o) {
+    public boolean equals(final Object o) {
         boolean retval = false;
         boolean componentNameEqual = false;
         boolean memberTokenIdEqual = false;
         boolean keyEqual = false;
-        if (this.componentName == null) {
-            if (o.componentName == null) {
+
+        if(o instanceof GMSCacheable){
+            if (this.componentName == null) {
+                if (((GMSCacheable)o).componentName == null) {
+                    componentNameEqual = true;
+                }
+            } else if (this.componentName.equals(((GMSCacheable)o).componentName)) {
                 componentNameEqual = true;
             }
-        } else if (this.componentName.equals(o.componentName)) {
-            componentNameEqual = true;
-        }
-        if (this.memberTokenId == null) {
-            if (o.memberTokenId == null) {
+            if (this.memberTokenId == null) {
+                if (((GMSCacheable) o).memberTokenId == null) {
+                    memberTokenIdEqual = true;
+                }
+            } else if (this.memberTokenId.equals(((GMSCacheable)o).memberTokenId)) {
                 memberTokenIdEqual = true;
             }
-        } else if (this.memberTokenId.equals(o.memberTokenId)) {
-            memberTokenIdEqual = true;
-        }
-        if (this.key.equals(o.key)) {
-            keyEqual = true;
-        }
+            if (this.key.equals(((GMSCacheable)o).key)) {
+                keyEqual = true;
+            }
 
-        if (componentNameEqual && memberTokenIdEqual && keyEqual) {
-            retval = true;
+            if (componentNameEqual && memberTokenIdEqual && keyEqual) {
+                retval = true;
+            }
         }
         return retval;
     }
