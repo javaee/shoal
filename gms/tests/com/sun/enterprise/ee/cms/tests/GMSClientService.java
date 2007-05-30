@@ -53,7 +53,7 @@ public class GMSClientService implements Runnable, CallBack{
     private String memberToken;
     private boolean sendMessages;
     private String serviceName;
-    private static final int MILLIS = 10000;
+    private static final int MILLIS = 4000;
     public static final String IIOP_MEMBER_DETAILS_KEY = "IIOPListenerEndPoints";
 
     public GMSClientService(final String serviceName,
