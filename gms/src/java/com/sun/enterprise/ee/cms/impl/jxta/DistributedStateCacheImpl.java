@@ -277,8 +277,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             return retval;
         }
         else{
-            if(!memberToken.equals(ctx.getServerIdentityToken())){
-                MemberStates state = ctx.getGroupCommunicationProvider().getMemberState(memberToken);
+            if(!memberToken.equals(getGMSContext().getServerIdentityToken())){
+                MemberStates state = getGMSContext().getGroupCommunicationProvider().getMemberState(memberToken);
                 if(state.equals(MemberStates.ALIVE)) {
                     ConcurrentHashMap<GMSCacheable, Object>
                     temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
@@ -420,7 +420,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         final DSCMessage msg = new DSCMessage(temp,
                 DSCMessage.OPERATION.ADDALLLOCAL.toString(),
                 isCoordinator);
-        if(!memberToken.equals(ctx.getServerIdentityToken())){
+        if(!memberToken.equals(getGMSContext().getServerIdentityToken())){
             logger.log(Level.FINER, "Sending sync message from DistributedStateCache " +
 
                     "to member "+memberToken);
