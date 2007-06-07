@@ -30,7 +30,6 @@ import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
 import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 
 import java.io.Serializable;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -207,7 +206,6 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 packet.getClusterView().getSize() !=
                         views.get(views.size() - 2).size()) {
             determineAndAddNewMemberJoins();
-            determineAndAddFailureSignals(packet);
         }
     }
 
@@ -248,29 +246,6 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             tokens.add(member.getMemberToken());
         }
         return tokens;
-    }
-
-    private void determineAndAddFailureSignals(final EventPacket packet) {
-        if (views.size() < 2) {
-            return;
-        }
-        final List<GMSMember> oldMembership = views.get(views.size() - 2);
-        String token;
-        for (GMSMember member : oldMembership) {
-            token = member.getMemberToken();
-            analyzeAndFireFailureSignals(member, token, packet);
-        }
-    }
-
-    private void analyzeAndFireFailureSignals(final GMSMember member,
-                                              final String token,
-                                              final EventPacket packet) {
-
-        if (member.getMemberType().equalsIgnoreCase(CORETYPE) && !getCurrentCoreMembers().contains(token)) {
-            logger.log(Level.INFO, "gms.failureEventReceived", token);
-            addFailureSignals(packet);
-            getGMSContext().removeFromSuspectList(token);
-        }
     }
 
     private void addPlannedShutdownSignals(final EventPacket packet) {
@@ -524,6 +499,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 logger.log(Level.WARNING, e.getLocalizedMessage());
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Exception during DSC sync:"+e);
+                e.printStackTrace();
             }
         }
     }
