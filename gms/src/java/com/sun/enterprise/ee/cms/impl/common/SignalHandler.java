@@ -36,7 +36,15 @@
 
 package com.sun.enterprise.ee.cms.impl.common;
 
-import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.core.FailureNotificationSignal;
+import com.sun.enterprise.ee.cms.core.FailureRecoverySignal;
+import com.sun.enterprise.ee.cms.core.FailureSuspectedSignal;
+import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
+import com.sun.enterprise.ee.cms.core.MessageSignal;
+import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
+import com.sun.enterprise.ee.cms.core.Signal;
+
+import java.util.concurrent.BlockingQueue;
 
 /**
  * On a separate thread, analyses and handles the Signals delivered to it.
@@ -47,23 +55,29 @@ import com.sun.enterprise.ee.cms.core.*;
  * @version $Revision$
  */
 public class SignalHandler implements Runnable {
-    private final QueueHelper qh;
+    private final BlockingQueue<SignalPacket> signalQueue;
     private final Router router;
 
-    public SignalHandler(final QueueHelper qh, final Router router) {
-        this.qh = qh;
+    public SignalHandler(final BlockingQueue<SignalPacket> qh, final Router router) {
+        this.signalQueue = qh;
         this.router = router;
     }
 
     public void run() {
         Signal[] signals;
         while (true) {
-            //todo infinite loop
-            final SignalPacket signalPacket = qh.take();
-            if ((signals = signalPacket.getSignals()) != null) {
-                handleSignals(signals);
-            } else {
-                handleSignal(signalPacket.getSignal());
+            try {
+                //todo infinite loop
+                SignalPacket signalPacket = signalQueue.take();
+                if (signalPacket != null) {
+                    if ((signals = signalPacket.getSignals()) != null) {
+                        handleSignals(signals);
+                    } else {
+                        handleSignal(signalPacket.getSignal());
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }

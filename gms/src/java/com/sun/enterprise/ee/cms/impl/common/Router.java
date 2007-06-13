@@ -48,6 +48,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,15 +77,16 @@ public class Router{
     private final Vector<FailureSuspectedActionFactory> failureSuspectedAF =
             new Vector<FailureSuspectedActionFactory>();
 
-    private final QueueHelper queHelper;
+    private final BlockingQueue<SignalPacket> queue;
     private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final ExecutorService actionPool;
     private long startupTime;
     private static final int GROUP_WARMUP_TIME = 30000;
+    private static final int BUFSIZE = 100;
 
     public Router(){
-        queHelper = new QueueHelper();
-        final SignalHandler signalHandler = new SignalHandler(queHelper, this);
+        queue = new ArrayBlockingQueue<SignalPacket>(BUFSIZE);
+        final SignalHandler signalHandler = new SignalHandler(queue, this);
         new Thread(signalHandler, this.getClass().getCanonicalName()+" Thread").start();        
         actionPool = Executors.newCachedThreadPool();
         startupTime = System.currentTimeMillis();
@@ -218,7 +221,12 @@ public class Router{
      * @param signalPacket
      */
     public void queueSignals(final SignalPacket signalPacket){
-        queHelper.put(signalPacket);
+        try {
+            queue.put(signalPacket);
+        } catch (InterruptedException e) {
+            logger.log(Level.WARNING, e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -226,7 +234,12 @@ public class Router{
      * @param signalPacket
      */
     public void queueSignal(final SignalPacket signalPacket) {
-        queHelper.put(signalPacket);
+        try {
+            queue.put(signalPacket);
+        } catch (InterruptedException e) {
+            logger.log(Level.WARNING, e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     void undocketAllDestinations() {
@@ -344,7 +357,12 @@ public class Router{
             // 30 secs since start time. we give 30 secs for join notif
             // registrations to happen until which time, the signals are
             // available in queue. 
-            queHelper.put(new SignalPacket(signal));
+            try {
+                queue.put(new SignalPacket(signal));
+            } catch (InterruptedException e) {
+                logger.log(Level.WARNING, e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
