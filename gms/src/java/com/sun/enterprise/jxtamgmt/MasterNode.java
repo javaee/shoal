@@ -105,15 +105,15 @@ class MasterNode implements PipeMsgListener, Runnable {
     private OutputPipe outputPipe;
 
     private boolean masterAssigned = false;
-    private boolean discoveryInProgress = false;
+    private volatile boolean discoveryInProgress = false;
     private ID localNodeID = ID.nullID;
     private final SystemAdvertisement sysAdv;
     private PipeAdvertisement pipeAdv = null;
     private final PipeService pipeService;
     private final MessageElement sysAdvElement;
     private MessageElement routeAdvElement = null;
-    private boolean started = false;
-    private boolean stop = false;
+    private volatile boolean started = false;
+    private volatile boolean stop = false;
     private Thread thread = null;
     private ClusterViewManager clusterViewManager;
     private ClusterView discoveryView;

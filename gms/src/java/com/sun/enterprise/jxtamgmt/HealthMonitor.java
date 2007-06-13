@@ -87,8 +87,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private OutputPipe outputPipe = null;
     private PipeAdvertisement pipeAdv = null;
     private final PipeService pipeService;
-    private boolean started = false;
-    private boolean stop = false;
+    private volatile boolean started = false;
+    private volatile boolean stop = false;
 
     private Thread thread = null;
     private Thread fdThread = null;
@@ -473,7 +473,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     public String getState(final ID id) {
         HealthMessage.Entry entry;
-        entry = cache.get(id);
+        entry = cache.get((PeerID) id);
         if (entry != null) {
             return entry.state;
         } else {

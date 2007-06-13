@@ -82,8 +82,8 @@ public class ClusterManager implements PipeMsgListener {
     private NetworkManager netManager = null;
     private String groupName = null;
     private String instanceName = null;
-    private boolean started = false;
-    private boolean stopped = true;
+    private volatile boolean started = false;
+    private volatile boolean stopped = true;
     private boolean loopbackMessages = false;
     private final String closeLock = new String("closeLock");
     private SystemAdvertisement systemAdv = null;
@@ -99,7 +99,7 @@ public class ClusterManager implements PipeMsgListener {
     private PeerID myID;
     private static final String APPMESSAGE = "APPMESSAGE";
     private List<ClusterMessageListener> cmListeners;
-    private boolean stopping = false;
+    private volatile boolean stopping = false;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
     /**
