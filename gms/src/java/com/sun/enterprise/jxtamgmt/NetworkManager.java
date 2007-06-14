@@ -151,7 +151,6 @@ public class NetworkManager implements RendezvousListener {
         }
     }
 
-
     /**
      * Returns a SHA1 hash of string.
      *
@@ -330,8 +329,7 @@ public class NetworkManager implements RendezvousListener {
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
         // Configure the peer name
-        final NetworkConfigurator config = new NetworkConfigurator();
-        config.setHome(userHome);
+        final NetworkConfigurator config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
         config.setPeerID(getPeerID(instanceName));
         config.setName(instanceName);
         //config.setPrincipal(instanceName);
@@ -342,7 +340,7 @@ public class NetworkManager implements RendezvousListener {
         config.setMulticastSize(64*1024);
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
-        config.setInfrastructureDescription(groupName + " Infrastructure Group Name");
+        config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
         if (mcastAddress != null) {
             config.setMulticastAddress(mcastAddress);
         }
