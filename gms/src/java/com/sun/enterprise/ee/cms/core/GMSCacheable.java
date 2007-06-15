@@ -53,6 +53,7 @@ public class GMSCacheable implements Serializable, Comparator {
     private final String componentName;
     private final String memberTokenId;
     private final Object key;
+    private int hashCode = 0;
 
     public GMSCacheable(final String componentName, final String memberTokenId, final Serializable key) {
         this.componentName = componentName;
@@ -74,7 +75,10 @@ public class GMSCacheable implements Serializable, Comparator {
      * {@inheritDoc}
      */
     public int hashCode() {
-        return key.hashCode() * 17 + componentName.toLowerCase().hashCode() + memberTokenId.toLowerCase().hashCode();
+        if (hashCode == 0) {
+            hashCode = key.hashCode() * 17 + componentName.hashCode() + memberTokenId.hashCode();
+        }
+        return hashCode;
     }
 
     /**
@@ -82,6 +86,7 @@ public class GMSCacheable implements Serializable, Comparator {
      * <p/>
      * We compare the contents of the GMSCacheable argument passed in with
      * the contents of this instance and determine if they are the same.
+     *
      * @override
      */
     public boolean equals(final Object o) {
@@ -90,22 +95,22 @@ public class GMSCacheable implements Serializable, Comparator {
         boolean memberTokenIdEqual = false;
         boolean keyEqual = false;
 
-        if(o instanceof GMSCacheable){
+        if (o instanceof GMSCacheable) {
             if (this.componentName == null) {
-                if (((GMSCacheable)o).componentName == null) {
+                if (((GMSCacheable) o).componentName == null) {
                     componentNameEqual = true;
                 }
-            } else if (this.componentName.equals(((GMSCacheable)o).componentName)) {
+            } else if (this.componentName.equals(((GMSCacheable) o).componentName)) {
                 componentNameEqual = true;
             }
             if (this.memberTokenId == null) {
                 if (((GMSCacheable) o).memberTokenId == null) {
                     memberTokenIdEqual = true;
                 }
-            } else if (this.memberTokenId.equals(((GMSCacheable)o).memberTokenId)) {
+            } else if (this.memberTokenId.equals(((GMSCacheable) o).memberTokenId)) {
                 memberTokenIdEqual = true;
             }
-            if (this.key.equals(((GMSCacheable)o).key)) {
+            if (this.key.equals(((GMSCacheable) o).key)) {
                 keyEqual = true;
             }
 
