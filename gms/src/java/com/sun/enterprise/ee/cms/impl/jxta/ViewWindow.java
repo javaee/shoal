@@ -86,7 +86,6 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private static final int SYNCWAITMILLIS = 3000;
     private static final String REC_PROGRESS_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_IN_PROGRESS.toString();
     private static final String REC_APPOINTED_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_SERVER_APPOINTED.toString();
-    private static final int VIEW_WAIT_TIMEOUT = 2000;
     private final ArrayBlockingQueue<EventPacket> viewQueue;
     private final String groupName;
 
@@ -123,8 +122,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             if (views.size() > size) {
                 views.remove(0);
             }
-            logger.log(Level.INFO, "membership.snapshot.analysis",
-                    new Object[]{packet.getClusterViewEvent().toString()});
+            logger.log(Level.INFO, "membership.snapshot.analysis", new Object[]{packet.getClusterViewEvent().toString()});
             Signal[] activeSignals = analyzeViewChange(packet);
 
             if (activeSignals.length != 0) {
@@ -146,10 +144,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         SystemAdvertisement advert;
         int count = 0;
         final StringBuffer sb =
-                new StringBuffer(
-                        new StringBuffer()
-                                .append("GMS View Change Received: Members in view ")
-                                .append("(before change analysis) are :\n").toString());
+                new StringBuffer("GMS View Change Received: Members in view ").append("(before change analysis) are :\n");
         for (SystemAdvertisement systemAdvertisement : view.getView()) {
             advert = systemAdvertisement;
             member = getGMSMember(advert);
@@ -164,8 +159,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             if (member.getMemberType().equals(CORETYPE)) {
                 synchronized (currentCoreMembers) {
                     currentCoreMembers.add(
-                            new StringBuffer()
-                                    .append(member.getMemberToken())
+                            new StringBuffer(member.getMemberToken())
                                     .append("::")
                                     .append(member.getStartTime()).toString());
                 }
@@ -190,15 +184,10 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                             CustomTagNames.MEMBER_TYPE.toString()),
                     systemAdvertisement.getCustomTagValue(
                             CustomTagNames.GROUP_NAME.toString()),
-                    Long.valueOf(
-                            systemAdvertisement.
-                                    getCustomTagValue(
-                                    CustomTagNames.START_TIME
-                                            .toString())));
+                    Long.valueOf(systemAdvertisement.getCustomTagValue(CustomTagNames.START_TIME.toString())));
         } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
-                    new StringBuffer()
-                            .append("SystemAdvertisement did not contain one of the ")
+                    new StringBuffer("SystemAdvertisement did not contain one of the ")
                             .append("specified tag values:")
                             .append(e.getLocalizedMessage()).toString());
             member = new GMSMember(systemAdvertisement.getName(), null, null, null);
@@ -282,8 +271,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         try {
             final GMSConstants.shutdownType shutdownType;
-            if (packet.getClusterViewEvent()
-                    .equals(ClusterViewEvents.CLUSTER_STOP_EVENT)) {
+            if (packet.getClusterViewEvent().equals(ClusterViewEvents.CLUSTER_STOP_EVENT)) {
                 shutdownType = GMSConstants.shutdownType.GROUP_SHUTDOWN;
             } else {
                 shutdownType = GMSConstants.shutdownType.INSTANCE_SHUTDOWN;
@@ -292,17 +280,12 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 }
             }
             //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
-            logger.log(Level.INFO, "plannedshutdownevent.announcement",
-                    new Object[]{token, shutdownType});
+            logger.log(Level.INFO, "plannedshutdownevent.announcement", new Object[]{token, shutdownType});
             signals.add(new PlannedShutdownSignalImpl(token,
-                    advert.getCustomTagValue(
-                            CustomTagNames.GROUP_NAME.toString()),
-                    Long.valueOf(advert.getCustomTagValue(
-                            CustomTagNames.START_TIME.toString())),
-                    shutdownType));
+                         advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                         Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())), shutdownType));
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
-                    new Object[]{e.getLocalizedMessage()});
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
         }
     }
 
@@ -312,15 +295,11 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         getGMSContext().addToSuspectList(token);
         try {
             logger.log(Level.INFO, "gms.failureSuspectedEventReceived", token);
-            signals.add(
-                    new FailureSuspectedSignalImpl(token,
-                            advert.getCustomTagValue(
-                                    CustomTagNames.GROUP_NAME.toString()),
-                            Long.valueOf(advert.getCustomTagValue(
-                                    CustomTagNames.START_TIME.toString()))));
+            signals.add(new FailureSuspectedSignalImpl(token,
+                          advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                          Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
-                    new Object[]{e.getLocalizedMessage()});
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
         }
     }
 
@@ -328,32 +307,25 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
         try {
-            final String type = advert.getCustomTagValue(
-                    CustomTagNames.MEMBER_TYPE.toString());
+            final String type = advert.getCustomTagValue(CustomTagNames.MEMBER_TYPE.toString());
             if (type.equalsIgnoreCase(CORETYPE)) {
                 logger.log(Level.INFO, "member.failed", new Object[]{token});
                 generateFailureRecoverySignals(views.get(views.size() - 2),
                         token,
-                        advert.getCustomTagValue(
-                                CustomTagNames.GROUP_NAME.toString()),
-                        Long.valueOf(advert.getCustomTagValue(
-                                CustomTagNames.START_TIME.toString())));
+                        advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                        Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())));
 
                 if (getGMSContext().getRouter().isFailureNotificationAFRegistered()) {
-                    signals.add(
-                            new FailureNotificationSignalImpl(token,
-                                    advert.getCustomTagValue(
-                                            CustomTagNames.GROUP_NAME.toString()),
-                                    Long.valueOf(advert.getCustomTagValue(
-                                            CustomTagNames.START_TIME.toString()))));
+                    signals.add(new FailureNotificationSignalImpl(token,
+                                  advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                                  Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
                 }
 
                 logger.fine("removing newly added node from the suspected list..." + token);
                 getGMSContext().removeFromSuspectList(token);
             }
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
-                    new Object[]{e.getLocalizedMessage()});
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
         }
     }
 
@@ -370,31 +342,22 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             if (RecoveryTargetSelector.resolveRecoveryTarget(null, oldMembership, token, getGMSContext())) {
                 //this is a list containing failed members who were in the
                 //process of being recovered.i.e. state was RECOVERY_IN_PROGRESS
-                final List<String> recInProgressMembers =
-                        getRecoveriesInProgressByFailedMember(token);
+                final List<String> recInProgressMembers = getRecoveriesInProgressByFailedMember(token);
                 //this is a list of failed members (who are still dead)
                 // for whom the failed member here was appointed as recovery
                 // server.
                 final List<String> recApptsHeldByFailedMember = getRecApptsHeldByFailedMember(token);
                 for (final String comp : router.getFailureRecoveryComponents()) {
-                    logger.log(Level.FINE, new StringBuffer()
-                            .append("adding failure recovery signal for component=")
-                            .append(comp).toString());
-                    signals.add(
-                            new FailureRecoverySignalImpl(comp, token,
-                                    groupName,
-                                    startTime));
+                    logger.log(Level.FINE, new StringBuffer("adding failure recovery signal for component=").append(comp).toString());
+                    signals.add(new FailureRecoverySignalImpl(comp, token, groupName, startTime));
                     if (!recInProgressMembers.isEmpty()) {
-
                         for (final String fToken : recInProgressMembers) {
-                            signals.add(new FailureRecoverySignalImpl(
-                                    comp, fToken, groupName, 0));
+                            signals.add(new FailureRecoverySignalImpl(comp, fToken, groupName, 0));
                         }
                     }
                     if (!recApptsHeldByFailedMember.isEmpty()) {
                         for (final String fToken : recApptsHeldByFailedMember) {
-                            signals.add(new FailureRecoverySignalImpl(
-                                    comp, fToken, groupName, 0));
+                            signals.add(new FailureRecoverySignalImpl(comp, fToken, groupName, 0));
                         }
                     }
                 }
@@ -413,8 +376,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 if (entry instanceof String) {
                     if (((String) entry).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(gmsCacheable.getKey())) {
                         //if the target member is already up dont include that
-                        logger.log(Level.FINER, new StringBuffer()
-                                .append("Failed Member ")
+                        logger.log(Level.FINER, new StringBuffer("Failed Member ")
                                 .append(token)
                                 .append(" was appointed for recovery of ")
                                 .append(gmsCacheable.getKey())
@@ -445,21 +407,20 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);
 
-        for (GMSCacheable c : entries.keySet()) {
+        for (GMSCacheable gmsCacheable : entries.keySet()) {
             //if this member is recovering someone else
-            if (token.equals(c.getMemberTokenId()) && !token.equals(c.getKey())) {
-                final Object entry = entries.get(c);
+            if (token.equals(gmsCacheable.getMemberTokenId()) && !token.equals(gmsCacheable.getKey())) {
+                final Object entry = entries.get(gmsCacheable);
                 if (entry instanceof String) {
                     if (((String) entry).startsWith(REC_PROGRESS_STATE)) {
-                        logger.log(Level.FINER, new StringBuffer()
-                                .append("Failed Member ").append(token)
+                        logger.log(Level.FINER, new StringBuffer("Failed Member ").append(token)
                                 .append(" had recovery-in-progress for ")
-                                .append(c.getKey()).append(" when ")
+                                .append(gmsCacheable.getKey()).append(" when ")
                                 .append(token).append(" failed. ").toString());
-                        tokens.add((String) c.getKey());
+                        tokens.add((String) gmsCacheable.getKey());
                         RecoveryTargetSelector.setRecoverySelectionState(
                                 getGMSContext().getServerIdentityToken(),
-                                (String) c.getKey(), getGMSContext().getGroupName());
+                                (String) gmsCacheable.getKey(), getGMSContext().getGroupName());
                     }
                 }
             }
@@ -485,7 +446,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             }
         } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
-                    new StringBuffer().append("The SystemAdvertisement did ")
+                    new StringBuffer("The SystemAdvertisement did ")
                             .append("not contain the ").append(
                             e.getLocalizedMessage())
                             .append(" custom tag value:").toString());
