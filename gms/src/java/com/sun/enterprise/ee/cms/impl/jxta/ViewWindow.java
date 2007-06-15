@@ -36,8 +36,22 @@
 
 package com.sun.enterprise.ee.cms.impl.jxta;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.common.*;
+import com.sun.enterprise.ee.cms.core.DistributedStateCache;
+import com.sun.enterprise.ee.cms.core.GMSCacheable;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.core.Signal;
+import com.sun.enterprise.ee.cms.impl.common.FailureNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.FailureRecoverySignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.impl.common.GMSMember;
+import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.RecoveryTargetSelector;
+import com.sun.enterprise.ee.cms.impl.common.Router;
+import com.sun.enterprise.ee.cms.impl.common.SignalPacket;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.jxtamgmt.ClusterView;
 import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
@@ -49,7 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -92,13 +105,14 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     public void run() {
 
         while (!getGMSContext().isShuttingDown()) {
+            final EventPacket packet;
             try {
-                final EventPacket packet = viewQueue.poll(VIEW_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
+                packet = viewQueue.take();
                 if (packet != null) {
                     newViewObserved(packet);
                 }
             } catch (InterruptedException e) {
-                logger.log(Level.WARNING, "InterruptedException while taking from ViewQueue :" + e.getLocalizedMessage());
+                logger.log(Level.FINEST, e.getLocalizedMessage());
             }
         }
     }
@@ -109,8 +123,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             if (views.size() > size) {
                 views.remove(0);
             }
-            logger.log(Level.INFO, "membership.snapshot.analysis", 
-                        new Object[] {packet.getClusterViewEvent().toString()});
+            logger.log(Level.INFO, "membership.snapshot.analysis",
+                    new Object[]{packet.getClusterViewEvent().toString()});
             Signal[] activeSignals = analyzeViewChange(packet);
 
             if (activeSignals.length != 0) {
@@ -278,8 +292,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 }
             }
             //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
-            logger.log(Level.INFO, "plannedshutdownevent.announcement", 
-                        new Object[] {token, shutdownType});
+            logger.log(Level.INFO, "plannedshutdownevent.announcement",
+                    new Object[]{token, shutdownType});
             signals.add(new PlannedShutdownSignalImpl(token,
                     advert.getCustomTagValue(
                             CustomTagNames.GROUP_NAME.toString()),
@@ -287,8 +301,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                             CustomTagNames.START_TIME.toString())),
                     shutdownType));
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,"systemadv.not.contain.customtag", 
-                        new Object[] {e.getLocalizedMessage()});
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
+                    new Object[]{e.getLocalizedMessage()});
         }
     }
 
@@ -305,8 +319,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                             Long.valueOf(advert.getCustomTagValue(
                                     CustomTagNames.START_TIME.toString()))));
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,"systemadv.not.contain.customtag", 
-                        new Object[] {e.getLocalizedMessage()});               
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
+                    new Object[]{e.getLocalizedMessage()});
         }
     }
 
@@ -317,7 +331,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             final String type = advert.getCustomTagValue(
                     CustomTagNames.MEMBER_TYPE.toString());
             if (type.equalsIgnoreCase(CORETYPE)) {
-                logger.log(Level.INFO, "member.failed", new Object[] {token});
+                logger.log(Level.INFO, "member.failed", new Object[]{token});
                 generateFailureRecoverySignals(views.get(views.size() - 2),
                         token,
                         advert.getCustomTagValue(
@@ -334,12 +348,12 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                                             CustomTagNames.START_TIME.toString()))));
                 }
 
-		logger.fine("removing newly added node from the suspected list..." + token);
-		getGMSContext().removeFromSuspectList(token);
+                logger.fine("removing newly added node from the suspected list..." + token);
+                getGMSContext().removeFromSuspectList(token);
             }
         } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag", 
-                        new Object[] {e.getLocalizedMessage()});               
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
+                    new Object[]{e.getLocalizedMessage()});
         }
     }
 
@@ -353,7 +367,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         if (router.isFailureRecoveryAFRegistered()) {
             logger.log(Level.FINE, "Determining the recovery server..");
             //determine if we are recovery server
-            if (RecoveryTargetSelector.resolveRecoveryTarget( null, oldMembership, token, getGMSContext())) {
+            if (RecoveryTargetSelector.resolveRecoveryTarget(null, oldMembership, token, getGMSContext())) {
                 //this is a list containing failed members who were in the
                 //process of being recovered.i.e. state was RECOVERY_IN_PROGRESS
                 final List<String> recInProgressMembers =
@@ -392,29 +406,29 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         final List<String> tokens = new ArrayList<String>();
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);
-        for (GMSCacheable c : entries.keySet()) {
+        for (GMSCacheable gmsCacheable : entries.keySet()) {
             //if this failed member was appointed for recovering someone else
-            if (token.equals(c.getMemberTokenId()) && !token.equals(c.getKey())) {
-                final Object entry = entries.get(c);
+            if (token.equals(gmsCacheable.getMemberTokenId()) && !token.equals(gmsCacheable.getKey())) {
+                final Object entry = entries.get(gmsCacheable);
                 if (entry instanceof String) {
-                    if (((String) entry).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(c.getKey())) {
+                    if (((String) entry).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(gmsCacheable.getKey())) {
                         //if the target member is already up dont include that
                         logger.log(Level.FINER, new StringBuffer()
                                 .append("Failed Member ")
                                 .append(token)
                                 .append(" was appointed for recovery of ")
-                                .append(c.getKey())
+                                .append(gmsCacheable.getKey())
                                 .append(" when ").append(token)
                                 .append(" failed. ")
                                 .append("Adding to recovery-appointed list...")
                                 .toString());
-                        tokens.add((String) c.getKey());
+                        tokens.add((String) gmsCacheable.getKey());
                         try {
-                            dsc.removeFromCache(c.getComponentName(),
-                                    c.getMemberTokenId(),
-                                    (Serializable) c.getKey());
+                            dsc.removeFromCache(gmsCacheable.getComponentName(),
+                                    gmsCacheable.getMemberTokenId(),
+                                    (Serializable) gmsCacheable.getKey());
                             RecoveryTargetSelector.setRecoverySelectionState(
-                                    getGMSContext().getServerIdentityToken(), (String) c.getKey(),
+                                    getGMSContext().getServerIdentityToken(), (String) gmsCacheable.getKey(),
                                     getGMSContext().getGroupName());
                         } catch (GMSException e) {
                             logger.log(Level.WARNING, e.getLocalizedMessage());
@@ -512,7 +526,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             } catch (InterruptedException e) {
                 logger.log(Level.WARNING, e.getLocalizedMessage());
             } catch (Exception e) {
-                logger.log(Level.WARNING, "Exception during DSC sync:"+e);
+                logger.log(Level.WARNING, "Exception during DSC sync:" + e);
                 e.printStackTrace();
             }
         }
