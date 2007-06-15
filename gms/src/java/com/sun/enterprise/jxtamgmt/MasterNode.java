@@ -137,6 +137,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private long timeout = 10 * 1000L;
     private static final String VIEW_CHANGE_EVENT = "VCE";
     private RouteControl routeControl = null;
+    private MessageTransport endpointRouter = null;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
     /**
@@ -164,7 +165,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 (XMLDocument) manager.getSystemAdvertisement()
                         .getDocument(MimeMediaType.XMLUTF8), null);
         //used to ensure up to date routes are used
-        MessageTransport endpointRouter = (group.getEndpointService()).getMessageTransport("jxta");
+        endpointRouter = (group.getEndpointService()).getMessageTransport("jxta");
         if (endpointRouter != null) {
             routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
             RouteAdvertisement route = routeControl.getMyLocalRoute();
@@ -1059,6 +1060,12 @@ class MasterNode implements PipeMsgListener, Runnable {
         } else {
             return -1;
         }
+    }
+    RouteControl getRouteControl() {
+        if (routeControl == null) {
+        routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
+        }
+        return routeControl;
     }
 }
 
