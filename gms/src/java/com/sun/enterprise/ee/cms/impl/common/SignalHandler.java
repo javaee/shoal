@@ -43,12 +43,15 @@ import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
 import com.sun.enterprise.ee.cms.core.MessageSignal;
 import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
 import com.sun.enterprise.ee.cms.core.Signal;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * On a separate thread, analyses and handles the Signals delivered to it.
- * Picks up signals from QueueHelper and processes them.
+ * Picks up signals from a BlockingQueue and processes them.
  *
  * @author Shreedhar Ganapathy
  *         Date: Jan 22, 2004
@@ -57,18 +60,26 @@ import java.util.concurrent.BlockingQueue;
 public class SignalHandler implements Runnable {
     private final BlockingQueue<SignalPacket> signalQueue;
     private final Router router;
+    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private volatile boolean interrupted = false;
 
-    public SignalHandler(final BlockingQueue<SignalPacket> qh, final Router router) {
-        this.signalQueue = qh;
+    /**
+     * Creates a SignalHandler
+     *
+     * @param packetQueue the packet exchange queue
+     * @param router the Router
+     */
+    public SignalHandler(final BlockingQueue<SignalPacket> packetQueue, final Router router) {
+        this.signalQueue = packetQueue;
         this.router = router;
     }
 
     public void run() {
         Signal[] signals;
-        while (true) {
+        while (!interrupted) {
+            SignalPacket signalPacket;
             try {
-                //todo infinite loop
-                SignalPacket signalPacket = signalQueue.take();
+                signalPacket = signalQueue.take();
                 if (signalPacket != null) {
                     if ((signals = signalPacket.getSignals()) != null) {
                         handleSignals(signals);
@@ -77,7 +88,8 @@ public class SignalHandler implements Runnable {
                     }
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.log(Level.FINEST, e.getLocalizedMessage());
+                interrupted = true;
             }
         }
     }
