@@ -124,8 +124,7 @@ public class HealthMessage {
      * @return The document
      */
     public Document getDocument(final MimeMediaType asMimeType) {
-        final StructuredDocument adv = StructuredDocumentFactory
-                .newStructuredDocument(asMimeType, getAdvertisementType());
+        final StructuredDocument adv = StructuredDocumentFactory.newStructuredDocument(asMimeType, getAdvertisementType());
         if (adv instanceof Attributable) {
             ((Attributable) adv).addAttribute("xmlns:jxta", "http://jxta.org");
         }
@@ -205,13 +204,10 @@ public class HealthMessage {
                 }
 
                 for (Enumeration each = elem.getChildren(); each.hasMoreElements();) {
-                    SystemAdvertisement adv = new
-                            SystemAdvertisement((TextElement) each.nextElement());
+                    SystemAdvertisement adv = new SystemAdvertisement((TextElement) each.nextElement());
                     final Entry entry = new Entry(adv, state);
                     add(entry);
                 }
-
-
             }
         }
         setEntries(entries);
@@ -256,8 +252,7 @@ public class HealthMessage {
      * @return String representation of the of this message type
      */
     public String toString() {
-        final StructuredTextDocument doc =
-                (StructuredTextDocument) getDocument(MimeMediaType.XMLUTF8);
+        final StructuredTextDocument doc = (StructuredTextDocument) getDocument(MimeMediaType.XMLUTF8);
         return doc.toString();
     }
 
@@ -279,11 +274,11 @@ public class HealthMessage {
         /**
          * Entry ID entry id
          */
-        PeerID id;
+        final PeerID id;
         /**
          * Entry adv SystemAdvertisement
          */
-        SystemAdvertisement adv;
+        final SystemAdvertisement adv;
         /**
          * Entry state
          */
@@ -301,14 +296,10 @@ public class HealthMessage {
          * @param state state value
          */
         public Entry(final SystemAdvertisement adv, final String state) {
-            this(adv, state, System.currentTimeMillis());
-        }
-
-        public Entry(final SystemAdvertisement adv, final String state, final long timestamp) {
             this.state = state;
             this.adv = adv;
             this.id = (PeerID) adv.getID();
-            this.timestamp = timestamp;
+            this.timestamp =System.currentTimeMillis();
         }
 
         /**
@@ -325,9 +316,11 @@ public class HealthMessage {
             return adv.getID().hashCode() * 45191 + state.hashCode();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         public String toString() {
-            return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " +
-                    timestamp;
+            return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " + timestamp;
         }
     }
 }
