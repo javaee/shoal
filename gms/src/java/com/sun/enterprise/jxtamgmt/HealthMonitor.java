@@ -41,6 +41,7 @@ import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocumentFactory;
 import net.jxta.document.StructuredTextDocument;
 import net.jxta.document.XMLDocument;
+import net.jxta.endpoint.EndpointAddress;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
@@ -564,7 +565,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //the specified max timeout
             if (!stop) {
                 LOG.log(Level.FINEST, "timeDiff > maxTime");
-                if (computeMissedBeat(entry) > maxMissedBeats) {
+                if (computeMissedBeat(entry) > maxMissedBeats && !isConnected(entry.id)) {
                     if (canProcessInDoubt(entry)) {
                         LOG.log(Level.FINEST, "Designating InDoubtState");
                         designateInDoubtState(entry);
@@ -578,8 +579,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     //dont suspect self
                     if (!entry.id.equals(localPeerID)) {
                         if (canProcessInDoubt(entry)) {
-                            LOG.log(Level.FINE, MessageFormat.format("For PID = {0}; last recorded heart-beat = {1}ms ago", entry.id, System.currentTimeMillis() - entry.timestamp));
-                            LOG.log(Level.FINE, MessageFormat.format("For PID = {0}; heart-beat # {1} out of a max of {2}", entry.id, computeMissedBeat(entry), maxMissedBeats));
+                            LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
+                                    entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
                         }
                     }
                 }
@@ -639,7 +640,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             synchronized (indoubtListLock) {
                 for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
                     entry = entry1;
-                    if (entry.state.equals(states[ALIVE])) {
+                    if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
                         //FIXME  Is this really needed? commenting out for now
                         /// reportLiveStateToLocalListeners(entry);
                     } else {
@@ -703,13 +704,30 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             LOG.log(Level.WARNING, states[state] + " peer: " + entry.id + " does not exist in local ClusterView");
         }
     }
+
+    /**
+     * Determines whether a connection to a specific node exists, or one can be created
+     * @param pid Node ID
+     * @return true, if a connection already exists, or a new was sucessfully created
+     */
+    public boolean isConnected(PeerID pid) {
+        return (masterNode.getRouteControl().getMessengerFor(new EndpointAddress("jxta", pid.getUniqueValue().toString(), null, null), null) != null);
+    }
+    /**
+     * Convert an ID into a Router Endpoint Address
+     *
+     * @param pid The ID who's equivalent Endpoint Address is desired.
+     * @return The ID as an EndpointAddress.
+     */
+
 /*
-    private void shutdown() {
+private void shutdown() {
+}
+private class ShutdownHook extends Thread {
+    public void run() {
+        shutdown();
     }
-    private class ShutdownHook extends Thread {
-        public void run() {
-            shutdown();
-        }
-    }
-    */
+}
+*/
+
 }
