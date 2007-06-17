@@ -44,6 +44,7 @@ import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.EndpointAddress;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
+import net.jxta.endpoint.Messenger;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
@@ -560,8 +561,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
         private void determineInDoubtPeers(final HealthMessage.Entry entry) {
 
-            //if current time exceeds the last state update
-            //timestamp from this peer id, by more than the
+            //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
                 LOG.log(Level.FINEST, "timeDiff > maxTime");
@@ -707,11 +707,23 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     /**
      * Determines whether a connection to a specific node exists, or one can be created
+     *
      * @param pid Node ID
      * @return true, if a connection already exists, or a new was sucessfully created
      */
     public boolean isConnected(PeerID pid) {
-        return (masterNode.getRouteControl().getMessengerFor(new EndpointAddress("jxta", pid.getUniqueValue().toString(), null, null), null) != null);
+        Messenger messenger = masterNode.getRouteControl().getMessengerFor(new EndpointAddress("jxta", pid.getUniqueValue().toString(), null, null), null);
+        if (messenger == null) {
+            return false;
+        }
+        if ((messenger.getState() & Messenger.USABLE) != 0) {
+            try {
+                messenger.sendMessageB(new Message(), null, null);
+            } catch (IOException e) {
+                // ignored
+            }
+        }
+        return (messenger.getState() & Messenger.CLOSED) != Messenger.CLOSED;
     }
     /**
      * Convert an ID into a Router Endpoint Address
