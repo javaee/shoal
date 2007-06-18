@@ -712,26 +712,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @return true, if a connection already exists, or a new was sucessfully created
      */
     public boolean isConnected(PeerID pid) {
-        Messenger messenger = masterNode.getRouteControl().getMessengerFor(new EndpointAddress("jxta", pid.getUniqueValue().toString(), null, null), null);
-        if (messenger == null) {
-            return false;
-        }
-        if ((messenger.getState() & Messenger.USABLE) != 0) {
-            try {
-                messenger.sendMessageB(new Message(), null, null);
-            } catch (IOException e) {
-                // ignored
-            }
-        }
-        return (messenger.getState() & Messenger.CLOSED) != Messenger.CLOSED;
+        return  masterNode.getRouteControl().isConnected(pid);
     }
-    /**
-     * Convert an ID into a Router Endpoint Address
-     *
-     * @param pid The ID who's equivalent Endpoint Address is desired.
-     * @return The ID as an EndpointAddress.
-     */
-
 /*
 private void shutdown() {
 }
