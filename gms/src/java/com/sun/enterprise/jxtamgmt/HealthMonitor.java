@@ -516,7 +516,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             while (!stop) {
                 synchronized (cacheLock) {
                     try {
-                        //System.out.println("InDoubtPeerDetector healthMonitorThread waiting for :"+timeout);
+                        //System.out.println("InDoubtPeerDetector failureDetectorThread waiting for :"+timeout);
                         //wait for specified timeout or until woken up
                         cacheLock.wait(timeout);
                         //LOG.log(Level.FINEST, "Analyzing cache for health...");
