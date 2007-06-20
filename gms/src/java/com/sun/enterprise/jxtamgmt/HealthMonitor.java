@@ -41,10 +41,8 @@ import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocumentFactory;
 import net.jxta.document.StructuredTextDocument;
 import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.EndpointAddress;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
-import net.jxta.endpoint.Messenger;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
@@ -92,8 +90,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private volatile boolean started = false;
     private volatile boolean stop = false;
 
-    private Thread thread = null;
-    private Thread fdThread = null;
+    private Thread healthMonitorThread = null;
+    private Thread failureDetectorThread = null;
 
     private InDoubtPeerDetector inDoubtPeerDetector;
     private final String[] states = {"starting",
@@ -343,9 +341,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //ignore as this happens on shutdown.
             //TODO: handle shutdown more gracefully
         } catch (Throwable all) {
-            LOG.log(Level.WARNING, "Uncaught Throwable in thread " + Thread.currentThread().getName() + ":" + all);
+            LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
         } finally {
-            thread = null;
+            healthMonitorThread = null;
         }
     }
 
@@ -399,8 +397,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // create output
                 outputPipe = pipeService.createOutputPipe(pipeAdv, 1);
 
-                this.thread = new Thread(this, "HealthMonitor");
-                thread.start();
+                this.healthMonitorThread = new Thread(this, "HealthMonitor");
+                healthMonitorThread.start();
                 inDoubtPeerDetector = new InDoubtPeerDetector();
                 inDoubtPeerDetector.start();
                 started = true;
@@ -437,8 +435,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         LOG.log(Level.FINE, "Stopping HealthMonitor");
         stop = true;
         started = false;
-        final Thread tmpThread = thread;
-        thread = null;
+        final Thread tmpThread = healthMonitorThread;
+        healthMonitorThread = null;
         if (tmpThread != null) {
             tmpThread.interrupt();
         }
@@ -473,9 +471,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    public String getState(final ID id) {
+    public String getState(final ID peerID) {
         HealthMessage.Entry entry;
-        entry = cache.get((PeerID) id);
+        entry = cache.get((PeerID) peerID);
         if (entry != null) {
             return entry.state;
         } else {
@@ -494,9 +492,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         private final long maxTime = timeout + buffer;
 
         void start() {
-            final Thread fdThread = new Thread(this, "InDoubtPeerDetector Thread");
+            failureDetectorThread = new Thread(this, "InDoubtPeerDetector Thread");
             LOG.log(Level.FINE, "Starting InDoubtPeerDetector Thread");
-            fdThread.start();
+            failureDetectorThread.start();
             FailureVerifier fverifier = new FailureVerifier();
             final Thread fvThread = new Thread(fverifier, "FailureVerifier Thread");
             LOG.log(Level.FINE, "Starting FailureVerifier Thread");
@@ -504,8 +502,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
 
         void stop() {
-            final Thread tmpThread = fdThread;
-            fdThread = null;
+            final Thread tmpThread = failureDetectorThread;
+            failureDetectorThread = null;
             if (tmpThread != null) {
                 tmpThread.interrupt();
             }
@@ -518,7 +516,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             while (!stop) {
                 synchronized (cacheLock) {
                     try {
-                        //System.out.println("InDoubtPeerDetector thread waiting for :"+timeout);
+                        //System.out.println("InDoubtPeerDetector healthMonitorThread waiting for :"+timeout);
                         //wait for specified timeout or until woken up
                         cacheLock.wait(timeout);
                         //LOG.log(Level.FINEST, "Analyzing cache for health...");
