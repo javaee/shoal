@@ -509,8 +509,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             masterAssigned = true;
             if (msgElement != null) {
                 final ArrayList<SystemAdvertisement> newLocalView =
-                        (ArrayList<SystemAdvertisement>)
-                                getObjectFromByteArray(msgElement);
+                        (ArrayList<SystemAdvertisement>) getObjectFromByteArray(msgElement);
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
                     long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);

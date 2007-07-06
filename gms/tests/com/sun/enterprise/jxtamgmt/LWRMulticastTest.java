@@ -155,12 +155,12 @@ public class LWRMulticastTest implements PipeMsgListener {
     /**
      * Gram TAG name
      */
-    public static String GRAMTAG = "GRAM";
+    public static final String GRAMTAG = "GRAM";
 
     /**
      * Tutorial message name space
      */
-    public static String NAMESPACE = "TEST";
+    public static final String NAMESPACE = "TEST";
 
     /**
      * {@inheritDoc}

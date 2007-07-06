@@ -76,7 +76,7 @@ public class LWRMulticastSenderTest implements PipeMsgListener {
      */
     private final static String completeLock = "completeLock";
     private static PipeAdvertisement pipeAdv = null;
-    private static PipeService pipeService = null;
+    private static final PipeService pipeService = null;
 
 
     /**

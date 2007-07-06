@@ -54,9 +54,9 @@ public class LWRMulticastTestUI extends javax.swing.JFrame implements PipeMsgLis
 
     private LWRMulticastTest mcastTest = null;
 
-    SpinnerNumberModel numMsgsSpinnerModel;
-    SpinnerNumberModel numRepeatSpinnerModel;
-    SpinnerNumberModel numSendersSpinnerModel;
+    final SpinnerNumberModel numMsgsSpinnerModel;
+    final SpinnerNumberModel numRepeatSpinnerModel;
+    final SpinnerNumberModel numSendersSpinnerModel;
 
     /**
      * Creates new form LWRMulticastTestUI
