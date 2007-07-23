@@ -37,20 +37,26 @@
 package com.sun.enterprise.jxtamgmt;
 
 import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.XMLDocument;
+import net.jxta.document.MimeMediaType;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.peergroup.PeerGroupID;
+import net.jxta.peergroup.WorldPeerGroupFactory;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkConfigurator;
 import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.protocol.ModuleImplAdvertisement;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
 import net.jxta.logging.Logging;
+import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
+import net.jxta.impl.endpoint.mcast.McastTransport;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +66,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.net.URI;
 
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
@@ -314,6 +321,50 @@ public class NetworkManager implements RendezvousListener {
         return getPeerGroupID(groupName);
     }
 
+    private PeerGroup createDomain(URI storeHome) throws PeerGroupException {
+        final NetworkConfigurator wConfig = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, storeHome);
+        wConfig.setUseMulticast(false);
+        // Instantiate the world peer group
+        WorldPeerGroupFactory wpgf = new WorldPeerGroupFactory(wConfig.getPlatformConfig(), storeHome);
+        PeerGroup wpg = wpgf.getInterface();
+        assert wpg.getPeerGroupID().equals(PeerGroupID.worldPeerGroupID);
+
+        ModuleImplAdvertisement npgImplAdv;
+        try {
+            npgImplAdv = wpg.getAllPurposePeerGroupImplAdvertisement();
+            npgImplAdv.setModuleSpecID(PeerGroup.allPurposePeerGroupSpecID);
+            StdPeerGroupParamAdv params = new StdPeerGroupParamAdv(npgImplAdv.getParam());
+            params.addProto(McastTransport.MCAST_TRANSPORT_CLASSID, McastTransport.MCAST_TRANSPORT_SPECID);
+            npgImplAdv.setParam((XMLDocument) params.getDocument(MimeMediaType.XMLUTF8));
+        } catch (Exception failed) {
+            throw new PeerGroupException("Could not construct domain ModuleImplAdvertisement", failed);
+        }
+
+        final NetworkConfigurator config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, storeHome);
+        config.setPeerID(getPeerID(instanceName));
+        config.setName(instanceName);
+        //config.setPrincipal(instanceName);
+        config.setDescription("Created by Jxta Cluster Management NetworkManager");
+        config.setTcpStartPort(9701);
+        config.setTcpEndPort(9999);
+        // allow for upto 64K datagrams
+        config.setMulticastSize(64 * 1024);
+        config.setInfrastructureID(getInfraPeerGroupID());
+        config.setInfrastructureName(groupName);
+        config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
+        if (mcastAddress != null) {
+            config.setMulticastAddress(mcastAddress);
+        }
+        if (mcastPort > 0) {
+            config.setMulticastPort(mcastPort);
+        }
+        factory = new NetPeerGroupFactory(config.getPlatformConfig(), storeHome);
+        netPeerGroup = factory.getInterface();
+
+        // Instantiate the domain net peer group
+        return new NetPeerGroupFactory(wpg, config.getPlatformConfig(), npgImplAdv).getInterface();
+    }
+
     /**
      * Creates and starts the JXTA NetPeerGroup using a platform configuration
      * template. This class also registers a listener for rendezvous events
@@ -328,27 +379,8 @@ public class NetworkManager implements RendezvousListener {
 
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
-        // Configure the peer name
-        final NetworkConfigurator config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
-        config.setPeerID(getPeerID(instanceName));
-        config.setName(instanceName);
-        //config.setPrincipal(instanceName);
-        config.setDescription("Created by Jxta Cluster Management NetworkManager");
-        config.setTcpStartPort(9701);
-        config.setTcpEndPort(9999);
-        // allow for upto 64K datagrams
-        config.setMulticastSize(64*1024);
-        config.setInfrastructureID(getInfraPeerGroupID());
-        config.setInfrastructureName(groupName);
-        config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
-        if (mcastAddress != null) {
-            config.setMulticastAddress(mcastAddress);
-        }
-        if (mcastPort > 0) {
-            config.setMulticastPort(mcastPort);
-        }
-        factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
-        netPeerGroup = factory.getInterface();
+
+        netPeerGroup = createDomain(userHome.toURI());
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
         stopped = false;
