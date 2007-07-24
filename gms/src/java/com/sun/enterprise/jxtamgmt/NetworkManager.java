@@ -97,6 +97,7 @@ public class NetworkManager implements RendezvousListener {
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
+    private transient static PeerGroup wpg;
 
     /**
      * JxtaSocket Pipe ID seed.
@@ -321,14 +322,18 @@ public class NetworkManager implements RendezvousListener {
         return getPeerGroupID(groupName);
     }
 
-    private PeerGroup createDomain(URI storeHome) throws PeerGroupException {
-        final NetworkConfigurator wConfig = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, storeHome);
-        wConfig.setUseMulticast(false);
-        // Instantiate the world peer group
-        WorldPeerGroupFactory wpgf = new WorldPeerGroupFactory(wConfig.getPlatformConfig(), storeHome);
-        PeerGroup wpg = wpgf.getInterface();
-        assert wpg.getPeerGroupID().equals(PeerGroupID.worldPeerGroupID);
-
+    private void createDomain(URI storeHome) throws PeerGroupException {
+        synchronized (this) {
+            if (wpg == null) {
+                final NetworkConfigurator wConfig = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, storeHome);
+                wConfig.setUseMulticast(false);
+                // Instantiate the world peer group
+                WorldPeerGroupFactory wpgf = new WorldPeerGroupFactory(wConfig.getPlatformConfig(), storeHome);
+                wpg = wpgf.getInterface();
+                assert wpg.getPeerGroupID().equals(PeerGroupID.worldPeerGroupID);
+            }
+        }
+        
         ModuleImplAdvertisement npgImplAdv;
         try {
             npgImplAdv = wpg.getAllPurposePeerGroupImplAdvertisement();
@@ -358,11 +363,8 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
-        factory = new NetPeerGroupFactory(config.getPlatformConfig(), storeHome);
+        factory = new NetPeerGroupFactory(wpg, config.getPlatformConfig(), npgImplAdv);
         netPeerGroup = factory.getInterface();
-
-        // Instantiate the domain net peer group
-        return new NetPeerGroupFactory(wpg, config.getPlatformConfig(), npgImplAdv).getInterface();
     }
 
     /**
@@ -380,7 +382,7 @@ public class NetworkManager implements RendezvousListener {
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
 
-        netPeerGroup = createDomain(userHome.toURI());
+        createDomain(userHome.toURI());
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
         stopped = false;
