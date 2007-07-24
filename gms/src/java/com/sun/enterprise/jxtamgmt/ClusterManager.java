@@ -149,15 +149,10 @@ public class ClusterManager implements PipeMsgListener {
             LOG.log(Level.WARNING, ioe.getLocalizedMessage());
         }
         NetworkManagerRegistry.add(groupName, netManager);
-        systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName,
-                identityMap);
+        systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap);
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
-        this.clusterViewManager =
-                new ClusterViewManager(getSystemAdvertisement(), this,
-                        viewListeners);
-        this.masterNode = new MasterNode(this,
-                getDiscoveryTimeout(props),
-                1);
+        this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
+        this.masterNode = new MasterNode(this, getDiscoveryTimeout(props), 1);
 
         this.healthMonitor = new HealthMonitor(this,
                 getFailureDetectionTimeout(props),
@@ -580,8 +575,7 @@ public class ClusterManager implements PipeMsgListener {
         sysAdv.setName(name);
         try {
             sysAdv.setIP(InetAddress.getLocalHost().getHostAddress());
-        }
-        catch (UnknownHostException ignored) {
+        } catch (UnknownHostException ignored) {
             LOG.log(Level.WARNING, "Failed to obtain IP address :" + ignored);
         }
         sysAdv.setOSName(System.getProperty("os.name"));
