@@ -97,7 +97,7 @@ public class NetworkManager implements RendezvousListener {
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
-    private transient static PeerGroup wpg;
+    private static PeerGroup wpg;
 
     /**
      * JxtaSocket Pipe ID seed.
@@ -121,7 +121,7 @@ public class NetworkManager implements RendezvousListener {
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
     private int mcastPort = 0;
-    private NetPeerGroupFactory factory;
+
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
      * of the JXTA platform.  In addition, it provides logical addressing by means of name
@@ -323,7 +323,7 @@ public class NetworkManager implements RendezvousListener {
     }
 
     private void createDomain(URI storeHome) throws PeerGroupException {
-        synchronized (this) {
+        synchronized (this.getClass()) {
             if (wpg == null) {
                 final NetworkConfigurator wConfig = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, storeHome);
                 wConfig.setUseMulticast(false);
@@ -363,7 +363,7 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
-        factory = new NetPeerGroupFactory(wpg, config.getPlatformConfig(), npgImplAdv);
+        NetPeerGroupFactory factory = new NetPeerGroupFactory(wpg, config.getPlatformConfig(), npgImplAdv);
         netPeerGroup = factory.getInterface();
     }
 
