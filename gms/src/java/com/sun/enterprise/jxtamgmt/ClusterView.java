@@ -45,6 +45,7 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.text.MessageFormat;
 
 /**
  * ClusterView is a snapshot of the current membership of the group. The
@@ -80,6 +81,7 @@ public class ClusterView {
      */
     ClusterView(SystemAdvertisement advertisement) {
         view = new TreeMap<String, SystemAdvertisement>();
+        lockLog("constructor()");
         viewLock.lock();
         try {
             view.put(advertisement.getID().toString(), advertisement);
@@ -105,6 +107,7 @@ public class ClusterView {
      * @param adv adds a system advertisement to the view
      */
     public void add(final SystemAdvertisement adv) {
+        lockLog("add()");
         viewLock.lock();
         try {
             view.put(adv.getID().toString(), adv);
@@ -115,6 +118,7 @@ public class ClusterView {
 
     public boolean containsKey(final ID id) {
         boolean hasKey = false;
+        lockLog("containsKey()");
         viewLock.lock();
         try {
             hasKey = view.containsKey(id.toString());
@@ -132,6 +136,7 @@ public class ClusterView {
      */
     public List<SystemAdvertisement> getView() {
         List<SystemAdvertisement> viewCopy;
+        lockLog("getView()");
         viewLock.lock();
         try {
             viewCopy = new ArrayList<SystemAdvertisement>(view.values());
@@ -149,6 +154,7 @@ public class ClusterView {
      */
     public List<String> getPeerNamesInView() {
         List<String> peerNamesList;
+        lockLog("getPeerNamesInView()");
         viewLock.lock();
         try {
             peerNamesList = new ArrayList<String>(view.keySet());
@@ -165,6 +171,7 @@ public class ClusterView {
      */
     public int getSize() {
         int size = 0;
+        lockLog("getSize()");
         viewLock.lock();
         try {
             size = view.size();
@@ -180,6 +187,7 @@ public class ClusterView {
      * @return the top node on the list
      */
     public SystemAdvertisement getMasterCandidate() {
+        lockLog("getMasterCandidate()");
         viewLock.lock();
         try {
             final String id = view.firstKey();
@@ -218,12 +226,17 @@ public class ClusterView {
      * Removes all of the elements from this set (optional operation).
      */
     public void clear() {
+        lockLog("clear()");
         viewLock.lock();
         try {
             view.clear();
         } finally {
             viewLock.unlock();
         }
+    }
+
+    private void lockLog(String method) {
+        LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
     }
 }
 
