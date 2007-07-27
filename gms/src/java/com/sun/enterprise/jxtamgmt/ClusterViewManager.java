@@ -33,8 +33,6 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-
-
 package com.sun.enterprise.jxtamgmt;
 
 import net.jxta.id.ID;
@@ -56,8 +54,7 @@ public class ClusterViewManager {
     private TreeMap<String, SystemAdvertisement> view = new TreeMap<String, SystemAdvertisement>();
     private SystemAdvertisement advertisement = null;
     private SystemAdvertisement masterAdvertisement = null;
-    private List<ClusterViewEventListener> cvListeners =
-            new ArrayList<ClusterViewEventListener>();
+    private List<ClusterViewEventListener> cvListeners = new ArrayList<ClusterViewEventListener>();
     private long viewId = 0;
     private long masterViewID = 0;
     private ClusterManager manager;
@@ -89,8 +86,7 @@ public class ClusterViewManager {
         cvListeners.add(listener);
     }
 
-    public void removeClusterViewEventListener(
-            final ClusterViewEventListener listener) {
+    public void removeClusterViewEventListener(final ClusterViewEventListener listener) {
         cvListeners.remove(listener);
     }
 
@@ -100,7 +96,7 @@ public class ClusterViewManager {
      * @param advertisement system adverisement to add
      */
     void add(final SystemAdvertisement advertisement) {
-
+        lockLog("add()");
         viewLock.lock();
         try {
             if (!view.containsKey(advertisement.getID().toString())) {
@@ -127,6 +123,7 @@ public class ClusterViewManager {
     void setMaster(final SystemAdvertisement advertisement, boolean notify) {
         if (!advertisement.equals(masterAdvertisement)) {
             masterAdvertisement = advertisement;
+            lockLog("setMaster()");
             viewLock.lock();
             try {
                 view.put(masterAdvertisement.getID().toString(), masterAdvertisement);
@@ -167,6 +164,7 @@ public class ClusterViewManager {
      */
     public SystemAdvertisement get(final ID id) {
         final SystemAdvertisement adv;
+        lockLog("get()");
         viewLock.lock();
         try {
             adv = view.get(id.toString());
@@ -186,6 +184,7 @@ public class ClusterViewManager {
     SystemAdvertisement remove(final ID id) {
         SystemAdvertisement advertisement = null;
         if (containsKey(id)) {
+            lockLog("remove()");
             viewLock.lock();
             try {
                 advertisement = view.remove(id.toString());
@@ -193,11 +192,9 @@ public class ClusterViewManager {
                 viewLock.unlock();
             }
 
-            LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   "
-                    + advertisement.getID().toString());
+            LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   "+ advertisement.getID().toString());
         } else {
-            LOG.log(Level.FINEST, "Skipping removal of " + id
-                    + " Not in view");
+            LOG.log(Level.FINEST, "Skipping removal of " + id+ " Not in view");
         }
         return advertisement;
     }
@@ -219,10 +216,10 @@ public class ClusterViewManager {
      */
     void reset() {
         LOG.log(Level.FINEST, "Resetting View");
+        lockLog("reset()");
         viewLock.lock();
         try {
             view.clear();
-
             view.put(advertisement.getID().toString(), advertisement);
         } finally {
             viewLock.unlock();
@@ -236,6 +233,7 @@ public class ClusterViewManager {
      */
     public ClusterView getLocalView() {
         final TreeMap<String, SystemAdvertisement> temp;
+        lockLog("getLocalView()");
         viewLock.lock();
         try {
             temp = (TreeMap<String, SystemAdvertisement>) view.clone();
@@ -253,7 +251,7 @@ public class ClusterViewManager {
      */
     public int getViewSize() {
         int size;
-
+        lockLog("getViewSize()");
         viewLock.lock();
         try {
             size = view.size();
@@ -271,6 +269,7 @@ public class ClusterViewManager {
     SystemAdvertisement getMasterCandidate() {
         final SystemAdvertisement adv;
         final String id = view.firstKey();
+        lockLog("getMasterCandidate()");
         viewLock.lock();
         try {
             adv = view.get(id);
@@ -354,6 +353,7 @@ public class ClusterViewManager {
 
         if (authoritative) {
             boolean changed = false;
+            lockLog("addToView()");
             viewLock.lock();
             try {
                 if (!newView.contains(manager.getSystemAdvertisement())) {
@@ -423,6 +423,9 @@ public class ClusterViewManager {
 
     public void setMasterViewID(long masterViewID) {
         this.masterViewID = masterViewID;
+    }
+    private void lockLog(String method) {
+        LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
     }
 }
 
