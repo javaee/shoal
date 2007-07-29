@@ -36,21 +36,13 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.StructuredTextDocument;
-import net.jxta.document.XMLDocument;
+import net.jxta.document.*;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.peer.PeerID;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.io.IOException;
@@ -562,15 +554,16 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
+                if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
                 LOG.log(Level.FINEST, "timeDiff > maxTime");
-                if (computeMissedBeat(entry) > maxMissedBeats && !isConnected(entry.id)) {
                     if (canProcessInDoubt(entry)) {
-                        LOG.log(Level.FINEST, "Designating InDoubtState");
+                        LOG.log(Level.FINER, "Designating InDoubtState");
                         designateInDoubtState(entry);
                         //delegate verification to Failure Verifier
-                        LOG.log(Level.FINEST, "Notifying FailureVerifier");
+                        LOG.log(Level.FINER, "Notifying FailureVerifier for "+entry.adv.getName());
                         synchronized (verifierLock) {
                             verifierLock.notify();
+                            LOG.log(Level.FINER, "Done Notifying FailureVerifier for "+entry.adv.getName());
                         }
                     }
                 } else {
@@ -607,6 +600,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 LOG.log(Level.FINE, "Sending INDOUBT state message about node ID: " + entry.id + " to the cluster...");
                 reportOtherPeerState(INDOUBT, entry.adv);
             }
+            LOG.log(Level.FINEST, "Notifying Local Listeners of designated indoubt state for "+entry.adv.getName());
             notifyLocalListeners(entry.state, entry.adv);
         }
     }
@@ -663,14 +657,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             }
             final boolean masterFailed = (masterNode.getMasterNodeID()).equals(entry.id);
             if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
-                LOG.log(Level.FINE, MessageFormat.format("Removing System Advertisement :{0}", entry.id.toString()));
+                LOG.log(Level.FINE, MessageFormat.format("Removing System Advertisement :{0} for name {1}", entry.id.toString(), entry.adv.getName()));
                 removeMasterAdv(entry, DEAD);
-                LOG.log(Level.FINE, MessageFormat.format("Announcing Failure Event of {0} ...", entry.id));
+                LOG.log(Level.FINE, MessageFormat.format("Announcing Failure Event of {0} for name {1}...", entry.id, entry.adv.getName()));
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, entry.adv);
                 masterNode.viewChanged(cvEvent);
             } else if (masterFailed) {
                 //remove the failed node
-                LOG.log(Level.FINE, MessageFormat.format("Master Failed. Removing System Advertisement :{0}", entry.id.toString()));
+                LOG.log(Level.FINE, MessageFormat.format("Master Failed. Removing System Advertisement :{0} for master named {1}", entry.id.toString(), entry.adv.getName()));
                 removeMasterAdv(entry, DEAD);
                 //manager.getClusterViewManager().remove(entry.id);
                 masterNode.resetMaster();
@@ -684,10 +678,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         if (entry.adv != null) {
             switch (state) {
                 case DEAD:
+                    LOG.log(Level.FINER, "FV: Notifying local listeners of Failure of "+entry.adv.getName());
                     manager.getClusterViewManager().notifyListeners(
                             new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, entry.adv));
                     break;
                 case PEERSTOPPING:
+                    LOG.log(Level.FINER, "FV: Notifying local listeners of Shutdown of "+entry.adv.getName());
                     manager.getClusterViewManager().notifyListeners(
                             new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, entry.adv));
                     break;

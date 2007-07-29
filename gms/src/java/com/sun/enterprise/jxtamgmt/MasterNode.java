@@ -39,36 +39,19 @@ package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocument;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.ByteArrayMessageElement;
-import net.jxta.endpoint.Message;
-import net.jxta.endpoint.MessageElement;
-import net.jxta.endpoint.MessageTransport;
-import net.jxta.endpoint.StringMessageElement;
-import net.jxta.endpoint.TextDocumentMessageElement;
+import net.jxta.document.*;
+import net.jxta.endpoint.*;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -401,7 +384,6 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     void resetMaster() {
         LOG.log(Level.FINER, "Resetting Master view");
-        clusterViewManager.setMasterViewID(0);
         masterAssigned = false;
     }
 
@@ -460,6 +442,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
+                    LOG.log(Level.FINEST, "MasterNode:PMNA: Received Master View with Seq Id="+seqID +
+                    "Current sequence is "+clusterViewManager.getMasterViewID());
                     if (seqID <= clusterViewManager.getMasterViewID()) {
                         LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
                                 " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
@@ -475,6 +459,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                         return true;
                     }
                     clusterViewManager.setMasterViewID(seqID);
+                    masterViewID.set(seqID);
+                    LOG.log(Level.FINER, "MN: New MasterViewID = "+clusterViewManager.getMasterViewID());
                     clusterViewManager.addToView(newLocalView, true, cvEvent);
                 } else {
                     LOG.log(Level.WARNING, "New View Received without corresponding ViewChangeEvent details");
@@ -513,6 +499,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
                 if (msgElement != null) {
                     long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
+                    LOG.log(Level.FINEST, "MasterNode:PMNR Received Master View with Seq Id="+seqID);
                     if (seqID <= clusterViewManager.getMasterViewID()) {
                         LOG.log(Level.FINER,
                                 MessageFormat.format("Received an older clusterView sequence {0} of size :{1}" +
@@ -533,6 +520,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         return true;
                     }
                     clusterViewManager.setMasterViewID(seqID);
+                    masterViewID.set(seqID);
                     clusterViewManager.addToView(newLocalView, true, cvEvent);
                     synchronized (MASTERLOCK) {
                         MASTERLOCK.notifyAll();
@@ -581,6 +569,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                     return true;
                 }
                 clusterViewManager.setMasterViewID(seqID);
+                masterViewID.set(seqID);
                 clusterViewManager.addToView(newLocalView, true, cvEvent);
             } else {
                 return false;
@@ -805,8 +794,6 @@ class MasterNode implements PipeMsgListener, Runnable {
     private void announceMaster(SystemAdvertisement adv) {
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
-        //increment seq id
-        clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
         LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains" +
                 "                                      {0} entries", clusterViewManager.getViewSize()));
         sendNewView(null, cvEvent, msg, (masterAssigned && isMaster()));
@@ -860,23 +847,27 @@ class MasterNode implements PipeMsgListener, Runnable {
             return;
         }
         final SystemAdvertisement madv;
+        LOG.log(Level.FINER, "MasterNode: discoveryInProgress="+discoveryInProgress);
         if (discoveryInProgress) {
             madv = discoveryView.getMasterCandidate();
         } else {
             madv = clusterViewManager.getMasterCandidate();
         }
-
+        LOG.log(Level.FINER, "MasterNode: Master Candidate="+madv.getName());
         //avoid notifying listeners
         clusterViewManager.setMaster(madv, false);
         masterAssigned = true;
         if (madv.getID().equals(localNodeID)) {
+            LOG.log(Level.FINER, "MasterNode: Setting myself as MasterNode ");
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            LOG.log(Level.FINER, "MasterNode: masterViewId ="+masterViewID );
             // generate view change event
             if (discoveryInProgress) {
                 List<SystemAdvertisement> list = discoveryView.getView();
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
                 clusterViewManager.addToView(list, true, cvEvent);
             } else {
+                LOG.log(Level.FINER, "MasterNode: Notifying Local Listeners of  Master Change");
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
                 clusterViewManager.notifyListeners(cvEvent);
             }
@@ -890,6 +881,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 LOG.log(Level.FINER, "Assuming Master Node designation ...");
                 //broadcast we are the masternode if view size is more than one
                 if (clusterViewManager.getViewSize() > 1) {
+                    LOG.log(Level.FINER, "MasterNode: announcing MasterNode assumption ");
                     announceMaster(manager.getSystemAdvertisement());
                 }
                 MASTERLOCK.notifyAll();
@@ -959,7 +951,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         createByteArrayFromObject(event),
                         null);
         msg.addMessageElement(NAMESPACE, cvEvent);
-        LOG.log(Level.FINER, "Sending new authoritative cluster view to group, events :" + event.getEvent().toString());
+        LOG.log(Level.FINER, "Sending new authoritative cluster view to group, event :" + event.getEvent().toString()+" viewSeqId: "+clusterViewManager.getMasterViewID());
         send(toID, null, msg);
     }
 
@@ -971,6 +963,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     void addAuthoritativeView(final Message msg) {
         final List<SystemAdvertisement> view;
         view = clusterViewManager.getLocalView().getView();
+        LOG.log(Level.FINER, "MasterNode: Adding Authoritative View of size "+view.size()+ "  to view message");
         final ByteArrayMessageElement bame =
                 new ByteArrayMessageElement(AMASTERVIEW,
                         MimeMediaType.AOS,
