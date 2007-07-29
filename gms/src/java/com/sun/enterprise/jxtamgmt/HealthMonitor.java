@@ -69,7 +69,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private long timeout = 10 * 1000L;
     private long verifyTimeout = 10 * 1000L;
     private int maxMissedBeats = 3;
-    private final String indoubtListLock = new String("IndoubtListLock");
     private final String threadLock = new String("threadLock");
     private final Hashtable<PeerID, HealthMessage.Entry> cache = new Hashtable<PeerID, HealthMessage.Entry>();
     private MasterNode masterNode = null;
@@ -629,15 +628,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //wait for the specified timeout for verification
             Thread.sleep(verifyTimeout + buffer);
             HealthMessage.Entry entry;
-            synchronized (indoubtListLock) {
-                for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
-                    entry = entry1;
-                    if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
-                        //FIXME  Is this really needed? commenting out for now
-                        /// reportLiveStateToLocalListeners(entry);
-                    } else {
-                        assignAndReportFailure(entry);
-                    }
+            for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
+                entry = entry1;
+                if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
+                    //FIXME  Is this really needed? commenting out for now
+                    /// reportLiveStateToLocalListeners(entry);
+                } else {
+                    assignAndReportFailure(entry);
                 }
             }
         }
