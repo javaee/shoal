@@ -633,7 +633,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
                     //FIXME  Is this really needed? commenting out for now
                     /// reportLiveStateToLocalListeners(entry);
-                } else {
+                } else if(entry.state.equals(states[INDOUBT]) && !isConnected(entry.id)){
                     assignAndReportFailure(entry);
                 }
             }
