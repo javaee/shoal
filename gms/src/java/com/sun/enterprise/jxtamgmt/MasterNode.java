@@ -33,8 +33,6 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-
-
 package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
@@ -73,7 +71,7 @@ import java.util.logging.Logger;
  * <p/>
  * -"ROUTE", contains a node's list of current physical addresses, which is used to issue ioctl to the JXTA
  * endpoint to update any existing routes to the nodes.  (useful when a node changes physical addresses.
- * <p/
+ *
  * <p/>
  * MasterNode will attempt to discover a master node with the specified timeout (timeout * number of iterations)
  * after which, it determine whether to become a master, if it happens to be first node in the ordered list of discovered nodes.
@@ -431,9 +429,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (checkMaster(source)) {
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null) {
-                final ArrayList<SystemAdvertisement> newLocalView =
-                        (ArrayList<SystemAdvertisement>)
-                                getObjectFromByteArray(msgElement);
+                final ArrayList<SystemAdvertisement> newLocalView = (ArrayList<SystemAdvertisement>) getObjectFromByteArray(msgElement);
                 if (newLocalView != null) {
                     LOG.log(Level.FINER, MessageFormat.format("Received an authoritative view from {0}, of size {1}" +
                             " resetting local view containing {2}",

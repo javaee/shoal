@@ -178,16 +178,16 @@ public class ClusterViewManager {
      * removes an entry from the table. This is only called when a
      * failure occurs.
      *
-     * @param id Instance ID
+     * @param advertisement Instance advertisement
      * @return SystemAdvertisement removed  or null if not in view.
      */
-    SystemAdvertisement remove(final ID id) {
-        SystemAdvertisement advertisement = null;
+    SystemAdvertisement remove(final SystemAdvertisement advertisement) {
+        ID id = advertisement.getID();
         if (containsKey(id)) {
             lockLog("remove()");
             viewLock.lock();
             try {
-                advertisement = view.remove(id.toString());
+                view.remove(id.toString());
             } finally {
                 viewLock.unlock();
             }

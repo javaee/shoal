@@ -671,7 +671,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private void removeMasterAdv(HealthMessage.Entry entry, short state) {
-        manager.getClusterViewManager().remove(entry.id);
+        manager.getClusterViewManager().remove(entry.adv);
         if (entry.adv != null) {
             switch (state) {
                 case DEAD:
