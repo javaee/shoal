@@ -946,6 +946,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                         MimeMediaType.AOS, JxtaUtil.
                         createByteArrayFromObject(event),
                         null);
+
+        LOG.log(Level.FINER, MessageFormat.format("Created a view element of size {0}bytes", cvEvent.getByteLength()));
         msg.addMessageElement(NAMESPACE, cvEvent);
         LOG.log(Level.FINER, "Sending new authoritative cluster view to group, event :" + event.getEvent().toString()+" viewSeqId: "+clusterViewManager.getMasterViewID());
         send(toID, null, msg);
@@ -966,6 +968,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                         JxtaUtil.createByteArrayFromObject(view),
                         null);
         msg.addMessageElement(NAMESPACE, bame);
+        LOG.log(Level.FINER, MessageFormat.format("Created an Authoritative view element of size {0}bytes", bame.getByteLength()));
         addLongToMessage(msg, NAMESPACE, MASTERVIEWSEQ, masterViewID.longValue());
     }
 
