@@ -212,7 +212,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 ex.printStackTrace();
                 LOG.log(Level.WARNING, "HealthMonitor:Caught IOException : " + ex.getLocalizedMessage());
             } catch (Throwable e) {
-                e.printStackTrace();
+                e.printStackTrace();            
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
             }
         }
@@ -285,7 +285,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private Map<PeerID, HealthMessage.Entry> getCacheCopy() {
-        return (Map<PeerID, HealthMessage.Entry>) cache.clone();
+        Hashtable<PeerID, HealthMessage.Entry> clone = new Hashtable<PeerID, HealthMessage.Entry>();
+        clone.putAll(cache);
+        return clone;
     }
 
     /**
@@ -554,7 +556,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //the specified max timeout
             if (!stop) {
                 if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
-                LOG.log(Level.FINEST, "timeDiff > maxTime");
+                    LOG.log(Level.FINEST, "timeDiff > maxTime");
                     if (canProcessInDoubt(entry)) {
                         LOG.log(Level.FINER, "Designating InDoubtState");
                         designateInDoubtState(entry);
@@ -567,11 +569,16 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 } else {
                     //dont suspect self
-                    if (!entry.id.equals(localPeerID)) {
-                        if (canProcessInDoubt(entry)) {
+                    if (!entry.id.equals(localPeerID) && canProcessInDoubt(entry)) {
+                        while(computeMissedBeat(entry) >0 && computeMissedBeat(entry) < maxMissedBeats && !isConnected(entry.id)){
                             LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
                                     entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
-                        }
+                            try {
+                                Thread.sleep(timeout);
+                            } catch (InterruptedException e) {
+                                LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", e.getLocalizedMessage()));
+                            }
+                        }                        
                     }
                 }
             }
@@ -588,7 +595,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
 
         private void designateInDoubtState(final HealthMessage.Entry entry) {
-
             entry.state = states[INDOUBT];
             cache.put(entry.id, entry);
             if (masterNode.isMaster()) {
@@ -608,17 +614,21 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         private final long buffer = 500;
 
         public void run() {
-            while (!stop) {
-                try {
-                    synchronized (verifierLock) {
+            try {
+                synchronized (verifierLock) {
+                    while (!stop) {
+                        LOG.log(Level.FINER, "FV: Entering verifierLock Wait....");
                         verifierLock.wait();
+                        LOG.log(Level.FINER, "FV: Woken up from verifierLock Wait by a notify ....");
                         if (!stop) {
+                            LOG.log(Level.FINER, "FV: Calling verify() ....");
                             verify();
+                            LOG.log(Level.FINER, "FV: Done verifying ....");
                         }
                     }
-                } catch (InterruptedException ex) {
-                    LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", ex.getLocalizedMessage()));
                 }
+            } catch (InterruptedException ex) {
+                LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", ex.getLocalizedMessage()));
             }
         }
 
@@ -628,12 +638,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //wait for the specified timeout for verification
             Thread.sleep(verifyTimeout + buffer);
             HealthMessage.Entry entry;
-            for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
+            final Map<PeerID, HealthMessage.Entry> cacheCopy = getCacheCopy();
+            LOG.log(Level.FINER, "FV: Cache Copy contains :"+cacheCopy.values());
+            for (HealthMessage.Entry entry1 : cacheCopy.values()) {
                 entry = entry1;
-                if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
+                LOG.log(Level.FINER, "FV: Verifying state of "+entry.adv.getName()+" state = "+entry.state);
+/*                if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
+                    LOG.log(Level.FINER, entry.adv.getName() +" is back alive, awaiting Add Event of this member");
+
                     //FIXME  Is this really needed? commenting out for now
                     /// reportLiveStateToLocalListeners(entry);
-                } else if(entry.state.equals(states[INDOUBT]) && !isConnected(entry.id)){
+                } else */if(entry.state.equals(states[INDOUBT]) && !isConnected(entry.id)){
+                    LOG.log(Level.FINER, "FV: Assigning and reporting failure ....");
                     assignAndReportFailure(entry);
                 }
             }
