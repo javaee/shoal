@@ -555,9 +555,21 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
-                if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
-                    LOG.log(Level.FINEST, "timeDiff > maxTime");
-                    if (canProcessInDoubt(entry)) {
+                if (!entry.id.equals(localPeerID) && canProcessInDoubt(entry)) {
+                    while (computeMissedBeat(entry) > 0  && computeMissedBeat(entry) <= maxMissedBeats){
+                        LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
+                                entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
+                        if(computeMissedBeat(entry) == maxMissedBeats){
+                            break;
+                        }
+                        try {
+                            Thread.sleep(timeout);
+                        } catch (InterruptedException e) {
+                            LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", e.getLocalizedMessage()));
+                        }
+                    }
+
+                    if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
                         LOG.log(Level.FINER, "Designating InDoubtState");
                         designateInDoubtState(entry);
                         //delegate verification to Failure Verifier
@@ -566,19 +578,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             verifierLock.notify();
                             LOG.log(Level.FINER, "Done Notifying FailureVerifier for "+entry.adv.getName());
                         }
-                    }
-                } else {
-                    //dont suspect self
-                    if (!entry.id.equals(localPeerID) && canProcessInDoubt(entry)) {
-                        while(computeMissedBeat(entry) >0 && computeMissedBeat(entry) < maxMissedBeats && !isConnected(entry.id)){
-                            LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
-                                    entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
-                            try {
-                                Thread.sleep(timeout);
-                            } catch (InterruptedException e) {
-                                LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", e.getLocalizedMessage()));
-                            }
-                        }                        
                     }
                 }
             }
