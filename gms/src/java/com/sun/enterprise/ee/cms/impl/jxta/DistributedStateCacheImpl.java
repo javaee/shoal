@@ -270,13 +270,10 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             final String memberToken) {
         final Map<Serializable, Serializable> retval =
                 new Hashtable<Serializable, Serializable>();
-        logger.finer("componentName = " + componentName + " memberToken = " + memberToken);
         if (componentName == null || memberToken == null) {
             return retval;
         }
         for (GMSCacheable c : cache.keySet()) {
-            logger.finer("c.getComponentName() = " + c.getComponentName() +
-                    "c.getMemberTokenId() = " + c.getMemberTokenId());
             if (componentName.equals(c.getComponentName())) {
                 if (memberToken.equals(c.getMemberTokenId())) {
                     retval.put((Serializable) c.getKey(),
@@ -289,31 +286,24 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             return retval;
         }
         else{
-            if(!memberToken.equals(getGMSContext().getServerIdentityToken())){               
-                MemberStates state = getGMSContext().getGroupCommunicationProvider().getMemberState(memberToken);
-                if(state.equals(MemberStates.ALIVE)) {
-                    logger.finer("state is alive");
-                    ConcurrentHashMap<GMSCacheable, Object>
-                    temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-                    DSCMessage msg = new DSCMessage(temp,
-                            DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
-                    try{
-                        sendMessage(memberToken, msg);
-                        Thread.sleep(3000);
-                        logger.finer("going to putAll into retVal");
-                        retval.putAll( getFromCacheForPattern(componentName, memberToken));
-                    } catch (GMSException e) {
-                        logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
-                    } catch (InterruptedException e) {
-                        logger.finer("InterruptedException occurred...ignoring");
-                        //ignore
-                    }
-                } else logger.finer("state is not ALIVE");
-            } else logger.finer("memberToken = " + memberToken + 
-                    " getGMSContext().getServerIdentityToken() = " + getGMSContext().getServerIdentityToken());
-        }  
+            if(!memberToken.equals(getGMSContext().getServerIdentityToken())){
+                ConcurrentHashMap<GMSCacheable, Object>
+                        temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
+                DSCMessage msg = new DSCMessage(temp,
+                        DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
+                try{
+                    sendMessage(memberToken, msg);
+                    Thread.sleep(3000);
+                    retval.putAll( getFromCacheForPattern(componentName, memberToken));
+                } catch (GMSException e) {
+                    logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
+                } catch (InterruptedException e) {
+                    //ignore
+                }
+            }
+        }
         if(retval.isEmpty()){
-           logger.info("retVal is empty"); 
+           logger.finer("retVal is empty"); 
         }
         
         return retval;
