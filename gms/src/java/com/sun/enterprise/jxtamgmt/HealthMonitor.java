@@ -212,7 +212,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 ex.printStackTrace();
                 LOG.log(Level.WARNING, "HealthMonitor:Caught IOException : " + ex.getLocalizedMessage());
             } catch (Throwable e) {
-                e.printStackTrace();            
+                e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
             }
         }
@@ -555,21 +555,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
-                if (!entry.id.equals(localPeerID) && canProcessInDoubt(entry)) {
-                    while (computeMissedBeat(entry) > 0  && computeMissedBeat(entry) <= maxMissedBeats){
-                        LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
-                                entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
-                        if(computeMissedBeat(entry) == maxMissedBeats){
-                            break;
-                        }
-                        try {
-                            Thread.sleep(timeout);
-                        } catch (InterruptedException e) {
-                            LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", e.getLocalizedMessage()));
-                        }
-                    }
-
-                    if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
+                if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
+                    LOG.log(Level.FINEST, "timeDiff > maxTime");
+                    if (canProcessInDoubt(entry)) {
                         LOG.log(Level.FINER, "Designating InDoubtState");
                         designateInDoubtState(entry);
                         //delegate verification to Failure Verifier
@@ -577,6 +565,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         synchronized (verifierLock) {
                             verifierLock.notify();
                             LOG.log(Level.FINER, "Done Notifying FailureVerifier for "+entry.adv.getName());
+                        }
+                    }
+                } else {
+                    //dont suspect self
+                    if (!entry.id.equals(localPeerID)) {
+                        if (canProcessInDoubt(entry)) {
+                            LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
+                                    entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
                         }
                     }
                 }
@@ -594,6 +590,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
 
         private void designateInDoubtState(final HealthMessage.Entry entry) {
+
             entry.state = states[INDOUBT];
             cache.put(entry.id, entry);
             if (masterNode.isMaster()) {
@@ -637,9 +634,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //wait for the specified timeout for verification
             Thread.sleep(verifyTimeout + buffer);
             HealthMessage.Entry entry;
-            final Map<PeerID, HealthMessage.Entry> cacheCopy = getCacheCopy();
-            LOG.log(Level.FINER, "FV: Cache Copy contains :"+cacheCopy.values());
-            for (HealthMessage.Entry entry1 : cacheCopy.values()) {
+            for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
                 entry = entry1;
                 LOG.log(Level.FINER, "FV: Verifying state of "+entry.adv.getName()+" state = "+entry.state);
 /*                if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
