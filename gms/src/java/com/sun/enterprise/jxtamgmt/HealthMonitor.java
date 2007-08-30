@@ -316,10 +316,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      */
     public void run() {
         long actualto = timeout;
-        try {
-            reportMyState(ALIVE, null);
-            //System.out.println("Running HealthMonitor Thread at interval :"+actualto);
-            while (!stop) {
+
+        reportMyState(ALIVE, null);
+        //System.out.println("Running HealthMonitor Thread at interval :"+actualto);
+        while (!stop) {
+            try {
                 synchronized (threadLock) {
                     threadLock.wait(actualto);
                 }
@@ -329,14 +330,15 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     //System.out.println("Resetting actualto :"+actualto+"  to timeout :"+timeout);
                 }
                 reportMyState(ALIVE, null);
-            }
-        } catch (InterruptedException e) {
-            //ignore as this happens on shutdown.
-            //TODO: handle shutdown more gracefully
-        } catch (Throwable all) {
-            LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
-        } finally {
-            healthMonitorThread = null;
+            } catch (InterruptedException e) {
+                //ignore as this happens on shutdown.
+                //TODO: handle shutdown more gracefully
+                stop = true;
+                LOG.log(Level.WARNING, "Shoal Health Monitor Thread Interrupted. Stopping...");
+                break;
+            } catch (Throwable all) {
+                LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
+            }                    
         }
     }
 
