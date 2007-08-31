@@ -233,7 +233,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     try {
                         masterNode.probeNode(entry);
                     } catch (IOException e) {
-                        //ignored
+                        e.printStackTrace();
+                        LOG.warning("IOException occured while sending probeNode() Message in HealthMonitor:"+e.getLocalizedMessage());
                     }
                 }
                 if (entry.state.equals(states[PEERSTOPPING]) || entry.state.equals(states[CLUSTERSTOPPING])) {
@@ -251,10 +252,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             LOG.log(Level.FINE, "Peer " + entry.id.toString() + " has failed. Its state is " + entry.state);
                         }
                     }
-                } else {
-                    //TODO: send an Add Event here (or a NoLongerInDoubt event) as clients need to know that
-                    //TODO: the peer is not suspected anymore
-                }
+                } 
             }
         }
     }
@@ -331,8 +329,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 reportMyState(ALIVE, null);
             } catch (InterruptedException e) {
-                //ignore as this happens on shutdown.
-                //TODO: handle shutdown more gracefully
                 stop = true;
                 LOG.log(Level.WARNING, "Shoal Health Monitor Thread Interrupted. Stopping...");
                 break;
@@ -521,6 +517,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         }
                     } catch (InterruptedException ex) {
                         LOG.log(Level.FINEST, ex.getLocalizedMessage());
+                        break;
+                    }
+                    catch(Throwable all){
+                        LOG.warning("Uncaught Throwable in failureDetectorThread " + Thread.currentThread().getName() + ":" + all);
                     }
                 }
             }
@@ -626,12 +626,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 }
             } catch (InterruptedException ex) {
-                LOG.log(Level.FINEST, MessageFormat.format("Thread interrupted: {0}", ex.getLocalizedMessage()));
+                LOG.log(Level.FINEST, MessageFormat.format("failure Verifier Thread interrupted: {0}", ex.getLocalizedMessage()));
             }
         }
 
-        //TODO: Add a isPeerLive() public method that the verify method could call and other callers could use to determine liveness of a member actively.
-        //TODO: Send direct message to the in doubt peer for verification.
         void verify() throws InterruptedException {
             //wait for the specified timeout for verification
             Thread.sleep(verifyTimeout + buffer);
