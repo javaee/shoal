@@ -330,7 +330,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 reportMyState(ALIVE, null);
             } catch (InterruptedException e) {
                 stop = true;
-                LOG.log(Level.WARNING, "Shoal Health Monitor Thread Interrupted. Stopping...");
+                LOG.log(Level.FINEST, "Shoal Health Monitor Thread Stopping as the thread is now interrupted...:"+e.getLocalizedMessage());
                 break;
             } catch (Throwable all) {
                 LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
@@ -516,7 +516,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             processCacheUpdate();
                         }
                     } catch (InterruptedException ex) {
-                        LOG.log(Level.FINEST, ex.getLocalizedMessage());
+                        LOG.log(Level.FINEST, "InDoubtPeerDetector Thread stopping as it is now interrupted :"+ex.getLocalizedMessage());
                         break;
                     }
                     catch(Throwable all){
@@ -626,7 +626,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 }
             } catch (InterruptedException ex) {
-                LOG.log(Level.FINEST, MessageFormat.format("failure Verifier Thread interrupted: {0}", ex.getLocalizedMessage()));
+                LOG.log(Level.FINEST, MessageFormat.format("failure Verifier Thread stopping as it is now interrupted: {0}", ex.getLocalizedMessage()));
             }
         }
 
