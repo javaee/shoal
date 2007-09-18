@@ -58,6 +58,9 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -73,7 +76,6 @@ import java.util.logging.Logger;
  * TODO:BE IF WE REMOVE INSTANCENAME FROM THE PARAMETERS OF THESE METHODS AND BASE INSTANCE NAME FROM THE CONSTRUCTOR'S
  * TODO: CONSTRUCTION FROM PROPERTIES OBJECT?
  * TODO: Why are most methods public? Should they not be private or package private? Is this exposed to outside callers?
- *
  */
 public class NetworkManager implements RendezvousListener {
 
@@ -86,7 +88,7 @@ public class NetworkManager implements RendezvousListener {
     private String groupName = "defaultGroup";
     private String instanceName;
     private static final String PREFIX = "SHOAL";
-    private static final String connectLock = "connectLock";
+    private static final String networkConnectLock = "networkConnectLock";
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
@@ -113,6 +115,9 @@ public class NetworkManager implements RendezvousListener {
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
     private int mcastPort = 0;
+    private List<String> rendezvousSeedURIs = new ArrayList<String>();
+    private boolean
+            isRendezvousSeed = false;
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -136,17 +141,35 @@ public class NetworkManager implements RendezvousListener {
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
         if (properties != null && !properties.isEmpty()) {
-            Object ma = properties.get(JxtaConfigConstants.MULTICASTADDRESS.toString());
+            final Object ma = properties.get(JxtaConfigConstants.MULTICASTADDRESS.toString());
             if (ma != null) {
                 mcastAddress = (String) ma;
             }
-            Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
+            final Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
             if (mp != null) {
                 if (mp instanceof String) {
                     mcastPort = Integer.parseInt((String) mp);
                 } else if (mp instanceof Integer) {
                     mcastPort = (Integer) mp;
                 }
+            }
+            final Object virtualMulticastURIList = properties.get(JxtaConfigConstants.VIRTUAL_MULTICAST_URI_LIST.toString());
+            if (virtualMulticastURIList != null) {
+                //if this object has multiple addresses that are comma separated
+                if (((String) virtualMulticastURIList).indexOf(",") > 0) {
+                    String addresses[] = ((String) virtualMulticastURIList).split(",");
+                    if (addresses.length > 0) {
+                        rendezvousSeedURIs = Arrays.asList(addresses);
+                    }
+                } else {
+                    //this object has only one address in it, so add it to the list
+                    rendezvousSeedURIs.add(((String) virtualMulticastURIList));
+                }
+            }
+            Object isVirtualMulticastNode = properties.get(JxtaConfigConstants.IS_VIRTUAL_MULTICAST_NODE.toString());
+            if (isVirtualMulticastNode != null) {
+                isRendezvousSeed = Boolean.parseBoolean((String) isVirtualMulticastNode);
+                LOG.fine("isRendezvousSeed is set to " + isRendezvousSeed);
             }
         }
     }
@@ -318,7 +341,7 @@ public class NetworkManager implements RendezvousListener {
      * Creates and starts the JXTA NetPeerGroup using a platform configuration
      * template. This class also registers a listener for rendezvous events
      *
-     * @throws IOException Description of the Exception
+     * @throws IOException        Description of the Exception
      * @throws PeerGroupException if the NetPeerGroup fails to initialize
      */
     public synchronized void start() throws PeerGroupException, IOException {
@@ -329,15 +352,34 @@ public class NetworkManager implements RendezvousListener {
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
         // Configure the peer name
-        final NetworkConfigurator config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
+        final NetworkConfigurator config;
+        if (isRendezvousSeed) {
+            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
+        } else {
+            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
+        }
         config.setPeerID(getPeerID(instanceName));
         config.setName(instanceName);
         //config.setPrincipal(instanceName);
         config.setDescription("Created by Jxta Cluster Management NetworkManager");
-        config.setTcpStartPort(9701);
-        config.setTcpEndPort(9999);
-        // allow for upto 64K datagrams
-        config.setMulticastSize(64*1024);
+        LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
+        if (!isRendezvousSeed) {
+            config.setTcpStartPort(9701);
+            config.setTcpEndPort(9999);
+        } else {
+            //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
+            //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
+            String myPort = rendezvousSeedURIs.get(0);
+            LOG.fine("myPort is " + myPort);
+            myPort = myPort.substring(myPort.lastIndexOf(":") + 1, myPort.length());
+            LOG.fine("myPort is " + myPort);
+            //TODO: Add a check for port availability and consequent actions
+            config.setTcpPort(Integer.parseInt(myPort));
+        }
+        LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
+        config.setRendezvousSeedURIs(rendezvousSeedURIs);
+        config.setUseMulticast(false);
+        config.setMulticastSize(64 * 1024);
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
         config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
@@ -351,6 +393,8 @@ public class NetworkManager implements RendezvousListener {
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
+        waitForRendezvousConnection(5000);
+        LOG.fine("Connected to an infrastructure node?: " + rendezvous.isConnectedToRendezVous());
         stopped = false;
         started = true;
     }
@@ -415,30 +459,49 @@ public class NetworkManager implements RendezvousListener {
      * network exposure.
      *
      * @param timeout timeout in milliseconds
+     * @return connection state
      */
-    public void waitForRendezvousConncection(final long timeout) {
-        if (!rendezvous.isConnectedToRendezVous()) {
+    public boolean waitForRendezvousConnection(long timeout) {
+        if (0 == timeout) {
+            timeout = Long.MAX_VALUE;
+        }
+
+        long timeoutAt = System.currentTimeMillis() + timeout;
+
+        if (timeoutAt <= 0) {
+            // handle overflow.
+            timeoutAt = Long.MAX_VALUE;
+        }
+
+        while (started && !stopped && !rendezvous.isConnectedToRendezVous() && !rendezvous.isRendezVous()) {
             try {
-                if (!rendezvous.isConnectedToRendezVous()) {
-                    synchronized (connectLock) {
-                        connectLock.wait(timeout);
+                long waitFor = timeoutAt - System.currentTimeMillis();
+
+                if (waitFor > 0) {
+                    synchronized (networkConnectLock) {
+                        networkConnectLock.wait(timeout);
                     }
+                } else {
+                    // all done with waiting.
+                    break;
                 }
             } catch (InterruptedException e) {
-                LOG.log(Level.WARNING, e.getLocalizedMessage());
+                Thread.interrupted();
+                break;
             }
         }
+
+        return rendezvous.isConnectedToRendezVous() || rendezvous.isRendezVous();
     }
 
     /**
      * {@inheritDoc}
      */
-    public void rendezvousEvent(final RendezvousEvent event) {
-        if (event.getType() == RendezvousEvent.RDVCONNECT ||
-                event.getType() == RendezvousEvent.RDVRECONNECT ||
-                event.getType() == RendezvousEvent.BECAMERDV) {
-            synchronized (connectLock) {
-                connectLock.notify();
+    public void rendezvousEvent(RendezvousEvent event) {
+        if (event.getType() == RendezvousEvent.RDVCONNECT || event.getType() == RendezvousEvent.RDVRECONNECT
+                || event.getType() == RendezvousEvent.BECAMERDV) {
+            synchronized (networkConnectLock) {
+                networkConnectLock.notifyAll();
             }
         }
     }

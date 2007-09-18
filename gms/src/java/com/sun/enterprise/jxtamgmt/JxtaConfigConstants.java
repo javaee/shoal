@@ -59,5 +59,9 @@ public enum JxtaConfigConstants {
     FAILURE_DETECTION_RETRIES,
     FAILURE_VERIFICATION_TIMEOUT,
     DISCOVERY_TIMEOUT,
+    // specifies if this node is a rendezvous seed peer
+    IS_VIRTUAL_MULTICAST_NODE,
+    //comma separated list of tcp/http rendezvous seed uri endpoints
+    VIRTUAL_MULTICAST_URI_LIST,
     LOOPBACK
 }
