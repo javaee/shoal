@@ -36,12 +36,7 @@
 
 package com.sun.enterprise.ee.cms.tests;
 
-import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GMSFactory;
-import com.sun.enterprise.ee.cms.core.GroupHandle;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.jxtamgmt.JxtaUtil;
@@ -198,9 +193,14 @@ public class ApplicationServer implements Runnable {
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
                                     System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
+        logger.fine("Is initial host="+System.getProperty("IS_INITIAL_HOST"));
+        configProps.put(ServiceProviderConfigurationKeys.IS_VIRTUAL_MULTICAST_NODE.toString(),
+                System.getProperty("IS_INITIAL_HOST"));
+        configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
+                System.getProperty("INITIAL_HOST_LIST"));
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), "2");
         //Uncomment this to receive loop back messages
-        //p.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
+        //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
 
         applicationServer = new ApplicationServer(System.getProperty("INSTANCEID"), System.getProperty("CLUSTERNAME"), memberType, configProps);
 
