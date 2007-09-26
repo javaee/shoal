@@ -378,7 +378,7 @@ public class NetworkManager implements RendezvousListener {
         }
         LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
         config.setRendezvousSeedURIs(rendezvousSeedURIs);
-        config.setUseMulticast(false);
+        //config.setUseMulticast(false);
         config.setMulticastSize(64 * 1024);
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
