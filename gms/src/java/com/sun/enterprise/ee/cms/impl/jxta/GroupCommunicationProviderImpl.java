@@ -150,7 +150,7 @@ public class GroupCommunicationProviderImpl implements
         }
     }
 
-    public void takeOverMasterRole(String groupName) {
+    public void assumeGroupLeadership(String groupName) {
         clusterManager.takeOverMasterRole(groupName);
     }
 

@@ -107,5 +107,5 @@ public interface GMSContext {
 
     GroupCommunicationProvider getGroupCommunicationProvider();
 
-    void takeOverMasterRole(String groupName);
+    void assumeGroupLeadership(String groupName);
 }

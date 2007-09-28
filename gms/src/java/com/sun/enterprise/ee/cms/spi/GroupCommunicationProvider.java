@@ -165,5 +165,5 @@ public interface GroupCommunicationProvider {
      * when the cluster is shutting down
      **/
 
-    void takeOverMasterRole(String groupName);
+    void assumeGroupLeadership(String groupName);
 }

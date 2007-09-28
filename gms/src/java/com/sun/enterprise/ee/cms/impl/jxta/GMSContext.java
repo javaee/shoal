@@ -148,8 +148,8 @@ public class GMSContext extends GMSContextBase {
                                 groupName, null));
     }
 
-      public void takeOverMasterRole(String groupName) {
-           groupCommunicationProvider.takeOverMasterRole(groupName);
+      public void assumeGroupLeadership(String groupName) {
+           groupCommunicationProvider.assumeGroupLeadership(groupName);
       }
 
     public boolean addToSuspectList(final String token) {

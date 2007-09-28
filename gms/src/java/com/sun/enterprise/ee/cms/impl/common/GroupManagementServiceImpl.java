@@ -336,7 +336,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         logger.log(Level.FINE,
                    "GMS:Announcing GroupShutdown to group with State="+shutdownState);
         gctx.announceGroupShutdown( groupName, shutdownState );
-        gctx.takeOverMasterRole(groupName);
+        gctx.assumeGroupLeadership(groupName);
     }
 
 
