@@ -112,6 +112,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String ROUTEADV = "ROUTE";
     private static final String AMASTERVIEW = "AMV";
     private static final String MASTERVIEWSEQ = "SEQ";
+    
+    public boolean clusterStopping = false;
 
     private int interval = 6;
     // Default master node discovery timeout
@@ -174,7 +176,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public long getTimeout() {
         return timeout * interval;
-    }
+    }    
 
     /**
      * Sets the Master Node peer ID, also checks for collisions at which event
@@ -186,30 +188,41 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public boolean checkMaster(final SystemAdvertisement systemAdv) {
         if (masterAssigned && isMaster()) {
-            LOG.log(Level.FINER,
-                    "Master node role collision with " + systemAdv.getName() +
-                            " .... attempting to resolve");
-            send(systemAdv.getID(), systemAdv.getName(),
-                    createMasterCollisionMessage());
-
-            //TODO add code to ensure whether this node should remain as master or resign (basically noop)
-            if (manager.getNodeID().toString().compareTo(systemAdv.getID().toString()) >= 0) {
-                LOG.log(Level.FINER, "Affirming Master Node role");
+            if (clusterStopping == true) {                
+                LOG.log(Level.FINE, "Forcefully resigning from Master role since group is shutting down. New Master Node is " + 
+                        systemAdv.getName());
+                setNewMaster(systemAdv);
+                return true;
             } else {
-                LOG.log(Level.FINER, "Resigning Master Node role in anticipation of a master node announcement");
-                clusterViewManager.setMaster(systemAdv, false);
-            }
+                LOG.log(Level.FINER,
+                        "Master node role collision with " + systemAdv.getName() +
+                                " .... attempting to resolve");
+                send(systemAdv.getID(), systemAdv.getName(),
+                        createMasterCollisionMessage());
 
-            return false;
-        } else {
-            clusterViewManager.setMaster(systemAdv, true);
-            masterAssigned = true;
-            synchronized (MASTERLOCK) {
-                MASTERLOCK.notifyAll();
+                //TODO add code to ensure whether this node should remain as master or resign (basically noop)
+                if (manager.getNodeID().toString().compareTo(systemAdv.getID().toString()) >= 0) {
+                    LOG.log(Level.FINER, "Affirming Master Node role");
+                } else {
+                    LOG.log(Level.FINER, "Resigning Master Node role in anticipation of a master node announcement");
+                    clusterViewManager.setMaster(systemAdv, false);
+                }
+
+                return false;
             }
+        } else {
             LOG.log(Level.FINE, "Discovered a Master node :" + systemAdv.getName());
-        }
-        return true;
+            setNewMaster(systemAdv);
+            return true;
+        }        
+    }
+    
+    private void setNewMaster(final SystemAdvertisement systemAdv) {
+       clusterViewManager.setMaster(systemAdv, true);
+       masterAssigned = true;
+       synchronized (MASTERLOCK) {
+          MASTERLOCK.notifyAll();
+       } 
     }
 
     /**
@@ -1047,7 +1060,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static long getLongFromMessage(Message message, String nameSpace, String elemName) throws NumberFormatException {
         String seqStr = message.getMessageElement(nameSpace, elemName).toString();
         if (seqStr != null) {
-            return Long.parseLong(message.getMessageElement(nameSpace, elemName).toString());
+            //return Long.parseLong(message.getMessageElement(nameSpace, elemName).toString());
+            return Long.parseLong(seqStr);
         } else {
             return -1;
         }
@@ -1057,6 +1071,22 @@ class MasterNode implements PipeMsgListener, Runnable {
         routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
         }
         return routeControl;
+    }
+
+    public void takeOverMasterRole(String groupName) {
+        LOG.log(Level.FINER, "MasterNode: Setting DAS as MasterNode by force... ");
+        clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+        LOG.log(Level.FINER, "MasterNode: masterViewId =" + masterViewID);
+        // generate view change event
+        LOG.log(Level.FINER, "MasterNode: Notifying Local Listeners of  Master Change");
+        SystemAdvertisement madv = new SystemAdvertisement();
+        final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+        clusterViewManager.notifyListeners(cvEvent);
+
+    }
+
+    public void setClusterStopping(boolean b) {
+        clusterStopping = b;
     }
 }
 

@@ -106,4 +106,6 @@ public interface GMSContext {
     ShutdownHelper getShutdownHelper ();
 
     GroupCommunicationProvider getGroupCommunicationProvider();
+
+    void takeOverMasterRole(String groupName);
 }

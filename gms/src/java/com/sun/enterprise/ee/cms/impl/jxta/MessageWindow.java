@@ -145,6 +145,7 @@ public class MessageWindow implements Runnable {
             final ShutdownHelper sh = GMSContextFactory.getGMSContext(gMsg.getGroupName()).getShutdownHelper();
             logger.log(Level.INFO, "member.groupshutdown", new Object[]{sender});
             sh.addToGroupShutdownList(gMsg.getGroupName());
+            GMSContextFactory.getGMSContext(gMsg.getGroupName()).getGroupCommunicationProvider().getClusterManager().setClusterStopping(true);
         } else {
             if (getRouter().isMessageAFRegistered()) {
                 writeLog(sender, gMsg);

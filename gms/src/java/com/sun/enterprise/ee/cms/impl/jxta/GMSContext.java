@@ -148,6 +148,10 @@ public class GMSContext extends GMSContextBase {
                                 groupName, null));
     }
 
+      public void takeOverMasterRole(String groupName) {
+           groupCommunicationProvider.takeOverMasterRole(groupName);
+      }
+
     public boolean addToSuspectList(final String token) {
         boolean retval = false;
         synchronized (suspectList) {

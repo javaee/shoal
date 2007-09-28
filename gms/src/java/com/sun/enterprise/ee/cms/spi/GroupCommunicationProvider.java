@@ -37,6 +37,7 @@
 package com.sun.enterprise.ee.cms.spi;
 
 import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.jxtamgmt.ClusterManager;
 
 import java.io.Serializable;
 import java.util.List;
@@ -154,5 +155,15 @@ public interface GroupCommunicationProvider {
      * Provider. 
      * @return   String
      */
-    String getGroupLeader();
+    String getGroupLeader();  
+    
+    ClusterManager getClusterManager();
+    
+    /**
+     * Let's an instance become a Master by force
+     * Used by the DAS to become a master forcefully (if not already)
+     * when the cluster is shutting down
+     **/
+
+    void takeOverMasterRole(String groupName);
 }
