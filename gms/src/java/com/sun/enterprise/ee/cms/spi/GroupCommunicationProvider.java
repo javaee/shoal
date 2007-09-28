@@ -157,12 +157,18 @@ public interface GroupCommunicationProvider {
      */
     String getGroupLeader();  
     
+    /**
+     * Returns the ClusterManager instance
+     **/
+    
     ClusterManager getClusterManager();
     
     /**
-     * Let's an instance become a Master by force
+     * Lets an instance become a Master by force
      * Used by the DAS to become a master forcefully (if not already)
      * when the cluster is shutting down
+     * For underlying Group Communication Providers who dont support the feature 
+     * of a forced leader takeover, the implementation of this method would be a no-op.
      **/
 
     void assumeGroupLeadership(String groupName);

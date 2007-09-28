@@ -106,6 +106,15 @@ public interface GMSContext {
     ShutdownHelper getShutdownHelper ();
 
     GroupCommunicationProvider getGroupCommunicationProvider();
+    
+    /**
+     * this method lets an instance become a Master by force
+     * Used by the DAS (in Glassfish) to become a master forcefully (if not already)
+     * when the cluster is shutting down
+     *     
+     * For underlying Group Communication Providers who dont support the feature 
+     * of a forced leader takeover, the implementation of this method would be a no-op.
+     **/
 
     void assumeGroupLeadership(String groupName);
 }
