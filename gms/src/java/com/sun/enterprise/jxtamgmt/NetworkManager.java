@@ -39,6 +39,7 @@ package com.sun.enterprise.jxtamgmt;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
+import net.jxta.logging.Logging;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
 import net.jxta.peergroup.PeerGroup;
@@ -50,17 +51,17 @@ import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
-import net.jxta.logging.Logging;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Map;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -353,20 +354,8 @@ public class NetworkManager implements RendezvousListener {
         clearCache(userHome);
         // Configure the peer name
         final NetworkConfigurator config;
-        if (isRendezvousSeed) {
+        if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
             config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
-        } else {
-            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
-        }
-        config.setPeerID(getPeerID(instanceName));
-        config.setName(instanceName);
-        //config.setPrincipal(instanceName);
-        config.setDescription("Created by Jxta Cluster Management NetworkManager");
-        LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
-        if (!isRendezvousSeed) {
-            config.setTcpStartPort(9701);
-            config.setTcpEndPort(9999);
-        } else {
             //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
             //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
             String myPort = rendezvousSeedURIs.get(0);
@@ -375,9 +364,18 @@ public class NetworkManager implements RendezvousListener {
             LOG.fine("myPort is " + myPort);
             //TODO: Add a check for port availability and consequent actions
             config.setTcpPort(Integer.parseInt(myPort));
+        } else {
+            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
+            config.setTcpStartPort(9701);
+            config.setTcpEndPort(9999);
         }
+        config.setPeerID(getPeerID(instanceName));
+        config.setName(instanceName);
+        //config.setPrincipal(instanceName);
+        config.setDescription("Created by Jxta Cluster Management NetworkManager");
+        LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
         LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
-        config.setRendezvousSeedURIs(rendezvousSeedURIs);
+        config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
         //config.setUseMulticast(false);
         config.setMulticastSize(64 * 1024);
         config.setInfrastructureID(getInfraPeerGroupID());
@@ -389,6 +387,7 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
+        System.out.println(config.getPlatformConfig().toString());
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
