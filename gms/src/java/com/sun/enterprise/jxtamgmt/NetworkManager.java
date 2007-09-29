@@ -387,7 +387,6 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
-        System.out.println(config.getPlatformConfig().toString());
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
