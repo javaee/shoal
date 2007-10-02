@@ -112,7 +112,7 @@ public interface GMSContext {
      * Typically this can be employed by an administrative member to become
      * a group leader prior to shutting down a group of members simultaneously.
      *     
-     * Underlying Group Communication Providers who don't support the feature
+     * For underlying Group Communication Providers who don't support the feature
      * of a explicit leader role assumption, the implementation of this method
      * would be a no-op.
      *
