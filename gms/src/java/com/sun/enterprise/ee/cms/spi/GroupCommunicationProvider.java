@@ -164,12 +164,15 @@ public interface GroupCommunicationProvider {
     ClusterManager getClusterManager();
     
     /**
-     * Lets an instance become a Master by force
-     * Used by the DAS to become a master forcefully (if not already)
-     * when the cluster is shutting down
-     * For underlying Group Communication Providers who dont support the feature 
-     * of a forced leader takeover, the implementation of this method would be a no-op.
+     * lets this instance become a group leader explicitly
+     * Typically this can be employed by an administrative member to become
+     * a group leader prior to shutting down a group of members simultaneously.
+     *
+     * Underlying Group Communication Providers who don't support the feature
+     * of a explicit leader role assumption, the implementation of this method
+     * would be a no-op.
+     *
+     * @param groupName group Name
      **/
-
     void assumeGroupLeadership(String groupName);
 }
