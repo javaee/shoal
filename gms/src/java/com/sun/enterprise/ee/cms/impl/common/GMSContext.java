@@ -119,5 +119,5 @@ public interface GMSContext {
      * @param groupName group Name 
      * */
 
-    void assumeGroupLeadership(String groupName);
+  // void assumeGroupLeadership(String groupName);
 }

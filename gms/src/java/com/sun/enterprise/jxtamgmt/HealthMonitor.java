@@ -695,7 +695,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, entry.adv));
                     break;
                 case CLUSTERSTOPPING:
-                    LOG.log(Level.FINER, "FV: Notifying local listeners of Cluster_Stopping of "+entry.adv.getName());
                     manager.getClusterViewManager().notifyListeners(
                             new ClusterViewEvent(ClusterViewEvents.CLUSTER_STOP_EVENT, entry.adv));
                     break;

@@ -161,7 +161,7 @@ public interface GroupCommunicationProvider {
      * Returns the ClusterManager instance
      **/
     
-    ClusterManager getClusterManager();
+  // ClusterManager getClusterManager();
     
     /**
      * lets this instance become a group leader explicitly
@@ -174,5 +174,5 @@ public interface GroupCommunicationProvider {
      *
      * @param groupName group Name
      **/
-    void assumeGroupLeadership(String groupName);
+  //void assumeGroupLeadership(String groupName);
 }

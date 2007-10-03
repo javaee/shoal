@@ -100,7 +100,7 @@ public class ClusterManager implements PipeMsgListener {
     private static final String APPMESSAGE = "APPMESSAGE";
     private List<ClusterMessageListener> cmListeners;
     private volatile boolean stopping = false;
-    private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();  
+    private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
     /**
      * The ClusterManager is created using the instanceName,
@@ -603,15 +603,6 @@ public class ClusterManager implements PipeMsgListener {
 
     boolean isStopping() {
         return stopping;
-    }
-
-    public void takeOverMasterRole(String groupName) { 
-        if (!isMaster())
-            masterNode.takeOverMasterRole(groupName);
-    }
-    
-    public void setClusterStopping(boolean b) {
-        masterNode.setClusterStopping(b);
     }
 }
 

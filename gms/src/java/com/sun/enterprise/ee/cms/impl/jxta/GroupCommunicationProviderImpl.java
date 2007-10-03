@@ -150,10 +150,6 @@ public class GroupCommunicationProviderImpl implements
         }
     }
 
-    public void assumeGroupLeadership(String groupName) {
-        clusterManager.takeOverMasterRole(groupName);
-    }
-
     /**
      * Leaves the group as a result of a planned administrative action to
      * shutdown.
@@ -248,9 +244,5 @@ public class GroupCommunicationProviderImpl implements
             logger.log(Level.WARNING,
                     MessageFormat.format("Interrupted Exception occured while adding message to Shoal MessageQueue :{0}", e.getLocalizedMessage()));
         }
-    }
-    
-    public ClusterManager getClusterManager() {
-        return clusterManager;
     }
 }
