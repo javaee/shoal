@@ -167,7 +167,7 @@ public class NetworkManager implements RendezvousListener {
                     rendezvousSeedURIs.add(((String) virtualMulticastURIList));
                 }
             }
-            Object isVirtualMulticastNode = properties.get(JxtaConfigConstants.IS_VIRTUAL_MULTICAST_NODE.toString());
+            Object isVirtualMulticastNode = properties.get(JxtaConfigConstants.IS_BOOTSTRAPPING_NODE.toString());
             if (isVirtualMulticastNode != null) {
                 isRendezvousSeed = Boolean.parseBoolean((String) isVirtualMulticastNode);
                 LOG.fine("isRendezvousSeed is set to " + isRendezvousSeed);
@@ -355,7 +355,7 @@ public class NetworkManager implements RendezvousListener {
         // Configure the peer name
         final NetworkConfigurator config;
         if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
-            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
+            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
             //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
             //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
             String myPort = rendezvousSeedURIs.get(0);
@@ -365,7 +365,7 @@ public class NetworkManager implements RendezvousListener {
             //TODO: Add a check for port availability and consequent actions
             config.setTcpPort(Integer.parseInt(myPort));
         } else {
-            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
+            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());                 
             config.setTcpStartPort(9701);
             config.setTcpEndPort(9999);
         }
@@ -376,7 +376,7 @@ public class NetworkManager implements RendezvousListener {
         LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
         LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
         config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
-        //config.setUseMulticast(false);
+        config.setUseMulticast(false);
         config.setMulticastSize(64 * 1024);
         config.setInfrastructureID(getInfraPeerGroupID());
         config.setInfrastructureName(groupName);
@@ -387,14 +387,15 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
+         LOG.fine("node config adv = " +    config.getPlatformConfig().toString());
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
-        waitForRendezvousConnection(5000);
-        LOG.fine("Connected to an infrastructure node?: " + rendezvous.isConnectedToRendezVous());
         stopped = false;
         started = true;
+        waitForRendezvousConnection(30000);
+        LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous()|| rendezvous.isRendezVous()));
     }
 
     /**
@@ -472,6 +473,8 @@ public class NetworkManager implements RendezvousListener {
         }
 
         while (started && !stopped && !rendezvous.isConnectedToRendezVous() && !rendezvous.isRendezVous()) {
+                LOG.fine("rendezvous.isRendezVous() = " + rendezvous.isRendezVous() +
+          "rendezvous.isConnectedToRendezVous() = " + rendezvous.isConnectedToRendezVous());
             try {
                 long waitFor = timeoutAt - System.currentTimeMillis();
 
@@ -488,7 +491,8 @@ public class NetworkManager implements RendezvousListener {
                 break;
             }
         }
-
+             LOG.fine("outside while loop -> rendezvous.isRendezVous() = " + rendezvous.isRendezVous() +
+          "rendezvous.isConnectedToRendezVous() = " + rendezvous.isConnectedToRendezVous());
         return rendezvous.isConnectedToRendezVous() || rendezvous.isRendezVous();
     }
 

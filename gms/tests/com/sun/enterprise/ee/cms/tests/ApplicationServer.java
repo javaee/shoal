@@ -194,7 +194,7 @@ public class ApplicationServer implements Runnable {
                                     System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
         logger.fine("Is initial host="+System.getProperty("IS_INITIAL_HOST"));
-        configProps.put(ServiceProviderConfigurationKeys.IS_VIRTUAL_MULTICAST_NODE.toString(),
+        configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
                 System.getProperty("IS_INITIAL_HOST", "false"));
         if(System.getProperty("INITIAL_HOST_LIST") != null){
             configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),

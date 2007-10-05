@@ -53,6 +53,6 @@ public enum ServiceProviderConfigurationKeys {
     FAILURE_VERIFICATION_TIMEOUT,
     DISCOVERY_TIMEOUT,
     LOOPBACK,
-    IS_VIRTUAL_MULTICAST_NODE, //set true if this node will be an initial host for other members to use for discovery
+    IS_BOOTSTRAPPING_NODE, //set true if this node will be an initial host for other members to use for discovery
     VIRTUAL_MULTICAST_URI_LIST // a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
 }
