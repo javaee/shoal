@@ -369,17 +369,24 @@ public class NetworkManager implements RendezvousListener {
             config.setTcpStartPort(9701);
             config.setTcpEndPort(9999);
         }
+
         config.setPeerID(getPeerID(instanceName));
         config.setName(instanceName);
         //config.setPrincipal(instanceName);
         config.setDescription("Created by Jxta Cluster Management NetworkManager");
+        config.setInfrastructureID(getInfraPeerGroupID());
+        config.setInfrastructureName(groupName);
+
+
         LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
         LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
         config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
+
+        //limit it to configured rendezvous at this point
+        config.setUseOnlyRendezvousSeeds(true);
+
         config.setUseMulticast(true);
         config.setMulticastSize(64 * 1024);
-        config.setInfrastructureID(getInfraPeerGroupID());
-        config.setInfrastructureName(groupName);
         config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
         if (mcastAddress != null) {
             config.setMulticastAddress(mcastAddress);
