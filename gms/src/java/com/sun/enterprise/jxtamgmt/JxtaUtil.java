@@ -118,8 +118,8 @@ public class JxtaUtil {
             //filter.add(HealthMonitor.class.getName());
             //filter.add(MasterNode.class.getName());
             //filter.add(ClusterView.class.getName());
-            filter.add(NetworkManager.class.getName());
-            filter.add(net.jxta.impl.rendezvous.RendezVousServiceImpl.class.getName());
+            //filter.add(NetworkManager.class.getName());
+            //filter.add(net.jxta.impl.rendezvous.RendezVousServiceImpl.class.getName());
             consoleHandler.setFilter(filter);
         } catch (SecurityException e) {
             new ErrorManager().error(
