@@ -379,11 +379,12 @@ public class NetworkManager implements RendezvousListener {
 
 
         LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
-        LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
-        config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
-
-        //limit it to configured rendezvous at this point
-        config.setUseOnlyRendezvousSeeds(true);
+        if (!rendezvousSeedURIs.isEmpty()) {
+            LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
+            config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
+            //limit it to configured rendezvous at this point
+            config.setUseOnlyRendezvousSeeds(true);
+        }
 
         config.setUseMulticast(true);
         config.setMulticastSize(64 * 1024);
@@ -394,7 +395,7 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
-         LOG.fine("node config adv = " +    config.getPlatformConfig().toString());
+        LOG.fine("node config adv = " +    config.getPlatformConfig().toString());
         NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
