@@ -402,7 +402,9 @@ public class NetworkManager implements RendezvousListener {
         rendezvous.addListener(this);
         stopped = false;
         started = true;
-        waitForRendezvousConnection(30000);
+        if (!rendezvousSeedURIs.isEmpty()) {
+            waitForRendezvousConnection(30000);
+        }
         LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous()|| rendezvous.isRendezVous()));
     }
 
