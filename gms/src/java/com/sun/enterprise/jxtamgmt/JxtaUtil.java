@@ -114,13 +114,13 @@ public class JxtaUtil {
         try {
             consoleHandler.setLevel(Level.ALL);
             consoleHandler.setFormatter(new NiceLogFormatter());
-            SelectiveLogFilter filter = new SelectiveLogFilter();
+            //SelectiveLogFilter filter = new SelectiveLogFilter();
             //filter.add(HealthMonitor.class.getName());
             //filter.add(MasterNode.class.getName());
             //filter.add(ClusterView.class.getName());
             //filter.add(NetworkManager.class.getName());
             //filter.add(net.jxta.impl.rendezvous.RendezVousServiceImpl.class.getName());
-            consoleHandler.setFilter(filter);
+            //consoleHandler.setFilter(filter);
         } catch (SecurityException e) {
             new ErrorManager().error(
                     "Exception caught in setting up ConsoleHandler ",
