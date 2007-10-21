@@ -125,6 +125,18 @@ public final class GroupHandleImpl implements GroupHandle {
 
     }
 
+    public void sendMessage(List<String> targetServerTokens, String targetComponentName, byte[] message) throws GMSException {
+        final GMSMessage gMsg = new GMSMessage(targetComponentName, message, groupName, getGMSContext().getStartTime());
+        if(targetServerTokens.isEmpty()){
+            getGMSContext().getGroupCommunicationProvider().sendMessage(null,gMsg, false  );
+        }
+        else {
+            for(String token : targetServerTokens){
+                getGMSContext().getGroupCommunicationProvider().sendMessage(token, gMsg, false  );    
+            }
+        }
+    }
+
     /**
      * returns a DistributedStateCache object that provides the ability to
      * set and retrieve CachedStates.

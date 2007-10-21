@@ -39,10 +39,12 @@ package com.sun.enterprise.ee.cms.core;
 import java.util.List;
 
 /**
- * Provides a handle to the interact with the membership group. 
- * While currently limited to sending messages to the group, 
- * in the future the handle could potentially encompass
- * sending of messages to individual and/or a sub-collection of members.
+ * Provides a handle to the interact with the membership group.
+ * Using this interface, applications can send messages to the group, to
+ * individual members or a list of members, and also to specific components
+ * within the target member or group.
+ * Provides a reference to the DistributedStateCache, and APIs for
+ * FailureFencing. 
  *
  * @author Shreedhar Ganapathy
  * Date: Jan 12, 2004
@@ -54,10 +56,10 @@ public interface GroupHandle {
      * Expects a target component name and a byte array as parameter
      * carrying the payload. Specifying a null component name would
      * result in the message being delivered to all registered
-     * components in the target member instance. 
+     * components in the target member instance.
      * @param targetComponentName target name
      * @param message the message to send
-     * @throws GMSException
+     * @throws GMSException - any exception while sending message wrapped into GMSException
      */
     void sendMessage(String targetComponentName, byte[] message) throws GMSException;
 
@@ -68,15 +70,27 @@ public interface GroupHandle {
      * and a byte array as parameter carrying the payload. Specifying
      * a null component name would result in the message being
      * delivered to all registered components in the target member
-     * instance. 
+     * instance.
      * @param targetServerToken targetServerToken representing the recipient member's id
      * @param targetComponentName target name
      * @param message the message to send
-     * @throws GMSException
+     * @throws GMSException - any exception while sending message wrapped into GMSException
      */
      void sendMessage(String targetServerToken, String targetComponentName,
                       byte[] message) throws GMSException;
 
+    /**
+     * Sends a message to a list of members in the group. An empty list would
+     * have the same effect as sending the message to the entire group
+     *
+     * @param targetServerTokens List of target server tokens
+     * @param targetComponentName a component in the target members to which message is addressed.
+     * @param message - the payload
+     * @throws GMSException - any exception while sending message wrapped into GMSException
+     */
+     void sendMessage(List<String> targetServerTokens, String targetComponentName,
+                      byte[] message) throws GMSException;
+    
     /**
      * returns a DistributedStateCache object that provides the ability to
      * set and retrieve CachedStates.
@@ -90,7 +104,7 @@ public interface GroupHandle {
      * in the group
      * @return List
      */
-    List<String> getCurrentCoreMembers(); 
+    List<String> getCurrentCoreMembers();
 
     /**
      * returns a List of strings containing the current group membership including
@@ -158,7 +172,7 @@ public interface GroupHandle {
      * the FailureRecoverySignal's release() method should be called. That
      * method has the effect of lowering the fence and performing any other
      * state management operation that may be added in future.
-     * 
+     *
      * @param componentName
      * @param failedMemberToken
      * @throws GMSException
@@ -183,7 +197,7 @@ public interface GroupHandle {
      * the DistributedStateCache.If a boolean "false" is returned, this could
      * mean that the client component can continue with its lifecycle startup
      * per its normal startup policies.
-     * 
+     *
      * @param componentName
      * @param memberToken
      * @return boolean
