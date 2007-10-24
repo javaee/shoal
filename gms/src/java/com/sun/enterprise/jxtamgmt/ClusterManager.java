@@ -570,6 +570,12 @@ public class ClusterManager implements PipeMsgListener {
     private static synchronized SystemAdvertisement createSystemAdv(final PeerGroup group,
                                                                     final String name,
                                                                     final Map<String, String> customTags) {
+        if (group == null) {
+            throw new IllegalArgumentException("Group can not be null");
+        }
+        if (name == null) {
+            throw new IllegalArgumentException("instance name can not be null");
+        }
         final SystemAdvertisement sysAdv = new SystemAdvertisement();
         sysAdv.setID(group.getPeerID());
         sysAdv.setName(name);
