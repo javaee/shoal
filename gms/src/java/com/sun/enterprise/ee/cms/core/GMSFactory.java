@@ -88,11 +88,21 @@ public class GMSFactory {
 
     /**
      * starts and returns the GMS module object as a Runnable that
-     * should be started in a separate thread. This method is only used to
-     * create the group or join an existing group. This method is called only by
-     * the parent module's lifecycle management code to initiate GMS module.
-     * Invocation of this method is made only when GMS is enabled
-     * in the parent application's configuration.
+     * could be started in a separate thread. This method is only used to
+     * create an instance of GroupManagementService and sets up the configuration
+     * properties in appropriate delegate objects.
+     * To actually create a  group or join an existing group, one has to either
+     * pass in the GroupManagementService Object in a new Thread and start it or
+     * call the GroupManagementService.join() method.
+     *
+     * The startGMSModule method is expected to be called  by the parent
+     * module's lifecycle management code to initiate GMS module. Invocation of
+     * this method assumes that GMS is enabled in the parent application's
+     * configuration.
+     *
+     * Calls to GMSFactory.getGMSModule() made before any code calls this method
+     * will result in GMSNotEnabledException to be thrown. 
+     *
      * @param serverToken  a logical name or identity given the member that
      * is repeatable over lifetimes of the server
      * @param groupName   name of the group
