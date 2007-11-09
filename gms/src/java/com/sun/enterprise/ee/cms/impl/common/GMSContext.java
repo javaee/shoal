@@ -115,9 +115,7 @@ public interface GMSContext {
      * For underlying Group Communication Providers who don't support the feature
      * of a explicit leader role assumption, the implementation of this method
      * would be a no-op.
-     *
-     * @param groupName group Name 
      * */
 
-  // void assumeGroupLeadership(String groupName);
+     void assumeGroupLeadership();
 }

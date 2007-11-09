@@ -105,6 +105,11 @@ public class SignalHandler implements Runnable {
     }
 
     private void analyzeSignal(final Signal signal) {
+        if (signal == null) {
+            throw new IllegalArgumentException("Signal is null. Cannot analyze.");
+        }
+
+        logger.log(Level.FINEST, "SignalHandler : processing a received signal " + signal.getClass().getName()) ;
         if (signal instanceof FailureRecoverySignal) {
             router.notifyFailureRecoveryAction((FailureRecoverySignal) signal);
         } else if (signal instanceof FailureNotificationSignal) {

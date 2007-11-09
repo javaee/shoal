@@ -48,10 +48,12 @@ import net.jxta.protocol.PipeAdvertisement;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes
@@ -70,7 +72,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private long verifyTimeout = 10 * 1000L;
     private int maxMissedBeats = 3;
     private final String threadLock = new String("threadLock");
-    private final Hashtable<PeerID, HealthMessage.Entry> cache = new Hashtable<PeerID, HealthMessage.Entry>();
+    private final ConcurrentHashMap<PeerID, HealthMessage.Entry> cache = new ConcurrentHashMap<PeerID, HealthMessage.Entry>();
     private MasterNode masterNode = null;
     private ClusterManager manager = null;
     private final PeerID localPeerID;
@@ -108,6 +110,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     private Message aliveMsg = null;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
+
+    //counter for keeping track of the seq ids of the health messages
+    AtomicLong hmSeqID = new AtomicLong();
 
     //private ShutdownHook shutdownHook;
 
@@ -151,7 +156,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         final Message msg = new Message();
         final HealthMessage hm = new HealthMessage();
         hm.setSrcID(localPeerID);
-        final HealthMessage.Entry entry = new HealthMessage.Entry(adv, states[state]);
+        final HealthMessage.Entry entry = new HealthMessage.Entry(adv, states[state], hmSeqID.incrementAndGet());
         hm.add(entry);
         msg.addMessageElement(NAMESPACE, new TextDocumentMessageElement(tag,
                 (XMLDocument) hm.getDocument(MimeMediaType.XMLUTF8), null));
@@ -204,10 +209,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             if (!hm.getSrcID().equals(localPeerID)) {
                                 masterNode.processRoute(msg);
                             }
-                            process(hm);
-                        }
-                    }
-                }
+			    process(hm);
+			}
+		    }
+		}
             } catch (IOException ex) {
                 ex.printStackTrace();
                 LOG.log(Level.WARNING, "HealthMonitor:Caught IOException : " + ex.getLocalizedMessage());
@@ -224,10 +229,37 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param hm Health message to process
      */
     private void process(final HealthMessage hm) {
-        //LOG.log(Level.FINEST, "Processing Health Message..");
+
         //discard loopback messages
         if (!hm.getSrcID().equals(localPeerID)) {
+            //current assumption is that there is only 1 entry
+            //per health message
             for (HealthMessage.Entry entry : hm.getEntries()) {
+
+                LOG.log(Level.FINEST, "Processing Health Message " + entry.getSeqID() + " for entry " + entry.adv.getName());
+                LOG.log(Level.FINEST, "Getting the cachedEntry " + entry.id);
+
+                HealthMessage.Entry cachedEntry = (HealthMessage.Entry) cache.get(entry.id);
+                if (cachedEntry != null) {                 
+                    LOG.log(Level.FINEST, "cachedEntry is not null");
+                    if (entry.getSeqID() <= cachedEntry.getSeqID()) {
+                        LOG.log(Level.FINER, MessageFormat.format("Received an older health message sequence {0}." +
+                                " Current sequence id is {1}. ",
+                                new Object[]{entry.getSeqID(), cachedEntry.getSeqID()}));
+                        if (entry.state.equals(states[CLUSTERSTOPPING]) || entry.state.equals(states[PEERSTOPPING])) {
+                            //dont discard the message
+                            //and don't alter the state if the cachedEntry's state is stopped
+                            LOG.log(Level.FINER, "Received clusterstopping state for " +
+                                    "out of order health message." +
+                                    " Calling handleStopEvent() to get the correct PlannedShutdownNotifications");
+                            handleStopEvent(entry);
+                        } else {
+                            LOG.log(Level.FINER, "Discarding out of sequence health message");
+                        }
+                        return;
+                    }
+                }
+                LOG.log(Level.FINEST, "Putting into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id);
                 cache.put(entry.id, entry);
                 if (!manager.getClusterViewManager().containsKey(entry.id)) {
                     try {
@@ -237,6 +269,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         LOG.warning("IOException occured while sending probeNode() Message in HealthMonitor:"+e.getLocalizedMessage());
                     }
                 }
+
                 if (entry.state.equals(states[PEERSTOPPING]) || entry.state.equals(states[CLUSTERSTOPPING])) {
                     handleStopEvent(entry);
                 }
@@ -283,7 +316,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private Map<PeerID, HealthMessage.Entry> getCacheCopy() {
-        Hashtable<PeerID, HealthMessage.Entry> clone = new Hashtable<PeerID, HealthMessage.Entry>();
+        ConcurrentHashMap<PeerID, HealthMessage.Entry> clone = new ConcurrentHashMap<PeerID, HealthMessage.Entry>();
         clone.putAll(cache);
         return clone;
     }
@@ -296,6 +329,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param id    destination node ID, if null broadcast to group
      */
     private void reportMyState(final short state, final PeerID id) {
+        LOG.log(Level.FINER, MessageFormat.format("Sending state {0} to {1}", states[state], id));
         if (state == ALIVE) {
             send(id, getAliveMessage());
         } else {
@@ -327,14 +361,16 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     actualto = timeout;
                     //System.out.println("Resetting actualto :"+actualto+"  to timeout :"+timeout);
                 }
-                reportMyState(ALIVE, null);
+                if (!stop) {
+                    reportMyState(ALIVE, null);
+                }
             } catch (InterruptedException e) {
                 stop = true;
                 LOG.log(Level.FINEST, "Shoal Health Monitor Thread Stopping as the thread is now interrupted...:"+e.getLocalizedMessage());
                 break;
             } catch (Throwable all) {
                 LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
-            }                    
+            }
         }
     }
 
@@ -410,22 +446,24 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      */
     void announceStop(final boolean isClusterShutdown) {
         //System.out.println("Announcing  Shutdown");
-        LOG.log(Level.FINE, MessageFormat.format("Announcing stop event to group with clusterShutdown set to {0}", isClusterShutdown));
+        LOG.log(Level.FINE, MessageFormat.format("Announcing stop event to group with clusterShutdown set to {0}", new Boolean(isClusterShutdown)));
         if (isClusterShutdown) {
             reportMyState(CLUSTERSTOPPING, null);
         } else {
             reportMyState(PEERSTOPPING, null);
         }
+
     }
 
     /**
      * Stops this service
      */
-    void stop() {
-        reportMyState(STOPPED, null);
-        LOG.log(Level.FINE, "Stopping HealthMonitor");
+    void stop(boolean isClusterShutdown) {
         stop = true;
         started = false;
+        announceStop(isClusterShutdown);
+        reportMyState(STOPPED, null);
+        LOG.log(Level.FINE, "Stopping HealthMonitor");
         final Thread tmpThread = healthMonitorThread;
         healthMonitorThread = null;
         if (tmpThread != null) {
@@ -437,9 +475,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         pipeCache.clear();
     }
 
-    private static HealthMessage getHealthMessage(final MessageElement msgElement) throws IOException {
+    private HealthMessage getHealthMessage(final MessageElement msgElement) throws IOException {
         final HealthMessage hm;
-        hm = new HealthMessage(getStructuredDocument(msgElement));
+        hm = new HealthMessage(getStructuredDocument(msgElement), hmSeqID.incrementAndGet());
         return hm;
     }
 
@@ -580,7 +618,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
             }
         }
-
         private boolean canProcessInDoubt(final HealthMessage.Entry entry) {
             boolean canProcessIndoubt = false;
             if (masterNode.getMasterNodeID().equals(entry.id)) {
@@ -695,6 +732,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, entry.adv));
                     break;
                 case CLUSTERSTOPPING:
+		    LOG.log(Level.FINER, "FV: Notifying local listeners of Cluster_Stopping of "+entry.adv.getName());
                     manager.getClusterViewManager().notifyListeners(
                             new ClusterViewEvent(ClusterViewEvents.CLUSTER_STOP_EVENT, entry.adv));
                     break;

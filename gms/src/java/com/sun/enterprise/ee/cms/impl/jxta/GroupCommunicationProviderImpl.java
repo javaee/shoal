@@ -88,7 +88,8 @@ public class GroupCommunicationProviderImpl implements
     public void clusterViewEvent(final ClusterViewEvent clusterViewEvent,
                                  final ClusterView clusterView) {
         if (!getGMSContext().isShuttingDown()) {
-            logger.log(Level.FINER, "Received Cluster View Event...");
+            logger.log(Level.FINER, "Received Cluster View Event..." + clusterViewEvent.getEvent().toString() +
+                   " from " + clusterViewEvent.getAdvertisement().getName());
             logger.log(Level.FINER, clusterView.getView().toString());
             final EventPacket ePacket = new EventPacket(clusterViewEvent.getEvent(),
                     clusterViewEvent.getAdvertisement(),
@@ -96,6 +97,7 @@ public class GroupCommunicationProviderImpl implements
             final ArrayBlockingQueue<EventPacket> viewQueue = getGMSContext().getViewQueue();
             try {
                 viewQueue.put(ePacket);
+                logger.log(Level.FINER, "Adding " + clusterViewEvent.getEvent() + " to viewQueue");
             } catch (InterruptedException e) {
                 //TODO: Examine all InterruptedException and thread.interrupt cases for better logging.
                 logger.log(Level.WARNING, "interruptedexception.occurred",
@@ -242,7 +244,18 @@ public class GroupCommunicationProviderImpl implements
             getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
         } catch (InterruptedException e) {
             logger.log(Level.WARNING,
-                    MessageFormat.format("Interrupted Exception occured while adding message to Shoal MessageQueue :{0}", e.getLocalizedMessage()));
+                    MessageFormat.format("Interrupted Exception occured while adding message to Shoal MessageQueue :{0}",
+                            e.getLocalizedMessage()));
         }
     }
+    
+    public void assumeGroupLeadership() {
+        clusterManager.takeOverMasterRole();
+    }
+
+    public void setGroupStoppingState() {
+        clusterManager.setClusterStopping();  
+    }
+
 }
+

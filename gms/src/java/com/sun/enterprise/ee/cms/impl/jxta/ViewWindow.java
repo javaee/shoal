@@ -107,6 +107,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             final EventPacket packet;
             try {
                 packet = viewQueue.take();
+                logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
                 if (packet != null) {
                     newViewObserved(packet);
                 }

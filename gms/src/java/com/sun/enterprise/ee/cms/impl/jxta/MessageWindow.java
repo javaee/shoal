@@ -87,7 +87,7 @@ public class MessageWindow implements Runnable {
             try {
                 final MessagePacket packet = messageQueue.take();
                 if (packet != null) {
-                    logger.log(Level.FINER, "Processing received message .... ");
+                    logger.log(Level.FINER, "Processing received message .... "+ packet.getMessage());
                     newMessageReceived(packet);
                 }
             } catch (InterruptedException e) {
@@ -145,6 +145,8 @@ public class MessageWindow implements Runnable {
             final ShutdownHelper sh = GMSContextFactory.getGMSContext(gMsg.getGroupName()).getShutdownHelper();
             logger.log(Level.INFO, "member.groupshutdown", new Object[]{sender});
             sh.addToGroupShutdownList(gMsg.getGroupName());
+            logger.log(Level.FINE, "setting clusterStopping variable to true");
+            GMSContextFactory.getGMSContext(gMsg.getGroupName()).getGroupCommunicationProvider().setGroupStoppingState();
         } else {
             if (getRouter().isMessageAFRegistered()) {
                 writeLog(sender, gMsg);

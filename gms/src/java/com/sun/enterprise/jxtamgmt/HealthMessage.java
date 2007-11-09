@@ -57,6 +57,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A HealthAdvertisement is described as follows
@@ -83,11 +84,11 @@ public class HealthMessage {
     public HealthMessage() {
     }
 
-    public HealthMessage(final InputStream stream) throws IOException {
+    public HealthMessage(final InputStream stream, long hmSeqID) throws IOException {
         final StructuredTextDocument doc = (StructuredTextDocument)
                 StructuredDocumentFactory.newStructuredDocument(
                         MimeMediaType.XMLUTF8, stream);
-        initialize(doc);
+        initialize(doc, hmSeqID);
     }
 
     /**
@@ -107,14 +108,14 @@ public class HealthMessage {
      *
      * @param root root element
      */
-    public HealthMessage(final Element root) {
+    public HealthMessage(final Element root, long hmSeqID) {
         final TextElement doc = (TextElement) root;
 
         if (!getAdvertisementType().equals(doc.getName())) {
             throw new IllegalArgumentException("Could not construct : " +
                     getClass().getName() + "from doc containing a " + doc.getName());
         }
-        initialize(doc);
+        initialize(doc, hmSeqID);
     }
 
     /**
@@ -171,7 +172,7 @@ public class HealthMessage {
      *
      * @param doc TextElement to iitialize object from
      */
-    private void initialize(final TextElement doc) {
+    private void initialize(final TextElement doc, long hmSeqID) {
 
         final Enumeration elements = doc.getChildren();
         TextElement elem;
@@ -203,9 +204,13 @@ public class HealthMessage {
                     state = stateAttr.getValue();
                 }
 
+                //current assumption is that each health message
+                //has only 1 entry in it. Hence the HMSeqID is simply
+                // passed by value (i.e. a copy is passed after incrementing it in
+                //HealthMonitor
                 for (Enumeration each = elem.getChildren(); each.hasMoreElements();) {
                     SystemAdvertisement adv = new SystemAdvertisement((TextElement) each.nextElement());
-                    final Entry entry = new Entry(adv, state);
+                    final Entry entry = new Entry(adv, state, hmSeqID);
                     add(entry);
                 }
             }
@@ -290,16 +295,26 @@ public class HealthMessage {
         long timestamp;
 
         /**
+         * * Entry sequence ID
+         */
+        long seqID = -1;
+
+        /**
          * Creates a Entry with id and state
          *
          * @param adv   SystemAdvertisement
          * @param state state value
          */
-        public Entry(final SystemAdvertisement adv, final String state) {
+        public Entry(final SystemAdvertisement adv, final String state, long seqID) {
             this.state = state;
             this.adv = adv;
             this.id = (PeerID) adv.getID();
             this.timestamp =System.currentTimeMillis();
+            this.seqID = seqID;
+        }
+        
+        public long getSeqID() {
+            return seqID;
         }
 
         /**
@@ -320,7 +335,7 @@ public class HealthMessage {
          * {@inheritDoc}
          */
         public String toString() {
-            return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " + timestamp;
+            return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " + timestamp + "sequence ID = " + seqID;
         }
     }
 }

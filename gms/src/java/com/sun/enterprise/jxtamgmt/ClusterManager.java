@@ -102,6 +102,8 @@ public class ClusterManager implements PipeMsgListener {
     private volatile boolean stopping = false;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
+    final String MASTERBYFORCELOCK = new String("MASTERBYFORCELOCK");
+
     /**
      * The ClusterManager is created using the instanceName,
      * and a Properties object that contains a set of parameters that the
@@ -294,19 +296,6 @@ public class ClusterManager implements PipeMsgListener {
         return new HashMap();
     }
 
-    /**
-     * Announces Stop event to all members indicating that this peer
-     * will gracefully exit the group. Presently this method is non-blocking.
-     * TODO:Make this a blocking call
-     *
-     * @param isClusterShutdown boolean value indicating whether this
-     *                          announcement is in the context of a clusterwide shutdown or a shutdown of
-     *                          this peer only.
-     */
-    public void announceStop(final boolean isClusterShutdown) {
-        stopping = true;
-        healthMonitor.announceStop(isClusterShutdown);
-    }
 
     /**
      * Stops the ClusterManager and all it's services
@@ -314,12 +303,12 @@ public class ClusterManager implements PipeMsgListener {
      * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
      */
     public synchronized void stop(final boolean isClusterShutdown) {
-        if (!stopped) {
-            announceStop(isClusterShutdown);
+        if (!stopped) {          
+            stopping = true;
             outputPipe.close();
             inputPipe.close();
             pipeCache.clear();
-            healthMonitor.stop();
+            healthMonitor.stop(isClusterShutdown);
             masterNode.stop();
             netManager.stop();
             NetworkManagerRegistry.remove(groupName);
@@ -521,7 +510,8 @@ public class ClusterManager implements PipeMsgListener {
                 if (msgElement != null) {
                     final Object appMessage = getObjectFromByteArray(msgElement);
                     if (appMessage != null) {
-                        LOG.log(Level.FINEST, "ClusterManager: Notifying APPMessage Listeners");
+                        LOG.log(Level.FINEST, "ClusterManager: Notifying APPMessage Listeners of " +
+                                appMessage.toString() + "and adv = " + adv.getName());
                         notifyMessageListeners(adv, appMessage);
                     }
                 }
@@ -609,6 +599,34 @@ public class ClusterManager implements PipeMsgListener {
 
     boolean isStopping() {
         return stopping;
+    }
+
+     public void takeOverMasterRole() {
+        masterNode.takeOverMasterRole();
+        //wait until the new Master gets forcefully appointed
+        //before processing any further requests.
+        waitFor(2000);
+    }
+
+    public void setClusterStopping() {
+        masterNode.setClusterStopping();
+    }
+
+    public void waitFor(long msec) {
+        try {
+            synchronized (MASTERBYFORCELOCK) {
+                MASTERBYFORCELOCK.wait(msec);
+            }
+        } catch (InterruptedException intr) {
+            Thread.interrupted();
+            LOG.log(Level.FINER, "Thread interrupted", intr);
+        }
+    }
+
+    public void notifyNewMaster() {
+        synchronized (MASTERBYFORCELOCK) {
+            MASTERBYFORCELOCK.notify();
+        }
     }
 }
 

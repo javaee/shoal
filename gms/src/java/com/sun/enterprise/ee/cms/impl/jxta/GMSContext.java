@@ -204,4 +204,8 @@ public class GMSContext extends GMSContextBase {
     public com.sun.enterprise.ee.cms.impl.common.ViewWindow getViewWindow() {
         return viewWindow;
     }
+
+   public void assumeGroupLeadership() {
+        groupCommunicationProvider.assumeGroupLeadership();
+    }
 }

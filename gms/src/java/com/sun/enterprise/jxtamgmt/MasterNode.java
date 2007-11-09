@@ -121,6 +121,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     private MessageTransport endpointRouter = null;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
+    private boolean clusterStopping = false;
+
     /**
      * Constructor for the MasterNode object
      *
@@ -186,6 +188,15 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public boolean checkMaster(final SystemAdvertisement systemAdv) {
         if (masterAssigned && isMaster()) {
+              LOG.log(Level.FINER,"checkMaster : clusterStopping() = " + clusterStopping);
+            if (clusterStopping) {
+                //accept the DAS as the new Master
+                LOG.log(Level.FINER, "Resigning Master Node role in anticipation of a master node announcement");
+                LOG.log(Level.FINER, "Accepting DAS as new master in the event of cluster stopping...");
+                clusterViewManager.setMaster(systemAdv, false);
+                masterAssigned = true;
+                return false;
+            }
             LOG.log(Level.FINER,
                     "Master node role collision with " + systemAdv.getName() +
                             " .... attempting to resolve");
@@ -237,6 +248,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     private void sendSelfNodeAdvertisement(final ID id, final String name) {
         final Message msg = createSelfNodeAdvertisement();
         LOG.log(Level.FINER, "Sending a Node Response Message ");
+        final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
+        msg.addMessageElement(NAMESPACE, el);
         send(id, name, msg);
     }
 
@@ -280,7 +293,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     /**
      * Creates a Master Response Message
      *
-     * @param masterID     the MasterNode ID                              3
+     * @param masterID     the MasterNode ID                              
      * @param announcement if true, creates an anouncement type message, otherwise it creates a response type.
      * @return a message containing a MasterResponse element
      */
@@ -539,7 +552,9 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     boolean processChangeEvent(final Message msg,
                                final SystemAdvertisement source) throws IOException {
+
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
+        LOG.log(Level.FINER,"Inside processChangeEvent..." + msgElement);
         if (msgElement != null) {
             final ClusterViewEvent cvEvent = (ClusterViewEvent)
                     getObjectFromByteArray(msgElement);
@@ -584,6 +599,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @throws IOException if an io error occurs
      */
     boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
+
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
 
         if (msgElement == null || adv == null) {
@@ -619,7 +635,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
 
         if (isMaster() && masterAssigned) {
-            LOG.log(Level.FINER, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+            LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             clusterViewManager.notifyListeners(cvEvent);
@@ -660,6 +676,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     }
 
     void processRoute(final Message msg) {
+        LOG.log(Level.FINER,"Inside processRoute...");
+
         try {
             final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
             if (routeElement != null && routeControl != null) {
@@ -728,6 +746,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * {@inheritDoc}
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
+        LOG.log(Level.INFO, "Received a message inside  pipeMsgEvent");
 
         if (manager.isStopping()) {
             LOG.log(Level.FINE, "Since this Peer is Stopping, returning without processing incoming master node message. ");
@@ -1057,6 +1076,44 @@ class MasterNode implements PipeMsgListener, Runnable {
         routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
         }
         return routeControl;
+    }
+
+    /**
+     * This method allows the DAS to become a master by force. This
+     * is especially important when the the DAS is going down and then
+     * coming back up. This way only the DAS will ever be the master.
+     */
+    public void takeOverMasterRole() {
+        synchronized (MASTERLOCK) {
+            final SystemAdvertisement madv = clusterViewManager.get(localNodeID);
+            LOG.log(Level.FINER, "MasterNode: Forcefully becoming the Master..." + madv.getName());
+            //avoid notifying listeners
+            clusterViewManager.setMaster(madv, false);
+            masterAssigned = true;
+
+            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            LOG.log(Level.FINER, "MasterNode: becomeMaster () : masterViewId ="+masterViewID );
+            // generate view change event
+            LOG.log(Level.FINER, "MasterNode: becomeMaster () : Notifying Local Listeners of  Master Change");
+            final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, madv);
+            clusterViewManager.notifyListeners(cvEvent);
+
+            discoveryView.clear();
+            discoveryView.add(sysAdv);
+
+            //broadcast we are the masternode if view size is more than one
+            if (clusterViewManager.getViewSize() > 1) {
+                LOG.log(Level.FINER, "MasterNode: becomeMaster () : announcing MasterNode assumption ");
+                announceMaster(manager.getSystemAdvertisement());
+            }
+            MASTERLOCK.notifyAll();
+            manager.notifyNewMaster();
+
+        }
+    }
+
+    public void setClusterStopping() {
+        clusterStopping = true;
     }
 }
 
