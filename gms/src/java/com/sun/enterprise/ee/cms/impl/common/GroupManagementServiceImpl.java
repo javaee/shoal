@@ -117,15 +117,25 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     }
 
     /**
-     * Registers a JoinNotificationActionFactory instance.
-     * To add MessageActionFactory instance, use the method
-     * addActionFactory(MessageActionFactory maf, String componentName);
-     *
-     * @param joinNotificationActionFactory   implementation of this interface
+     * Registers a JoinedAndReadyNotificationActionFactory instance.
+     * @param joinedAndReadyNotificationActionFactory
+     * Implementation of this interface produces
+     * a JoinedAndReadyNotificationAction instance which consumes the member
+     * joined and ready notification signal.
      */
-    public void addActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
-        router.addDestination(joinNotificationActionFactory);
+
+    public void addActionFactory(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
+        router.addDestination(joinedAndReadyNotificationActionFactory);
     }
+
+       /**
+       * Registers a JoinNotificationActionFactory instance.
+       *
+       * @param joinNotificationActionFactory   implementation of this interface
+       */
+      public void addActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
+          router.addDestination(joinNotificationActionFactory);
+      }
 
     /**
      * Registers a PlannedShuttdownActionFactory instance.
@@ -195,6 +205,18 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      */
     public void removeActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
         router.removeDestination(joinNotificationActionFactory);
+    }
+
+       /**
+     * Removes a JoinedAndReadyNotificationActionFactory instance
+     * To remove a MessageActionFactory for a specific component,
+     * use the method:
+     * removeActionFactory(String componentName);
+     *
+     * @param joinedAndReadyNotificationActionFactory implementation of this interface
+     */
+    public void removeActionFactory(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
+        router.removeDestination(joinedAndReadyNotificationActionFactory);
     }
 
     /**
@@ -332,12 +354,26 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      */
     public void announceGroupShutdown ( final String groupName,
                             final GMSConstants.shutdownState shutdownState) {
+
         final GMSContext gctx = GMSContextFactory.getGMSContext( groupName );
         logger.log(Level.FINE,
-                   "GMS:Announcing GroupShutdown to group with State="+shutdownState);
+                   "GMS:Announcing GroupShutdown to group with State = " + shutdownState);       
         gctx.announceGroupShutdown( groupName, shutdownState );
         gctx.assumeGroupLeadership();
  
+    }
+
+    /**
+     *  This method is provided for reporting the joined and ready
+     *  state of a member. The member is now ready to process its operations.
+     * GMS clients that are interested in knowing when an instance is ready to start
+     * processing operations, can subscribe to this event and be notified of this state.
+     */
+    public void reportJoinedAndReadyState(String groupName) {
+        final GMSContext gctx = GMSContextFactory.getGMSContext( groupName );
+        logger.log(Level.FINE,
+                   "GMS:Reporting Joined and Ready state to group " + groupName);
+        gctx.reportJoinedAndReadyState();
     }
 
 }

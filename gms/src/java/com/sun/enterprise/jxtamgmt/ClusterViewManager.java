@@ -427,5 +427,13 @@ public class ClusterViewManager {
     private void lockLog(String method) {
         LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
     }
+
+    public void setPeerReadyState(SystemAdvertisement adv) {
+        if (adv == null) {
+            throw new IllegalArgumentException("SystemAdvertisment may not be null");
+        }
+        notifyListeners(new ClusterViewEvent(ClusterViewEvents.JOINED_AND_READY_EVENT, adv));
+
+    }
 }
 

@@ -87,11 +87,22 @@ public interface GroupManagementService {
     /**
      * Registers a JoinNotificationActionFactory instance.
      * @param joinNotificationActionFactory  Implementation of this interface produces
-     * a JoinNotificationAction instance which consume the member join notification
+     * a JoinNotificationAction instance which consumes the member join notification
      * signal. 
      */
     void addActionFactory(
             JoinNotificationActionFactory joinNotificationActionFactory);
+
+    /**
+     * Registers a JoinedAndReadyNotificationActionFactory instance.
+     * @param joinedAndReadyNotificationActionFactory
+     * Implementation of this interface produces
+     * a JoinedAndReadyNotificationAction instance which consumes the member
+     * joined and ready notification signal. 
+     */
+
+    void addActionFactory(
+            JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
 
     /**
      * Registers a PlannedShutdownActionFactory instance.
@@ -151,6 +162,13 @@ public interface GroupManagementService {
      */
     void removeActionFactory(
             JoinNotificationActionFactory joinNotificationActionFactory);
+
+    /**
+     * Removes a JoinedAndReadyNotificationActionFactory instance
+     * @param joinedAndReadyNotificationActionFactory
+     */
+    void removeActionFactory(
+            JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
 
     /**
      * Removes a PlannedShutdownActionFactory instance
@@ -241,5 +259,13 @@ public interface GroupManagementService {
      */
     void announceGroupShutdown ( String groupName,
                                  GMSConstants.shutdownState shutdownState);
+    /**
+     *  This method is provided for reporting the joined and ready
+     *  state of a member. The member is now ready to process its operations.
+     * GMS clients that are interested in knowing when an instance is ready to start
+     * processing operations, can subscribe to this event and be notified of this state.
+     * @param groupName
+     */
+     void reportJoinedAndReadyState(String groupName);
 
 }

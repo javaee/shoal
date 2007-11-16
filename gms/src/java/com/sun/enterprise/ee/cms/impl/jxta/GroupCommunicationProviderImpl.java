@@ -146,7 +146,7 @@ public class GroupCommunicationProviderImpl implements
 
     public void announceClusterShutdown(final GMSMessage gmsMessage) {
         try {
-            clusterManager.send(null, gmsMessage);
+            clusterManager.send(null, gmsMessage);                  
         } catch (IOException e) {
             logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[] {e});
         }
@@ -255,6 +255,10 @@ public class GroupCommunicationProviderImpl implements
 
     public void setGroupStoppingState() {
         clusterManager.setClusterStopping();  
+    }
+
+    public void reportJoinedAndReadyState() {
+        clusterManager.reportJoinedAndReadyState();
     }
 
 }

@@ -48,6 +48,7 @@ import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.common.GMSMember;
 import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.JoinedAndReadyNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.RecoveryTargetSelector;
 import com.sun.enterprise.ee.cms.impl.common.Router;
@@ -199,22 +200,33 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private Signal[] analyzeViewChange(final EventPacket packet) {
         ((Vector) signals).removeAllElements();
         final ClusterViewEvents events = packet.getClusterViewEvent();
-
-        if (events.equals(ClusterViewEvents.ADD_EVENT)) {
-            addNewMemberJoins(packet);
-        } else if (events.equals(ClusterViewEvents.IN_DOUBT_EVENT)) {
-            addInDoubtMemberSignals(packet);
-        } else if (events.equals(ClusterViewEvents.FAILURE_EVENT)) {
-            addFailureSignals(packet);
-        } else if (events.equals(ClusterViewEvents.MASTER_CHANGE_EVENT)) {
-            analyzeMasterChangeView(packet);
-        } else if (events.equals(ClusterViewEvents.CLUSTER_STOP_EVENT) ||
-                events.equals(ClusterViewEvents.PEER_STOP_EVENT)) {
-            addPlannedShutdownSignals(packet);
-        } else if (events.equals(ClusterViewEvents.NO_LONGER_INDOUBT_EVENT)) {
-            addNewMemberJoins(packet);
+        switch (events) {
+            case ADD_EVENT:
+                addNewMemberJoins(packet);
+                break;
+            case CLUSTER_STOP_EVENT:
+                addPlannedShutdownSignals(packet);
+                break;
+            case FAILURE_EVENT:
+                addFailureSignals(packet);
+                break;
+            case IN_DOUBT_EVENT:
+                addInDoubtMemberSignals(packet);
+                break;
+            case JOINED_AND_READY_EVENT:
+                addReadyMembers(packet);
+                break;
+            case MASTER_CHANGE_EVENT:
+                analyzeMasterChangeView(packet);
+                break;
+            case NO_LONGER_INDOUBT_EVENT:
+                addNewMemberJoins(packet);
+                break;
+            case PEER_STOP_EVENT:
+                addPlannedShutdownSignals(packet);
+                break;
         }
-
+ 
         final Signal[] s = new Signal[signals.size()];
         return signals.toArray(s);
     }
@@ -452,6 +464,39 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                             e.getLocalizedMessage())
                             .append(" custom tag value:").toString());
         }
+    }
+
+    private void addReadyMembers(final EventPacket packet) {
+        final SystemAdvertisement advert = packet.getSystemAdvertisement();
+        final String token = advert.getName();
+        logger.log(Level.FINE, "Adding Joined And Ready member : " + token);
+        try {
+            if (advert.getCustomTagValue(
+                    CustomTagNames.MEMBER_TYPE.toString()).equalsIgnoreCase(CORETYPE)) {
+                addJoinedAndReadyNotificationSignal(token,
+                        advert.getCustomTagValue(
+                                CustomTagNames.GROUP_NAME.toString()),
+                        Long.valueOf(advert.getCustomTagValue(
+                                CustomTagNames.START_TIME.toString())));
+            }
+        } catch (NoSuchFieldException e) {
+            logger.log(Level.WARNING,
+                    new StringBuffer("The SystemAdvertisement did ")
+                            .append("not contain the ").append(
+                            e.getLocalizedMessage())
+                            .append(" custom tag value:").toString());
+        }
+    }
+
+    private void addJoinedAndReadyNotificationSignal(final String token,
+                                    final String groupName,
+                                    final long startTime) {
+        logger.log(Level.FINE, "adding join and ready signal");
+        signals.add(new JoinedAndReadyNotificationSignalImpl(token,
+                getCurrentCoreMembers(),
+                getAllCurrentMembers(),
+                groupName,
+                startTime));
     }
 
     private void addJoinNotificationSignal(final String token,

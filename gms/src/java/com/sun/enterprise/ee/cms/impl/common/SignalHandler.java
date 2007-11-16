@@ -40,6 +40,7 @@ import com.sun.enterprise.ee.cms.core.FailureNotificationSignal;
 import com.sun.enterprise.ee.cms.core.FailureRecoverySignal;
 import com.sun.enterprise.ee.cms.core.FailureSuspectedSignal;
 import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
+import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationSignal;
 import com.sun.enterprise.ee.cms.core.MessageSignal;
 import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
 import com.sun.enterprise.ee.cms.core.Signal;
@@ -110,6 +111,7 @@ public class SignalHandler implements Runnable {
         }
 
         logger.log(Level.FINEST, "SignalHandler : processing a received signal " + signal.getClass().getName()) ;
+   
         if (signal instanceof FailureRecoverySignal) {
             router.notifyFailureRecoveryAction((FailureRecoverySignal) signal);
         } else if (signal instanceof FailureNotificationSignal) {
@@ -123,6 +125,8 @@ public class SignalHandler implements Runnable {
             router.notifyPlannedShutdownAction((PlannedShutdownSignal) signal);
         } else if (signal instanceof FailureSuspectedSignal) {
             router.notifyFailureSuspectedAction((FailureSuspectedSignal) signal);
+        } else if (signal instanceof JoinedAndReadyNotificationSignal) {
+            router.notifyJoinedAndReadyNotificationAction((JoinedAndReadyNotificationSignal) signal);
         }
     }
 }

@@ -34,23 +34,42 @@
  * holder.
  */
 
-package com.sun.enterprise.jxtamgmt;
+package com.sun.enterprise.ee.cms.impl.client;
+
+import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * An enumeration of the type of events expected to be disseminated by the
- * JxtaClusterManagement layer to consuming applications.
- *
- * @author Shreedhar Ganapathy
- *         Date: Jun 29, 2006
- * @version $Revision$
+ * Reference Implementation of JoinedAndReadyNotificationAction
+ * @author Sheetal Vartak
+ * @Date : Nov 13, 2007
  */
-public enum ClusterViewEvents {
-    ADD_EVENT,
-    PEER_STOP_EVENT,
-    CLUSTER_STOP_EVENT,
-    MASTER_CHANGE_EVENT,
-    IN_DOUBT_EVENT,
-    FAILURE_EVENT,
-    NO_LONGER_INDOUBT_EVENT,
-    JOINED_AND_READY_EVENT
+public class JoinedAndReadyNotificationActionImpl implements JoinedAndReadyNotificationAction {
+    private final CallBack callBack;
+    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    public JoinedAndReadyNotificationActionImpl(final CallBack callBack) {
+        this.callBack = callBack;
+    }
+
+    /**
+     * Implementations of consumeSignal should strive to return control
+     * promptly back to the thread that has delivered the Signal.
+     */
+    public void consumeSignal(final Signal s) throws ActionException {
+        try {
+            s.acquire();
+            callBack.processNotification(s);
+        } catch (SignalAcquireException e) {
+            logger.log(Level.SEVERE, e.getLocalizedMessage());
+        }
+
+        try {
+            s.release();
+        } catch (SignalReleaseException e) {
+            logger.log(Level.SEVERE, e.getLocalizedMessage());
+        }
+    }
 }

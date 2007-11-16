@@ -628,5 +628,9 @@ public class ClusterManager implements PipeMsgListener {
             MASTERBYFORCELOCK.notify();
         }
     }
+
+    public void reportJoinedAndReadyState() {
+        healthMonitor.reportJoinedAndReadyState();
+    }
 }
 

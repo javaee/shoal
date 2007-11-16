@@ -1,4 +1,4 @@
-/*
+ /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
  * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
@@ -34,23 +34,15 @@
  * holder.
  */
 
-package com.sun.enterprise.jxtamgmt;
+package com.sun.enterprise.ee.cms.core;
 
 /**
- * An enumeration of the type of events expected to be disseminated by the
- * JxtaClusterManagement layer to consuming applications.
- *
- * @author Shreedhar Ganapathy
- *         Date: Jun 29, 2006
- * @version $Revision$
+ * Marker interface to provide a specific type of ActionFactory  namely JoinedAndReadyNotificationActionFactory.
+ * The GroupManagementService module internals would expect such sub-types when a factory is added.
+ * This factory's implementation provides a way to produce a JoinedAndReadyNotificationAction
+ * implementation
+ * @author Sheetal Vartak
+ * @Date: Nov 13, 2007
  */
-public enum ClusterViewEvents {
-    ADD_EVENT,
-    PEER_STOP_EVENT,
-    CLUSTER_STOP_EVENT,
-    MASTER_CHANGE_EVENT,
-    IN_DOUBT_EVENT,
-    FAILURE_EVENT,
-    NO_LONGER_INDOUBT_EVENT,
-    JOINED_AND_READY_EVENT
+public interface JoinedAndReadyNotificationActionFactory extends ActionFactory{
 }

@@ -1,4 +1,4 @@
-/*
+ /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
  * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
@@ -34,23 +34,28 @@
  * holder.
  */
 
-package com.sun.enterprise.jxtamgmt;
+ package com.sun.enterprise.ee.cms.impl.client;
+
+import com.sun.enterprise.ee.cms.core.Action;
+import com.sun.enterprise.ee.cms.core.CallBack;
+import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationActionFactory;
 
 /**
- * An enumeration of the type of events expected to be disseminated by the
- * JxtaClusterManagement layer to consuming applications.
- *
- * @author Shreedhar Ganapathy
- *         Date: Jun 29, 2006
- * @version $Revision$
+ * Reference Implementation of JoinedAndReadyNotificationActionFactory
+ * @author Sheetal Vartak
+ * @Date: Nov 13, 2007
  */
-public enum ClusterViewEvents {
-    ADD_EVENT,
-    PEER_STOP_EVENT,
-    CLUSTER_STOP_EVENT,
-    MASTER_CHANGE_EVENT,
-    IN_DOUBT_EVENT,
-    FAILURE_EVENT,
-    NO_LONGER_INDOUBT_EVENT,
-    JOINED_AND_READY_EVENT
+public class JoinedAndReadyNotificationActionFactoryImpl implements JoinedAndReadyNotificationActionFactory{
+    private final CallBack callBack;
+    public JoinedAndReadyNotificationActionFactoryImpl(final CallBack callBack){
+        this.callBack=callBack;
+    }
+    /**
+     * Produces an Action instance.
+     *
+     * @return com.sun.enterprise.ee.cms.Action
+     */
+    public Action produceAction() {
+        return new JoinedAndReadyNotificationActionImpl(callBack);
+    }
 }

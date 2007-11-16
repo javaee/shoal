@@ -95,7 +95,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             "stopped",
             "dead",
             "indoubt",
-            "unknown"};
+            "unknown",
+            "ready"};
     private static final short ALIVE = 2;
     private static final short CLUSTERSTOPPING = 3;
     private static final short PEERSTOPPING = 4;
@@ -103,6 +104,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private static final short DEAD = 6;
     private static final short INDOUBT = 7;
     private static final short UNKNOWN = 8;
+    private static final short READY = 9;
     private static final String HEALTHM = "HM";
     private static final String NAMESPACE = "HEALTH";
     private static final String cacheLock = "cacheLock";
@@ -253,6 +255,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                                     "out of order health message." +
                                     " Calling handleStopEvent() to get the correct PlannedShutdownNotifications");
                             handleStopEvent(entry);
+                        } else if (entry.state.equals(states[READY])) {
+                            notifyLocalListeners(entry.state, entry.adv);
                         } else {
                             LOG.log(Level.FINER, "Discarding out of sequence health message");
                         }
@@ -269,7 +273,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         LOG.warning("IOException occured while sending probeNode() Message in HealthMonitor:"+e.getLocalizedMessage());
                     }
                 }
-
+                if (entry.state.equals(states[READY])) {
+                    notifyLocalListeners(entry.state, entry.adv);
+                }
                 if (entry.state.equals(states[PEERSTOPPING]) || entry.state.equals(states[CLUSTERSTOPPING])) {
                     handleStopEvent(entry);
                 }
@@ -497,6 +503,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             manager.getClusterViewManager().setClusterStoppingState(adv);
         } else if (state.equals(states[PEERSTOPPING])) {
             manager.getClusterViewManager().setPeerStoppingState(adv);
+        }  else if (state.equals(states[READY])) {
+            manager.getClusterViewManager().setPeerReadyState(adv);
         }
     }
 
@@ -508,6 +516,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         } else {
             return states[DEAD];
         }
+    }
+
+    public void reportJoinedAndReadyState() {
+        reportMyState(READY, null);
     }
 
     /**

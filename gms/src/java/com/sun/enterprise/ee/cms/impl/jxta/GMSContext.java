@@ -205,7 +205,11 @@ public class GMSContext extends GMSContextBase {
         return viewWindow;
     }
 
-   public void assumeGroupLeadership() {
+    public void assumeGroupLeadership() {
         groupCommunicationProvider.assumeGroupLeadership();
+    }
+
+    public void reportJoinedAndReadyState() {
+        groupCommunicationProvider.reportJoinedAndReadyState();
     }
 }

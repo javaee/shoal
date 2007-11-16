@@ -34,23 +34,20 @@
  * holder.
  */
 
-package com.sun.enterprise.jxtamgmt;
+package com.sun.enterprise.ee.cms.core;
+
+import java.util.List;
 
 /**
- * An enumeration of the type of events expected to be disseminated by the
- * JxtaClusterManagement layer to consuming applications.
+ * Signal corresponding to JoinedAndReadyNotificationAction. This Signal enables the
+ * consumer to get specifics about a join and ready notification. This Signal type
+ * will only be passed to a JoinedAndReadyNotificationAction.  This Signal
+ * is delivered to registered GMS Clients on all members of the group.
  *
- * @author Shreedhar Ganapathy
- *         Date: Jun 29, 2006
- * @version $Revision$
+ * @author Sheetal Vartak
+ * Date: Nov 13 2007
  */
-public enum ClusterViewEvents {
-    ADD_EVENT,
-    PEER_STOP_EVENT,
-    CLUSTER_STOP_EVENT,
-    MASTER_CHANGE_EVENT,
-    IN_DOUBT_EVENT,
-    FAILURE_EVENT,
-    NO_LONGER_INDOUBT_EVENT,
-    JOINED_AND_READY_EVENT
+public interface JoinedAndReadyNotificationSignal extends Signal{
+    List<String> getCurrentCoreMembers();
+    List<String> getAllCurrentMembers();
 }

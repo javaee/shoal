@@ -180,4 +180,13 @@ public interface GroupCommunicationProvider {
      * that the group is shutting down.
      */
     void setGroupStoppingState();
+
+    /**
+     *  This method is provided for reporting the joined and ready
+     *  state of a member. The member is now ready to process its operations.
+     * GMS clients that are interested in knowing when an instance is ready to start
+     * processing operations, can subscribe to this event and be notified of this state.
+     */
+
+    void reportJoinedAndReadyState();
 }

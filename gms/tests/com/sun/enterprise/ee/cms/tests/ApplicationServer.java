@@ -65,11 +65,13 @@ public class ApplicationServer implements Runnable {
     private GMSClientService gcs1;
     private GMSClientService gcs2;
     private String serverName;
+    private String groupName;
 
     public ApplicationServer(final String serverName, final String groupName,
                              final GroupManagementService.MemberType memberType,
                              final Properties props) {
         this.serverName = serverName;
+        this.groupName = groupName;
         gms = (GroupManagementService) GMSFactory.startGMSModule(serverName, groupName, memberType, props);
         initClientServices(Boolean.valueOf(System.getProperty("MESSAGING_MODE", "true")));
     }
@@ -99,6 +101,8 @@ public class ApplicationServer implements Runnable {
         startGMS();
         addMemberDetails();
         startClientServices();
+        gms.reportJoinedAndReadyState(groupName);
+        logger.log(Level.FINE,"reporting joined and ready state...");
         try {
             Thread.sleep(Integer.parseInt(System.getProperty("LIFEINMILLIS", "15000")));
         } catch (InterruptedException e) {

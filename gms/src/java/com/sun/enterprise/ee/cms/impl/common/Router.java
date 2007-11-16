@@ -75,6 +75,10 @@ public class Router {
 
     private final Vector<JoinNotificationActionFactory> joinNotificationAF =
             new Vector<JoinNotificationActionFactory>();
+
+    private final Vector<JoinedAndReadyNotificationActionFactory> joinedAndReadyNotificationAF =
+            new Vector<JoinedAndReadyNotificationActionFactory>();
+
     private final Vector<FailureSuspectedActionFactory> failureSuspectedAF =
             new Vector<FailureSuspectedActionFactory>();
 
@@ -123,6 +127,16 @@ public class Router {
      */
     void addDestination(final JoinNotificationActionFactory joinNotificationActionFactory) {
         joinNotificationAF.add(joinNotificationActionFactory);
+    }
+
+     /**
+     * adds a JoinedAndReadyNotificationActionFactory as a destination.
+     * Collects this actionfactory in a Collection of same type.
+     *
+     * @param joinedAndReadyNotificationActionFactory the JoinedAndReadyNotificationActionFactory
+     */
+    void addDestination(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
+        joinedAndReadyNotificationAF.add(joinedAndReadyNotificationActionFactory);
     }
 
     /**
@@ -174,6 +188,14 @@ public class Router {
         joinNotificationAF.remove(joinNotificationActionFactory);
     }
 
+       /**
+     * removes a JoinedAndReadyNotificationActionFactory destination.
+     *
+     * @param joinedAndReadyNotificationActionFactory the JoinedAndReadyNotificationActionFactory
+     */
+    void removeDestination(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
+        joinedAndReadyNotificationAF.remove(joinedAndReadyNotificationActionFactory);
+    }
     /**
      * removes a PlannedShutdownActionFactory destination.
      *
@@ -357,6 +379,36 @@ public class Router {
         }
     }
 
+    void notifyJoinedAndReadyNotificationAction(final JoinedAndReadyNotificationSignal signal) {
+        JoinedAndReadyNotificationAction a;
+        JoinedAndReadyNotificationSignal jns;
+        //todo: NEED to be able to predetermine the number of GMS clients
+        //that would register for joined and ready notifications.
+        if (isJoinedAndReadyNotificationAFRegistered()) {
+            logger.log(Level.FINE,
+                    MessageFormat.format("Sending JoinedAndReadyNotificationSignals to " +
+                            "registered Actions, Member {0}...", signal.getMemberToken()));
+            synchronized (joinedAndReadyNotificationAF) {
+                for (JoinedAndReadyNotificationActionFactory jnaf : joinedAndReadyNotificationAF) {
+                    a = (JoinedAndReadyNotificationAction) jnaf.produceAction();
+                    jns = new JoinedAndReadyNotificationSignalImpl(signal);
+                    callAction(a, jns);
+                }
+            }
+        } else if (System.currentTimeMillis() - startupTime < GROUP_WARMUP_TIME) {
+            // put it back to the queue if it is less than
+            // 30 secs since start time. we give 30 secs for join ready notif
+            // registrations to happen until which time, the signals are
+            // available in queue.
+            try {
+                queue.put(new SignalPacket(signal));
+            } catch (InterruptedException e) {
+                logger.log(Level.WARNING, e.getMessage());
+                e.printStackTrace();
+            }
+        }
+     }
+
     void notifyPlannedShutdownAction(final PlannedShutdownSignal signal) {
         PlannedShutdownAction a;
         PlannedShutdownSignal pss;
@@ -420,6 +472,15 @@ public class Router {
         boolean retval = true;
         synchronized (joinNotificationAF) {
             if (joinNotificationAF.isEmpty())
+                retval = false;
+        }
+        return retval;
+    }
+
+       public boolean isJoinedAndReadyNotificationAFRegistered() {
+        boolean retval = true;
+        synchronized (joinedAndReadyNotificationAF) {
+            if (joinedAndReadyNotificationAF.isEmpty())
                 retval = false;
         }
         return retval;

@@ -88,6 +88,7 @@ public class GMSClientService implements Runnable, CallBack{
         gms.addActionFactory(serviceName,
                              new FailureRecoveryActionFactoryImpl(this));
         gms.addActionFactory(new MessageActionFactoryImpl(this), serviceName);
+        gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
     }
 
     public void start(){
