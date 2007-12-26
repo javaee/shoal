@@ -48,12 +48,12 @@ import net.jxta.protocol.PipeAdvertisement;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Collections;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes
@@ -97,6 +97,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             "indoubt",
             "unknown",
             "ready"};
+    private static final short STARTING = 0;    
     private static final short ALIVE = 2;
     private static final short CLUSTERSTOPPING = 3;
     private static final short PEERSTOPPING = 4;
@@ -162,6 +163,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         hm.add(entry);
         msg.addMessageElement(NAMESPACE, new TextDocumentMessageElement(tag,
                 (XMLDocument) hm.getDocument(MimeMediaType.XMLUTF8), null));
+        //add this state to the local health cache. 
+        cache.put(entry.id, entry);
         return msg;
     }
 
@@ -241,22 +244,24 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 LOG.log(Level.FINEST, "Processing Health Message " + entry.getSeqID() + " for entry " + entry.adv.getName());
                 LOG.log(Level.FINEST, "Getting the cachedEntry " + entry.id);
 
-                HealthMessage.Entry cachedEntry = (HealthMessage.Entry) cache.get(entry.id);
+                HealthMessage.Entry cachedEntry = cache.get(entry.id);
                 if (cachedEntry != null) {                 
                     LOG.log(Level.FINEST, "cachedEntry is not null");
                     if (entry.getSeqID() <= cachedEntry.getSeqID()) {
                         LOG.log(Level.FINER, MessageFormat.format("Received an older health message sequence {0}." +
                                 " Current sequence id is {1}. ",
-                                new Object[]{entry.getSeqID(), cachedEntry.getSeqID()}));
+                                entry.getSeqID(), cachedEntry.getSeqID()));
                         if (entry.state.equals(states[CLUSTERSTOPPING]) || entry.state.equals(states[PEERSTOPPING])) {
                             //dont discard the message
                             //and don't alter the state if the cachedEntry's state is stopped
-                            LOG.log(Level.FINER, "Received clusterstopping state for " +
-                                    "out of order health message." +
-                                    " Calling handleStopEvent() to get the correct PlannedShutdownNotifications");
+                            LOG.log(Level.FINER, "Received out of order health message " +
+                                    "with clusterstopping state." +
+                                    " Calling handleStopEvent() to handle shutdown state.");
                             handleStopEvent(entry);
                         } else if (entry.state.equals(states[READY])) {
-                            notifyLocalListeners(entry.state, entry.adv);
+                            LOG.finer("Received out of order health message with Joined and Ready state. " +
+                                    "Calling handleReadyEvent() for handling the peer's ready state");
+                            handleReadyEvent(entry);
                         } else {
                             LOG.log(Level.FINER, "Discarding out of sequence health message");
                         }
@@ -274,6 +279,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 }
                 if (entry.state.equals(states[READY])) {
+                    handleReadyEvent( entry );
                     notifyLocalListeners(entry.state, entry.adv);
                 }
                 if (entry.state.equals(states[PEERSTOPPING]) || entry.state.equals(states[CLUSTERSTOPPING])) {
@@ -293,6 +299,19 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 } 
             }
+        }
+    }
+
+    private void handleReadyEvent(final HealthMessage.Entry entry) {
+        cache.put(entry.id, entry);
+        if(entry.id.equals(masterNode.getMasterNodeID())){
+            //if this is a ready state sent out by master, take no action here as master would send out a view to the group.
+            return;
+        }
+        //if this is a ready state sent by a non-master, and if I am the assigned master, send out a new view.  
+        if(masterNode.isMaster() && masterNode.isMasterAssigned()){
+            LOG.log(Level.FINEST, MessageFormat.format("Handling Ready Event for peer :{0}", entry.adv.getName()));
+            masterNode.sendReadyEventView(entry.adv);
         }
     }
 
@@ -353,19 +372,17 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * Main processing method for the HealthMonitor object
      */
     public void run() {
-        long actualto = timeout;
-
-        reportMyState(ALIVE, null);
+        //At start, the starting state is reported. But reporting ready state is dependent on
+        //the parent application making the call that it is in the ready state, which is not
+        //necessarily deterministic. Hence we move on from starting state to reporting
+        //this peer's alive state. For join notification event, the liveness state of a peer
+        // would be one of starting or ready or alive (other than peerstopping, etc). 
+        reportMyState(STARTING, null);
         //System.out.println("Running HealthMonitor Thread at interval :"+actualto);
         while (!stop) {
             try {
                 synchronized (threadLock) {
-                    threadLock.wait(actualto);
-                }
-                if (actualto < timeout) {
-                    //reset timeout back in case we lose master designation
-                    actualto = timeout;
-                    //System.out.println("Resetting actualto :"+actualto+"  to timeout :"+timeout);
+                    threadLock.wait(timeout);
                 }
                 if (!stop) {
                     reportMyState(ALIVE, null);
@@ -452,7 +469,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      */
     void announceStop(final boolean isClusterShutdown) {
         //System.out.println("Announcing  Shutdown");
-        LOG.log(Level.FINE, MessageFormat.format("Announcing stop event to group with clusterShutdown set to {0}", new Boolean(isClusterShutdown)));
+        LOG.log(Level.FINE, MessageFormat.format("Announcing stop event to group with clusterShutdown set to {0}", isClusterShutdown));
         if (isClusterShutdown) {
             reportMyState(CLUSTERSTOPPING, null);
         } else {
@@ -463,6 +480,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     /**
      * Stops this service
+     * @param isClusterShutdown  true if the cluster is shutting down
      */
     void stop(boolean isClusterShutdown) {
         stop = true;
@@ -519,7 +537,29 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     public void reportJoinedAndReadyState() {
-        reportMyState(READY, null);
+        //if I am the master send out a new view with ready event but wait for master discovery to be over.Also send out a health message
+        //with state set to READY. Recipients of health message would only update their health state cache.
+        //Master Node discovery completion and assignment is necessary for the ready state of a peer to be sent out as an event with a view.
+        //if I am not the master, report my state to the group as READY. MasterNode will send out a
+        //JOINED_AND_READY_EVENT view to the group on receipt of this health state message.
+
+        if(masterNode.isDiscoveryInProgress()){
+            synchronized (masterNode.discoveryLock){
+                try {
+                    masterNode.discoveryLock.wait();
+                    if(masterNode.isMaster() && masterNode.isMasterAssigned()){
+                        LOG.log(Level.FINEST,  "Sending Ready Event View for "+ manager.getSystemAdvertisement().getName());
+                        ClusterViewEvent cvEvent = masterNode.sendReadyEventView(manager.getSystemAdvertisement());
+                        LOG.log(Level.FINEST, MessageFormat.format("Notifying Local listeners about " +
+                                "Joined and Ready Event View for peer :{0}", manager.getSystemAdvertisement().getName()));
+                        manager.getClusterViewManager().notifyListeners(cvEvent);
+                    }
+                    reportMyState(READY, null);
+                } catch (InterruptedException e) {
+                    LOG.log(Level.FINEST, "MasterNode's DiscoveryLock Thread is interrupted "+e);
+                }
+            }
+        }
     }
 
     /**
@@ -529,8 +569,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @author : Shreedhar Ganapathy
      */
     private class InDoubtPeerDetector implements Runnable {
-        private static final long buffer = 500;
-        private final long maxTime = timeout + buffer;
 
         void start() {
             failureDetectorThread = new Thread(this, "InDoubtPeerDetector Thread");
@@ -686,20 +724,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
                 entry = entry1;
                 LOG.log(Level.FINER, "FV: Verifying state of "+entry.adv.getName()+" state = "+entry.state);
-/*                if (entry.state.equals(states[ALIVE]) || isConnected(entry.id)) {
-                    LOG.log(Level.FINER, entry.adv.getName() +" is back alive, awaiting Add Event of this member");
-
-                    //FIXME  Is this really needed? commenting out for now
-                    /// reportLiveStateToLocalListeners(entry);
-                } else */if(entry.state.equals(states[INDOUBT]) && !isConnected(entry.id)){
+                if(entry.state.equals(states[INDOUBT]) && !isConnected(entry.id)){
                     LOG.log(Level.FINER, "FV: Assigning and reporting failure ....");
                     assignAndReportFailure(entry);
                 }
             }
-        }
-
-        private void reportLiveStateToLocalListeners(final HealthMessage.Entry entry) {
-            //TODO: NOt YET IMPLEMENTED
         }
     }
 
