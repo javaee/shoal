@@ -44,12 +44,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Set;
 import java.util.Vector;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -394,17 +389,6 @@ public class Router {
                     jns = new JoinedAndReadyNotificationSignalImpl(signal);
                     callAction(a, jns);
                 }
-            }
-        } else if (System.currentTimeMillis() - startupTime < GROUP_WARMUP_TIME) {
-            // put it back to the queue if it is less than
-            // 30 secs since start time. we give 30 secs for join ready notif
-            // registrations to happen until which time, the signals are
-            // available in queue.
-            try {
-                queue.put(new SignalPacket(signal));
-            } catch (InterruptedException e) {
-                logger.log(Level.WARNING, e.getMessage());
-                e.printStackTrace();
             }
         }
      }
