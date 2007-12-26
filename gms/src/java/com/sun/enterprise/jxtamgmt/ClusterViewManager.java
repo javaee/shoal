@@ -345,14 +345,11 @@ public class ClusterViewManager {
         if (cvEvent == null) {
             return;
         }
-        //if this is a new authoritative view, just replace the old one with the new one.
-        if (authoritative) {
-            LOG.log(Level.FINER, "Resetting View");
-            reset();
-        }
 
         if (authoritative) {
             boolean changed = false;
+            LOG.log(Level.FINER, "Resetting View");
+            reset();
             lockLog("addToView()");
             viewLock.lock();
             try {
