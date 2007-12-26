@@ -47,7 +47,7 @@
  */
 public enum MemberStates {
     STARTING,
-    STARTED,
+    READY,
     ALIVE,
     INDOUBT,
     DEAD,
