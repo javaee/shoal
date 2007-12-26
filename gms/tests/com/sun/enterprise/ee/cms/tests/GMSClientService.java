@@ -36,14 +36,14 @@
 
  package com.sun.enterprise.ee.cms.tests;
 
- import com.sun.enterprise.ee.cms.core.*;
- import com.sun.enterprise.ee.cms.impl.client.*;
- import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.client.*;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
- import static java.lang.Thread.sleep;
- import java.util.Map;
- import java.util.logging.Level;
- import java.util.logging.Logger;
+import static java.lang.Thread.sleep;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
  /**
  * This is a mock object that exists to demonstrate a GMS client.
@@ -168,7 +168,16 @@ public class GMSClientService implements Runnable, CallBack{
                 logger.log(Level.INFO, e.getLocalizedMessage());
             }
         }
-        else if(notification instanceof JoinNotificationSignal ||
+        else if(notification instanceof JoinNotificationSignal)
+        {
+            serverToken =
+                    notification.getMemberToken();
+            logger.info("Received JoinNotificationSignal for member "+serverToken+
+             " with state set to "+((JoinNotificationSignal)notification).getMemberState().toString());
+            extractMemberDetails( notification, serverToken );
+
+        }
+        else if(notification instanceof JoinedAndReadyNotificationSignal ||
                 notification instanceof FailureNotificationSignal ||
                 notification instanceof PlannedShutdownSignal ||
                 notification instanceof FailureSuspectedSignal)

@@ -101,8 +101,8 @@ public class ApplicationServer implements Runnable {
         startGMS();
         addMemberDetails();
         startClientServices();
-        gms.reportJoinedAndReadyState(groupName);
         logger.log(Level.FINE,"reporting joined and ready state...");
+        gms.reportJoinedAndReadyState(groupName);
         try {
             Thread.sleep(Integer.parseInt(System.getProperty("LIFEINMILLIS", "15000")));
         } catch (InterruptedException e) {
@@ -144,12 +144,9 @@ public class ApplicationServer implements Runnable {
 
     public void startGMS() {
         logger.log(Level.FINE, "ApplicationServer: Starting GMS service");
-        final Thread gservice = new Thread((Runnable) gms, "GMSThread");
-        gservice.start();
-
-        try {
-            gservice.join();//wait for this thread to die
-        } catch (InterruptedException e) {
+        try{
+            gms.join();
+        } catch (GMSException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
         }
     }
