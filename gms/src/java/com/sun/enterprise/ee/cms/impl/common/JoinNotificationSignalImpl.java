@@ -42,6 +42,8 @@ import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
 import com.sun.enterprise.ee.cms.core.SignalAcquireException;
 import com.sun.enterprise.ee.cms.core.SignalReleaseException;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -132,6 +134,14 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
 
     public List<String> getAllCurrentMembers() {
         return allCurrentMembers;
+    }
+
+    public MemberStates getMemberState() {
+        if(ctx == null){
+            ctx = GMSContextFactory.getGMSContext(groupName);
+        }
+        GroupCommunicationProvider gcp = ctx.getGroupCommunicationProvider();
+        return gcp.getMemberState(memberToken);
     }
 
     /**
