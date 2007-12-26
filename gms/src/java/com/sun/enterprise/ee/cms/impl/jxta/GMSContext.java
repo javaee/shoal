@@ -208,8 +208,4 @@ public class GMSContext extends GMSContextBase {
     public void assumeGroupLeadership() {
         groupCommunicationProvider.assumeGroupLeadership();
     }
-
-    public void reportJoinedAndReadyState() {
-        groupCommunicationProvider.reportJoinedAndReadyState();
-    }
 }
