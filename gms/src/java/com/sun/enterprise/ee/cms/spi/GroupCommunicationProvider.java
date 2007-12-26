@@ -36,12 +36,11 @@
 
 package com.sun.enterprise.ee.cms.spi;
 
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.jxtamgmt.ClusterManager;
+ import com.sun.enterprise.ee.cms.core.GMSException;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
+ import java.io.Serializable;
+ import java.util.List;
+ import java.util.Map;
 
 /**
  * Provides a plugging interface for integrating group communication
@@ -155,22 +154,16 @@ public interface GroupCommunicationProvider {
      * Provider. 
      * @return   String
      */
-    String getGroupLeader();  
-    
+    String getGroupLeader();
+
     /**
-     * Returns the ClusterManager instance
-     **/
-    
-  // ClusterManager getClusterManager();
-    
-    /**
-     * lets this instance become a group leader explicitly
+     * <p>Provides for this instance to become a group leader explicitly.
      * Typically this can be employed by an administrative member to become
-     * a group leader prior to shutting down a group of members simultaneously.
+     * a group leader prior to shutting down a group of members simultaneously.</p>
      *
-     * For underlying Group Communication Providers who don't support the feature
+     * <p>For underlying Group Communication Providers who don't support the feature
      * of a explicit leader role assumption, the implementation of this method
-     * would be a no-op.
+     * would be a no-op.</p>
      *     
      **/
     void assumeGroupLeadership();
@@ -182,10 +175,13 @@ public interface GroupCommunicationProvider {
     void setGroupStoppingState();
 
     /**
-     *  This method is provided for reporting the joined and ready
-     *  state of a member. The member is now ready to process its operations.
-     * GMS clients that are interested in knowing when an instance is ready to start
-     * processing operations, can subscribe to this event and be notified of this state.
+     *  This API is provided for the parent application to report to the group
+     * its joined and ready state to begin processing its operations.
+     * The group member that this parent application represents is now ready to
+     * process its operations at the time of this announcement to the group.
+     * GMS clients in all other group members that are interested in knowing
+     * when another member is ready to start processing operations, can subscribe
+     * to the event JoinedAndReadyEvent and be notified of this JoinedAndReadyNotificationSignal.
      */
 
     void reportJoinedAndReadyState();
