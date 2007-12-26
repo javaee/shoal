@@ -260,11 +260,14 @@ public interface GroupManagementService {
     void announceGroupShutdown ( String groupName,
                                  GMSConstants.shutdownState shutdownState);
     /**
-     *  This method is provided for reporting the joined and ready
-     *  state of a member. The member is now ready to process its operations.
-     * GMS clients that are interested in knowing when an instance is ready to start
-     * processing operations, can subscribe to this event and be notified of this state.
-     * @param groupName
+     *  This API is provided for the parent application to report to the group
+     * its joined and ready state to begin processing its operations.
+     * The group member that this parent application represents is now ready to
+     * process its operations at the time of this announcement to the group.
+     * GMS clients in all other group members that are interested in knowing
+     * when another member is ready to start processing operations, can subscribe
+     * to the event JoinedAndReadyEvent and be given this JoinedAndReadyNotificationSignal.
+     * @param groupName name of the group
      */
      void reportJoinedAndReadyState(String groupName);
 
