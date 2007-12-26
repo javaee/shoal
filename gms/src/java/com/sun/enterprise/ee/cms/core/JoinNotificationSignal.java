@@ -36,6 +36,8 @@
 
  package com.sun.enterprise.ee.cms.core;
 
+import com.sun.enterprise.ee.cms.spi.MemberStates;
+
 import java.util.List;
 
 /**
@@ -48,6 +50,24 @@ import java.util.List;
  * @version $Revision$
  */
 public interface JoinNotificationSignal extends Signal{
+    /**
+     * provides a list of all live and current CORE designated members.
+     *
+     * @return List containing the list of member token ids of core members
+     */
     List<String> getCurrentCoreMembers();
+
+    /**
+     * provides a list of all live members i.e. CORE and SPECTATOR members.
+     * @return List containing the list of member token ids of all members.
+     */
     List<String> getAllCurrentMembers();
+
+    /**
+     * Provides the current liveness state of the member whose joining the group is being
+     * signalled by this JoinNotification Signal. The state corresponds to one of the states enumerated
+     * by the MemberStates enum
+     * @return MemberStates
+     */
+    MemberStates getMemberState(); 
 }
