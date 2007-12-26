@@ -122,6 +122,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
     private boolean clusterStopping = false;
+    final Object discoveryLock = new Object();
 
     /**
      * Constructor for the MasterNode object
@@ -174,7 +175,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @return timeout
      */
-    public long getTimeout() {
+    long getTimeout() {
         return timeout * interval;
     }
 
@@ -186,7 +187,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @param systemAdv the system advertisement
      * @return true if no collisions detected, false otherwise
      */
-    public boolean checkMaster(final SystemAdvertisement systemAdv) {
+    boolean checkMaster(final SystemAdvertisement systemAdv) {
         if (masterAssigned && isMaster()) {
               LOG.log(Level.FINER,"checkMaster : clusterStopping() = " + clusterStopping);
             if (clusterStopping) {
@@ -332,7 +333,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @return the MasterNode ID
      */
-    public boolean discoverMaster() {
+    boolean discoverMaster() {
         masterViewID.set(clusterViewManager.getMasterViewID());
         final long timeToWait = timeout;
         LOG.log(Level.FINER, "Attempting to discover a master node");
@@ -356,7 +357,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @return The master value
      */
-    public boolean isMaster() {
+    boolean isMaster() {
         LOG.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
         return clusterViewManager.isMaster();
     }
@@ -375,7 +376,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @return The master node ID
      */
-    public ID getMasterNodeID() {
+    ID getMasterNodeID() {
         return clusterViewManager.getMaster().getID();
     }
 
@@ -384,7 +385,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @return true if this service has been started, false otherwise
      */
-    public synchronized boolean isStarted() {
+    synchronized boolean isStarted() {
         return started;
     }
 
@@ -582,8 +583,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                 clusterViewManager.setMasterViewID(seqID);
                 masterViewID.set(seqID);
                 clusterViewManager.addToView(newLocalView, true, cvEvent);
-            } else {
-                return false;
+                return true;
             }
         }
         return false;
@@ -746,7 +746,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * {@inheritDoc}
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
-        LOG.log(Level.INFO, "Received a message inside  pipeMsgEvent");
+        LOG.log(Level.FINEST, "Received a message inside  pipeMsgEvent");
 
         if (manager.isStopping()) {
             LOG.log(Level.FINE, "Since this Peer is Stopping, returning without processing incoming master node message. ");
@@ -809,9 +809,11 @@ class MasterNode implements PipeMsgListener, Runnable {
     private void announceMaster(SystemAdvertisement adv) {
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
-        LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains" +
+        if(masterAssigned && isMaster()){
+            LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains" +
                 "                                      {0} entries", clusterViewManager.getViewSize()));
-        sendNewView(null, cvEvent, msg, (masterAssigned && isMaster()));
+            sendNewView(null, cvEvent, msg, true);
+        }
     }
 
     /**
@@ -820,6 +822,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     public void run() {
         startMasterNodeDiscovery();
         discoveryInProgress = false;
+        synchronized (discoveryLock) { discoveryLock.notifyAll(); }
     }
 
     /**
@@ -833,6 +836,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         if (masterAssigned) {
             discoveryInProgress = false;
+            synchronized (discoveryLock) { discoveryLock.notifyAll(); }
             return;
         }
         while (!stop && count < interval) {
@@ -994,7 +998,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     /**
      * Stops this service
      */
-    public synchronized void stop() {
+    synchronized void stop() {
         LOG.log(Level.FINER, "Stopping MasterNode");
         outputPipe.close();
         inputPipe.close();
@@ -1005,12 +1009,16 @@ class MasterNode implements PipeMsgListener, Runnable {
         started = false;
         stop = true;
         discoveryInProgress = false;
+        synchronized (discoveryLock){
+            discoveryLock.notifyAll();
+        }
+
     }
 
     /**
      * Starts this service. Creates the communication channels, and the MasterNode discovery thread.
      */
-    public synchronized void start() {
+    synchronized void start() {
         LOG.log(Level.FINER, "Starting MasterNode");
         discoveryInProgress = true;
         this.clusterViewManager = manager.getClusterViewManager();
@@ -1033,7 +1041,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      *
      * @param event VievChange event
      */
-    public void viewChanged(final ClusterViewEvent event) {
+    void viewChanged(final ClusterViewEvent event) {
         if (isMaster() && masterAssigned) {
             //increment the view seqID
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
@@ -1083,7 +1091,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * is especially important when the the DAS is going down and then
      * coming back up. This way only the DAS will ever be the master.
      */
-    public void takeOverMasterRole() {
+    void takeOverMasterRole() {
         synchronized (MASTERLOCK) {
             final SystemAdvertisement madv = clusterViewManager.get(localNodeID);
             LOG.log(Level.FINER, "MasterNode: Forcefully becoming the Master..." + madv.getName());
@@ -1112,8 +1120,20 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
     }
 
-    public void setClusterStopping() {
+    void setClusterStopping() {
         clusterStopping = true;
+    }
+
+    ClusterViewEvent sendReadyEventView(final SystemAdvertisement adv) {
+        final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.JOINED_AND_READY_EVENT, adv);        
+        LOG.log(Level.FINEST, MessageFormat.format("Sending to Group, Joined and Ready Event View for peer :{0}", adv.getName()));
+        clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+        sendNewView(null, cvEvent, createSelfNodeAdvertisement(), true);
+        return cvEvent;
+    }
+
+    boolean isDiscoveryInProgress() {
+        return discoveryInProgress;
     }
 }
 
