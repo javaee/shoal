@@ -86,7 +86,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private OutputPipe outputPipe;
 
     private boolean masterAssigned = false;
-    private volatile boolean discoveryInProgress = false;
+    private volatile boolean discoveryInProgress = true;
     private ID localNodeID = ID.nullID;
     private final SystemAdvertisement sysAdv;
     private PipeAdvertisement pipeAdv = null;
@@ -737,7 +737,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     void probeNode(final HealthMessage.Entry entry) throws IOException {
         if (isMaster() && masterAssigned) {
-            LOG.log(Level.INFO, "Probing ID = " + entry.id + ", name = " + entry.adv.getName());
+            LOG.log(Level.FINER, "Probing ID = " + entry.id + ", name = " + entry.adv.getName());
             send(entry.id, null, createNodeQuery());
         }
     }
@@ -821,8 +821,6 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     public void run() {
         startMasterNodeDiscovery();
-        discoveryInProgress = false;
-        synchronized (discoveryLock) { discoveryLock.notifyAll(); }
     }
 
     /**
@@ -855,6 +853,9 @@ class MasterNode implements PipeMsgListener, Runnable {
             LOG.log(Level.FINER, "MN Discovery timeout, appointing master");
             appointMasterNode();
         }
+       LOG.log(Level.FINEST,"startMasterNodeDiscovery making discoveryInProgress false");
+       discoveryInProgress = false;
+       synchronized (discoveryLock) { discoveryLock.notifyAll(); }        
     }
 
     /**
@@ -1020,7 +1021,6 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     synchronized void start() {
         LOG.log(Level.FINER, "Starting MasterNode");
-        discoveryInProgress = true;
         this.clusterViewManager = manager.getClusterViewManager();
 
         try {

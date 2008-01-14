@@ -280,7 +280,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 if (entry.state.equals(states[READY])) {
                     handleReadyEvent( entry );
-                    notifyLocalListeners(entry.state, entry.adv);
                 }
                 if (entry.state.equals(states[PEERSTOPPING]) || entry.state.equals(states[CLUSTERSTOPPING])) {
                     handleStopEvent(entry);
@@ -547,19 +546,21 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             synchronized (masterNode.discoveryLock){
                 try {
                     masterNode.discoveryLock.wait();
-                    if(masterNode.isMaster() && masterNode.isMasterAssigned()){
-                        LOG.log(Level.FINEST,  "Sending Ready Event View for "+ manager.getSystemAdvertisement().getName());
-                        ClusterViewEvent cvEvent = masterNode.sendReadyEventView(manager.getSystemAdvertisement());
-                        LOG.log(Level.FINEST, MessageFormat.format("Notifying Local listeners about " +
-                                "Joined and Ready Event View for peer :{0}", manager.getSystemAdvertisement().getName()));
-                        manager.getClusterViewManager().notifyListeners(cvEvent);
-                    }
-                    reportMyState(READY, null);
+                    LOG.log(Level.FINEST, "reportJoinedAndReadyState() waiting for masternode discovery to finish...");
                 } catch (InterruptedException e) {
                     LOG.log(Level.FINEST, "MasterNode's DiscoveryLock Thread is interrupted "+e);
                 }
             }
         }
+        if(masterNode.isMaster() && masterNode.isMasterAssigned()){
+            LOG.log(Level.FINEST,  "Sending Ready Event View for "+ manager.getSystemAdvertisement().getName());
+            ClusterViewEvent cvEvent = masterNode.sendReadyEventView(manager.getSystemAdvertisement());
+            LOG.log(Level.FINEST, MessageFormat.format("Notifying Local listeners about " +
+                    "Joined and Ready Event View for peer :{0}", manager.getSystemAdvertisement().getName()));
+            manager.getClusterViewManager().notifyListeners(cvEvent);
+        }
+        LOG.log(Level.FINEST, "Calling reportMyState() with READY...");
+        reportMyState(READY, null);
     }
 
     /**
