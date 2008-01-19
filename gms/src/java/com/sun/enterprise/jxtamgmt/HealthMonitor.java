@@ -214,10 +214,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                             if (!hm.getSrcID().equals(localPeerID)) {
                                 masterNode.processRoute(msg);
                             }
-			    process(hm);
-			}
-		    }
-		}
+			                process(hm);
+			            }
+		            }
+		        }
             } catch (IOException ex) {
                 ex.printStackTrace();
                 LOG.log(Level.WARNING, "HealthMonitor:Caught IOException : " + ex.getLocalizedMessage());
@@ -307,10 +307,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if this is a ready state sent out by master, take no action here as master would send out a view to the group.
             return;
         }
-        //if this is a ready state sent by a non-master, and if I am the assigned master, send out a new view.  
+        //if this is a ready state sent by a non-master, and if I am the assigned master, send out a new view and notify local listeners.
         if(masterNode.isMaster() && masterNode.isMasterAssigned()){
             LOG.log(Level.FINEST, MessageFormat.format("Handling Ready Event for peer :{0}", entry.adv.getName()));
-            masterNode.sendReadyEventView(entry.adv);
+            final ClusterViewEvent cvEvent = masterNode.sendReadyEventView(entry.adv);
+            manager.getClusterViewManager().notifyListeners(cvEvent);
         }
     }
 
@@ -527,12 +528,29 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     public String getState(final ID peerID) {
         HealthMessage.Entry entry;
+        final String state;
         entry = cache.get((PeerID) peerID);
         if (entry != null) {
-            return entry.state;
-        } else {
-            return states[DEAD];
+            state = entry.state;
         }
+        else {
+            if(((PeerID)peerID).equals(localPeerID)){
+                if(!started){
+                    state = states[STARTING];
+                }
+                else {
+                    state = states[ALIVE];
+                }
+            } else {
+                if(manager.getClusterViewManager().containsKey(peerID)){
+                    state = states[STARTING];//we assume that the peer is in starting state hence its state is not yet known in this peer
+                }
+                else {
+                    state = states[DEAD];
+                }
+            }
+        }
+        return state;
     }
 
     public void reportJoinedAndReadyState() {
