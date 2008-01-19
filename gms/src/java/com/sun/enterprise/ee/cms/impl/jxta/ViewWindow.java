@@ -36,23 +36,8 @@
 
 package com.sun.enterprise.ee.cms.impl.jxta;
 
-import com.sun.enterprise.ee.cms.core.DistributedStateCache;
-import com.sun.enterprise.ee.cms.core.GMSCacheable;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.Signal;
-import com.sun.enterprise.ee.cms.impl.common.FailureNotificationSignalImpl;
-import com.sun.enterprise.ee.cms.impl.common.FailureRecoverySignalImpl;
-import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
-import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
-import com.sun.enterprise.ee.cms.impl.common.GMSMember;
-import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
-import com.sun.enterprise.ee.cms.impl.common.JoinedAndReadyNotificationSignalImpl;
-import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
-import com.sun.enterprise.ee.cms.impl.common.RecoveryTargetSelector;
-import com.sun.enterprise.ee.cms.impl.common.Router;
-import com.sun.enterprise.ee.cms.impl.common.SignalPacket;
+import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.common.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.jxtamgmt.ClusterView;
 import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
@@ -232,6 +217,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     private void analyzeMasterChangeView(final EventPacket packet) {
+        //TODO: 01/19/2008 Dont recall why I did this; Need to revisit as join notification of local member does not get sent
         if (views.size() > 1 &&
                 packet.getClusterView().getSize() !=
                         views.get(views.size() - 2).size()) {
