@@ -37,8 +37,6 @@
 package com.sun.enterprise.jxtamgmt;
 
 import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.XMLDocument;
-import net.jxta.document.MimeMediaType;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
 import net.jxta.logging.Logging;
@@ -46,17 +44,13 @@ import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.peergroup.PeerGroupID;
-import net.jxta.peergroup.WorldPeerGroupFactory;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkConfigurator;
 import net.jxta.protocol.PipeAdvertisement;
-import net.jxta.protocol.ModuleImplAdvertisement;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
-import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
-import net.jxta.impl.endpoint.mcast.McastTransport;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.net.URI;
 
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
@@ -83,14 +76,15 @@ import java.net.URI;
  * TODO: PROVIDE DIFFERENT INSTANCE NAMES AT DIFFERENT TIMES DURING A GIVEN LIFETIME OF THE APP? WHAT IMPACT WOULD THERE
  * TODO:BE IF WE REMOVE INSTANCENAME FROM THE PARAMETERS OF THESE METHODS AND BASE INSTANCE NAME FROM THE CONSTRUCTOR'S
  * TODO: CONSTRUCTION FROM PROPERTIES OBJECT?
+ * TODO: Why are most methods public? Should they not be private or package private? Is this exposed to outside callers?
  */
 public class NetworkManager implements RendezvousListener {
 
     private static final Logger LOG = JxtaUtil.getLogger();
     private static MessageDigest digest;
-    private PeerGroup netPeerGroup;
-    private boolean started = false;
-    private boolean stopped = false;
+    private static PeerGroup netPeerGroup;
+    private static boolean started = false;
+    private static boolean stopped = false;
     private RendezVousService rendezvous;
     private String groupName = "defaultGroup";
     private String instanceName;
@@ -99,7 +93,6 @@ public class NetworkManager implements RendezvousListener {
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
-    private static PeerGroup worldPG;
 
     /**
      * JxtaSocket Pipe ID seed.
@@ -124,7 +117,8 @@ public class NetworkManager implements RendezvousListener {
     private String mcastAddress;
     private int mcastPort = 0;
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
-    private boolean isRendezvousSeed = false;
+    private boolean
+            isRendezvousSeed = false;
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -139,27 +133,18 @@ public class NetworkManager implements RendezvousListener {
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    NetworkManager(final String groupName,
+    public NetworkManager(final String groupName,
                           final String instanceName,
                           final Map properties) {
         System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
         this.groupName = groupName;
         this.instanceName = instanceName;
-
-        if (worldPG == null) {
-            try {
-                worldPG = createWPG(home.toURI(), instanceName);
-            } catch (PeerGroupException e) {
-                LOG.log(Level.WARNING, e.getLocalizedMessage());
-            }
-        }
-
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
         if (properties != null && !properties.isEmpty()) {
-            final String ma = (String)properties.get(JxtaConfigConstants.MULTICASTADDRESS.toString());
+            final Object ma = properties.get(JxtaConfigConstants.MULTICASTADDRESS.toString());
             if (ma != null) {
-                mcastAddress = ma;
+                mcastAddress = (String) ma;
             }
             final Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
             if (mp != null) {
@@ -226,7 +211,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name
      * @return The pipeID value
      */
-    PipeID getPipeID(String instanceName) {
+    public PipeID getPipeID(String instanceName) {
         String seed = instanceName + PIPESEED;
         return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toUpperCase()));
     }
@@ -237,7 +222,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name value
      * @return The scoket PipeID value
      */
-    PipeID getSocketID(final String instanceName) {
+    public PipeID getSocketID(final String instanceName) {
         final String seed = instanceName + SOCKETSEED;
         return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toUpperCase()));
     }
@@ -248,7 +233,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name value
      * @return The peerID value
      */
-    PeerID getPeerID(final String instanceName) {
+    public PeerID getPeerID(final String instanceName) {
         return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
     }
 
@@ -258,7 +243,7 @@ public class NetworkManager implements RendezvousListener {
      * @param groupName instance name value
      * @return The peerID value
      */
-    PeerGroupID getPeerGroupID(final String groupName) {
+    public PeerGroupID getPeerGroupID(final String groupName) {
         if (mcastAddress == null && mcastPort <= 0) {
             return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
                     hash(PREFIX + groupName.toUpperCase()));
@@ -273,7 +258,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The HealthPipe Pipe ID
      */
-    PipeID getHealthPipeID() {
+    public PipeID getHealthPipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(HEALTHSEED.toUpperCase()));
     }
 
@@ -282,7 +267,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The MasterPipe PipeID
      */
-    PipeID getMasterPipeID() {
+    public PipeID getMasterPipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(MASTERSEED.toUpperCase()));
     }
 
@@ -291,7 +276,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The SessionQuery PipeID
      */
-    PipeID getSessionQueryPipeID() {
+    public PipeID getSessionQueryPipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(SESSIONQUERYSEED.toUpperCase()));
     }
 
@@ -301,7 +286,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The Application Service Pipe ID
      */
-    PipeID getAppServicePipeID() {
+    public PipeID getAppServicePipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(APPSERVICESEED.toUpperCase()));
     }
 
@@ -325,7 +310,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name
      * @return a JxtaSocket Pipe Advertisement
      */
-    PipeAdvertisement getSocketAdvertisement(final String instanceName) {
+    public PipeAdvertisement getSocketAdvertisement(final String instanceName) {
         final PipeAdvertisement advertisement = getTemplatePipeAdvertisement(instanceName);
         advertisement.setPipeID(getSocketID(instanceName));
         return advertisement;
@@ -337,7 +322,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name
      * @return PipeAdvertisement a JxtaBiDiPipe Pipe Advertisement
      */
-    PipeAdvertisement getPipeAdvertisement(final String instanceName) {
+    public PipeAdvertisement getPipeAdvertisement(final String instanceName) {
         final PipeAdvertisement advertisement = getTemplatePipeAdvertisement(instanceName);
         advertisement.setPipeID(getPipeID(instanceName));
         return advertisement;
@@ -349,7 +334,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The infraPeerGroupID PeerGroupID
      */
-    PeerGroupID getInfraPeerGroupID() {
+    public PeerGroupID getInfraPeerGroupID() {
         return getPeerGroupID(groupName);
     }
 
@@ -357,17 +342,70 @@ public class NetworkManager implements RendezvousListener {
      * Creates and starts the JXTA NetPeerGroup using a platform configuration
      * template. This class also registers a listener for rendezvous events
      *
-     * @throws IOException  if an io error occurs during creation of the cache directory
+     * @throws IOException        Description of the Exception
      * @throws PeerGroupException if the NetPeerGroup fails to initialize
      */
-    synchronized void start() throws PeerGroupException, IOException {
+    public synchronized void start() throws PeerGroupException, IOException {
         if (started) {
             return;
         }
 
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
-        startDomain();
+        // Configure the peer name
+        final NetworkConfigurator config;
+        if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
+            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
+            //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
+            //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
+            String myPort = rendezvousSeedURIs.get(0);
+            LOG.fine("myPort is " + myPort);
+            myPort = myPort.substring(myPort.lastIndexOf(":") + 1, myPort.length());
+            LOG.fine("myPort is " + myPort);
+            //TODO: Add a check for port availability and consequent actions
+            config.setTcpPort(Integer.parseInt(myPort));
+        } else {
+            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());                 
+            config.setTcpStartPort(9701);
+            config.setTcpEndPort(9999);
+        }
+
+        config.setPeerID(getPeerID(instanceName));
+        config.setName(instanceName);
+        //config.setPrincipal(instanceName);
+        config.setDescription("Created by Jxta Cluster Management NetworkManager");
+        config.setInfrastructureID(getInfraPeerGroupID());
+        config.setInfrastructureName(groupName);
+
+
+        LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
+        if (!rendezvousSeedURIs.isEmpty()) {
+            LOG.fine("Setting Rendezvous seed uris to network configurator:" + rendezvousSeedURIs);
+            config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
+            //limit it to configured rendezvous at this point
+            config.setUseOnlyRendezvousSeeds(true);
+        }
+
+        config.setUseMulticast(true);
+        config.setMulticastSize(64 * 1024);
+        config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
+        if (mcastAddress != null) {
+            config.setMulticastAddress(mcastAddress);
+        }
+        if (mcastPort > 0) {
+            config.setMulticastPort(mcastPort);
+        }
+        LOG.fine("node config adv = " +    config.getPlatformConfig().toString());
+        NetPeerGroupFactory factory = new NetPeerGroupFactory(config.getPlatformConfig(), userHome.toURI());
+        netPeerGroup = factory.getInterface();
+        rendezvous = netPeerGroup.getRendezVousService();
+        rendezvous.addListener(this);
+        stopped = false;
+        started = true;
+        if (!rendezvousSeedURIs.isEmpty()) {
+            waitForRendezvousConnection(30000);
+        }
+        LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous()|| rendezvous.isRendezVous()));
     }
 
     /**
@@ -397,7 +435,7 @@ public class NetworkManager implements RendezvousListener {
     /**
      * Stops the NetworkManager and the JXTA platform.
      */
-    synchronized void stop() {
+    public synchronized void stop() {
         if (stopped && !started) {
             return;
         }
@@ -420,7 +458,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The netPeerGroup value
      */
-    PeerGroup getNetPeerGroup() {
+    public PeerGroup getNetPeerGroup() {
         return netPeerGroup;
     }
 
@@ -432,7 +470,7 @@ public class NetworkManager implements RendezvousListener {
      * @param timeout timeout in milliseconds
      * @return connection state
      */
-    boolean waitForRendezvousConnection(long timeout) {
+    public boolean waitForRendezvousConnection(long timeout) {
         if (0 == timeout) {
             timeout = Long.MAX_VALUE;
         }
@@ -485,7 +523,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The peerID value
      */
-    PeerID getPeerID() {
+    public PeerID getPeerID() {
         if (stopped && !started) {
             return null;
         }
@@ -497,7 +535,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The running value
      */
-    boolean isStarted() {
+    public boolean isStarted() {
         return !stopped && started;
     }
 
@@ -506,7 +544,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The socketID value
      */
-    PipeID getSocketID() {
+    public PipeID getSocketID() {
         return socketID;
     }
 
@@ -515,7 +553,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The pipeID value
      */
-    PipeID getPipeID() {
+    public PipeID getPipeID() {
         return pipeID;
     }
 
@@ -524,7 +562,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The instance name value
      */
-    String getInstanceName() {
+    public String getInstanceName() {
         return instanceName;
     }
 
@@ -533,111 +571,8 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The instance name value
      */
-    File getHome() {
+    public File getHome() {
         return home;
-    }
-
-
-    /**
-     * Configure and start the World Peer Group.
-     *
-     * @param storeHome The location JXTA will use to store all persistent data.
-     * @param instanceName  The name of the peer.
-     * @throws PeerGroupException Thrown for errors creating the world peer group.
-     * @return the world peergroup
-     */
-    private PeerGroup createWPG(URI storeHome, String instanceName) throws PeerGroupException {
-        NetworkConfigurator worldGroupConfig = NetworkConfigurator.newAdHocConfiguration(storeHome);
-
-        PeerID peerid =  getPeerID(instanceName);
-        worldGroupConfig.setName(instanceName);
-        worldGroupConfig.setPeerID(peerid);
-        // Disable multicast because we will be using a separate multicast in each group.
-        worldGroupConfig.setUseMulticast(false);
-
-        // Instantiate the world peer group
-        WorldPeerGroupFactory wpgf = new WorldPeerGroupFactory(worldGroupConfig.getPlatformConfig(), storeHome);
-        return wpgf.getInterface();
-    }
-
-    /**
-     * Configure and start a separate top-level JXTA domain.
-     *
-     * @throws PeerGroupException Thrown for errors creating the domain.
-     * @return the net peergroup
-     */
-    private PeerGroup startDomain() throws PeerGroupException {
-        assert worldPG.getPeerGroupID().equals(PeerGroupID.worldPeerGroupID);
-
-        final File userHome = new File(home, instanceName);
-        clearCache(userHome);
-        // Configure the peer name
-        final NetworkConfigurator config;
-        if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
-            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
-            //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
-            //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
-            String myPort = rendezvousSeedURIs.get(0);
-            LOG.fine("myPort is " + myPort);
-            myPort = myPort.substring(myPort.lastIndexOf(":") + 1, myPort.length());
-            LOG.fine("myPort is " + myPort);
-            //TODO: Add a check for port availability and consequent actions
-            config.setTcpPort(Integer.parseInt(myPort));
-        } else {
-            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
-            config.setTcpStartPort(9701);
-            config.setTcpEndPort(9999);
-        }
-
-        config.setPeerID(getPeerID(instanceName));
-        config.setName(instanceName);
-        //config.setPrincipal(instanceName);
-        config.setDescription("Created by Jxta Cluster Management NetworkManager");
-        config.setInfrastructureID(getInfraPeerGroupID());
-        config.setInfrastructureName(groupName);
-
-        LOG.fine("Rendezvous seed?:" + isRendezvousSeed);
-        if (!rendezvousSeedURIs.isEmpty()) {
-            LOG.fine("Setting Rendezvous seeding uri's to network configurator:" + rendezvousSeedURIs);
-            config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
-            //limit it to configured rendezvous at this point
-            config.setUseOnlyRendezvousSeeds(true);
-        }
-
-        config.setUseMulticast(true);
-        config.setMulticastSize(64 * 1024);
-        config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
-        if (mcastAddress != null) {
-            config.setMulticastAddress(mcastAddress);
-        }
-        if (mcastPort > 0) {
-            config.setMulticastPort(mcastPort);
-        }
-        LOG.fine("node config adv = " + config.getPlatformConfig().toString());
-
-        ModuleImplAdvertisement npgImplAdv;
-        try {
-            npgImplAdv = worldPG.getAllPurposePeerGroupImplAdvertisement();
-            npgImplAdv.setModuleSpecID(PeerGroup.allPurposePeerGroupSpecID);
-            StdPeerGroupParamAdv params = new StdPeerGroupParamAdv(npgImplAdv.getParam());
-            params.addProto(McastTransport.MCAST_TRANSPORT_CLASSID, McastTransport.MCAST_TRANSPORT_SPECID);
-            npgImplAdv.setParam((XMLDocument) params.getDocument(MimeMediaType.XMLUTF8));
-        } catch (Exception failed) {
-            throw new PeerGroupException("Could not construct domain ModuleImplAdvertisement", failed);
-        }
-
-        // Configure the domain
-        NetPeerGroupFactory factory = new NetPeerGroupFactory(worldPG, config.getPlatformConfig(), npgImplAdv);
-        netPeerGroup = factory.getInterface();
-        rendezvous = netPeerGroup.getRendezVousService();
-        rendezvous.addListener(this);
-        stopped = false;
-        started = true;
-        if (!rendezvousSeedURIs.isEmpty()) {
-            waitForRendezvousConnection(30000);
-        }
-        LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous() || rendezvous.isRendezVous()));
-        return netPeerGroup;
     }
 }
 
