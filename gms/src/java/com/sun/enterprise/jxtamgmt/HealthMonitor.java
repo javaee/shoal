@@ -793,6 +793,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @return true, if a connection already exists, or a new was sucessfully created
      */
     public boolean isConnected(PeerID pid) {
+        //if System property for InetAddress.isReachable() is set, then check for the following:
+        //if InetAddress.isReachable() is true, then check for isConnected()
+        //if InetAddress.isReachable() is false, then simply return false
         return  masterNode.getRouteControl().isConnected(pid);
     }
 /*
