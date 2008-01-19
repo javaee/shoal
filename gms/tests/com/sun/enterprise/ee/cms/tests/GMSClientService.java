@@ -184,6 +184,7 @@ public class GMSClientService implements Runnable, CallBack{
         {
             serverToken =
                     notification.getMemberToken();
+            logger.info("Received "+ notification.toString() +" for member "+serverToken);
             extractMemberDetails( notification, serverToken );
 
         }
