@@ -107,6 +107,11 @@ public interface GroupHandle {
     List<String> getCurrentCoreMembers();
 
     /**
+     * * returns only the members that are in ALIVE or READY state
+     * @return  List
+     */
+    List<String> getCurrentAliveOrReadyMembers();
+    /**
      * returns a List of strings containing the current group membership including
      * spectator members.
      * @return List

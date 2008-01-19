@@ -41,11 +41,14 @@ import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.common.ViewWindow;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
+import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -98,7 +101,7 @@ public final class GroupHandleImpl implements GroupHandle {
      */
     public void sendMessage(final String componentName, final byte[] message) throws GMSException {
         final GMSMessage gMsg = new GMSMessage(componentName, message, groupName, getGMSContext().getStartTime());
-        getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, false);
+        getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, true);
     }
 
     /**
@@ -128,7 +131,7 @@ public final class GroupHandleImpl implements GroupHandle {
     public void sendMessage(List<String> targetServerTokens, String targetComponentName, byte[] message) throws GMSException {
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message, groupName, getGMSContext().getStartTime());
         if(targetServerTokens.isEmpty()){
-            getGMSContext().getGroupCommunicationProvider().sendMessage(null,gMsg, false  );
+            getGMSContext().getGroupCommunicationProvider().sendMessage(null,gMsg, true  );
         }
         else {
             for(String token : targetServerTokens){
@@ -397,5 +400,19 @@ public final class GroupHandleImpl implements GroupHandle {
                 .RECOVERY_IN_PROGRESS.toString() + "|" +
                 System.currentTimeMillis();
 
+    }
+
+    public List<String> getCurrentAliveOrReadyMembers() {
+        List<String> members = getCurrentCoreMembers();
+        List<String> currentAliveOrReadyMembers = new ArrayList<String>();
+        GroupCommunicationProvider gcp = getGMSContext().getGroupCommunicationProvider();
+
+        for (String member : members) {
+            MemberStates state = gcp.getMemberState(member);
+            if (state == MemberStates.ALIVE || state == MemberStates.READY) {
+                currentAliveOrReadyMembers.add(member);
+            }
+        }
+        return currentAliveOrReadyMembers;
     }
 }
