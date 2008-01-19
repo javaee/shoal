@@ -47,13 +47,17 @@ import net.jxta.id.ID;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.text.MessageFormat;
 
 /**
  * Implements the GroupCommunicationProvider interface to plug in
@@ -68,14 +72,16 @@ public class GroupCommunicationProviderImpl implements
         ClusterViewEventListener,
         ClusterMessageListener {
     private ClusterManager clusterManager;
-    private String certPass;
     private final String groupName;
     private GMSContext ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private final ExecutorService msgSendPool;
+    private  Map<ID, CallableMessageSend> instanceCache = new Hashtable<ID, CallableMessageSend>();
 
     public GroupCommunicationProviderImpl(final String groupName) {
         this.groupName = groupName;
         System.setProperty("JXTA_MGMT_LOGGER", logger.getName());
+        msgSendPool = Executors.newCachedThreadPool();
     }
 
     private GMSContext getGMSContext() {
@@ -181,10 +187,30 @@ public class GroupCommunicationProviderImpl implements
     public void sendMessage(final String targetMemberIdentityToken,
                             final Serializable message,
                             final boolean synchronous) throws GMSException {
-        //TODO: support synchronous mode for now the boolean is ignored and message sent asynchronously
         try {
             if(targetMemberIdentityToken == null){
-                clusterManager.send(null, message);//sends to whole group
+                if (synchronous) {
+                    /*
+                    Use point-to-point communication with all instances instead of the group-wide (udp) based message.
+                    Since we don't have reliable multicast yet, this approach will ensure reliability.
+                    Ideally, when a message is sent to the group via point-to-point,
+                    the message to each member should be on a separate thread to get concurrency.
+                     */
+                    List<String> currentMembers = getGMSContext().getGroupHandle().getAllCurrentMembers();
+                    //for (String currentMember : currentMembers) {
+                      //  final ID id = clusterManager.getID(currentMember);
+                       /*
+                        final CallableMessageSend task = getInstanceOfCallableMessageSend(id);
+                        task.setMessage(message);
+                        msgSendPool.submit(task);
+                        */
+                       //TODO : make this multi-threaded via Callable
+                      // clusterManager.send(id, message);
+                    clusterManager.send(null, message);
+                    //}
+                } else {
+                    clusterManager.send(null, message);//sends to whole group
+                }
             }
             else {
                 final ID id = clusterManager.getID(targetMemberIdentityToken);
@@ -259,6 +285,40 @@ public class GroupCommunicationProviderImpl implements
 
     public void reportJoinedAndReadyState() {
         clusterManager.reportJoinedAndReadyState();
+    }
+
+  /*  private CallableMessageSend getInstanceOfCallableMessageSend(ID id) {
+        if (instanceCache.get(id) == null) {
+            CallableMessageSend c = new CallableMessageSend(id);
+            instanceCache.put(id, c);
+            return c;
+        } else {
+            return instanceCache.get(id);
+        }
+    }
+    */
+
+    /**
+     * implements Callable.
+     * Used for handing off the job of calling sendMessage() method to a ThreadPool.
+     * REVISIT
+     */
+    private class CallableMessageSend implements Callable<Object> {
+        private ID member;
+        private Serializable msg;
+
+           private CallableMessageSend(final ID member) {
+            this.member = member;
+        }
+
+         public void setMessage(Serializable msg) {
+             this.msg = msg;
+         }
+
+        public Object call() throws Exception {
+            clusterManager.send(member, msg);
+            return null;
+        }
     }
 
 }
