@@ -196,7 +196,8 @@ public class GroupCommunicationProviderImpl implements
                     Ideally, when a message is sent to the group via point-to-point,
                     the message to each member should be on a separate thread to get concurrency.
                      */
-                    List<String> currentMembers = getMembers();
+                    List<String> currentMembers = getGMSContext().getGroupHandle().getAllCurrentMembers();
+                    // getMembers();
                     for (String currentMember : currentMembers) {
                         final ID id = clusterManager.getID(currentMember);
 
@@ -206,7 +207,7 @@ public class GroupCommunicationProviderImpl implements
                         task.setMessage(message);
                         msgSendPool.submit(task);
                         */
-                        logger.log(Level.INFO, "sending message to PeerID: " + id);
+                        logger.log(Level.INFO, "sending message to member: " + currentMember);                   
                         clusterManager.send(id, message);
                     }
                 } else {
