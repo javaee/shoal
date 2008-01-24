@@ -196,18 +196,19 @@ public class GroupCommunicationProviderImpl implements
                     Ideally, when a message is sent to the group via point-to-point,
                     the message to each member should be on a separate thread to get concurrency.
                      */
-                    List<String> currentMembers = getGMSContext().getGroupHandle().getAllCurrentMembers();
-                    //for (String currentMember : currentMembers) {
-                      //  final ID id = clusterManager.getID(currentMember);
-                       /*
-                        final CallableMessageSend task = getInstanceOfCallableMessageSend(id);
+                    List<String> currentMembers = getMembers();
+                    for (String currentMember : currentMembers) {
+                        final ID id = clusterManager.getID(currentMember);
+
+                        //TODO : make this multi-threaded via Callable
+                       /* final CallableMessageSend task = getInstanceOfCallableMessageSend(id);
+                        logger.fine("Message is = " + message.toString());
                         task.setMessage(message);
                         msgSendPool.submit(task);
                         */
-                       //TODO : make this multi-threaded via Callable
-                      // clusterManager.send(id, message);
-                    clusterManager.send(null, message);
-                    //}
+                        logger.log(Level.INFO, "sending message to PeerID: " + id);
+                        clusterManager.send(id, message);
+                    }
                 } else {
                     clusterManager.send(null, message);//sends to whole group
                 }
@@ -287,7 +288,7 @@ public class GroupCommunicationProviderImpl implements
         clusterManager.reportJoinedAndReadyState();
     }
 
-  /*  private CallableMessageSend getInstanceOfCallableMessageSend(ID id) {
+    private CallableMessageSend getInstanceOfCallableMessageSend(ID id) {
         if (instanceCache.get(id) == null) {
             CallableMessageSend c = new CallableMessageSend(id);
             instanceCache.put(id, c);
@@ -296,7 +297,6 @@ public class GroupCommunicationProviderImpl implements
             return instanceCache.get(id);
         }
     }
-    */
 
     /**
      * implements Callable.
@@ -312,6 +312,7 @@ public class GroupCommunicationProviderImpl implements
         }
 
          public void setMessage(Serializable msg) {
+             this.msg = null;
              this.msg = msg;
          }
 
