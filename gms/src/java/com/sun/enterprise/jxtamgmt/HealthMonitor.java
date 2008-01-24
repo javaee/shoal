@@ -546,7 +546,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     state = states[STARTING];//we assume that the peer is in starting state hence its state is not yet known in this peer
                 }
                 else {
-                    state = states[DEAD];
+                    entry = cache.get((PeerID) peerID);
+                    if (entry != null) {
+                        state = entry.state;
+                    } else
+                        state = states[UNKNOWN];
                 }
             }
         }
