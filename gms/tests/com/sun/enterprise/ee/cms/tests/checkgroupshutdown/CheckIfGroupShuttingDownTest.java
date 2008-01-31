@@ -24,18 +24,26 @@ import com.sun.enterprise.ee.cms.core.*;
  * Time: 1:22:36 PM
  * This test is for making sure that the API added to check if the
  * group is shutting down works fine.
+ * start the test as follows in 2 terminals :
+ * "sh runcheckgroupshutdown.sh DAS" and "sh runcheckgroupshutdown.sh C1"
+ * DAS will send out the announceShutdown() message which will be received by C1
+ * C1 will print out the value for gms.isGroupBeingShutdown(group) before and after the message is received from DAS
+ * This way the above API can be tested. The value returned should be false before DAS announces the GMSMessage
+ * for shutdown and the nti should become true before C1 shuts down.
  */
 public class CheckIfGroupShuttingDownTest implements CallBack{
 
     final static Logger logger = Logger.getLogger("CheckIfGroupShuttingDownTest");
     final Object waitLock = new Object();
+    final String group = "Group";
 
-    public static void main(String[] args){
-        JxtaUtil.setLogger(logger);
-        JxtaUtil.setupLogHandler();
+    public static void main(String[] args) {
+        //JxtaUtil.setLogger(logger);
+        //JxtaUtil.setupLogHandler();
         CheckIfGroupShuttingDownTest check = new CheckIfGroupShuttingDownTest();
+        String serverName = System.getProperty("TYPE");
         try {
-            check.runSimpleSample();
+            check.runSimpleSample(serverName);
         } catch (GMSException e) {
             logger.log(Level.SEVERE, "Exception occured while joining group:" + e);
         }
@@ -45,10 +53,8 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
      * Runs this sample
      * @throws GMSException
      */
-    private void runSimpleSample() throws GMSException {
+    private void runSimpleSample(String serverName) throws GMSException {
         logger.log(Level.INFO, "Starting CheckIfGroupShuttingDownTest....");
-        final String serverName = "server"+System.currentTimeMillis();
-        final String group = "Group";
 
         //initialize Group Management Service
         GroupManagementService gms = initializeGMS(serverName, group);
@@ -57,18 +63,29 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
         registerForGroupEvents(gms);
         //join group
         joinGMSGroup(group, gms);
+        
+        if (serverName.equals("C1"))
+              logger.info("SHUTDOWN : Is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
 
-       try {
-            waitForShutdown();
+        try {
+            waitForShutdown(10000);
+        } catch (InterruptedException e) {
+            logger.log(Level.WARNING, e.getMessage());
+        }
+
+
+        if (serverName.equals("DAS")) {
+            GMSContextFactory.getGMSContext(group).announceGroupShutdown(group, GMSConstants.shutdownState.COMPLETED);
+        }
+
+        try {
+            waitForShutdown(20000);
         } catch (InterruptedException e) {
             logger.log(Level.WARNING, e.getMessage());
         }
         
-        logger.info("Is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
-        logger.info("Adding group to ShutdownHelper's groupShutdownList...");
-        //leave the group gracefully
-        GMSContextFactory.getGMSContext(group).getShutdownHelper().addToGroupShutdownList(group);
-        logger.info("Now is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
+        if (serverName.equals("C1"))
+            logger.info("SHUTDOWN : Now is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
 
         leaveGroupAndShutdown(serverName, gms);
 
@@ -95,10 +112,10 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
          gms.join();
      }
 
-        private void waitForShutdown() throws InterruptedException {
-        logger.log(Level.INFO, "wait 10 secs to shutdown");
+        private void waitForShutdown(int time) throws InterruptedException {
+        logger.log(Level.INFO, "waiting for " + time + " ms");
         synchronized(waitLock){
-            waitLock.wait(10000);
+            waitLock.wait(time);
         }
     }
 
