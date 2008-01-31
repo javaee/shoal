@@ -384,4 +384,18 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
     }
 
+    /**
+     * <p>This API allows applications to query GMS to see if the group is shutting down.
+     * This helps with any pre-shutdown processing that may be required to be done on the
+     * application's side.</p>
+     * @param groupName
+     * @return boolean
+     */
+    public boolean isGroupBeingShutdown(String groupName) {
+        final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
+        logger.log(Level.FINE,
+                "GMS: checking if the group " + groupName + " is shutting down");
+        return gctx.getShutdownHelper().isGroupBeingShutdown(groupName);
+    }
+
 }

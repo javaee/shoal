@@ -271,4 +271,13 @@ public interface GroupManagementService {
      */
      void reportJoinedAndReadyState(String groupName);
 
+       /**
+     * <p>This API allows applications to query GMS to see if the group is shutting down.
+     * This helps with any pre-shutdown processing that may be required to be done on the
+     * application's side.</p>
+     * @param groupName
+     * @return boolean
+     */
+     boolean isGroupBeingShutdown(String groupName);
+
 }
