@@ -207,7 +207,7 @@ public class GroupCommunicationProviderImpl implements
                         task.setMessage(message);
                         msgSendPool.submit(task);
                         */
-                        logger.log(Level.INFO, "sending message to member: " + currentMember);                   
+                        logger.log(Level.FINE, "sending message to member: " + currentMember);                   
                         clusterManager.send(id, message);
                     }
                 } else {
@@ -268,7 +268,7 @@ public class GroupCommunicationProviderImpl implements
     public void handleClusterMessage(final SystemAdvertisement adv,
                                      final Object message) {
         try {
-            logger.log(Level.FINER, "Received AppMessage Notification, placing in message queue");
+            //logger.log(Level.FINE, "Received AppMessage Notification, placing in message queue = " + new String(((GMSMessage)message).getMessage()));
             getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
         } catch (InterruptedException e) {
             logger.log(Level.WARNING,
