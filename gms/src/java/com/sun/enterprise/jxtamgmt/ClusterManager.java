@@ -303,12 +303,12 @@ public class ClusterManager implements PipeMsgListener {
      * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
      */
     public synchronized void stop(final boolean isClusterShutdown) {
-        if (!stopped) {          
+        if (!stopped) {
+            healthMonitor.stop(isClusterShutdown);            
             stopping = true;
             outputPipe.close();
             inputPipe.close();
             pipeCache.clear();
-            healthMonitor.stop(isClusterShutdown);
             masterNode.stop();
             netManager.stop();
             NetworkManagerRegistry.remove(groupName);
