@@ -99,7 +99,7 @@ public class NetworkManager implements RendezvousListener {
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
-    private static PeerGroup worldPG;
+    private static WorldPeerGroupFactory wpgf;
 
     /**
      * JxtaSocket Pipe ID seed.
@@ -146,12 +146,10 @@ public class NetworkManager implements RendezvousListener {
         this.groupName = groupName;
         this.instanceName = instanceName;
 
-        if (worldPG == null) {
-            try {
-                worldPG = createWPG(home.toURI(), instanceName);
-            } catch (PeerGroupException e) {
-                LOG.log(Level.WARNING, e.getLocalizedMessage());
-            }
+        try {
+    	    initWPGF(home.toURI(), instanceName);
+        } catch (PeerGroupException e) {
+    	    LOG.log(Level.SEVERE, e.getLocalizedMessage());
         }
 
         socketID = getSocketID(instanceName);
@@ -539,25 +537,28 @@ public class NetworkManager implements RendezvousListener {
 
 
     /**
-     * Configure and start the World Peer Group.
+     * Configure and start the World Peer Group Factory
      *
      * @param storeHome    The location JXTA will use to store all persistent data.
      * @param instanceName The name of the peer.
-     * @return the world peergroup
+     * @return the world peergroup factory
      * @throws PeerGroupException Thrown for errors creating the world peer group.
      */
-    private PeerGroup createWPG(URI storeHome, String instanceName) throws PeerGroupException {
-        NetworkConfigurator worldGroupConfig = NetworkConfigurator.newAdHocConfiguration(storeHome);
+    private void initWPGF(URI storeHome, String instanceName) throws PeerGroupException {
+	    synchronized(NetworkManager.class) {
+    		if(null == wpgf) {
+                NetworkConfigurator worldGroupConfig = NetworkConfigurator.newAdHocConfiguration(storeHome);
 
-        PeerID peerid = getPeerID(instanceName);
-        worldGroupConfig.setName(instanceName);
-        worldGroupConfig.setPeerID(peerid);
-        // Disable multicast because we will be using a separate multicast in each group.
-        worldGroupConfig.setUseMulticast(false);
+                PeerID peerid = getPeerID(instanceName);
+                worldGroupConfig.setName(instanceName);
+                worldGroupConfig.setPeerID(peerid);
+                // Disable multicast because we will be using a separate multicast in each group.
+                worldGroupConfig.setUseMulticast(false);
 
-        // Instantiate the world peer group
-        WorldPeerGroupFactory wpgf = new WorldPeerGroupFactory(worldGroupConfig.getPlatformConfig(), storeHome);
-        return wpgf.getInterface();
+                // Instantiate the world peer group factory.
+                wpgf = new WorldPeerGroupFactory(worldGroupConfig.getPlatformConfig(), storeHome);
+    		}
+	    }
     }
 
     /**
@@ -567,8 +568,6 @@ public class NetworkManager implements RendezvousListener {
      * @throws PeerGroupException Thrown for errors creating the domain.
      */
     private PeerGroup startDomain() throws PeerGroupException {
-        assert worldPG.getPeerGroupID().equals(PeerGroupID.worldPeerGroupID);
-
         final File userHome = new File(home, instanceName);
         clearCache(userHome);
         // Configure the peer name
@@ -614,6 +613,8 @@ public class NetworkManager implements RendezvousListener {
             config.setMulticastPort(mcastPort);
         }
         LOG.fine("node config adv = " + config.getPlatformConfig().toString());
+
+	    PeerGroup worldPG = wpgf.getInterface();
 
         ModuleImplAdvertisement npgImplAdv;
         try {
