@@ -147,9 +147,9 @@ public class NetworkManager implements RendezvousListener {
         this.instanceName = instanceName;
 
         try {
-    	    initWPGF(home.toURI(), instanceName);
+            initWPGF(home.toURI(), instanceName);
         } catch (PeerGroupException e) {
-    	    LOG.log(Level.SEVERE, e.getLocalizedMessage());
+            LOG.log(Level.SEVERE, e.getLocalizedMessage());
         }
 
         socketID = getSocketID(instanceName);
@@ -541,12 +541,11 @@ public class NetworkManager implements RendezvousListener {
      *
      * @param storeHome    The location JXTA will use to store all persistent data.
      * @param instanceName The name of the peer.
-     * @return the world peergroup factory
      * @throws PeerGroupException Thrown for errors creating the world peer group.
      */
     private void initWPGF(URI storeHome, String instanceName) throws PeerGroupException {
-	    synchronized(NetworkManager.class) {
-    		if(null == wpgf) {
+        synchronized (NetworkManager.class) {
+            if (null == wpgf) {
                 NetworkConfigurator worldGroupConfig = NetworkConfigurator.newAdHocConfiguration(storeHome);
 
                 PeerID peerid = getPeerID(instanceName);
@@ -557,8 +556,8 @@ public class NetworkManager implements RendezvousListener {
 
                 // Instantiate the world peer group factory.
                 wpgf = new WorldPeerGroupFactory(worldGroupConfig.getPlatformConfig(), storeHome);
-    		}
-	    }
+            }
+        }
     }
 
     /**
@@ -614,7 +613,7 @@ public class NetworkManager implements RendezvousListener {
         }
         LOG.fine("node config adv = " + config.getPlatformConfig().toString());
 
-	    PeerGroup worldPG = wpgf.getInterface();
+        PeerGroup worldPG = wpgf.getInterface();
 
         ModuleImplAdvertisement npgImplAdv;
         try {
