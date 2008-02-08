@@ -54,5 +54,8 @@ public enum ServiceProviderConfigurationKeys {
     DISCOVERY_TIMEOUT,
     LOOPBACK,
     IS_BOOTSTRAPPING_NODE, //set true if this node will be an initial host for other members to use for discovery
-    VIRTUAL_MULTICAST_URI_LIST // a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
+    VIRTUAL_MULTICAST_URI_LIST, // a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
+    BIND_INTERFACE_ADDRESS;
+                            //used for specifying which interface to use for group communication
+                            //This is the address which Shoal should bind to for communication.
 }

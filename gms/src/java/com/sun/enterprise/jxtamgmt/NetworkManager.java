@@ -72,6 +72,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.net.URI;
 
+import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
+
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
  * instance name, it encodes a node Peer ID, and provides utilities to derive Peer ID's
@@ -125,6 +127,7 @@ public class NetworkManager implements RendezvousListener {
     private int mcastPort = 0;
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
     private boolean isRendezvousSeed = false;
+    private String tcpAddress;
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -155,11 +158,11 @@ public class NetworkManager implements RendezvousListener {
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
         if (properties != null && !properties.isEmpty()) {
-            final String ma = (String) properties.get(JxtaConfigConstants.MULTICASTADDRESS.toString());
+            final String ma = (String) properties.get(MULTICASTADDRESS.toString());
             if (ma != null) {
                 mcastAddress = ma;
             }
-            final Object mp = properties.get(JxtaConfigConstants.MULTICASTPORT.toString());
+            final Object mp = properties.get(MULTICASTPORT.toString());
             if (mp != null) {
                 if (mp instanceof String) {
                     mcastPort = Integer.parseInt((String) mp);
@@ -167,7 +170,7 @@ public class NetworkManager implements RendezvousListener {
                     mcastPort = (Integer) mp;
                 }
             }
-            final Object virtualMulticastURIList = properties.get(JxtaConfigConstants.VIRTUAL_MULTICAST_URI_LIST.toString());
+            final Object virtualMulticastURIList = properties.get(VIRTUAL_MULTICAST_URI_LIST.toString());
             if (virtualMulticastURIList != null) {
                 //if this object has multiple addresses that are comma separated
                 if (((String) virtualMulticastURIList).indexOf(",") > 0) {
@@ -180,11 +183,14 @@ public class NetworkManager implements RendezvousListener {
                     rendezvousSeedURIs.add(((String) virtualMulticastURIList));
                 }
             }
-            Object isVirtualMulticastNode = properties.get(JxtaConfigConstants.IS_BOOTSTRAPPING_NODE.toString());
+            Object isVirtualMulticastNode = properties.get(IS_BOOTSTRAPPING_NODE.toString());
             if (isVirtualMulticastNode != null) {
                 isRendezvousSeed = Boolean.parseBoolean((String) isVirtualMulticastNode);
                 LOG.fine("isRendezvousSeed is set to " + isRendezvousSeed);
             }
+
+            tcpAddress = (String)properties.get(BIND_INTERFACE_ADDRESS.toString());
+
         }
     }
 
@@ -612,6 +618,12 @@ public class NetworkManager implements RendezvousListener {
             config.setMulticastPort(mcastPort);
         }
         LOG.fine("node config adv = " + config.getPlatformConfig().toString());
+
+        //if a machine has multiple network interfaces,
+        //specify which interface the group communication should start on
+        if (tcpAddress != null && !tcpAddress.equals("")) {
+            config.setTcpInterfaceAddress(tcpAddress);
+        }
 
         PeerGroup worldPG = wpgf.getInterface();
 

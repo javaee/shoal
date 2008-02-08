@@ -63,5 +63,7 @@ public enum JxtaConfigConstants {
     IS_BOOTSTRAPPING_NODE,
     //comma separated list of tcp/http rendezvous seed uri endpoints
     VIRTUAL_MULTICAST_URI_LIST,
-    LOOPBACK
+    LOOPBACK,
+    BIND_INTERFACE_ADDRESS //used for specifying which interface to use for group communication
+                           // This is the address which Shoal should bind to for communication.
 }
