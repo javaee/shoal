@@ -56,6 +56,8 @@ import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.pipe.PipeMsgListener;
 import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.protocol.RouteAdvertisement;
+import net.jxta.impl.pipe.BlockingWireOutputPipe;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -67,6 +69,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -90,6 +93,7 @@ public class ClusterManager implements PipeMsgListener {
 
     private static final String NODEADV = "NAD";
     private transient Map<String, String> identityMap;
+    private transient Map<PeerID, RouteAdvertisement> routeCache = new ConcurrentHashMap<PeerID, RouteAdvertisement>();
     private PipeAdvertisement pipeAdv;
     private PipeService pipeService;
     private MessageElement sysAdvElement = null;
@@ -304,7 +308,7 @@ public class ClusterManager implements PipeMsgListener {
      */
     public synchronized void stop(final boolean isClusterShutdown) {
         if (!stopped) {
-            healthMonitor.stop(isClusterShutdown);            
+            healthMonitor.stop(isClusterShutdown);
             stopping = true;
             outputPipe.close();
             inputPipe.close();
@@ -432,11 +436,18 @@ public class ClusterManager implements PipeMsgListener {
             message.addMessageElement(NAMESPACE, bame);
 
             if (peerid != null) {
-                OutputPipe output;
+                OutputPipe output = null;
                 if (!pipeCache.containsKey(peerid)) {
-                    // Unicast datagram
-                    // create a op pipe to the destination peer
-                    output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+
+                    RouteAdvertisement route = getCachedRoute((PeerID) peerid);
+                    if (route != null) {
+                        output = new BlockingWireOutputPipe(getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
+                    }
+                    if (output == null) {
+                        // Unicast datagram
+                        // create a op pipe to the destination peer
+                        output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                    }
                     pipeCache.put(peerid, output);
                 } else {
                     output = pipeCache.get(peerid);
@@ -601,7 +612,7 @@ public class ClusterManager implements PipeMsgListener {
         return stopping;
     }
 
-     public void takeOverMasterRole() {
+    public void takeOverMasterRole() {
         masterNode.takeOverMasterRole();
         //wait until the new Master gets forcefully appointed
         //before processing any further requests.
@@ -632,5 +643,25 @@ public class ClusterManager implements PipeMsgListener {
     public void reportJoinedAndReadyState() {
         healthMonitor.reportJoinedAndReadyState();
     }
+
+    /**
+     * Caches a route for an instance
+     *
+     * @param route the route advertisement
+     */
+    public void cacheRoute(RouteAdvertisement route) {
+        routeCache.put(route.getDestPeerID(), route);
+    }
+
+    /**
+     * returns the cached route if any, null otherwise
+     *
+     * @param peerid the instance id
+     * @return the cached route if any, null otherwise
+     */
+    public RouteAdvertisement getCachedRoute(PeerID peerid) {
+        return routeCache.get(peerid);
+    }
+
 }
 

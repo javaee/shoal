@@ -47,6 +47,7 @@ import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  * Simple test harness for LWRMulticast
@@ -68,7 +69,7 @@ public class LWRMulticastRecTest implements PipeMsgListener {
      * Common propagated pipe id
      */
     private final static String completeLock = "completeLock";
-    NetworkManager manager;
+    ClusterManager manager;
 
     /**
      * Gets the pipeAdvertisement attribute of the PropagatedPipeServer class
@@ -76,7 +77,7 @@ public class LWRMulticastRecTest implements PipeMsgListener {
      * @return The pipeAdvertisement value
      */
     public PipeAdvertisement getPipeAdvertisement() {
-        PipeID pipeID = manager.getPipeID("multicasttest");
+        PipeID pipeID = manager.getNetworkManager().getPipeID("multicasttest");
         PipeAdvertisement advertisement = (PipeAdvertisement)
                 AdvertisementFactory.newAdvertisement(PipeAdvertisement.getAdvertisementType());
         advertisement.setPipeID(pipeID);
@@ -125,20 +126,21 @@ public class LWRMulticastRecTest implements PipeMsgListener {
     public static void main(String args[]) {
         LWRMulticastRecTest server = new LWRMulticastRecTest();
         LWRMulticast mcast1 = null;
-        server.manager = new NetworkManager("testGroup", "receiver", new HashMap());
+        server.manager = new ClusterManager("testGroup", "receiver", new HashMap<String, String>(), new HashMap(), new ArrayList<ClusterViewEventListener>(), new ArrayList<ClusterMessageListener>());
+
         PipeAdvertisement pipeAdv = server.getPipeAdvertisement();
         try {
             server.manager.start();
             PeerGroup netPeerGroup = server.manager.getNetPeerGroup();
             System.out.println("Node ID :" + netPeerGroup.getPeerID().toString());
-            mcast1 = new LWRMulticast(netPeerGroup, pipeAdv, server);
+            mcast1 = new LWRMulticast(server.manager, pipeAdv, server);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
         }
         server.waitForever();
         mcast1.close();
-        server.manager.stop();
+        server.manager.stop(false);
     }
 }
 

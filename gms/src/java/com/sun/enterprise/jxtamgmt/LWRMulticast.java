@@ -40,13 +40,21 @@ import net.jxta.document.AdvertisementFactory;
 import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocumentFactory;
 import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.*;
+import net.jxta.endpoint.Message;
+import net.jxta.endpoint.MessageElement;
+import net.jxta.endpoint.MessageTransport;
+import net.jxta.endpoint.StringMessageElement;
+import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.router.EndpointRouter;
 import net.jxta.impl.endpoint.router.RouteControl;
+import net.jxta.impl.pipe.BlockingWireOutputPipe;
 import net.jxta.peer.PeerID;
-import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.*;
+import net.jxta.pipe.InputPipe;
+import net.jxta.pipe.OutputPipe;
+import net.jxta.pipe.PipeMsgEvent;
+import net.jxta.pipe.PipeMsgListener;
+import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
@@ -54,7 +62,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -90,7 +102,6 @@ public class LWRMulticast implements PipeMsgListener {
     private transient PipeAdvertisement pipeAdv;
     private transient PipeService pipeSvc;
     private transient InputPipe in;
-    private transient PeerGroup group;
     private transient OutputPipe outputPipe;
     private transient boolean closed = false;
     private transient boolean bound = false;
@@ -108,6 +119,8 @@ public class LWRMulticast implements PipeMsgListener {
     private MessageElement routeAdvElement = null;
     private static final String ROUTEADV = "ROUTE";
     private long t0 = System.currentTimeMillis();
+    private ClusterManager manager;
+    private PeerID localPeerID;
 
     /**
      * The application message listener
@@ -119,16 +132,16 @@ public class LWRMulticast implements PipeMsgListener {
      * peer group
      *
      * @param pipeAd      PipeAdvertisement
-     * @param group       peer group handle
+     * @param manager     the ClusterManger
      * @param msgListener the application listener
      * @throws IOException if an io error occurs
      */
-    public LWRMulticast(PeerGroup group,
+    public LWRMulticast(ClusterManager manager,
                         PipeAdvertisement pipeAd,
                         PipeMsgListener msgListener) throws IOException {
         super();
-        joinGroup(group, pipeAd, msgListener);
-        MessageTransport endpointRouter = (group.getEndpointService()).getMessageTransport("jxta");
+        joinGroup(manager, pipeAd, msgListener);
+        MessageTransport endpointRouter = (manager.getNetPeerGroup().getEndpointService()).getMessageTransport("jxta");
         if (endpointRouter != null) {
             routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
             RouteAdvertisement route = routeControl.getMyLocalRoute();
@@ -143,12 +156,12 @@ public class LWRMulticast implements PipeMsgListener {
     /**
      * joins MutlicastSocket to specified pipe within the context of group
      *
-     * @param group       group context
+     * @param manager     the ClusterManger
      * @param pipeAd      PipeAdvertisement
      * @param msgListener The application message listener
      * @throws IOException if an io error occurs
      */
-    public void joinGroup(PeerGroup group,
+    public void joinGroup(ClusterManager manager,
                           PipeAdvertisement pipeAd,
                           PipeMsgListener msgListener) throws IOException {
         if (pipeAd.getType() != null && !pipeAd.getType().equals(PipeService.PropagateType)) {
@@ -160,14 +173,14 @@ public class LWRMulticast implements PipeMsgListener {
         if (msgListener == null) {
             throw new IllegalArgumentException("msgListener can not be null");
         }
+        this.manager = manager;
         this.msgListener = msgListener;
-        this.group = group;
         this.pipeAdv = pipeAd;
-        this.pipeSvc = group.getPipeService();
+        this.pipeSvc = manager.getNetPeerGroup().getPipeService();
         this.in = pipeSvc.createInputPipe(pipeAd, this);
         outputPipe = pipeSvc.createOutputPipe(pipeAd, 1);
-        String id = group.getPeerID().toString();
-        srcElement = new StringMessageElement(SRCIDTAG, id, null);
+        localPeerID = manager.getNetPeerGroup().getPeerID();
+        srcElement = new StringMessageElement(SRCIDTAG, localPeerID.toString(), null);
         LOG.log(Level.FINEST, "Statring LWRMulticast on pipe id :" + pipeAdv.getID());
         bound = true;
     }
@@ -207,7 +220,7 @@ public class LWRMulticast implements PipeMsgListener {
 
         MessageElement element;
         PeerID id = getSource(message);
-        if (id.equals(group.getPeerID())) {
+        if (id.equals(localPeerID)) {
             //loop back
             return;
         }
@@ -419,7 +432,7 @@ public class LWRMulticast implements PipeMsgListener {
      */
     public void send(PeerID pid, Message msg) throws IOException {
         checkState();
-        OutputPipe op;
+        OutputPipe op = null;
         if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
             msg.addMessageElement(NAMESPACE, routeAdvElement);
         }
@@ -427,9 +440,15 @@ public class LWRMulticast implements PipeMsgListener {
         LOG.log(Level.FINEST, "Sending a message");
         if (pid != null) {
             if (!pipeCache.containsKey(pid)) {
-                // Unicast datagram
-                // create a op pipe to the destination peer
-                op = pipeSvc.createOutputPipe(pipeAdv, Collections.singleton(pid), 1000);
+                RouteAdvertisement route = manager.getCachedRoute(pid);
+                if (route != null) {
+                    op = new BlockingWireOutputPipe(manager.getNetPeerGroup(), pipeAdv, pid, route);
+                }
+                if (op == null) {
+                    // Unicast datagram
+                    // create a op pipe to the destination peer
+                    op = pipeSvc.createOutputPipe(pipeAdv, Collections.singleton(pid), 1);
+                }
                 pipeCache.put(pid, op);
             } else {
                 op = pipeCache.get(pid);
@@ -494,6 +513,7 @@ public class LWRMulticast implements PipeMsgListener {
                 final RouteAdvertisement route = (RouteAdvertisement)
                         AdvertisementFactory.newAdvertisement(asDoc);
                 routeControl.addRoute(route);
+                manager.cacheRoute(route);
             }
         } catch (IOException io) {
             LOG.log(Level.WARNING, io.getLocalizedMessage(), io);

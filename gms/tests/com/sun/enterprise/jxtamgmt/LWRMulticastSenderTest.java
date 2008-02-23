@@ -40,7 +40,6 @@ import net.jxta.document.AdvertisementFactory;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.StringMessageElement;
-import net.jxta.id.IDFactory;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeMsgEvent;
@@ -48,10 +47,9 @@ import net.jxta.pipe.PipeMsgListener;
 import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.ArrayList;
 
 /**
  * Simple test harness for LWRMulticast
@@ -70,7 +68,7 @@ public class LWRMulticastSenderTest implements PipeMsgListener {
      */
     public final static String NAMESPACE = "TEST";
     private static PeerGroup netPeerGroup = null;
-    NetworkManager manager;
+    ClusterManager manager;
     /**
      *  Common propagated pipe id
      */
@@ -85,7 +83,7 @@ public class LWRMulticastSenderTest implements PipeMsgListener {
      * @return    The pipeAdvertisement value
      */
     public PipeAdvertisement getPipeAdvertisement() {
-        PipeID pipeID = manager.getPipeID("multicasttest");
+        PipeID pipeID = manager.getNetworkManager().getPipeID("multicasttest");
         PipeAdvertisement advertisement = (PipeAdvertisement)
                                           AdvertisementFactory.newAdvertisement(PipeAdvertisement.getAdvertisementType());
         advertisement.setPipeID(pipeID);
@@ -134,13 +132,13 @@ public class LWRMulticastSenderTest implements PipeMsgListener {
     public static void main(String args[]) {
         LWRMulticastSenderTest client = new LWRMulticastSenderTest();
         LWRMulticast mcast = null;
-        client.manager = new NetworkManager("testGroup", "sender", new HashMap());
+        client.manager = new ClusterManager("testGroup", "sender", new HashMap<String, String>(), new HashMap(), new ArrayList<ClusterViewEventListener>(), new ArrayList<ClusterMessageListener>());
         pipeAdv = client.getPipeAdvertisement();
         try {
             client.manager.start();
             netPeerGroup = client.manager.getNetPeerGroup();
             System.out.println("Node ID :"+netPeerGroup.getPeerID().toString());
-            mcast = new LWRMulticast(netPeerGroup, pipeAdv, client);
+            mcast = new LWRMulticast(client.manager, pipeAdv, client);
             for (int i = 0; i < 5 ; i++) {
                 Message msg = new Message();
                 msg.addMessageElement(NAMESPACE, new StringMessageElement(GRAMTAG, "Message"+i, null));
@@ -153,7 +151,7 @@ public class LWRMulticastSenderTest implements PipeMsgListener {
             System.exit(-1);
         }
         mcast.close();
-        client.manager.stop();
+        client.manager.stop(false);
     }
 }
 

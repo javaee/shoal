@@ -36,8 +36,6 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import com.sun.enterprise.jxtamgmt.LWRMulticast;
-import com.sun.enterprise.jxtamgmt.NetworkManager;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.Message.ElementIterator;
@@ -55,6 +53,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.ArrayList;
 
 /**
  * A test harness for the LWRMulticast class in SHOAL
@@ -93,7 +92,7 @@ public class LWRMulticastTest implements PipeMsgListener {
 
     private static PeerGroup netPeerGroup = null;
     private static PipeAdvertisement pipeAdv = null;
-    private static NetworkManager netManager = null;
+    private static ClusterManager manager = null;
 
     private static String groupName = "testGroup";
     private static String instanceName = "testInstance." + System.nanoTime();
@@ -107,31 +106,30 @@ public class LWRMulticastTest implements PipeMsgListener {
     }
 
     public static void setGroupName(String _groupName) {
-        if (netManager != null)
+        if (manager != null)
             groupName = _groupName;
     }
 
     public static void setInstanceName(String _instanceName) {
-        if (netManager != null)
+        if (manager != null)
             instanceName = _instanceName;
     }
 
     public static boolean startManager() {
-        if (netManager != null) {
+        if (manager != null) {
             return true;
         }
 
         pipeAdv = getPipeAdvertisement();
-        netManager = new NetworkManager(groupName, instanceName, new HashMap());
-
+        manager = new ClusterManager(groupName, instanceName, new HashMap<String, String>(), new HashMap(), new ArrayList<ClusterViewEventListener>(), new ArrayList<ClusterMessageListener>());
         try {
-            netManager.start();
-            netPeerGroup = netManager.getNetPeerGroup();
+            manager.start();
+            netPeerGroup = manager.getNetworkManager().getNetPeerGroup();
             System.out.println("Network manager started.");
             System.out.println("Node ID :" + getNodeID());
         } catch (Exception e) {
             e.printStackTrace();
-            netManager = null;
+            manager = null;
             return false;
         }
 
@@ -146,9 +144,9 @@ public class LWRMulticastTest implements PipeMsgListener {
     }
 
     public static void stopManager() {
-        if (netManager != null) {
-            netManager.stop();
-            netManager = null;
+        if (manager != null) {
+            manager.stop(false);
+            manager = null;
         }
     }
 
@@ -190,7 +188,7 @@ public class LWRMulticastTest implements PipeMsgListener {
 
         try {
             if (startManager()) {
-                mcast = new LWRMulticast(netPeerGroup, pipeAdv, listener);
+                mcast = new LWRMulticast(manager, pipeAdv, listener);
                 mcast.setSoTimeout(6000);
             } else {
                 System.out.println("Failed to start Network Manager");
