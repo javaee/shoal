@@ -382,6 +382,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         logger.log(Level.FINE,
                    "GMS:Reporting Joined and Ready state to group " + groupName);
         gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
+        logger.log(Level.FINE, "GMS : JoinedAndReady state reported to group " + groupName);
     }
 
     /**
