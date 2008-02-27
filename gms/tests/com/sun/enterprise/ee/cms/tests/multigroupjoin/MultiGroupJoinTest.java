@@ -21,11 +21,15 @@ import java.util.logging.Logger;
 public class MultiGroupJoinTest implements CallBack {
     final static Logger logger = Logger.getLogger("MultiGroupJoinTest");
     final Object waitLock = new Object();
+    final String serverName;
+    public MultiGroupJoinTest(String serverName) {
+        this.serverName = serverName;
+    }
 
     public static void main(String[] args){
-        JxtaUtil.setLogger(logger);
-        JxtaUtil.setupLogHandler();
-        MultiGroupJoinTest multiGroupJoin = new MultiGroupJoinTest();
+       // JxtaUtil.setLogger(logger);
+       // JxtaUtil.setupLogHandler();
+        MultiGroupJoinTest multiGroupJoin = new MultiGroupJoinTest(System.getProperty("INSTANCEID"));
         try {
             multiGroupJoin.runSimpleSample();
         } catch (GMSException e) {
@@ -40,7 +44,7 @@ public class MultiGroupJoinTest implements CallBack {
     private void runSimpleSample() throws GMSException {
         logger.log(Level.INFO, "Starting MultiGroupJoinTest....");
 
-        final String serverName = "server"+System.currentTimeMillis();
+        //final String serverName = "server"+System.currentTimeMillis();
         final String group1 = "Group1";
         final String group2 = "Group2";
 

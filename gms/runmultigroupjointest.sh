@@ -29,5 +29,5 @@
 publish_home=./dist
 lib_home=./lib
 
-java -Dcom.sun.management.jmxremote -cp ${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar com.sun.enterprise.ee.cms.tests.multigroupjoin.MultiGroupJoinTest;
+java -Dcom.sun.management.jmxremote -DINSTANCEID=$1 -cp ${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar com.sun.enterprise.ee.cms.tests.multigroupjoin.MultiGroupJoinTest;
 

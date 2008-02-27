@@ -131,7 +131,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         SystemAdvertisement advert;
         int count = 0;
         final StringBuffer sb =
-                new StringBuffer("GMS View Change Received: Members in view ").append("(before change analysis) are :\n");
+                new StringBuffer("GMS View Change Received for group ").append(groupName + " : Members in view for ").append("(before change analysis) are :\n");
         for (SystemAdvertisement systemAdvertisement : view.getView()) {
             advert = systemAdvertisement;
             member = getGMSMember(advert);
