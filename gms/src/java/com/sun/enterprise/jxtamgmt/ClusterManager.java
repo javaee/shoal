@@ -595,7 +595,7 @@ public class ClusterManager implements PipeMsgListener {
     }
 
     public String getNodeState(final ID peerID) {
-        return getHealthMonitor().getState((PeerID) peerID);
+        return getHealthMonitor().getMemberState((PeerID) peerID);
     }
 
     /**
