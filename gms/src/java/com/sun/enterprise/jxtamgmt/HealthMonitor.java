@@ -801,13 +801,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             final Map<PeerID, HealthMessage.Entry> cacheCopy = getCacheCopy();
             //for each peer id
             for (HealthMessage.Entry entry : cacheCopy.values()) {
-                if (entry.state.equals(states[ALIVE])) {
-                    //if there is a record, then get the number of
-                    //retries performed in an earlier iteration
-                    try {
-                        determineInDoubtPeers(entry);
-                    } catch (NumberFormatException nfe) {
-                        LOG.log(Level.WARNING, "Exception occurred during time stamp conversion : " + nfe.getLocalizedMessage());
+               LOG.fine("checking if entry  = " + entry.adv.getName() + " is in doubt state. " +
+                        " And I am = " + manager.getSystemAdvertisement().getName());
+                //don't check for isConnected with your own self
+                if (!entry.id.equals(manager.getSystemAdvertisement().getID())) {
+                    if (entry.state.equals(states[ALIVE])) {
+                        //if there is a record, then get the number of
+                        //retries performed in an earlier iteration
+                        try {
+                            determineInDoubtPeers(entry);
+                        } catch (NumberFormatException nfe) {
+                            LOG.log(Level.WARNING, "Exception occurred during time stamp conversion : " + nfe.getLocalizedMessage());
+                        }
                     }
                 }
             }
@@ -818,9 +823,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
-                boolean b = isConnected(entry.id);
-                LOG.fine("SHEETAL : isConnected => " + b);
-                if (computeMissedBeat(entry) >= maxMissedBeats && !b) {
+                if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
                     LOG.log(Level.FINEST, "timeDiff > maxTime");
                     if (canProcessInDoubt(entry)) {
                         LOG.log(Level.FINER, "Designating InDoubtState");
