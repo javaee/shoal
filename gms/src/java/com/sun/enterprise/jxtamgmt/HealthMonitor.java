@@ -800,9 +800,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         private void processCacheUpdate() {
             final Map<PeerID, HealthMessage.Entry> cacheCopy = getCacheCopy();
             //for each peer id
-            for (HealthMessage.Entry entry : cacheCopy.values()) {
-               LOG.fine("checking if entry  = " + entry.adv.getName() + " is in doubt state. " +
-                        " And I am = " + manager.getSystemAdvertisement().getName());
+            for (HealthMessage.Entry entry : cacheCopy.values()) {              
                 //don't check for isConnected with your own self
                 if (!entry.id.equals(manager.getSystemAdvertisement().getID())) {
                     if (entry.state.equals(states[ALIVE])) {
