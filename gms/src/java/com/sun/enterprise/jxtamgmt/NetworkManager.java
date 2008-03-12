@@ -52,6 +52,7 @@ import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkConfigurator;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.ModuleImplAdvertisement;
+import net.jxta.protocol.ConfigParams;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
@@ -136,24 +137,18 @@ public class NetworkManager implements RendezvousListener {
      * addressing.  Therefore it is key that these names are chosen carefully to avoid collision.
      *
      * @param groupName    Group Name, a logical group name that this peer is part of.
-     * @param instanceName Instance Name, a logical name for this peer.
+     * @param name Instance Name, a logical name for this peer.
      * @param properties   a Properties object that would contain every configuration
      *                     element that the employing application wants to specify values for. The
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
     NetworkManager(final String groupName,
-                   final String instanceName,
+                   final String name,
                    final Map properties) {
         System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
         this.groupName = groupName;
-        this.instanceName = instanceName;
-
-        try {
-            initWPGF(home.toURI(), instanceName);
-        } catch (PeerGroupException e) {
-            LOG.log(Level.SEVERE, e.getLocalizedMessage());
-        }
+        this.instanceName = name;
 
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
@@ -190,8 +185,14 @@ public class NetworkManager implements RendezvousListener {
             }
 
             tcpAddress = (String)properties.get(BIND_INTERFACE_ADDRESS.toString());
-
         }
+        try {
+            initWPGF(home.toURI(), instanceName);
+        } catch (PeerGroupException e) {
+            LOG.log(Level.SEVERE, e.getLocalizedMessage());
+        }
+
+
     }
 
     /**
@@ -559,9 +560,9 @@ public class NetworkManager implements RendezvousListener {
                 worldGroupConfig.setPeerID(peerid);
                 // Disable multicast because we will be using a separate multicast in each group.
                 worldGroupConfig.setUseMulticast(false);
-
+                ConfigParams config =  worldGroupConfig.getPlatformConfig();
                 // Instantiate the world peer group factory.
-                wpgf = new WorldPeerGroupFactory(worldGroupConfig.getPlatformConfig(), storeHome);
+                wpgf = new WorldPeerGroupFactory(config, storeHome);
             }
         }
     }
@@ -638,8 +639,9 @@ public class NetworkManager implements RendezvousListener {
             throw new PeerGroupException("Could not construct domain ModuleImplAdvertisement", failed);
         }
 
+        ConfigParams cfg =  config.getPlatformConfig();
         // Configure the domain
-        NetPeerGroupFactory factory = new NetPeerGroupFactory(worldPG, config.getPlatformConfig(), npgImplAdv);
+        NetPeerGroupFactory factory = new NetPeerGroupFactory(worldPG, cfg, npgImplAdv);
         netPeerGroup = factory.getInterface();
         rendezvous = netPeerGroup.getRendezVousService();
         rendezvous.addListener(this);
