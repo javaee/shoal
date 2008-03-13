@@ -143,12 +143,12 @@ public class NetworkManager implements RendezvousListener {
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    NetworkManager(final String groupName,
-                   final String name,
+    public NetworkManager(final String groupName,
+                   final String instanceName,
                    final Map properties) {
         System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
         this.groupName = groupName;
-        this.instanceName = name;
+        this.instanceName = instanceName;
 
         socketID = getSocketID(instanceName);
         pipeID = getPipeID(instanceName);
@@ -231,7 +231,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name
      * @return The pipeID value
      */
-    PipeID getPipeID(String instanceName) {
+    public PipeID getPipeID(String instanceName) {
         String seed = instanceName + PIPESEED;
         return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toUpperCase()));
     }
@@ -242,7 +242,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name value
      * @return The scoket PipeID value
      */
-    PipeID getSocketID(final String instanceName) {
+    public PipeID getSocketID(final String instanceName) {
         final String seed = instanceName + SOCKETSEED;
         return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toUpperCase()));
     }
@@ -253,7 +253,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name value
      * @return The peerID value
      */
-    PeerID getPeerID(final String instanceName) {
+    public PeerID getPeerID(final String instanceName) {
         return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
     }
 
@@ -263,7 +263,7 @@ public class NetworkManager implements RendezvousListener {
      * @param groupName instance name value
      * @return The peerID value
      */
-    PeerGroupID getPeerGroupID(final String groupName) {
+    public PeerGroupID getPeerGroupID(final String groupName) {
         if (mcastAddress == null && mcastPort <= 0) {
             return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
                     hash(PREFIX + groupName.toUpperCase()));
@@ -278,7 +278,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The HealthPipe Pipe ID
      */
-    PipeID getHealthPipeID() {
+    public PipeID getHealthPipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(HEALTHSEED.toUpperCase()));
     }
 
@@ -287,7 +287,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The MasterPipe PipeID
      */
-    PipeID getMasterPipeID() {
+    public PipeID getMasterPipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(MASTERSEED.toUpperCase()));
     }
 
@@ -296,7 +296,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The SessionQuery PipeID
      */
-    PipeID getSessionQueryPipeID() {
+    public PipeID getSessionQueryPipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(SESSIONQUERYSEED.toUpperCase()));
     }
 
@@ -306,7 +306,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The Application Service Pipe ID
      */
-    PipeID getAppServicePipeID() {
+    public PipeID getAppServicePipeID() {
         return IDFactory.newPipeID(getInfraPeerGroupID(), hash(APPSERVICESEED.toUpperCase()));
     }
 
@@ -330,7 +330,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name
      * @return a JxtaSocket Pipe Advertisement
      */
-    PipeAdvertisement getSocketAdvertisement(final String instanceName) {
+    public PipeAdvertisement getSocketAdvertisement(final String instanceName) {
         final PipeAdvertisement advertisement = getTemplatePipeAdvertisement(instanceName);
         advertisement.setPipeID(getSocketID(instanceName));
         return advertisement;
@@ -342,7 +342,7 @@ public class NetworkManager implements RendezvousListener {
      * @param instanceName instance name
      * @return PipeAdvertisement a JxtaBiDiPipe Pipe Advertisement
      */
-    PipeAdvertisement getPipeAdvertisement(final String instanceName) {
+    public PipeAdvertisement getPipeAdvertisement(final String instanceName) {
         final PipeAdvertisement advertisement = getTemplatePipeAdvertisement(instanceName);
         advertisement.setPipeID(getPipeID(instanceName));
         return advertisement;
@@ -354,7 +354,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The infraPeerGroupID PeerGroupID
      */
-    PeerGroupID getInfraPeerGroupID() {
+    public PeerGroupID getInfraPeerGroupID() {
         return getPeerGroupID(groupName);
     }
 
@@ -365,7 +365,7 @@ public class NetworkManager implements RendezvousListener {
      * @throws IOException        if an io error occurs during creation of the cache directory
      * @throws PeerGroupException if the NetPeerGroup fails to initialize
      */
-    synchronized void start() throws PeerGroupException, IOException {
+    public synchronized void start() throws PeerGroupException, IOException {
         if (started) {
             return;
         }
@@ -402,7 +402,7 @@ public class NetworkManager implements RendezvousListener {
     /**
      * Stops the NetworkManager and the JXTA platform.
      */
-    synchronized void stop() {
+    public synchronized void stop() {
         if (stopped && !started) {
             return;
         }
@@ -425,7 +425,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The netPeerGroup value
      */
-    PeerGroup getNetPeerGroup() {
+    public PeerGroup getNetPeerGroup() {
         return netPeerGroup;
     }
 
@@ -437,7 +437,7 @@ public class NetworkManager implements RendezvousListener {
      * @param timeout timeout in milliseconds
      * @return connection state
      */
-    boolean waitForRendezvousConnection(long timeout) {
+    public boolean waitForRendezvousConnection(long timeout) {
         if (0 == timeout) {
             timeout = Long.MAX_VALUE;
         }
@@ -490,7 +490,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The peerID value
      */
-    PeerID getPeerID() {
+    public PeerID getPeerID() {
         if (stopped && !started) {
             return null;
         }
@@ -520,7 +520,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The pipeID value
      */
-    PipeID getPipeID() {
+    public PipeID getPipeID() {
         return pipeID;
     }
 
@@ -529,7 +529,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The instance name value
      */
-    String getInstanceName() {
+    public String getInstanceName() {
         return instanceName;
     }
 
@@ -538,7 +538,7 @@ public class NetworkManager implements RendezvousListener {
      *
      * @return The instance name value
      */
-    File getHome() {
+    public File getHome() {
         return home;
     }
 
