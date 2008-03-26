@@ -136,9 +136,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
                            final Serializable key,
                            final byte[] state)
             throws GMSException {
-        logger.log(Level.FINER, "Adding to DSC by local Member:" + memberTokenId +
-                ",Component:" + componentName + ",key:" + key +
-                ",State:" + state);
+        logger.log(Level.FINER, new StringBuilder().append("Adding to DSC by local Member:").append(memberTokenId).append(",Component:").append(componentName).append(",key:").append(key).append(",State:").append(state).toString());
         final GMSCacheable cKey = createCompositeKey(componentName,
                 memberTokenId,
                 key);
@@ -460,12 +458,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         return new GMSCacheable(componentName, memberTokenId, key);
     }
 
-    private void sendMessage(final String member,
-                                          final DSCMessage msg)
-            throws GMSException {
-
-        getGMSContext().getGroupCommunicationProvider().sendMessage(member,
-                msg, true);
+    private void sendMessage(final String member, final DSCMessage msg) throws GMSException {
+        getGMSContext().getGroupCommunicationProvider().sendMessage(member, msg, true);
     }
 
     public boolean isFirstSyncDone() {
