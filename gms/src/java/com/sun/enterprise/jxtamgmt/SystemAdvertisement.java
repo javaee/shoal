@@ -48,14 +48,13 @@ import static net.jxta.document.StructuredDocumentFactory.newStructuredDocument;
 import net.jxta.document.StructuredTextDocument;
 import net.jxta.document.TextElement;
 import net.jxta.id.ID;
+import net.jxta.endpoint.EndpointAddress;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A SystemAdvertisement is described as follows <p/>
@@ -81,11 +80,11 @@ public class SystemAdvertisement extends Advertisement
     private String hwarch;
     private String hwvendor;
     private ID id = ID.nullID;
-    private String ip;
     private String name;
     private String osname;
     private String osversion;
     private String osarch;
+    private List<String> endpointAddresses = null;
     private HashMap<String, String> customTags = null;
 
     private static final String OSNameTag = "OSName";
@@ -172,13 +171,29 @@ public class SystemAdvertisement extends Advertisement
     }
 
     /**
-     * Sets the iP attribute of the SystemAdvertisement object
+     * Sets the network interface's address in the form of a URI
      *
-     * @param ip The new iP value
+     * @param value  new uri (tcp://host:port)
      */
-    public void setIP(final String ip) {
-        this.ip = ip;
+       public void addEndpointAddress(final EndpointAddress value) {
+        if (endpointAddresses == null) {
+            endpointAddresses = new ArrayList<String>();
+        }
+        endpointAddresses.add(value.toString());
     }
+
+
+    /**
+     * API for setting the IP addresses for all the network interfaces
+     * @param endpoints endpoint addresses
+     */
+    public void setEndpointAddresses(final List<String> endpoints) {
+        if (endpointAddresses == null) {
+            endpointAddresses = new ArrayList<String>();
+        }
+        endpointAddresses.addAll(endpoints);
+    }
+
 
     /**
      * Sets the name attribute of the DeviceAdvertisement object
@@ -248,8 +263,12 @@ public class SystemAdvertisement extends Advertisement
         adv.appendChild(e);
         e = adv.createElement(OSarchTag, getOSArch().trim());
         adv.appendChild(e);
-        e = adv.createElement(ipTag, getIP().trim());
-        adv.appendChild(e);
+        if (endpointAddresses != null && !endpointAddresses.isEmpty()) {
+            for (String address : getEndpointAddresses()) {
+                e = adv.createElement(ipTag, address.toString());
+                adv.appendChild(e);
+            }
+        }
         e = adv.createElement(hwarchTag, getHWArch().trim());
         adv.appendChild(e);
         e = adv.createElement(hwvendorTag, getHWVendor().trim());
@@ -301,12 +320,12 @@ public class SystemAdvertisement extends Advertisement
     }
 
     /**
-     * Gets the IP attribute of the SystemAdvertisement object
+     * Gets the address of the network interface in the form of URI
      *
-     * @return The IP value
+     * @return the list of URIs for all the network interfaces
      */
-    public String getIP() {
-        return ip;
+    public List<String> getEndpointAddresses() {
+        return endpointAddresses;
     }
 
     /**
@@ -358,7 +377,10 @@ public class SystemAdvertisement extends Advertisement
             likeMe.setOSName(getName());
             likeMe.setOSVersion(getOSVersion());
             likeMe.setOSArch(getOSArch());
-            likeMe.setIP(getIP());
+            //likeMe.setIP(getIP());
+            if (endpointAddresses != null && !endpointAddresses.isEmpty()) {
+                likeMe.setEndpointAddresses(getEndpointAddresses());
+            }
             likeMe.setHWArch(getHWArch());
             likeMe.setHWVendor(getHWVendor());
             if (customTags != null && !customTags.isEmpty()) {
@@ -388,7 +410,7 @@ public class SystemAdvertisement extends Advertisement
         } else if (elem.getName().equals(OSarchTag)) {
             setOSArch(elem.getTextValue());
         } else if (elem.getName().equals(ipTag)) {
-            setIP(elem.getTextValue());
+            addEndpointAddress(new EndpointAddress(elem.getTextValue()));
         } else if (elem.getName().equals(hwarchTag)) {
             setHWArch(elem.getTextValue());
         } else if (elem.getName().equals(hwvendorTag)) {

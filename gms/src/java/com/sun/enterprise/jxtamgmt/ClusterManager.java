@@ -43,11 +43,14 @@ import net.jxta.document.StructuredDocument;
 import net.jxta.document.StructuredDocumentFactory;
 import net.jxta.document.XMLDocument;
 import net.jxta.endpoint.ByteArrayMessageElement;
+import net.jxta.endpoint.EndpointAddress;
 import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.TextDocumentMessageElement;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.ID;
+import net.jxta.impl.endpoint.tcp.TcpTransport;
+import net.jxta.impl.pipe.BlockingWireOutputPipe;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
 import net.jxta.pipe.InputPipe;
@@ -57,16 +60,14 @@ import net.jxta.pipe.PipeMsgListener;
 import net.jxta.pipe.PipeService;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
-import net.jxta.impl.pipe.BlockingWireOutputPipe;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -444,9 +445,16 @@ public class ClusterManager implements PipeMsgListener {
                         output = new BlockingWireOutputPipe(getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
                     }
                     if (output == null) {
-                        // Unicast datagram
-                        // create a op pipe to the destination peer
-                        output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                        if (route == null) {
+                            // try to obtain the route again
+                            route = getCachedRoute((PeerID) peerid);
+                            output = new BlockingWireOutputPipe(getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
+                        }
+                        if (output == null) {
+                            // Unicast datagram
+                            // create a op pipe to the destination peer
+                            output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                        }
                     }
                     pipeCache.put(peerid, output);
                 } else {
@@ -580,10 +588,10 @@ public class ClusterManager implements PipeMsgListener {
         final SystemAdvertisement sysAdv = new SystemAdvertisement();
         sysAdv.setID(group.getPeerID());
         sysAdv.setName(name);
-        try {
-            sysAdv.setIP(InetAddress.getLocalHost().getHostAddress());
-        } catch (UnknownHostException ignored) {
-            LOG.log(Level.WARNING, "Failed to obtain IP address :" + ignored);
+        TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
+        Iterator it = tcpTransport.getPublicAddresses();
+        while (it.hasNext()) {
+            sysAdv.addEndpointAddress((EndpointAddress)it.next());
         }
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));
