@@ -137,7 +137,7 @@ public class NetworkManager implements RendezvousListener {
      * addressing.  Therefore it is key that these names are chosen carefully to avoid collision.
      *
      * @param groupName    Group Name, a logical group name that this peer is part of.
-     * @param name Instance Name, a logical name for this peer.
+     * @param instanceName Instance Name, a logical name for this peer.
      * @param properties   a Properties object that would contain every configuration
      *                     element that the employing application wants to specify values for. The
      *                     keys in this object must correspond to the constants specified in the
