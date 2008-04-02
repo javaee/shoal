@@ -55,7 +55,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A HealthAdvertisement is described as follows
@@ -105,6 +104,7 @@ public class HealthMessage {
      * Construct from a StructuredDocument
      *
      * @param root root element
+     * @param hmSeqID health message sequence ID
      */
     public HealthMessage(final Element root, long hmSeqID) {
         final TextElement doc = (TextElement) root;
@@ -169,6 +169,7 @@ public class HealthMessage {
      * Process an individual element from the document.
      *
      * @param doc TextElement to iitialize object from
+     * @param hmSeqID health message sequence ID
      */
     private void initialize(final TextElement doc, long hmSeqID) {
 
@@ -302,6 +303,7 @@ public class HealthMessage {
          *
          * @param adv   SystemAdvertisement
          * @param state state value
+         * @param seqID health message sequence ID
          */
         public Entry(final SystemAdvertisement adv, final String state, long seqID) {
             this.state = state;
@@ -319,7 +321,7 @@ public class HealthMessage {
          * {@inheritDoc}
          */
         public boolean equals(final Object obj) {
-            return this == obj || obj != null && id.equals(obj);
+            return obj instanceof Entry && this == obj || obj != null && id.equals(obj);
         }
 
         /**
