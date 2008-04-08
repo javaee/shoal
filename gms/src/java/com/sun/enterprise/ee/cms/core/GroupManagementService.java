@@ -267,6 +267,10 @@ public interface GroupManagementService {
      * GMS clients in all other group members that are interested in knowing
      * when another member is ready to start processing operations, can subscribe
      * to the event JoinedAndReadyEvent and be given this JoinedAndReadyNotificationSignal.
+     * Currently this API can only be used by cluster members which are of the type CORE and
+     * not the SPECTATOR members. The reason being is that Shoal makes the assumption that
+     * only the CORE members will act as servers for serving the client requests and not
+     * the SPECTATOR members
      * @param groupName name of the group
      */
      void reportJoinedAndReadyState(String groupName);

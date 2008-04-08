@@ -37,6 +37,7 @@
 package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
@@ -155,6 +156,8 @@ public class GroupCommunicationProviderImpl implements
             clusterManager.send(null, gmsMessage);                  
         } catch (IOException e) {
             logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[] {e});
+        } catch (MemberNotInViewException e) {
+            //ignore since this is a broadcast
         }
     }
 
@@ -186,9 +189,9 @@ public class GroupCommunicationProviderImpl implements
      */
     public void sendMessage(final String targetMemberIdentityToken,
                             final Serializable message,
-                            final boolean synchronous) throws GMSException {
+                            final boolean synchronous) throws GMSException, MemberNotInViewException {
         try {
-            if(targetMemberIdentityToken == null){
+            if (targetMemberIdentityToken == null) {
                 if (synchronous) {
                     /*
                     Use point-to-point communication with all instances instead of the group-wide (udp) based message.
@@ -196,36 +199,45 @@ public class GroupCommunicationProviderImpl implements
                     Ideally, when a message is sent to the group via point-to-point,
                     the message to each member should be on a separate thread to get concurrency.
                      */
-                    List<String> currentMembers = getGMSContext().getGroupHandle().getAllCurrentMembers();
-                    // getMembers();
+                    List<String> currentMembers = clusterManager.getClusterViewManager().
+                                                    getLocalView().getPeerNamesInView();                   
+
                     for (String currentMember : currentMembers) {
                         final ID id = clusterManager.getID(currentMember);
 
                         //TODO : make this multi-threaded via Callable
-                       /* final CallableMessageSend task = getInstanceOfCallableMessageSend(id);
+                        /* final CallableMessageSend task = getInstanceOfCallableMessageSend(id);
                         logger.fine("Message is = " + message.toString());
                         task.setMessage(message);
                         msgSendPool.submit(task);
                         */
-                        logger.log(Level.FINE, "sending message to member: " + currentMember);                   
+                        logger.log(Level.FINE, "sending message to member: " + currentMember);
                         clusterManager.send(id, message);
                     }
                 } else {
                     clusterManager.send(null, message);//sends to whole group
                 }
-            }
-            else {
+            } else {
                 final ID id = clusterManager.getID(targetMemberIdentityToken);
-                logger.log(Level.FINER, "sending message to PeerID: " + id);
-                clusterManager.send(id, message);
+                if (clusterManager.getClusterViewManager().containsKey(id)) {
+                    logger.log(Level.FINER, "sending message to PeerID: " + id);
+                    clusterManager.send(id, message);
+                } else {
+                    logger.log(Level.FINE, "message not sent to  " + targetMemberIdentityToken +
+                            " since it is not in the View");
+                    throw new MemberNotInViewException("Member " + targetMemberIdentityToken +
+                            " is not in the View anymore. Hence not performing sendMessage operation");
+                }
             }
         } catch (IOException e) {
+            if (logger.isLoggable(Level.FINE)) {
+                e.printStackTrace();
+            }
             throw new GMSException(e);
-
         }
     }
 
-    public void sendMessage(Serializable message) throws GMSException {
+    public void sendMessage(Serializable message) throws GMSException, MemberNotInViewException {
         sendMessage(null, message, false);
     }
 

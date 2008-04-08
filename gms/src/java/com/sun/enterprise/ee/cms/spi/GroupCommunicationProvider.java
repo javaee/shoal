@@ -37,6 +37,7 @@
 package com.sun.enterprise.ee.cms.spi;
 
  import com.sun.enterprise.ee.cms.core.GMSException;
+ import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 
  import java.io.Serializable;
  import java.util.List;
@@ -115,7 +116,7 @@ public interface GroupCommunicationProvider {
      */
     void sendMessage (String targetMemberIdentityToken, Serializable message,
                       boolean synchronous )
-            throws GMSException;
+            throws GMSException, MemberNotInViewException;
 
     /**
      * Sends a message to the entire group using the underlying group communication
@@ -125,7 +126,7 @@ public interface GroupCommunicationProvider {
      * appropriately
      * @throws GMSException Underlying exception is wrapped in a GMSException
      */
-    void sendMessage (Serializable message) throws GMSException;
+    void sendMessage (Serializable message) throws GMSException, MemberNotInViewException;
 
     /**
      * returns a list of members that are currently alive in the group.

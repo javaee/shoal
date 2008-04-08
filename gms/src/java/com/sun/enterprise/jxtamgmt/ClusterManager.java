@@ -37,6 +37,7 @@
 package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
+import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocument;
@@ -418,6 +419,14 @@ public class ClusterManager implements PipeMsgListener {
     }
 
     /**
+     * in the event of a failure or planned shutdown, remove the
+     * pipe from the pipeCache
+     */
+    public void removePipeFromCache(ID token) {
+        pipeCache.remove(token);
+    }   
+
+    /**
      * Send a message to a specific node or the group. In the case where the id
      * is null the message is sent to the entire group
      *
@@ -425,7 +434,8 @@ public class ClusterManager implements PipeMsgListener {
      * @param msg    the message to send
      * @throws java.io.IOException if an io error occurs
      */
-    public void send(final ID peerid, final Serializable msg) throws IOException {
+    public void send(final ID peerid, final Serializable msg) throws IOException, MemberNotInViewException {
+
         if (!stopping) {
             final Message message = new Message();
             message.addMessageElement(NAMESPACE, sysAdvElement);
@@ -437,34 +447,71 @@ public class ClusterManager implements PipeMsgListener {
             message.addMessageElement(NAMESPACE, bame);
 
             if (peerid != null) {
-                OutputPipe output = null;
-                if (!pipeCache.containsKey(peerid)) {
+                //check if the peerid is part of the cluster view
+                if (getClusterViewManager().containsKey(peerid)) {
+                    LOG.fine("ClusterManager.send : Cluster View contains " + peerid.toString());
+                    OutputPipe output = null;
+                    if (!pipeCache.containsKey(peerid)) {
 
-                    RouteAdvertisement route = getCachedRoute((PeerID) peerid);
-                    if (route != null) {
-                        output = new BlockingWireOutputPipe(getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
-                    }
-                    if (output == null) {
-                        if (route == null) {
-                            // try to obtain the route again
-                            route = getCachedRoute((PeerID) peerid);
+                        RouteAdvertisement route = getCachedRoute((PeerID) peerid);
+                        if (route != null) {
+                            LOG.fine("ClusterManager.send : route is not null. Got in first try.");
                             output = new BlockingWireOutputPipe(getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
+                            if (output != null) {
+                                LOG.fine("ClusterManager.send : output got created in first try : " + output.getName());
+                            }
+                        } else {
+                            LOG.fine("ClusterManager.send : route is null in first try. output not created yet.");
                         }
                         if (output == null) {
-                            // Unicast datagram
-                            // create a op pipe to the destination peer
-                            output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                             LOG.fine("ClusterManager.send : output is null in first try");
+                            if (route == null) {
+                                // try to obtain the route again
+                                route = getCachedRoute((PeerID) peerid);
+                                if (route == null) {
+                                    LOG.fine("ClusterManager.send : route is null in second try");
+                                    //listRoutes((PeerID) peerid);
+                                } else {
+                                    LOG.fine("ClusterManager.send : route is not null. Got in second try.");
+                                }
+                            } else {
+                               LOG.fine("ClusterManager.send : route is not null. Got in first try.");
+                            }
+                            //closing the above if block here since route may not be null.
+                            output = new BlockingWireOutputPipe(getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
+                            if (output != null) {
+                                LOG.fine("ClusterManager.send : output got created in second try : " + output.getName());
+                            } else {
+                                LOG.fine("ClusterManager.send : output is null in second try");
+                            }
+
+                            if (output == null) {
+                                // Unicast datagram
+                                // create a op pipe to the destination peer
+                                output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                                LOG.fine("ClusterManager.send : adding output to cache without route creation : " + output.getName());
+                            }
                         }
-                    }
-                    pipeCache.put(peerid, output);
-                } else {
-                    output = pipeCache.get(peerid);
-                    if (output.isClosed()) {
-                        output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
                         pipeCache.put(peerid, output);
+                    } else {
+                        LOG.fine("ClusterManager.send : getting the output from pipeCache.");
+                        output = pipeCache.get(peerid);
+                        if (output.isClosed()) {
+                            output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                            pipeCache.put(peerid, output);
+                        }
+
                     }
+
+                    if (output == null) {
+                        LOG.warning("ClusterManager.send : output is null. Cannot send message.");
+                    }
+                    output.send(message);
+                } else {
+                    LOG.fine("ClusterManager.send : Cluster View does not contain " + peerid.toString() + " hence will not send message.");
+                    throw new MemberNotInViewException("Member " + peerid +
+                            " is not in the View anymore. Hence not performing sendMessage operation");
                 }
-                output.send(message);
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
@@ -473,7 +520,6 @@ public class ClusterManager implements PipeMsgListener {
             //JxtaUtil.printMessageStats(message, true);
         }
     }
-
 
     /**
      * Returns a pipe advertisement for Cluster messaging of propagate type
@@ -669,6 +715,19 @@ public class ClusterManager implements PipeMsgListener {
      */
     public RouteAdvertisement getCachedRoute(PeerID peerid) {
         return routeCache.get(peerid);
+    }
+
+    /**
+     * in the event of a failure or planned shutdown, remove the
+     * route from the routeCache
+     */
+    void removeRouteFromCache(ID token) {
+        routeCache.remove(token);
+    }
+
+    void clearAllCaches() {
+        routeCache.clear();
+        pipeCache.clear();
     }
 
 }

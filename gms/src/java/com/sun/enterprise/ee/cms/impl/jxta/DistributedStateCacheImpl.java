@@ -39,10 +39,10 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 import com.sun.enterprise.ee.cms.core.DistributedStateCache;
 import com.sun.enterprise.ee.cms.core.GMSCacheable;
 import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 import com.sun.enterprise.ee.cms.impl.common.DSCMessage;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
-import com.sun.enterprise.ee.cms.spi.MemberStates;
 
 import java.io.Serializable;
 import java.util.*;
@@ -50,7 +50,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import static java.util.logging.Level.FINER;
 import java.util.logging.Logger;
-
 
 /**
  * Messaging based implementation of a shared distributed state cache(DSC).
@@ -203,10 +202,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     }
 
     private void addToRemoteCache(final GMSCacheable cKey,
-                                  final Object state)
-            throws GMSException {
-        final DSCMessage msg = new DSCMessage(cKey, state,
-                DSCMessage.OPERATION.ADD.toString());
+                                  final Object state) throws GMSException {
+        final DSCMessage msg = new DSCMessage(cKey, state, DSCMessage.OPERATION.ADD.toString());
 
         sendMessage(null, msg);
     }
@@ -215,9 +212,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
      * removes an entry from local cache and calls remote members to remove
      * the entry from their cache
      */
-    public void removeFromCache(
-            final String componentName, final String memberTokenId,
-            final Serializable key) throws GMSException {
+    public void removeFromCache( final String componentName, final String memberTokenId, final Serializable key) throws GMSException {
         final GMSCacheable cKey = createCompositeKey(componentName, memberTokenId,
                 key);
         removeFromLocalCache(cKey);
@@ -263,47 +258,51 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         return new ConcurrentHashMap<GMSCacheable, Object>(cache);
     }
 
-    public Map<Serializable, Serializable> getFromCacheForPattern(
-            final String componentName,
-            final String memberToken) {
-        final Map<Serializable, Serializable> retval =
-                new Hashtable<Serializable, Serializable>();
-        if (componentName == null || memberToken == null) {
-            return retval;
-        }
+    private Map<Serializable, Serializable> getEntryFromCacheForPattern(final String componentName, final String memberToken) {
+        Map<Serializable, Serializable> retval = new Hashtable<Serializable, Serializable>();
         for (GMSCacheable c : cache.keySet()) {
             if (componentName.equals(c.getComponentName())) {
                 if (memberToken.equals(c.getMemberTokenId())) {
-                    retval.put((Serializable) c.getKey(),
-                            (Serializable) cache.get(c));
+                    retval.put((Serializable) c.getKey(), (Serializable) cache.get(c));
                 }
             }
         }
+        return retval;
+    }
 
-        if(!retval.isEmpty()){
+    public Map<Serializable, Serializable> getFromCacheForPattern(final String componentName, final String memberToken) {
+
+        logger.fine("DSCImpl.getCacheFromPattern() for " + memberToken);
+        final Map<Serializable, Serializable> retval = new Hashtable<Serializable, Serializable>();
+        if (componentName == null || memberToken == null) {
             return retval;
         }
-        else{
-            if(!memberToken.equals(getGMSContext().getServerIdentityToken())){
+        retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
+
+        if (!retval.isEmpty()) {
+            return retval;
+        } else {
+            if (!getGMSContext().isShuttingDown() &&
+                    !memberToken.equals(getGMSContext().getServerIdentityToken()) &&
+                    getGMSContext().getGroupHandle().getAllCurrentMembers().contains(memberToken)) {
                 ConcurrentHashMap<GMSCacheable, Object>
                         temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
                 DSCMessage msg = new DSCMessage(temp,
                         DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
-                try{
+                try {
                     sendMessage(memberToken, msg);
                     Thread.sleep(3000);
-                    retval.putAll( getFromCacheForPattern(componentName, memberToken));
+                    retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
                 } catch (GMSException e) {
-                    logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...."+e) ;
+                    logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...." + e);                   
                 } catch (InterruptedException e) {
                     //ignore
                 }
             }
         }
-        if(retval.isEmpty()){
-           logger.finer("retVal is empty"); 
+        if (retval.isEmpty()) {
+            logger.finer("retVal is empty");
         }
-        
         return retval;
     }
 
@@ -425,13 +424,9 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         final ConcurrentHashMap<GMSCacheable, Object> temp;
         temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
 
-        final DSCMessage msg = new DSCMessage(temp,
-                DSCMessage.OPERATION.ADDALLLOCAL.toString(),
-                isCoordinator);
+        final DSCMessage msg = new DSCMessage(temp, DSCMessage.OPERATION.ADDALLLOCAL.toString(), isCoordinator);
         if(!memberToken.equals(getGMSContext().getServerIdentityToken())){
-            logger.log(Level.FINER, "Sending sync message from DistributedStateCache " +
-
-                    "to member "+memberToken);
+            logger.log(Level.FINER, "Sending sync message from DistributedStateCache " + "to member " + memberToken);
             sendMessage(memberToken, msg);
         }
         if (isCoordinator) {
@@ -459,7 +454,12 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     }
 
     private void sendMessage(final String member, final DSCMessage msg) throws GMSException {
-        getGMSContext().getGroupCommunicationProvider().sendMessage(member, msg, true);
+        try {
+            getGMSContext().getGroupCommunicationProvider().sendMessage(member, msg, true);
+        } catch (MemberNotInViewException e) {
+            logger.log(Level.WARNING, "Member " + member +
+                    " is not in the view anymore. Hence not performing sendMessage operation");
+        }
     }
 
     public boolean isFirstSyncDone() {

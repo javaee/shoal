@@ -101,7 +101,11 @@ public final class GroupHandleImpl implements GroupHandle {
      */
     public void sendMessage(final String componentName, final byte[] message) throws GMSException {
         final GMSMessage gMsg = new GMSMessage(componentName, message, groupName, getGMSContext().getStartTime());
-        getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, true);
+        try {
+            getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, true);
+        } catch (MemberNotInViewException e) {
+            logger.warning("GroupHandleImpl.sendMessage : Could not send message : " + e.getMessage());
+        }
     }
 
     /**
@@ -123,19 +127,31 @@ public final class GroupHandleImpl implements GroupHandle {
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message,
                 groupName,
                 getGMSContext().getStartTime());
-        getGMSContext().getGroupCommunicationProvider()
+        try {
+            getGMSContext().getGroupCommunicationProvider()
                 .sendMessage(targetServerToken, gMsg, false);
+        } catch (MemberNotInViewException e) {
+            logger.warning("GroupHandleImpl.sendMessage : Could not send message : " + e.getMessage());
+        }
 
     }
 
     public void sendMessage(List<String> targetServerTokens, String targetComponentName, byte[] message) throws GMSException {
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message, groupName, getGMSContext().getStartTime());
         if(targetServerTokens.isEmpty()){
-            getGMSContext().getGroupCommunicationProvider().sendMessage(null,gMsg, true  );
+            try {
+                getGMSContext().getGroupCommunicationProvider().sendMessage(null,gMsg, true  );
+            } catch (MemberNotInViewException e) {
+                logger.warning("GroupHandleImpl.sendMessage : Could not send message : " + e.getMessage());
+            }
         }
         else {
             for(String token : targetServerTokens){
-                getGMSContext().getGroupCommunicationProvider().sendMessage(token, gMsg, false  );    
+                try {
+                    getGMSContext().getGroupCommunicationProvider().sendMessage(token, gMsg, false  );
+                } catch (MemberNotInViewException e) {
+                    logger.warning("GroupHandleImpl.sendMessage : Could not send message : " + e.getMessage());
+                }
             }
         }
     }

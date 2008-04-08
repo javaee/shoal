@@ -170,6 +170,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     /**
+     * in the event of a failure or planned shutdown, remove the
+     * pipe from the pipeCache
+     */
+    public void removePipeFromCache(ID token) {
+        pipeCache.remove(token);
+    }
+
+    /**
      * Creates a Message containing this node's state
      *
      * @param state member state
@@ -404,6 +412,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         }
                         if (entry.state.equals(states[DEAD])) {
                             LOG.log(Level.FINE, "Peer " + entry.id.toString() + " has failed. Its state is " + entry.state);
+                            cleanAllCaches(entry);
                         }
                     }
                 } 
@@ -448,6 +457,15 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             }
             masterNode.viewChanged(cvEvent);
         }
+        cleanAllCaches(entry);
+    }
+
+    private void cleanAllCaches(HealthMessage.Entry entry) {
+        LOG.fine("HealthMonitor.cleanAllCaches : removing pipes and route from cache..." + entry.id);
+        removePipeFromCache(entry.id);
+        manager.removePipeFromCache(entry.id);
+        manager.removeRouteFromCache(entry.id);
+        masterNode.removePipeFromCache(entry.id);
     }
 
     private Map<PeerID, HealthMessage.Entry> getCacheCopy() {
@@ -614,6 +632,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         inputPipe.close();
         outputPipe.close();
         pipeCache.clear();
+        manager.clearAllCaches();
+        masterNode.clearPipeCache();
     }
 
     private HealthMessage getHealthMessage(final MessageElement msgElement) throws IOException {
@@ -803,6 +823,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             for (HealthMessage.Entry entry : cacheCopy.values()) {              
                 //don't check for isConnected with your own self
                 if (!entry.id.equals(manager.getSystemAdvertisement().getID())) {
+                    LOG.fine("processCacheUpdate : " + entry.adv.getName() + " 's state is " + entry.state);
                     if (entry.state.equals(states[ALIVE])) {
                         //if there is a record, then get the number of
                         //retries performed in an earlier iteration
@@ -932,6 +953,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 masterNode.resetMaster();
                 masterNode.appointMasterNode();
             }
+            cleanAllCaches(entry);
         }
     }
 

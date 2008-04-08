@@ -190,6 +190,19 @@ class MasterNode implements PipeMsgListener, Runnable {
     }
 
     /**
+     * in the event of a failure or planned shutdown, remove the
+     * pipe from the pipeCache
+     */
+     
+    void removePipeFromCache(ID token) {
+        pipeCache.remove(token);
+    }
+
+    void clearPipeCache() {
+        pipeCache.clear();
+    }
+
+    /**
      * returns the cumulative MasterNode timeout
      *
      * @return timeout
