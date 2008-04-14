@@ -388,7 +388,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 LOG.log(Level.FINEST, "Putting into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id);
                 cache.put(entry.id, entry);
-                if (!manager.getClusterViewManager().containsKey(entry.id)) {
+                if (!manager.getClusterViewManager().containsKey(entry.id) &&
+                        (!entry.state.equals(states[CLUSTERSTOPPING]) &&
+                                !entry.state.equals(states[PEERSTOPPING]) &&
+                                !entry.state.equals(states[STOPPED]) &&
+                                !entry.state.equals(states[DEAD]))) {
                     try {
                         masterNode.probeNode(entry);
                     } catch (IOException e) {

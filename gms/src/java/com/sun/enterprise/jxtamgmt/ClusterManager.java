@@ -309,9 +309,9 @@ public class ClusterManager implements PipeMsgListener {
      * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
      */
     public synchronized void stop(final boolean isClusterShutdown) {
-        if (!stopped) {
-            healthMonitor.stop(isClusterShutdown);
+        if (!stopped) {           
             stopping = true;
+            healthMonitor.stop(isClusterShutdown);
             outputPipe.close();
             inputPipe.close();
             pipeCache.clear();
