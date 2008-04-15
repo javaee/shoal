@@ -139,18 +139,7 @@ public class LWRMulticast implements PipeMsgListener {
     public LWRMulticast(ClusterManager manager,
                         PipeAdvertisement pipeAd,
                         PipeMsgListener msgListener) throws IOException {
-        super();
         joinGroup(manager, pipeAd, msgListener);
-        MessageTransport endpointRouter = (manager.getNetPeerGroup().getEndpointService()).getMessageTransport("jxta");
-        if (endpointRouter != null) {
-            routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
-            RouteAdvertisement route = routeControl.getMyLocalRoute();
-            if (route != null) {
-                routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
-                        (XMLDocument) route.getDocument(MimeMediaType.XMLUTF8), null);
-            }
-        }
-
     }
 
     /**
@@ -161,9 +150,8 @@ public class LWRMulticast implements PipeMsgListener {
      * @param msgListener The application message listener
      * @throws IOException if an io error occurs
      */
-    public void joinGroup(ClusterManager manager,
-                          PipeAdvertisement pipeAd,
-                          PipeMsgListener msgListener) throws IOException {
+    public void joinGroup(ClusterManager manager, PipeAdvertisement pipeAd, PipeMsgListener msgListener) throws IOException {
+
         if (pipeAd.getType() != null && !pipeAd.getType().equals(PipeService.PropagateType)) {
             throw new IOException("Only propagate pipe advertisements are supported");
         }
@@ -174,13 +162,23 @@ public class LWRMulticast implements PipeMsgListener {
             throw new IllegalArgumentException("msgListener can not be null");
         }
         this.manager = manager;
+        this.localPeerID = manager.getNetPeerGroup().getPeerID();
+        srcElement = new StringMessageElement(SRCIDTAG, localPeerID.toString(), null);
+
+        MessageTransport endpointRouter = (manager.getNetPeerGroup().getEndpointService()).getMessageTransport("jxta");
+        if (endpointRouter != null) {
+            routeControl = (RouteControl) endpointRouter.transportControl(EndpointRouter.GET_ROUTE_CONTROL, null);
+            RouteAdvertisement route = routeControl.getMyLocalRoute();
+            if (route != null) {
+                routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
+                        (XMLDocument) route.getDocument(MimeMediaType.XMLUTF8), null);
+            }
+        }
         this.msgListener = msgListener;
         this.pipeAdv = pipeAd;
         this.pipeSvc = manager.getNetPeerGroup().getPipeService();
         this.in = pipeSvc.createInputPipe(pipeAd, this);
         outputPipe = pipeSvc.createOutputPipe(pipeAd, 1);
-        localPeerID = manager.getNetPeerGroup().getPeerID();
-        srcElement = new StringMessageElement(SRCIDTAG, localPeerID.toString(), null);
         LOG.log(Level.FINEST, "Statring LWRMulticast on pipe id :" + pipeAdv.getID());
         bound = true;
     }
@@ -220,7 +218,7 @@ public class LWRMulticast implements PipeMsgListener {
 
         MessageElement element;
         PeerID id = getSource(message);
-        if (id.equals(localPeerID)) {
+        if (id != null && id.equals(localPeerID)) {
             //loop back
             return;
         }
