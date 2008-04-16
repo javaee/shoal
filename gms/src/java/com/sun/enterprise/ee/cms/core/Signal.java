@@ -44,31 +44,33 @@ import java.util.Map;
  *
  * Subtypes of Signal will define operations specific to their Signal
  * functionalities i.e specific group events or a message event.
- * 
+ *
  * <code>Action</code>s consume <code>Signal</code>s.
  *
  * Each Signal is delivered on its own thread.
- * 
+ *
  * @author Shreedhar Ganapathy
- * Date: November 07, 2003
+ *         Date: November 07, 2003
  * @version $Revision$
  */
 public interface Signal {
     /**
-     * Signal is acquired prior to processing of the signal 
+     * Signal is acquired prior to processing of the signal
      * to protect group resources being
      * acquired from being affected by a race condition
      * Signal must be mandatorily acquired before any processing for recovery
      * operations.
-     * @throws  SignalAcquireException
+     *
+     * @throws SignalAcquireException
      */
     void acquire() throws SignalAcquireException;
 
     /**
-     * Signal is released after processing of the signal to bring the 
+     * Signal is released after processing of the signal to bring the
      * group resources to a state of availability
      * Signal should be madatorily released after recovery process is
      * completed.
+     *
      * @throws SignalReleaseException
      */
     void release() throws SignalReleaseException;
@@ -83,7 +85,8 @@ public interface Signal {
      * In the case of a JoinNotificationSignal or GracefulShutdownSignal, the
      * member token would be the member who joined or is being gracefully
      * shutdown, respectively.
-     * @return   returns the identity token of the member
+     *
+     * @return returns the identity token of the member
      */
     String getMemberToken();
 
@@ -91,19 +94,22 @@ public interface Signal {
      * returns the details of the member who caused this Signal to be generated
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
-     * @return Map  <Serializable, Serializable> 
+     *
+     * @return Map  <Serializable, Serializable>
      */
-    public Map<Serializable, Serializable> getMemberDetails ( );
+    public Map<Serializable, Serializable> getMemberDetails();
 
     /**
      * returns the group to which the member involved in the Signal belonged to
+     *
      * @return String
      */
-    public String getGroupName( );
+    public String getGroupName();
 
     /**
      * returns the start time of the member involved in this Signal.
-     * @return  long - time stamp of when this member started
+     *
+     * @return long - time stamp of when this member started
      */
-    long getStartTime ();
+    long getStartTime();
 }
