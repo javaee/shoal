@@ -199,11 +199,11 @@ public class GroupCommunicationProviderImpl implements
                     Ideally, when a message is sent to the group via point-to-point,
                     the message to each member should be on a separate thread to get concurrency.
                      */
-                    List<String> currentMembers = clusterManager.getClusterViewManager().
-                                                    getLocalView().getPeerNamesInView();                   
+                    List<SystemAdvertisement> currentMemberAdvs = clusterManager.getClusterViewManager().
+                                                    getLocalView().getView();
 
-                    for (String currentMember : currentMembers) {
-                        final ID id = clusterManager.getID(currentMember);
+                    for (SystemAdvertisement currentMemberAdv : currentMemberAdvs) {
+                        final ID id = currentMemberAdv.getID();
 
                         //TODO : make this multi-threaded via Callable
                         /* final CallableMessageSend task = getInstanceOfCallableMessageSend(id);
@@ -211,8 +211,12 @@ public class GroupCommunicationProviderImpl implements
                         task.setMessage(message);
                         msgSendPool.submit(task);
                         */
-                        logger.log(Level.FINE, "sending message to member: " + currentMember);
-                        clusterManager.send(id, message);
+                        logger.log(Level.FINE, "sending message to member: " + currentMemberAdv.getName());
+                        try {
+                            clusterManager.send(id, message);
+                        } catch (MemberNotInViewException e) {
+                            logger.warning("MemberNotInViewException : " + e.toString());
+                        }
                     }
                 } else {
                     clusterManager.send(null, message);//sends to whole group
@@ -220,8 +224,8 @@ public class GroupCommunicationProviderImpl implements
             } else {
                 final ID id = clusterManager.getID(targetMemberIdentityToken);
                 if (clusterManager.getClusterViewManager().containsKey(id)) {
-                    logger.log(Level.FINER, "sending message to PeerID: " + id);
-                    clusterManager.send(id, message);
+                    logger.log(Level.FINE, "sending message to PeerID: " + id);
+                    clusterManager.send(id, message);                    
                 } else {
                     logger.log(Level.FINE, "message not sent to  " + targetMemberIdentityToken +
                             " since it is not in the View");
