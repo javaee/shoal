@@ -77,7 +77,7 @@ public class GroupCommunicationProviderImpl implements
     private GMSContext ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final ExecutorService msgSendPool;
-    private  Map<ID, CallableMessageSend> instanceCache = new Hashtable<ID, CallableMessageSend>();
+    private Map<ID, CallableMessageSend> instanceCache = new Hashtable<ID, CallableMessageSend>();
 
     public GroupCommunicationProviderImpl(final String groupName) {
         this.groupName = groupName;
@@ -96,7 +96,7 @@ public class GroupCommunicationProviderImpl implements
                                  final ClusterView clusterView) {
         if (!getGMSContext().isShuttingDown()) {
             logger.log(Level.FINER, "Received Cluster View Event..." + clusterViewEvent.getEvent().toString() +
-                   " from " + clusterViewEvent.getAdvertisement().getName());
+                    " from " + clusterViewEvent.getAdvertisement().getName());
             logger.log(Level.FINER, clusterView.getView().toString());
             final EventPacket ePacket = new EventPacket(clusterViewEvent.getEvent(),
                     clusterViewEvent.getAdvertisement(),
@@ -108,7 +108,7 @@ public class GroupCommunicationProviderImpl implements
             } catch (InterruptedException e) {
                 //TODO: Examine all InterruptedException and thread.interrupt cases for better logging.
                 logger.log(Level.WARNING, "interruptedexception.occurred",
-                        new Object[] {e.getLocalizedMessage()});
+                        new Object[]{e.getLocalizedMessage()});
             }
         }
     }
@@ -120,9 +120,9 @@ public class GroupCommunicationProviderImpl implements
      * by the employing application. The valid property keys must be specified
      * in a datastructure that is available to the implementation and to GMS.
      *
-     * @param memberName member name
-     * @param groupName group name
-     * @param identityMap valid configuration properties
+     * @param memberName       member name
+     * @param groupName        group name
+     * @param identityMap      valid configuration properties
      * @param configProperties configuration properties
      */
     public void initializeGroupCommunicationProvider(final String memberName,
@@ -153,9 +153,9 @@ public class GroupCommunicationProviderImpl implements
 
     public void announceClusterShutdown(final GMSMessage gmsMessage) {
         try {
-            clusterManager.send(null, gmsMessage);                  
+            clusterManager.send(null, gmsMessage);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[] {e});
+            logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[]{e});
         } catch (MemberNotInViewException e) {
             //ignore since this is a broadcast
         }
@@ -175,17 +175,18 @@ public class GroupCommunicationProviderImpl implements
      * GMSMessage object.
      *
      * @param targetMemberIdentityToken The member token string that identifies
-     *                      the target member to which this message is addressed.
-     *                      The implementation is expected to provide a mapping
-     *                      the member token to the GCP's addressing semantics.
-     *                      If null, the entire group would receive this message.
-     * @param message       a Serializable object that wraps the user specified
-     *                      message in order to allow remote GMS instances to
-     *                      unpack this message appropriately.
-     * @param synchronous   setting true here will call the underlying GCP's api
-     *                      that corresponds to a synchronous message, if
-     *                      available.
+     *                                  the target member to which this message is addressed.
+     *                                  The implementation is expected to provide a mapping
+     *                                  the member token to the GCP's addressing semantics.
+     *                                  If null, the entire group would receive this message.
+     * @param message                   a Serializable object that wraps the user specified
+     *                                  message in order to allow remote GMS instances to
+     *                                  unpack this message appropriately.
+     * @param synchronous               setting true here will call the underlying GCP's api
+     *                                  that corresponds to a synchronous message, if
+     *                                  available.
      * @throws com.sun.enterprise.ee.cms.core.GMSException
+     *
      */
     public void sendMessage(final String targetMemberIdentityToken,
                             final Serializable message,
@@ -200,7 +201,7 @@ public class GroupCommunicationProviderImpl implements
                     the message to each member should be on a separate thread to get concurrency.
                      */
                     List<SystemAdvertisement> currentMemberAdvs = clusterManager.getClusterViewManager().
-                                                    getLocalView().getView();
+                            getLocalView().getView();
 
                     for (SystemAdvertisement currentMemberAdv : currentMemberAdvs) {
                         final ID id = currentMemberAdv.getID();
@@ -225,7 +226,7 @@ public class GroupCommunicationProviderImpl implements
                 final ID id = clusterManager.getID(targetMemberIdentityToken);
                 if (clusterManager.getClusterViewManager().containsKey(id)) {
                     logger.log(Level.FINE, "sending message to PeerID: " + id);
-                    clusterManager.send(id, message);                    
+                    clusterManager.send(id, message);
                 } else {
                     logger.log(Level.FINE, "message not sent to  " + targetMemberIdentityToken +
                             " since it is not in the View");
@@ -273,8 +274,7 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public MemberStates getMemberState(final String memberIdentityToken) {
-        //TODO/FIXME lowercase is always recommended over uppercase for non localized strings
-        return MemberStates.valueOf(clusterManager.getNodeState(clusterManager.getID(memberIdentityToken)).toUpperCase());
+        return MemberStates.valueOf(clusterManager.getNodeState(clusterManager.getID(memberIdentityToken)));
     }
 
     public String getGroupLeader() {
@@ -292,19 +292,20 @@ public class GroupCommunicationProviderImpl implements
                             e.getLocalizedMessage()));
         }
     }
-    
+
     public void assumeGroupLeadership() {
         clusterManager.takeOverMasterRole();
     }
 
     public void setGroupStoppingState() {
-        clusterManager.setClusterStopping();  
+        clusterManager.setClusterStopping();
     }
 
     public void reportJoinedAndReadyState() {
         clusterManager.reportJoinedAndReadyState();
     }
 
+    /*
     private CallableMessageSend getInstanceOfCallableMessageSend(ID id) {
         if (instanceCache.get(id) == null) {
             CallableMessageSend c = new CallableMessageSend(id);
@@ -314,6 +315,7 @@ public class GroupCommunicationProviderImpl implements
             return instanceCache.get(id);
         }
     }
+    */
 
     /**
      * implements Callable.
@@ -324,14 +326,14 @@ public class GroupCommunicationProviderImpl implements
         private ID member;
         private Serializable msg;
 
-           private CallableMessageSend(final ID member) {
+        private CallableMessageSend(final ID member) {
             this.member = member;
         }
 
-         public void setMessage(Serializable msg) {
-             this.msg = null;
-             this.msg = msg;
-         }
+        public void setMessage(Serializable msg) {
+            this.msg = null;
+            this.msg = msg;
+        }
 
         public Object call() throws Exception {
             clusterManager.send(member, msg);
