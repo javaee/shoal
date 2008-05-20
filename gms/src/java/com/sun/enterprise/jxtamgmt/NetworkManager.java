@@ -146,7 +146,11 @@ public class NetworkManager implements RendezvousListener {
     public NetworkManager(final String groupName,
                    final String instanceName,
                    final Map properties) {
-        System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
+        String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
+        if (jxtaLoggingPropertyValue == null) {
+            // Only disable jxta logging when jxta logging has not already been explicitly enabled.
+            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
+        }
         this.groupName = groupName;
         this.instanceName = instanceName;
 
