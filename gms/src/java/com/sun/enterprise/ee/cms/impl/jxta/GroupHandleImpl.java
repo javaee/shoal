@@ -425,7 +425,9 @@ public final class GroupHandleImpl implements GroupHandle {
 
         for (String member : members) {
             MemberStates state = gcp.getMemberState(member);
-            if (state == MemberStates.ALIVE || state == MemberStates.READY) {
+            if (state == MemberStates.ALIVE ||
+                    state == MemberStates.READY ||
+                    state == MemberStates.ALIVEANDREADY) {
                 currentAliveOrReadyMembers.add(member);
             }
         }

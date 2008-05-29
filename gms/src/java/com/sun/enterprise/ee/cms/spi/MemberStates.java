@@ -49,6 +49,7 @@ public enum MemberStates {
     STARTING,
     READY,
     ALIVE,
+    ALIVEANDREADY,
     INDOUBT,
     DEAD,
     CLUSTERSTOPPING,

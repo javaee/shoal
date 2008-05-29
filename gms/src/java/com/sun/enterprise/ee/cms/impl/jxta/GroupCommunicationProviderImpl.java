@@ -274,7 +274,8 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public MemberStates getMemberState(final String memberIdentityToken) {
-        return MemberStates.valueOf(clusterManager.getNodeState(clusterManager.getID(memberIdentityToken)));
+        String state =  (clusterManager.getNodeState(clusterManager.getID(memberIdentityToken))).toUpperCase();
+        return MemberStates.valueOf(state);
     }
 
     public String getGroupLeader() {
