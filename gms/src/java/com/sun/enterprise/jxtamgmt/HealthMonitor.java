@@ -51,10 +51,13 @@ import net.jxta.endpoint.StringMessageElement;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.URI;
 
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes
@@ -135,6 +138,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private static final String memberStateLock = new String("memberStateLock");
     private String memberState;
 
+    private final String hwFailureDetectionthreadLock = new String ("hwFailureDetectionthreadLock");
+    private static final String CONNECTION_REFUSED = "Connection refused";
+    private long failureDetectionTCPTimeout;
+    private int failureDetectionTCPPort;
+    private final ThreadPoolExecutor isConnectedPool;
     //private ShutdownHook shutdownHook;
 
     /**
@@ -148,7 +156,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      *                       retrying an indoubt peer's availability.
      */
     public HealthMonitor(final ClusterManager manager, final long timeout,
-                         final int maxMissedBeats, final long verifyTimeout) {
+                         final int maxMissedBeats, final long verifyTimeout,
+                         final long failureDetectionTCPTimeout,
+                         final int failureDetectionTCPPort) {
         this.timeout = timeout;
         this.maxMissedBeats = maxMissedBeats;
         this.verifyTimeout = verifyTimeout;
@@ -156,6 +166,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         this.masterNode = manager.getMasterNode();
         this.localPeerID = manager.getNetPeerGroup().getPeerID();
         this.pipeService = manager.getNetPeerGroup().getPipeService();
+        this.failureDetectionTCPTimeout = failureDetectionTCPTimeout;
+        this.failureDetectionTCPPort =  failureDetectionTCPPort;
+        isConnectedPool = (ThreadPoolExecutor)Executors.newCachedThreadPool();
+
          try {
             mcast = new LWRMulticast(manager,
                     createPipeAdv(),
@@ -168,6 +182,19 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         //this.shutdownHook = new ShutdownHook();
         //Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
+
+    void fine(String msg, Object[] obj) {
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, msg, obj);
+        }
+    }
+
+    void fine(String msg) {
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, msg);
+        }
+    }
+
 
     /**
      * in the event of a failure or planned shutdown, remove the
@@ -496,7 +523,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         ConcurrentHashMap<PeerID, HealthMessage.Entry> clone = new ConcurrentHashMap<PeerID, HealthMessage.Entry>();
         clone.putAll(cache);
         return clone;
-    }
+    }                                 
 
     /**
      * Reports on the wire the specified state
@@ -799,7 +826,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @author : Shreedhar Ganapathy
      */
     private class InDoubtPeerDetector implements Runnable {
-
+                       
         void start() {
             failureDetectorThread = new Thread(this, "InDoubtPeerDetector Thread");
             LOG.log(Level.FINE, "Starting InDoubtPeerDetector Thread");
@@ -886,7 +913,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
-                if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry.id)) {
+                if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry)) {
                     LOG.log(Level.FINEST, "timeDiff > maxTime");
                     if (canProcessInDoubt(entry)) {
                         LOG.log(Level.FINER, "Designating InDoubtState");
@@ -966,7 +993,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
                 entry = entry1;
                 LOG.log(Level.FINER, "FV: Verifying state of "+entry.adv.getName()+" state = "+entry.state);
-                if(entry.state.equals(states[INDOUBT]) && !isConnected(entry.id)){
+                if(entry.state.equals(states[INDOUBT]) && !isConnected(entry)){
                     LOG.log(Level.FINER, "FV: Assigning and reporting failure ....");
                     assignAndReportFailure(entry);
                 }
@@ -1050,12 +1077,161 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param pid Node ID
      * @return true, if a connection already exists, or a new was sucessfully created
      */
-    public boolean isConnected(PeerID pid) {
+  /*  public boolean isConnected(PeerID pid) {
         //if System property for InetAddress.isReachable() is set, then check for the following:
         //if InetAddress.isReachable() is true, then check for isConnected()
         //if InetAddress.isReachable() is false, then simply return false
         return masterNode.getRouteControl().isConnected(pid, manager.getCachedRoute(pid));
+    }  */
+    public boolean isConnected(HealthMessage.Entry entry) {
+        //TODO : put only during the first heartbeat that comes in for that entry
+        //TODO : cleaup needed if entry goes down
+        //TODO : map  host to uris. and entries to host
+
+        List<URI> list = entry.adv.getURIs();
+        List<Future> array = new ArrayList<Future>();
+
+        for (URI uri : list) {
+            LOG.info("Checking for machine status for network interface : " + uri.toString());
+            CheckConnectionToPeerMachine connectionToPeer = new CheckConnectionToPeerMachine(entry, uri.getHost());
+            Future future = isConnectedPool.submit(connectionToPeer);
+            array.add(future);
+        }
+
+        try {
+            synchronized (hwFailureDetectionthreadLock) {
+                hwFailureDetectionthreadLock.wait(failureDetectionTCPTimeout);
+            }
+        } catch (InterruptedException e) {
+                fine("InterruptedException occurred..." + e.getMessage(), new Object[] {e});
+            }
+
+        //check if the interrupt() call really does interrupt the thread
+        //for (int i = 0; i < array.size(); i++) {
+        for (Future future : array) {
+            try {
+                //if the task has completed after waiting for the
+                //specified timeout
+                if (future.isDone()) {
+                    if (future.get().equals(Boolean.TRUE)) {
+                        fine("Peer Machine for " + entry.adv.getName() + " is up");
+                        boolean connection = masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
+                        fine("routeControl.isConnected() for " + entry.adv.getName() + " is => " + connection);
+                        return connection;
+                    } 
+                } else {
+                    //interrupt the thread which is running the task submitted to it
+                    fine("Going to cancel the future task...");
+                    future.cancel(true);
+                    isConnectedPool.purge();
+                    fine("Finished cancelling and purging the future task...");
+
+                    //cancelling the task is as good as getting false
+                    //underlying socket that got created will still be alive.
+                }
+            } catch (ExecutionException e) {
+                fine("Exception occurred while getting the return value from the Future object " + e.getMessage());
+                return false;
+            } catch (InterruptedException e) {
+                fine("InterruptedException occurred..." + e.getMessage(), new Object[]{e});
+            }
+            return false;
+        }
+        fine("Peer Machine for " + entry.adv.getName() + " is down!");
+        return false;
     }
+
+
+//This is the Callable Object that gets executed by the ExecutorService
+    private class CheckConnectionToPeerMachine implements Callable<Object> {
+        HealthMessage.Entry entry;
+        String address;
+
+        CheckConnectionToPeerMachine(HealthMessage.Entry entry, String address) {
+            this.entry = entry;
+            this.address = address;
+        }
+
+        public Object call() {
+            Socket socket = null;
+            try {
+                fine("Going to create a socket at " + address + "port = " + failureDetectionTCPPort);
+                socket = new Socket(InetAddress.getByName(address), failureDetectionTCPPort);
+                fine("Socket created at " + address + "port = " + failureDetectionTCPPort);
+                synchronized (hwFailureDetectionthreadLock) {
+                    hwFailureDetectionthreadLock.notify();
+                }
+                //for whatever reason a socket got created, close it and return true
+                //i.e. this instance was able to create a socket on that machine so it is up
+                return Boolean.valueOf(true);
+            } catch (IOException e) {
+                fine("IOException occurred while trying to connect to peer " + entry.adv.getName() +
+                        "'s machine : " + e.getMessage(), new Object[] {e});
+                if (e.getMessage().trim().equals(CONNECTION_REFUSED)) {
+                    fine("Going to call notify since the peer machine is up");
+                    synchronized (hwFailureDetectionthreadLock) {
+                        hwFailureDetectionthreadLock.notify();
+                    }
+                    return Boolean.valueOf(true);
+                }
+                return Boolean.valueOf(false);
+            }  finally {
+                if (socket != null) {
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        fine("Could not close the socket due to " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Determines whether a connection to a specific node exists, or one can be created
+     *
+     * @param entry HealthMessage.Entry
+     * le@return true, if a connection already exists, or a new was sucessfully created
+     */
+
+  /*     public boolean isConnected(HealthMessage.Entry entry) {
+        //if System property for InetAddress.isReachable() is set, then check for the following:
+        //if InetAddress.isReachable() is true, then check for isConnected()
+        //if InetAddress.isReachable() is false, then simply return false
+
+        //check if using JDK 5 or 6. isUp() API available only in 6
+        Method method ;
+        try {
+            Class c = Class.forName("java.net.NetworkInterface");
+            method = c.getMethod("isUp", new Class[]{});
+        } catch (NoSuchMethodException nsme) {
+            //we are using JDK version < 6
+            return masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
+        } catch (SecurityException s) {
+            return masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
+        } catch (ClassNotFoundException c) {
+            return masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
+        }
+
+        try {
+            String ipAddr = manager.getSystemAdvertisement().getIP(); //get my IP address
+            LOG.fine("ipAddr in isConnected => " + ipAddr);
+            NetworkInterface ni = NetworkInterface.getByInetAddress(InetAddress.getByName(ipAddr));
+            //if (ni.isUp()) {
+            if (((Boolean) method.invoke(ni, new Object[]{})).booleanValue()) {
+                LOG.fine("The network interface " + ni.getDisplayName() + " is up");
+                return masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
+            } else {
+                LOG.fine("The network interface " + ni.getDisplayName() + " is NOT up");
+                MasterNode.INSTANCE_IN_NETWORK_ISOLATION = true;
+                designateInIsolationState((HealthMessage.Entry) cache.get(manager.getSystemAdvertisement().getID())); //put myself in network isolation category
+                return false;
+            }
+
+        } catch (Exception e) {
+            return false;
+        }
+    }   */
 
 /*
 private void shutdown() {

@@ -53,9 +53,35 @@ public enum ServiceProviderConfigurationKeys {
     FAILURE_VERIFICATION_TIMEOUT,
     DISCOVERY_TIMEOUT,
     LOOPBACK,
-    IS_BOOTSTRAPPING_NODE, //set true if this node will be an initial host for other members to use for discovery
-    VIRTUAL_MULTICAST_URI_LIST, // a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
-    BIND_INTERFACE_ADDRESS;
-                            //used for specifying which interface to use for group communication
-                            //This is the address which Shoal should bind to for communication.
+    /**
+     * set true if this node will be an initial host for other members to use for discovery
+     */
+    IS_BOOTSTRAPPING_NODE,
+   /**
+    *  a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
+    * above 2 properties are used for cross-subnet support
+    */
+    VIRTUAL_MULTICAST_URI_LIST,
+    /**
+     * used for specifying which interface to use for group communication
+     * This is the address which Shoal should bind to for communication.
+    */
+    BIND_INTERFACE_ADDRESS,
+    /**
+     * The default TCP timeout is 10 minutes
+     * Let's take the case of 2 machines A and B hosting instances A and B. machine B goes down due to
+     * the power outage.
+     * instance A on machine A won't know that instance B on machine B is down until 10 minutes have passed.
+     * This can cause severe issues. States of the instances won't be correctly known to other instances.
+     * For this purpose, admin can specify the timeout after which the HealthMonitor.isConnected() thread can
+     * quit checking if the peer's machine is up or not.
+     * By default it is set to 30 seconds.
+     */
+    FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT,
+    /**
+     *  port where a socket can be created to see if the instance's machine is up or down
+     * admin will need make sure that the same port number is available on all the machines that make up the 
+     * cluster, for this purpose.
+     */
+    FAILURE_DETECTION_TCP_RETRANSMIT_PORT
 }

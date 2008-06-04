@@ -55,6 +55,8 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A SystemAdvertisement is described as follows <p/>
@@ -97,6 +99,9 @@ public class SystemAdvertisement extends Advertisement
     private static final String nameTag = "name";
     //Indexable fields
     private static final String[] fields = {idTag, nameTag, hwarchTag};
+
+    private static final Logger LOG = JxtaUtil.getLogger(SystemAdvertisement.class.getName());
+
 
     /**
      * Default Constructor
@@ -326,6 +331,22 @@ public class SystemAdvertisement extends Advertisement
      */
     public List<String> getEndpointAddresses() {
         return endpointAddresses;
+    }
+
+    public List<URI> getURIs() {
+        List<String> endpoints = getEndpointAddresses();
+        List<URI> uriList = new ArrayList <URI> (endpoints.size());
+
+        for (int i = 0; i < endpoints.size(); i++) {
+            try {
+                uriList.add(new URI((String) endpoints.get(i)));
+            } catch (java.net.URISyntaxException e) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "Exception occurred : ", e);
+                }
+            }
+        }
+        return uriList;
     }
 
     /**

@@ -87,6 +87,7 @@ public class ClusterManager implements PipeMsgListener {
     private NetworkManager netManager = null;
     private String groupName = null;
     private String instanceName = null;
+    private String bindInterfaceAddress = null;
     private volatile boolean started = false;
     private volatile boolean stopped = true;
     private boolean loopbackMessages = false;
@@ -157,7 +158,8 @@ public class ClusterManager implements PipeMsgListener {
             LOG.log(Level.WARNING, ioe.getLocalizedMessage());
         }
         NetworkManagerRegistry.add(groupName, netManager);
-        systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap);
+        this.bindInterfaceAddress = (String)props.get(JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString());
+        systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
         this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
         this.masterNode = new MasterNode(this, getDiscoveryTimeout(props), 1);
@@ -165,7 +167,9 @@ public class ClusterManager implements PipeMsgListener {
         this.healthMonitor = new HealthMonitor(this,
                 getFailureDetectionTimeout(props),
                 getFailureDetectionRetries(props),
-                getVerifyFailureTimeout(props));
+                getVerifyFailureTimeout(props),
+                getFailureDetectionTcpRetransmitTimeout(props),
+                getFailureDetectionTcpRetransmitPort(props));
 
         pipeService = netManager.getNetPeerGroup().getPipeService();
         myID = netManager.getNetPeerGroup().getPeerID();
@@ -226,6 +230,28 @@ public class ClusterManager implements PipeMsgListener {
             }
         }
         return failRetry;
+    }
+
+    private long getFailureDetectionTcpRetransmitTimeout(Map props) {
+        long failTcpTimeout = 30000;
+        if (props != null && !props.isEmpty()) {
+            Object ft = props.get(JxtaConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString());
+            if (ft != null) {
+                failTcpTimeout = Long.parseLong((String) ft);
+            }
+        }
+        return failTcpTimeout;
+    }
+
+    private int getFailureDetectionTcpRetransmitPort(Map props) {
+        int failTcpPort = 9000;
+        if (props != null && !props.isEmpty()) {
+            Object ft = props.get(JxtaConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_PORT.toString());
+            if (ft != null) {
+                failTcpPort = Integer.parseInt((String) ft);
+            }
+        }
+        return failTcpPort;
     }
 
     private long getVerifyFailureTimeout(Map props) {
@@ -603,7 +629,7 @@ public class ClusterManager implements PipeMsgListener {
      */
     public SystemAdvertisement getSystemAdvertisement() {
         if (systemAdv == null) {
-            systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap);
+            systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         }
         return systemAdv;
     }
@@ -624,7 +650,8 @@ public class ClusterManager implements PipeMsgListener {
      */
     private static synchronized SystemAdvertisement createSystemAdv(final PeerGroup group,
                                                                     final String name,
-                                                                    final Map<String, String> customTags) {
+                                                                    final Map<String, String> customTags,
+                                                                    final String bindInterfaceAddress) {
         if (group == null) {
             throw new IllegalArgumentException("Group can not be null");
         }
@@ -634,10 +661,14 @@ public class ClusterManager implements PipeMsgListener {
         final SystemAdvertisement sysAdv = new SystemAdvertisement();
         sysAdv.setID(group.getPeerID());
         sysAdv.setName(name);
-        TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
-        Iterator it = tcpTransport.getPublicAddresses();
-        while (it.hasNext()) {
-            sysAdv.addEndpointAddress((EndpointAddress)it.next());
+        if (bindInterfaceAddress != null && !bindInterfaceAddress.equals("")) {
+            sysAdv.addEndpointAddress(new EndpointAddress(bindInterfaceAddress));
+        } else {
+            TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
+            Iterator it = tcpTransport.getPublicAddresses();
+            while (it.hasNext()) {
+                sysAdv.addEndpointAddress((EndpointAddress) it.next());
+            }
         }
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));
