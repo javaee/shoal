@@ -54,34 +54,64 @@ public enum ServiceProviderConfigurationKeys {
     DISCOVERY_TIMEOUT,
     LOOPBACK,
     /**
-     * set true if this node will be an initial host for other members to use for discovery
+     * Represents a key whose value is set to true if this node will be a bootstrapping
+     * host for other members to use for discovery purposes. This is particularly useful
+     * when multicast traffic is not supported in the network or cluster members are located
+     * outside a multicast supported network area.
+     * Setting the value of this to true requires specifying a URI corresponding to this
+     * member process's IP address and port with tcp protocol, as a value in the
+     * VIRTUAL_MULTICAST_URI_LIST property.
+     * See below for the VIRTUAL_MULTICAST_URI_LIST property
      */
     IS_BOOTSTRAPPING_NODE,
+
    /**
-    *  a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
-    * above 2 properties are used for cross-subnet support
+    * This enum represents a key the value of which is a comma separated list of
+    * initial bootstrapping tcp addresses. This address list must be specified on
+    * all members of the cluster through this property.
+    * <p>Typically an address uri would be specified as tcp://<ipaddress>:<port></p>
+    * Specifying this list is helpful particularly when cluster members are located
+    * beyond one subnet or multicast traffic is disabled.
+    * Note: The implementation in Shoal at the moment only uses the first
+    * address in this list and ignores the rest. This is an enhancement that is not
+    * yet completed.
     */
     VIRTUAL_MULTICAST_URI_LIST,
-    /**
-     * used for specifying which interface to use for group communication
-     * This is the address which Shoal should bind to for communication.
+
+   /**
+    * If you wish to specify a particular network interface that should be used
+    * for all group communication messages, use this key and specify an interface
+    * address.
+    * This is the address which Shoal would pass down to a service provider such as
+    * Jxta to bind to for communication.
     */
     BIND_INTERFACE_ADDRESS,
     /**
-     * The default TCP timeout is 10 minutes
-     * Let's take the case of 2 machines A and B hosting instances A and B. machine B goes down due to
-     * the power outage.
-     * instance A on machine A won't know that instance B on machine B is down until 10 minutes have passed.
-     * This can cause severe issues. States of the instances won't be correctly known to other instances.
-     * For this purpose, admin can specify the timeout after which the HealthMonitor.isConnected() thread can
-     * quit checking if the peer's machine is up or not.
-     * By default it is set to 30 seconds.
+     * Maximum time that the health monitoring protocol would wait for a reachability
+     * query to block for a response. After this time expires, the health monitoring
+     * protocol would report a failure based on the fact that an endpoint was unreachable
+     * for this length of time. <br>
+     * Specifying this property is typically helpful in determining hardware and network failures
+     * within a shorter time period than the OS/System configured TCP retransmission timeout.
+     * On many OSs, the TCP retransmission timeout is about 10 minutes.
+     * <p>The default timeout for this property is set to 30 seconds.</p>
+     * <p> As an example, let's take the case of 2 machines A and B hosting
+     * instances X and Y, respectively. Machine B goes down due to a power outage
+     * or a hardware failure.</p>
+     * <p>Under normal circumstances, Instance X on machine A would not know of the unavailability of
+     * Instance X on Machine B until the TCP retransmission timeout (typically 10 minutes) has passed.
+     * By setting this property's value to some lower time threshold, instance X would
+     * determine Y's failure due to Machine B's failure, a lot earlier. </p>
+     * <p>Related to this key is the FAILURE_DETECTION_TCP_RETRANSMIT_PORT. See below</p>
      */
     FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT,
     /**
-     *  port where a socket can be created to see if the instance's machine is up or down
-     * admin will need make sure that the same port number is available on all the machines that make up the 
-     * cluster, for this purpose.
+     * <p> This value of this key is a port common to all cluster members where a socket will be
+     * attempted to be created when a particular instance's configured periodic heartbeats
+     * have been missed for the max retry times. The port number specified should be an available
+     * unoccupied port on all machines involved in the cluster. If the socket creation attempt
+     * blocks for the above-mentioned FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT, then the health
+     * monitoring protocol would return a failure event. </p>
      */
     FAILURE_DETECTION_TCP_RETRANSMIT_PORT
 }
