@@ -628,6 +628,7 @@ public class NetworkManager implements RendezvousListener {
         //specify which interface the group communication should start on
         if (tcpAddress != null && !tcpAddress.equals("")) {
             config.setTcpInterfaceAddress(tcpAddress);
+            config.setMulticastInterface(tcpAddress);
         }
 
         PeerGroup worldPG = wpgf.getInterface();
