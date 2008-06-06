@@ -46,12 +46,49 @@ package com.sun.enterprise.ee.cms.core;
  * @author Shreedhar Ganapathy
  */
 public enum ServiceProviderConfigurationKeys {
+    /**
+     * unreserved valid multicast address in the range 224.0.0.0 through
+     * 239.255.255.255
+     * See http://www.iana.org/assignments/multicast-addresses for more details
+     * on valid addresses.
+     * If not using multicast, do not specify this property
+     */
     MULTICASTADDRESS,
+    /**
+     * A valid port. If not using multicast, do not specify this property
+     */
     MULTICASTPORT,
+    /**
+     * The timeout in milliseconds which will be used to send out periodic
+     * heartbeats. This is also the period that will be used to check for
+     * update to the health state of each member process.
+     */
     FAILURE_DETECTION_TIMEOUT,
+    /**
+     * Number of periodic heartbeats than can be missed in order to be 
+     * determined a suspected failure. Once the retries have been exhausted,
+     * a FailureSuspectedNotificationSignal is sent out to all GMS clients who
+     * have registered for this event.
+     */
     FAILURE_DETECTION_RETRIES,
+    /**
+     * The timeout in milliseconds which will be used to wait and verify that
+     * the suspected member has indeed failed.
+     * Once confirmed failed, a FailureNotificationSignal is sent out to all GMS
+     * clients who have registered for this event.
+     */
     FAILURE_VERIFICATION_TIMEOUT,
+    /**
+     * The timeout in milliseconds that each member would wait to discover a
+     * group leader. If no group leader was found within this timeout, the member
+     * announces itself as the assumed and assigned group leader.
+     */
     DISCOVERY_TIMEOUT,
+    /**
+     * Setting the value of this key to true, would make all application level
+     * messages sent by this member to also be received by this member in
+     * addition to the target members to whom the message was sent.
+     */
     LOOPBACK,
     /**
      * Represents a key whose value is set to true if this node will be a bootstrapping
