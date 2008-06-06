@@ -106,7 +106,8 @@ public enum ServiceProviderConfigurationKeys {
     * This enum represents a key the value of which is a comma separated list of
     * initial bootstrapping tcp addresses. This address list must be specified on
     * all members of the cluster through this property.
-    * <p>Typically an address uri would be specified as tcp://<ipaddress>:<port></p>
+    * <p>Typically an address uri would be specified as tcp://ipaddress:port</p>
+    * The port here could be any available unoccupied port.<br> 
     * Specifying this list is helpful particularly when cluster members are located
     * beyond one subnet or multicast traffic is disabled.
     * Note: The implementation in Shoal at the moment only uses the first
