@@ -529,49 +529,61 @@ class MasterNode implements PipeMsgListener, Runnable {
     boolean processMasterNodeResponse(final Message msg,
                                       final SystemAdvertisement source) throws IOException {
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERNODERESPONSE);
-        if (msgElement != null) {
-            LOG.log(Level.FINE, "Received a MasterNode Response from Name :" + source.getName());
-            processRoute(msg);
-            clusterViewManager.setMaster(source, true);
-            msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
+        if ( msgElement == null )
+            return false;
+        LOG.log(Level.FINE, "Received a MasterNode Response from Name :" + source.getName());
+        processRoute(msg);
+        msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
+        if ( msgElement == null ) {
+            clusterViewManager.setMaster( source, true );
             masterAssigned = true;
-            if (msgElement != null) {
-                final ArrayList<SystemAdvertisement> newLocalView =
-                        (ArrayList<SystemAdvertisement>) getObjectFromByteArray(msgElement);
-                msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
-                if (msgElement != null) {
-                    long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
-                    LOG.log(Level.FINEST, "MasterNode:PMNR Received Master View with Seq Id="+seqID);
-                    if (seqID <= clusterViewManager.getMasterViewID()) {
-                        LOG.log(Level.FINER,
-                                MessageFormat.format("Received an older clusterView sequence {0} of size :{1}" +
-                                        " Current sequence :{2} discarding out of sequence view",
-                                        seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
-                        return true;
-                    } else {
-                        LOG.log(Level.FINER,
-                                MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}",
-                                        source.getName(), seqID, newLocalView.size()));
-                    }
-                    final ClusterViewEvent cvEvent = (ClusterViewEvent)
-                            getObjectFromByteArray(msgElement);
-                    if (!newLocalView.contains(manager.getSystemAdvertisement())) {
-                        LOG.log(Level.FINER, "Received view does not contain self. Publishing self");
-                        sendSelfNodeAdvertisement(source.getID(), null);
-                        //update the view once the the master node includes this node
-                        return true;
-                    }
-                    clusterViewManager.setMasterViewID(seqID);
-                    masterViewID.set(seqID);
-                    clusterViewManager.addToView(newLocalView, true, cvEvent);
-                    synchronized (MASTERLOCK) {
-                        MASTERLOCK.notifyAll();
-                    }
-                    return true;
-                }
-            }
+            return true;
         }
-        return false;
+        final ArrayList<SystemAdvertisement> newLocalView =
+                (ArrayList<SystemAdvertisement>) getObjectFromByteArray(msgElement);
+        msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
+        if ( msgElement == null ) {
+            clusterViewManager.setMaster( source, true );
+            masterAssigned = true;
+            return true;
+        }
+        long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
+        LOG.log(Level.FINEST, "MasterNode:PMNR Received Master View with Seq Id="+seqID);
+        if (seqID <= clusterViewManager.getMasterViewID()) {
+            clusterViewManager.setMaster( source, true );
+            masterAssigned = true;
+            LOG.log(Level.FINER,
+                    MessageFormat.format("Received an older clusterView sequence {0} of size :{1}" +
+                            " Current sequence :{2} discarding out of sequence view",
+                            seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
+            return true;
+        } else {
+            LOG.log(Level.FINER,
+                    MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}",
+                            source.getName(), seqID, newLocalView.size()));
+        }
+        final ClusterViewEvent cvEvent = (ClusterViewEvent)
+                getObjectFromByteArray(msgElement);
+        if (!newLocalView.contains(manager.getSystemAdvertisement())) {
+            clusterViewManager.setMaster( source, true );
+            masterAssigned = true;
+            LOG.log(Level.FINER, "Received view does not contain self. Publishing self");
+            sendSelfNodeAdvertisement(source.getID(), null);
+            //update the view once the the master node includes this node
+            return true;
+        }
+        clusterViewManager.setMasterViewID(seqID);
+        masterViewID.set(seqID);
+        boolean masterChanged = clusterViewManager.setMaster( newLocalView, source );
+        masterAssigned = true;
+        if ( masterChanged )
+            clusterViewManager.notifyListeners( cvEvent );
+        else
+            clusterViewManager.addToView(newLocalView, true, cvEvent);
+        synchronized (MASTERLOCK) {
+            MASTERLOCK.notifyAll();
+        }
+        return true;
     }
 
     /**
