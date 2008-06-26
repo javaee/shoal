@@ -158,7 +158,8 @@ public class ClusterManager implements PipeMsgListener {
             LOG.log(Level.WARNING, ioe.getLocalizedMessage());
         }
         NetworkManagerRegistry.add(groupName, netManager);
-        this.bindInterfaceAddress = (String)props.get(JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString());
+        if ( props != null )
+            this.bindInterfaceAddress = (String)props.get(JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString());
         systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
         this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
