@@ -217,7 +217,9 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     private void analyzeMasterChangeView(final EventPacket packet) {
-        //TODO: 01/19/2008 Dont recall why I did this; Need to revisit as join notification of local member does not get sent
+        if(views.size() == 1){ //views list only contains 1 view which is assumed to be the 1st view.
+            addNewMemberJoins(packet);
+        }
         if (views.size() > 1 &&
                 packet.getClusterView().getSize() !=
                         views.get(views.size() - 2).size()) {
