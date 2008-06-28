@@ -36,41 +36,23 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocument;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.ByteArrayMessageElement;
-import net.jxta.endpoint.EndpointAddress;
-import net.jxta.endpoint.Message;
-import net.jxta.endpoint.MessageElement;
-import net.jxta.endpoint.TextDocumentMessageElement;
+import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
+import net.jxta.document.*;
+import net.jxta.endpoint.*;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.tcp.TcpTransport;
 import net.jxta.impl.pipe.BlockingWireOutputPipe;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -158,8 +140,9 @@ public class ClusterManager implements PipeMsgListener {
             LOG.log(Level.WARNING, ioe.getLocalizedMessage());
         }
         NetworkManagerRegistry.add(groupName, netManager);
-        if ( props != null )
+        if(props !=null && !props.isEmpty()){
             this.bindInterfaceAddress = (String)props.get(JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString());
+        }
         systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
         this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
