@@ -98,7 +98,8 @@ public class NetworkManager implements RendezvousListener {
     private String groupName = "defaultGroup";
     private String instanceName;
     private static final String PREFIX = "SHOAL";
-    private static final String networkConnectLock = "networkConnectLock";
+    private final String networkConnectLock = "networkConnectLock";
+    private static final Object digestLock = new Object();
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
@@ -210,14 +211,16 @@ public class NetworkManager implements RendezvousListener {
         if (expression == null) {
             throw new IllegalArgumentException("Invalid null expression");
         }
-        if (digest == null) {
-            try {
-                digest = MessageDigest.getInstance("SHA1");
-            } catch (NoSuchAlgorithmException ex) {
-                LOG.log(Level.WARNING, ex.getLocalizedMessage());
+        synchronized(digestLock) {
+            if (digest == null) {
+                try {
+                    digest = MessageDigest.getInstance("SHA1");
+                } catch (NoSuchAlgorithmException ex) {
+                    LOG.log(Level.WARNING, ex.getLocalizedMessage());
+                }
             }
         }
-        digest.reset();
+        //digest.reset();
         try {
             digArray = digest.digest(expression.getBytes("UTF-8"));
         } catch (UnsupportedEncodingException impossible) {

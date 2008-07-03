@@ -59,7 +59,7 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
     //Logging related stuff
     protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
-    private static GMSContext ctx ;
+    private GMSContext ctx ;
     private long startTime;
     private GMSConstants.shutdownType shutdownType;
 
