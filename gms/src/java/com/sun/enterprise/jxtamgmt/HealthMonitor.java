@@ -1215,7 +1215,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             } catch (IOException e) {
                 fine("IOException occurred while trying to connect to peer " + entry.adv.getName() +
                         "'s machine : " + e.getMessage(), new Object[] {e});
-                if (e.getMessage().trim().equals(CONNECTION_REFUSED)) {
+                if (e.getMessage().trim().contains(CONNECTION_REFUSED)) {
                     fine("Going to call notify since the peer machine is up");
                     synchronized (hwFailureDetectionthreadLock) {
                         hwFailureDetectionthreadLock.notify();
