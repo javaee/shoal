@@ -645,15 +645,7 @@ public class ClusterManager implements PipeMsgListener {
         final SystemAdvertisement sysAdv = new SystemAdvertisement();
         sysAdv.setID(group.getPeerID());
         sysAdv.setName(name);
-        if (bindInterfaceAddress != null && !bindInterfaceAddress.equals("")) {
-            sysAdv.addEndpointAddress(new EndpointAddress(bindInterfaceAddress));
-        } else {
-            TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
-            Iterator it = tcpTransport.getPublicAddresses();
-            while (it.hasNext()) {
-                sysAdv.addEndpointAddress((EndpointAddress) it.next());
-            }
-        }
+        setBindInterfaceAddress(sysAdv, bindInterfaceAddress, group);
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));
         sysAdv.setOSArch(System.getProperty("os.arch"));
@@ -661,6 +653,37 @@ public class ClusterManager implements PipeMsgListener {
         sysAdv.setHWVendor(System.getProperty("java.vm.vendor"));
         sysAdv.setCustomTags(customTags);
         return sysAdv;
+    }
+    
+    static private void setBindInterfaceAddress(SystemAdvertisement sysAdv, String bindInterfaceAddress, PeerGroup group) {
+        EndpointAddress bindInterfaceEndpointAddress = null;
+        if (bindInterfaceAddress != null && !bindInterfaceAddress.equals("")) {
+            final String TCP_SCHEME = "tcp://";
+            final String PORT = ":4000";  // necessary to add a port but its value is ignored.
+            String bindInterfaceAddressURI = TCP_SCHEME + bindInterfaceAddress + PORT;
+            try {
+                bindInterfaceEndpointAddress = new EndpointAddress(bindInterfaceAddressURI);
+            } catch (Exception e) {
+                LOG.log(Level.WARNING, "invalid bindInterfaceEndpointAddress URI=" + bindInterfaceAddressURI + " computed from property " +
+                                       JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
+                                       " value=" + bindInterfaceAddress, e);
+            }
+        }
+        if (bindInterfaceEndpointAddress != null) {
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("Configured bindInterfaceEndpointAddress URI " + bindInterfaceEndpointAddress.toString() +
+                           " using property " + JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
+                           " value=" + bindInterfaceAddress);
+            }
+            sysAdv.addEndpointAddress(bindInterfaceEndpointAddress);
+        } else {                
+            // lookup all public addresses
+            TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
+            Iterator it = tcpTransport.getPublicAddresses();
+            while (it.hasNext()) {
+                sysAdv.addEndpointAddress((EndpointAddress) it.next());
+            }
+        }
     }
 
     public String getNodeState(final ID peerID) {
