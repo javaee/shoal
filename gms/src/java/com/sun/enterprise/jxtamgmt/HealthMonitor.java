@@ -1159,7 +1159,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         List<Future> array = new ArrayList<Future>();
 
         for (URI uri : list) {
-            LOG.info("Checking for machine status for network interface : " + uri.toString());
+            fine("Checking for machine status for network interface : " + uri.toString());
             CheckConnectionToPeerMachine connectionToPeer = new CheckConnectionToPeerMachine(entry, uri.getHost());
             Future future = isConnectedPool.submit(connectionToPeer);
             array.add(future);
