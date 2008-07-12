@@ -144,14 +144,14 @@ public class NetworkManager implements RendezvousListener {
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    public NetworkManager(final String groupName,
-                   final String instanceName,
-                   final Map properties) {
+    public NetworkManager(final String groupName, final String instanceName, final Map properties) {
+
         String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
         if (jxtaLoggingPropertyValue == null) {
             // Only disable jxta logging when jxta logging has not already been explicitly enabled.
             System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
         }
+
         this.groupName = groupName;
         this.instanceName = instanceName;
 
@@ -240,7 +240,7 @@ public class NetworkManager implements RendezvousListener {
      */
     public PipeID getPipeID(String instanceName) {
         String seed = instanceName + PIPESEED;
-        return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toUpperCase()));
+        return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toLowerCase()));
     }
 
     /**
@@ -251,7 +251,7 @@ public class NetworkManager implements RendezvousListener {
      */
     public PipeID getSocketID(final String instanceName) {
         final String seed = instanceName + SOCKETSEED;
-        return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toUpperCase()));
+        return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toLowerCase()));
     }
 
     /**
@@ -261,7 +261,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerID getPeerID(final String instanceName) {
-        return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+        return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toLowerCase()));
     }
 
     /**
@@ -273,10 +273,10 @@ public class NetworkManager implements RendezvousListener {
     public PeerGroupID getPeerGroupID(final String groupName) {
         if (mcastAddress == null && mcastPort <= 0) {
             return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
-                    hash(PREFIX + groupName.toUpperCase()));
+                    hash(PREFIX + groupName.toLowerCase()));
         } else {
             return IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID,
-                    hash(PREFIX + groupName.toUpperCase() + mcastAddress + mcastPort));
+                    hash(PREFIX + groupName.toLowerCase() + mcastAddress + mcastPort));
         }
     }
 
@@ -286,7 +286,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The HealthPipe Pipe ID
      */
     public PipeID getHealthPipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(HEALTHSEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(HEALTHSEED.toLowerCase()));
     }
 
     /**
@@ -295,7 +295,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The MasterPipe PipeID
      */
     public PipeID getMasterPipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(MASTERSEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(MASTERSEED.toLowerCase()));
     }
 
     /**
@@ -304,7 +304,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The SessionQuery PipeID
      */
     public PipeID getSessionQueryPipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(SESSIONQUERYSEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(SESSIONQUERYSEED.toLowerCase()));
     }
 
     /**
@@ -314,7 +314,7 @@ public class NetworkManager implements RendezvousListener {
      * @return The Application Service Pipe ID
      */
     public PipeID getAppServicePipeID() {
-        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(APPSERVICESEED.toUpperCase()));
+        return IDFactory.newPipeID(getInfraPeerGroupID(), hash(APPSERVICESEED.toLowerCase()));
     }
 
     /**
@@ -595,6 +595,9 @@ public class NetworkManager implements RendezvousListener {
             LOG.fine("myPort is " + myPort);
             //TODO: Add a check for port availability and consequent actions
             config.setTcpPort(Integer.parseInt(myPort));
+            config.setTcpStartPort(Integer.parseInt(myPort));
+            config.setTcpEndPort(Integer.parseInt(myPort));
+
         } else {
             config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
             config.setTcpStartPort(9701);
