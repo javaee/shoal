@@ -36,41 +36,23 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
-import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
-import net.jxta.document.StructuredDocument;
-import net.jxta.document.StructuredDocumentFactory;
-import net.jxta.document.XMLDocument;
-import net.jxta.endpoint.ByteArrayMessageElement;
-import net.jxta.endpoint.EndpointAddress;
-import net.jxta.endpoint.Message;
-import net.jxta.endpoint.MessageElement;
-import net.jxta.endpoint.TextDocumentMessageElement;
+import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
+import net.jxta.document.*;
+import net.jxta.endpoint.*;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.ID;
 import net.jxta.impl.endpoint.tcp.TcpTransport;
 import net.jxta.impl.pipe.BlockingWireOutputPipe;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.PeerGroup;
-import net.jxta.pipe.InputPipe;
-import net.jxta.pipe.OutputPipe;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
+import net.jxta.pipe.*;
 import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.protocol.RouteAdvertisement;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -87,6 +69,7 @@ public class ClusterManager implements PipeMsgListener {
     private NetworkManager netManager = null;
     private String groupName = null;
     private String instanceName = null;
+    private String bindInterfaceAddress = null;
     private volatile boolean started = false;
     private volatile boolean stopped = true;
     private boolean loopbackMessages = false;
@@ -157,7 +140,10 @@ public class ClusterManager implements PipeMsgListener {
             LOG.log(Level.WARNING, ioe.getLocalizedMessage());
         }
         NetworkManagerRegistry.add(groupName, netManager);
-        systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap);
+        if(props !=null && !props.isEmpty()){
+            this.bindInterfaceAddress = (String)props.get(JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString());
+        }
+        systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
         this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
         this.masterNode = new MasterNode(this, getDiscoveryTimeout(props), 1);
@@ -603,7 +589,7 @@ public class ClusterManager implements PipeMsgListener {
      */
     public SystemAdvertisement getSystemAdvertisement() {
         if (systemAdv == null) {
-            systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap);
+            systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         }
         return systemAdv;
     }
@@ -624,7 +610,8 @@ public class ClusterManager implements PipeMsgListener {
      */
     private static synchronized SystemAdvertisement createSystemAdv(final PeerGroup group,
                                                                     final String name,
-                                                                    final Map<String, String> customTags) {
+                                                                    final Map<String, String> customTags,
+                                                                    final String bindInterfaceAddress) {
         if (group == null) {
             throw new IllegalArgumentException("Group can not be null");
         }
@@ -634,11 +621,7 @@ public class ClusterManager implements PipeMsgListener {
         final SystemAdvertisement sysAdv = new SystemAdvertisement();
         sysAdv.setID(group.getPeerID());
         sysAdv.setName(name);
-        TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
-        Iterator it = tcpTransport.getPublicAddresses();
-        while (it.hasNext()) {
-            sysAdv.addEndpointAddress((EndpointAddress)it.next());
-        }
+        setBindInterfaceAddress(sysAdv, bindInterfaceAddress, group);
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));
         sysAdv.setOSArch(System.getProperty("os.arch"));
@@ -646,6 +629,37 @@ public class ClusterManager implements PipeMsgListener {
         sysAdv.setHWVendor(System.getProperty("java.vm.vendor"));
         sysAdv.setCustomTags(customTags);
         return sysAdv;
+    }
+    
+    static private void setBindInterfaceAddress(SystemAdvertisement sysAdv, String bindInterfaceAddress, PeerGroup group) {
+        EndpointAddress bindInterfaceEndpointAddress = null;
+        if (bindInterfaceAddress != null && !bindInterfaceAddress.equals("")) {
+            final String TCP_SCHEME = "tcp://";
+            final String PORT = ":4000";  // necessary to add a port but its value is ignored.
+            String bindInterfaceAddressURI = TCP_SCHEME + bindInterfaceAddress + PORT;
+            try {
+                bindInterfaceEndpointAddress = new EndpointAddress(bindInterfaceAddressURI);
+            } catch (Exception e) {
+                LOG.log(Level.WARNING, "invalid bindInterfaceEndpointAddress URI=" + bindInterfaceAddressURI + " computed from property " +
+                                       JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
+                                       " value=" + bindInterfaceAddress, e);
+            }
+        }
+        if (bindInterfaceEndpointAddress != null) {
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("Configured bindInterfaceEndpointAddress URI " + bindInterfaceEndpointAddress.toString() +
+                           " using property " + JxtaConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
+                           " value=" + bindInterfaceAddress);
+            }
+            sysAdv.addEndpointAddress(bindInterfaceEndpointAddress);
+        } else {                
+            // lookup all public addresses
+            TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
+            Iterator it = tcpTransport.getPublicAddresses();
+            while (it.hasNext()) {
+                sysAdv.addEndpointAddress((EndpointAddress) it.next());
+            }
+        }
     }
 
     public String getNodeState(final ID peerID) {
