@@ -46,16 +46,82 @@ package com.sun.enterprise.ee.cms.core;
  * @author Shreedhar Ganapathy
  */
 public enum ServiceProviderConfigurationKeys {
+    /**
+     * unreserved valid multicast address in the range 224.0.0.0 through
+     * 239.255.255.255
+     * See http://www.iana.org/assignments/multicast-addresses for more details
+     * on valid addresses.
+     * If not using multicast, do not specify this property
+     */
     MULTICASTADDRESS,
+    /**
+     * A valid port. If not using multicast, do not specify this property
+     */
     MULTICASTPORT,
+    /**
+     * The timeout in milliseconds which will be used to send out periodic
+     * heartbeats. This is also the period that will be used to check for
+     * update to the health state of each member process.
+     */
     FAILURE_DETECTION_TIMEOUT,
+    /**
+     * Number of periodic heartbeats than can be missed in order to be 
+     * determined a suspected failure. Once the retries have been exhausted,
+     * a FailureSuspectedNotificationSignal is sent out to all GMS clients who
+     * have registered for this event.
+     */
     FAILURE_DETECTION_RETRIES,
+    /**
+     * The timeout in milliseconds which will be used to wait and verify that
+     * the suspected member has indeed failed.
+     * Once confirmed failed, a FailureNotificationSignal is sent out to all GMS
+     * clients who have registered for this event.
+     */
     FAILURE_VERIFICATION_TIMEOUT,
+    /**
+     * The timeout in milliseconds that each member would wait to discover a
+     * group leader. If no group leader was found within this timeout, the member
+     * announces itself as the assumed and assigned group leader.
+     */
     DISCOVERY_TIMEOUT,
+    /**
+     * Setting the value of this key to true, would make all application level
+     * messages sent by this member to also be received by this member in
+     * addition to the target members to whom the message was sent.
+     */
     LOOPBACK,
-    IS_BOOTSTRAPPING_NODE, //set true if this node will be an initial host for other members to use for discovery
-    VIRTUAL_MULTICAST_URI_LIST, // a comma separated list of initial tcp/http addresses that is known to all joining members when not using Multicast over UDP.
-    BIND_INTERFACE_ADDRESS;
-                            //used for specifying which interface to use for group communication
-                            //This is the address which Shoal should bind to for communication.
+    /**
+     * Represents a key whose value is set to true if this node will be a bootstrapping
+     * host for other members to use for discovery purposes. This is particularly useful
+     * when multicast traffic is not supported in the network or cluster members are located
+     * outside a multicast supported network area.
+     * Setting the value of this to true requires specifying a URI corresponding to this
+     * member process's IP address and port with tcp protocol, as a value in the
+     * VIRTUAL_MULTICAST_URI_LIST property.
+     * See below for the VIRTUAL_MULTICAST_URI_LIST property
+     */
+    IS_BOOTSTRAPPING_NODE,
+
+   /**
+    * This enum represents a key the value of which is a comma separated list of
+    * initial bootstrapping tcp addresses. This address list must be specified on
+    * all members of the cluster through this property.
+    * <p>Typically an address uri would be specified as tcp://ipaddress:port</p>
+    * The port here could be any available unoccupied port.<br> 
+    * Specifying this list is helpful particularly when cluster members are located
+    * beyond one subnet or multicast traffic is disabled.
+    * Note: The implementation in Shoal at the moment only uses the first
+    * address in this list and ignores the rest. This is an enhancement that is not
+    * yet completed.
+    */
+    VIRTUAL_MULTICAST_URI_LIST,
+
+   /**
+    * If you wish to specify a particular network interface that should be used
+    * for all group communication messages, use this key and specify an interface
+    * address.
+    * This is the address which Shoal would pass down to a service provider such as
+    * Jxta to bind to for communication.
+    */
+    BIND_INTERFACE_ADDRESS
 }
