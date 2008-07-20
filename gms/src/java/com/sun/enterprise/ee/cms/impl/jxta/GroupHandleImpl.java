@@ -48,7 +48,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -242,6 +241,9 @@ public final class GroupHandleImpl implements GroupHandle {
                     + failedMemberToken + " by member "
                     + getGMSContext().getServerIdentityToken()
                     + " component " + componentName);
+        }
+        else {
+            throw new GMSException ("Could not raise fence. Fence for member "+failedMemberToken +" and Component "+ componentName+" already exists");
         }
     }
 
