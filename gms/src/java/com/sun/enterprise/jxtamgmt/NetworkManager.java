@@ -36,11 +36,14 @@
 
 package com.sun.enterprise.jxtamgmt;
 
+import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
 import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.XMLDocument;
 import net.jxta.document.MimeMediaType;
+import net.jxta.document.XMLDocument;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
+import net.jxta.impl.endpoint.mcast.McastTransport;
+import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
 import net.jxta.logging.Logging;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
@@ -50,30 +53,22 @@ import net.jxta.peergroup.WorldPeerGroupFactory;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkConfigurator;
-import net.jxta.protocol.PipeAdvertisement;
-import net.jxta.protocol.ModuleImplAdvertisement;
 import net.jxta.protocol.ConfigParams;
+import net.jxta.protocol.ModuleImplAdvertisement;
+import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
-import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
-import net.jxta.impl.endpoint.mcast.McastTransport;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.net.URI;
-
-import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
 
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
@@ -130,6 +125,7 @@ public class NetworkManager implements RendezvousListener {
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
     private boolean isRendezvousSeed = false;
     private String tcpAddress;
+    private Hashtable<String,PeerID> instanceToPeerIdMap = new Hashtable<String, PeerID>();
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -219,8 +215,8 @@ public class NetworkManager implements RendezvousListener {
                     LOG.log(Level.WARNING, ex.getLocalizedMessage());
                 }
             }
+            digest.reset();
         }
-        //digest.reset();
         try {
             digArray = digest.digest(expression.getBytes("UTF-8"));
         } catch (UnsupportedEncodingException impossible) {
@@ -261,7 +257,12 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerID getPeerID(final String instanceName) {
-        return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toLowerCase()));
+        PeerID id = instanceToPeerIdMap.get(instanceName);
+        if(id == null){
+            id = IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+            instanceToPeerIdMap.put(instanceName, id);
+        }
+        return id;
     }
 
     /**
