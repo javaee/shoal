@@ -421,6 +421,7 @@ public class NetworkManager implements RendezvousListener {
             netPeerGroup = null;
             final File userHome = new File(home, instanceName);
             clearCache(userHome);
+            instanceToPeerIdMap.clear();
         } catch (Throwable th) {
             LOG.log(Level.FINEST, th.getLocalizedMessage());
         }
