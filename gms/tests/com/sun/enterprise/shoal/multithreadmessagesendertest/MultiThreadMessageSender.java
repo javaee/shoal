@@ -36,15 +36,10 @@
 
 package com.sun.enterprise.shoal.multithreadmessagesendertest;
 
-import com.sun.enterprise.ee.cms.core.CallBack;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GMSFactory;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.MessageSignal;
-import com.sun.enterprise.ee.cms.core.Signal;
-import com.sun.enterprise.ee.cms.core.SignalAcquireException;
-import com.sun.enterprise.ee.cms.core.SignalReleaseException;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
+
+import java.util.List;
 
 /**
  * Simple test for sending messages using multiple threads
@@ -72,7 +67,7 @@ public class MultiThreadMessageSender implements CallBack{
 		initGMS();		
 		startSenderThread();
 	}
-	
+
 	private void initGMS(){
 		try {
 			gms = (GroupManagementService) GMSFactory.startGMSModule(memberToken,"DemoGroup", GroupManagementService.MemberType.CORE, null);
@@ -86,18 +81,28 @@ public class MultiThreadMessageSender implements CallBack{
 		}
 	}
 	private void startSenderThread(){
-		for(int i=0;i<sendingThreadNum;i++){
-			new Thread(new Runnable(){
-				public void run() {
-					while(true){
-						try {
-							Thread.sleep(200);	
-							gms.getGroupHandle().sendMessage(destMemberToken, "SimpleSampleComponent",msg.getBytes());
-						} catch (InterruptedException e) {
+        for(int i=0;i<sendingThreadNum; i++){
+            final int i1 = i;
+            new Thread(new Runnable(){
+                String msg1 = msg + " "+ i1;
+                public void run() {
+                    List<String> members;
+                    while(true){
+                        members = gms.getGroupHandle().getAllCurrentMembers();
+                        System.out.println(members.toString());
+                        try {
+							Thread.sleep(10);
+                            if(members.size()>=2){
+                                gms.getGroupHandle().sendMessage(destMemberToken, "SimpleSampleComponent",msg1.getBytes());
+                            }
+                        } catch (InterruptedException e) {
 							e.printStackTrace();
-						} catch (GMSException e) {
-							e.printStackTrace();
-						}
+                            break;
+                        } catch (GMSException e) {							
+                            e.printStackTrace();
+
+                            break;                            
+                        }
 					}
 					
 				}
