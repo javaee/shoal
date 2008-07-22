@@ -221,15 +221,14 @@ public class NetworkManager implements RendezvousListener {
                     LOG.log(Level.WARNING, ex.getLocalizedMessage());
                 }
             }
-        }
-        //digest.reset();
-        try {
-            digArray = digest.digest(expression.getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException impossible) {
-            LOG.log(Level.WARNING, "digestEncoding unsupported:"
-                    + impossible.getLocalizedMessage() +
-                    ":returning digest with default encoding");
-            digArray = digest.digest(expression.getBytes());
+            digest.reset();
+            try {
+                digArray = digest.digest(expression.getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException impossible) {
+                LOG.log(Level.WARNING, "digestEncoding unsupported:" + impossible.getLocalizedMessage() +
+                        ":returning digest with default encoding");
+                digArray = digest.digest(expression.getBytes());
+            }
         }
         return digArray;
     }
