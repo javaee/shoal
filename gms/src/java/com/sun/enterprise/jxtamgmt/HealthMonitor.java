@@ -1201,8 +1201,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 return false;
             } catch (InterruptedException e) {
                 fine("InterruptedException occurred..." + e.getMessage(), new Object[]{e});
+                return false;
             }
-            return false;
         }
         fine("Peer Machine for " + entry.adv.getName() + " is down!");
         return false;
