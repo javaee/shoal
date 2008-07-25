@@ -260,7 +260,7 @@ public interface GroupManagementService {
     void announceGroupShutdown ( String groupName,
                                  GMSConstants.shutdownState shutdownState);
     /**
-     *  This API is provided for the parent application to report to the group
+     * <p>This API is provided for the parent application to report to the group
      * its joined and ready state to begin processing its operations.
      * The group member that this parent application represents is now ready to
      * process its operations at the time of this announcement to the group.
@@ -268,9 +268,20 @@ public interface GroupManagementService {
      * when another member is ready to start processing operations, can subscribe
      * to the event JoinedAndReadyEvent and be given this JoinedAndReadyNotificationSignal.
      * Currently this API can only be used by cluster members which are of the type CORE and
-     * not the SPECTATOR members. The reason being is that Shoal makes the assumption that
-     * only the CORE members will act as servers for serving the client requests and not
-     * the SPECTATOR members
+     * not the SPECTATOR members. Shoal makes the assumption that only the CORE members will
+     * act as servers for serving the client requests and not the SPECTATOR members.</p>
+     *
+     *<p> The behavioral semantics of this feature is that as each member reports its
+     * joined and ready state, the corresponding JoinedAndReadyNotificationSignal will be
+     * delivered to other cluster members who have already joined the group and have components
+     * who have registered for this event to be delivered. There may be members who may not
+     * have joined the group at the time a particular member reported its JoinedAndReady state.
+     * For these cases, those members have to rely on the <code>JoinNotificationSignal</code>
+     * of this particular member and call the <code>getMemberState()</code> api.
+     * The implementation currently does not require the joined and ready notification
+     * to be sent out to members joining the group after a member reported its
+     * joined and ready state.</p> 
+     *
      * @param groupName name of the group
      */
      void reportJoinedAndReadyState(String groupName);

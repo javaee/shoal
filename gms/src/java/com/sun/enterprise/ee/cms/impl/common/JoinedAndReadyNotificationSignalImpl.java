@@ -58,7 +58,7 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     private List<String> currentCoreMembers;
     private List<String> allCurrentMembers;
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
-    private static GMSContext ctx;
+    private GMSContext ctx;
 
     //Logging related stuff
      protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);

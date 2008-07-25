@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Hashtable;
 import java.net.URI;
 
 import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
@@ -98,7 +99,8 @@ public class NetworkManager implements RendezvousListener {
     private String groupName = "defaultGroup";
     private String instanceName;
     private static final String PREFIX = "SHOAL";
-    private static final String networkConnectLock = "networkConnectLock";
+    private final String networkConnectLock = "networkConnectLock";
+    private static  final Object digestLock = new Object();
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
@@ -129,6 +131,7 @@ public class NetworkManager implements RendezvousListener {
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
     private boolean isRendezvousSeed = false;
     private String tcpAddress;
+    private Hashtable<String,PeerID> instanceToPeerIdMap = new Hashtable<String, PeerID>();
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -210,21 +213,22 @@ public class NetworkManager implements RendezvousListener {
         if (expression == null) {
             throw new IllegalArgumentException("Invalid null expression");
         }
-        if (digest == null) {
-            try {
-                digest = MessageDigest.getInstance("SHA1");
-            } catch (NoSuchAlgorithmException ex) {
-                LOG.log(Level.WARNING, ex.getLocalizedMessage());
+        synchronized(digestLock) {
+            if (digest == null) {
+                try {
+                    digest = MessageDigest.getInstance("SHA1");
+                } catch (NoSuchAlgorithmException ex) {
+                    LOG.log(Level.WARNING, ex.getLocalizedMessage());
+                }
             }
-        }
-        digest.reset();
-        try {
-            digArray = digest.digest(expression.getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException impossible) {
-            LOG.log(Level.WARNING, "digestEncoding unsupported:"
-                    + impossible.getLocalizedMessage() +
-                    ":returning digest with default encoding");
-            digArray = digest.digest(expression.getBytes());
+            digest.reset();
+            try {
+                digArray = digest.digest(expression.getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException impossible) {
+                LOG.log(Level.WARNING, "digestEncoding unsupported:" + impossible.getLocalizedMessage() +
+                        ":returning digest with default encoding");
+                digArray = digest.digest(expression.getBytes());
+            }
         }
         return digArray;
     }
@@ -258,7 +262,12 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerID getPeerID(final String instanceName) {
-        return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+        PeerID id = instanceToPeerIdMap.get(instanceName);
+        if(id == null){
+            id = IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+            instanceToPeerIdMap.put(instanceName, id);
+        }
+        return id;
     }
 
     /**
@@ -417,6 +426,7 @@ public class NetworkManager implements RendezvousListener {
             netPeerGroup = null;
             final File userHome = new File(home, instanceName);
             clearCache(userHome);
+            instanceToPeerIdMap.clear();
         } catch (Throwable th) {
             LOG.log(Level.FINEST, th.getLocalizedMessage());
         }
@@ -628,6 +638,7 @@ public class NetworkManager implements RendezvousListener {
         //specify which interface the group communication should start on
         if (tcpAddress != null && !tcpAddress.equals("")) {
             config.setTcpInterfaceAddress(tcpAddress);
+            config.setMulticastInterface(tcpAddress);
         }
 
         PeerGroup worldPG = wpgf.getInterface();
