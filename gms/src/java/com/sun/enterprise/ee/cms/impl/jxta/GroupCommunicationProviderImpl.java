@@ -235,8 +235,8 @@ public class GroupCommunicationProviderImpl implements
                 }
             }
         } catch (IOException e) {
-            if (logger.isLoggable(Level.FINE)) {
-                e.printStackTrace();
+            if (logger.isLoggable(Level.FINEST)) {
+                logger.log(Level.FINEST, "exception in sendMessage", e);
             }
             throw new GMSException(e);
         }
