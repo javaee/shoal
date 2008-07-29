@@ -110,7 +110,7 @@ public class LWRMulticast implements PipeMsgListener {
     private transient long timeout = 5000 + padding;
     private transient MessageElement srcElement = null;
     private transient AtomicLong sequence = new AtomicLong();
-    private final String ackLock = new String("ackLock");
+    private final Object ackLock = new Object();
     private transient int threshold = 0;
     private transient Set<PeerID> ackSet = new HashSet<PeerID>();
     private transient Set<PeerID> ackList = new HashSet<PeerID>();

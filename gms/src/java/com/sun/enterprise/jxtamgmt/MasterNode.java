@@ -119,7 +119,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private ClusterView discoveryView;
     private final AtomicLong masterViewID = new AtomicLong();
     //Collision control
-    final String MASTERLOCK = new String("MASTERLOCK");
+    final Object MASTERLOCK = new Object();
     private static final String CCNTL = "CCNTL";
     private static final String MASTERNODE = "MN";
     private static final String MASTERQUERY = "MQ";

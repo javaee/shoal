@@ -99,7 +99,7 @@ public class NetworkManager implements RendezvousListener {
     private String groupName = "defaultGroup";
     private String instanceName;
     private static final String PREFIX = "SHOAL";
-    private final String networkConnectLock = "networkConnectLock";
+    private final Object networkConnectLock = new Object();
     private static  final Object digestLock = new Object();
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
