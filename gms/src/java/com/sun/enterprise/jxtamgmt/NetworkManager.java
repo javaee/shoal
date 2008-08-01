@@ -36,14 +36,11 @@
 
 package com.sun.enterprise.jxtamgmt;
 
-import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
 import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.MimeMediaType;
 import net.jxta.document.XMLDocument;
+import net.jxta.document.MimeMediaType;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
-import net.jxta.impl.endpoint.mcast.McastTransport;
-import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
 import net.jxta.logging.Logging;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
@@ -53,22 +50,31 @@ import net.jxta.peergroup.WorldPeerGroupFactory;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkConfigurator;
-import net.jxta.protocol.ConfigParams;
-import net.jxta.protocol.ModuleImplAdvertisement;
 import net.jxta.protocol.PipeAdvertisement;
+import net.jxta.protocol.ModuleImplAdvertisement;
+import net.jxta.protocol.ConfigParams;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
+import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
+import net.jxta.impl.endpoint.mcast.McastTransport;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Hashtable;
+import java.net.URI;
+
+import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
 
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
@@ -93,8 +99,8 @@ public class NetworkManager implements RendezvousListener {
     private String groupName = "defaultGroup";
     private String instanceName;
     private static final String PREFIX = "SHOAL";
-    private final String networkConnectLock = "networkConnectLock";
-    private static final Object digestLock = new Object();
+    private final Object networkConnectLock = new Object();
+    private static  final Object digestLock = new Object();
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
@@ -140,14 +146,14 @@ public class NetworkManager implements RendezvousListener {
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    public NetworkManager(final String groupName, final String instanceName, final Map properties) {
-
+    public NetworkManager(final String groupName,
+                   final String instanceName,
+                   final Map properties) {
         String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
         if (jxtaLoggingPropertyValue == null) {
             // Only disable jxta logging when jxta logging has not already been explicitly enabled.
             System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
         }
-
         this.groupName = groupName;
         this.instanceName = instanceName;
 
@@ -216,12 +222,10 @@ public class NetworkManager implements RendezvousListener {
                 }
             }
             digest.reset();
-
             try {
                 digArray = digest.digest(expression.getBytes("UTF-8"));
             } catch (UnsupportedEncodingException impossible) {
-                LOG.log(Level.WARNING, "digestEncoding unsupported:"
-                        + impossible.getLocalizedMessage() +
+                LOG.log(Level.WARNING, "digestEncoding unsupported:" + impossible.getLocalizedMessage() +
                         ":returning digest with default encoding");
                 digArray = digest.digest(expression.getBytes());
             }

@@ -73,7 +73,7 @@ public class ClusterManager implements PipeMsgListener {
     private volatile boolean started = false;
     private volatile boolean stopped = true;
     private boolean loopbackMessages = false;
-    private final String closeLock = new String("closeLock");
+    private final Object closeLock = new Object();
     private SystemAdvertisement systemAdv = null;
 
     private static final String NODEADV = "NAD";
@@ -91,7 +91,7 @@ public class ClusterManager implements PipeMsgListener {
     private volatile boolean stopping = false;
     private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
 
-    final String MASTERBYFORCELOCK = new String("MASTERBYFORCELOCK");
+    final Object MASTERBYFORCELOCK = new Object();
 
     /**
      * The ClusterManager is created using the instanceName,

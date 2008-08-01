@@ -70,4 +70,9 @@ public class EventPacket {
     public ClusterView getClusterView() {
         return clusterView;
     }
+
+    public String toString() {
+        final String token = systemAdvertisement.getName();
+        return clusterViewEvent.toString() + " from " + token;
+    }
 }

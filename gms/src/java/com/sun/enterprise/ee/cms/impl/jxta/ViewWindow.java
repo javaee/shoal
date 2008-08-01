@@ -103,18 +103,25 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     public void run() {
-
-        while (!getGMSContext().isShuttingDown()) {
-            final EventPacket packet;
-            try {
-                packet = viewQueue.take();
-                logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
-                if (packet != null) {
-                    newViewObserved(packet);
+        try {
+            while (!getGMSContext().isShuttingDown()) {
+                EventPacket packet = null;
+                try {
+                    packet = viewQueue.take();
+                    if (packet != null) {
+                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
+                        newViewObserved(packet);
+                    }
+                } catch (InterruptedException e) {
+                    logger.log(Level.FINEST, e.getLocalizedMessage());
+                } catch (Throwable t) {
+                    final String packetInfo = (packet == null ? "<null>" : packet.toString());
+                    logger.log(Level.FINE, "handled exception processing event packet " + packetInfo, t);
                 }
-            } catch (InterruptedException e) {
-                logger.log(Level.FINEST, e.getLocalizedMessage());
             }
+            logger.info("normal termination of ViewWindow thread");
+        } catch  (Throwable tOuter ) {
+            logger.log(Level.WARNING, "unexpected exception terminated ViewWindow thread", tOuter);
         }
     }
 
@@ -409,7 +416,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                                     getGMSContext().getServerIdentityToken(), (String) gmsCacheable.getKey(),
                                     getGMSContext().getGroupName());
                         } catch (GMSException e) {
-                            logger.log(Level.WARNING, e.getLocalizedMessage());
+                            logger.log(Level.FINE, e.getLocalizedMessage(), e);
                         }
                     }
                 }
@@ -531,13 +538,17 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 dsc.syncCache(token, true);
                 logger.log(Level.FINER, "Sync request sent..");
             } catch (GMSException e) {
-                logger.log(Level.WARNING, "GMSException during DSC sync" +
-                        e.getLocalizedMessage());
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "GMSException during DSC sync " + e.getLocalizedMessage(), e);
+                }
             } catch (InterruptedException e) {
-                logger.log(Level.WARNING, e.getLocalizedMessage());
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, e.getLocalizedMessage(), e);
+                }
             } catch (Exception e) {
-                logger.log(Level.WARNING, "Exception during DSC sync:" + e);
-                e.printStackTrace();
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "Exception during DSC sync:" + e, e);
+                }
             }
         }
     }
