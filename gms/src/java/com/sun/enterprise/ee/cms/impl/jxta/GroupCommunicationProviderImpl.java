@@ -212,11 +212,32 @@ public class GroupCommunicationProviderImpl implements
                         task.setMessage(message);
                         msgSendPool.submit(task);
                         */
-                        logger.log(Level.FINE, "sending message to member: " + currentMemberAdv.getName());
+                        logger.log(Level.FINER, "sending message to member: " + currentMemberAdv.getName());
                         try {
                             clusterManager.send(id, message);
                         } catch (MemberNotInViewException e) {
-                            logger.warning("MemberNotInViewException : " + e.toString());
+                            if (logger.isLoggable(Level.FINE)) {
+                                logger.fine("MemberNotInViewException : " + e.toString());
+                            }
+                        } catch (IOException ioe) {
+                            // don't allow an exception sending to one instance of the cluster to prevent ptp multicast to all other instances of
+                            // of the cluster.  Catch this exception, record it and continue sending to rest of instances in the cluster.
+                            if (logger.isLoggable(Level.FINE)) {
+                                logger.log(Level.FINE, 
+                                        "IOException in reliable synchronous ptp multicast sending to instance " + currentMemberAdv.getName() + 
+                                        ". Perhaps this instance has failed but that has not been detected yet. Peer id=" +
+                                        id.toString(), 
+                                        ioe);
+                            }
+                        } catch (Throwable t) {
+                           // don't allow an exception sending to one instance of the cluster prevent ptp broadcast to all other instances of
+                           // of the cluster.  Catch this exception, record it and continue sending to rest of instances in the cluster.
+                           if (logger.isLoggable(Level.FINE)) {
+                                logger.log(Level.FINE, 
+                                        "Exception in reliable synchronous ptp multicast sending to instance " + currentMemberAdv.getName() + 
+                                        ", peer id=" + id.toString(), 
+                                        t);
+                            }
                         }
                     }
                 } else {
