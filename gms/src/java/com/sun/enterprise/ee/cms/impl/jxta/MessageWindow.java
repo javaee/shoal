@@ -141,7 +141,8 @@ public class MessageWindow implements Runnable {
     }
 
     private void handleGMSMessage(final GMSMessage gMsg, final String sender) {
-        if (gMsg.getComponentName().equals(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString())) {
+        if (gMsg.getComponentName() != null &&
+                gMsg.getComponentName().equals(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString())) {
             final ShutdownHelper sh = GMSContextFactory.getGMSContext(gMsg.getGroupName()).getShutdownHelper();
             logger.log(Level.INFO, "member.groupshutdown", new Object[]{sender});
             sh.addToGroupShutdownList(gMsg.getGroupName());
