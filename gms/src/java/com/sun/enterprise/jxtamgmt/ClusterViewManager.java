@@ -155,11 +155,19 @@ public class ClusterViewManager {
      * @return true if there is master's change, false otherwise
      */
     boolean setMaster( final List<SystemAdvertisement> newView, final SystemAdvertisement advertisement ) {
-        if( advertisement.equals( masterAdvertisement ) )
+        if( advertisement.equals( masterAdvertisement ) ) {
             return false;
-        if ( newView != null )
+        }
+        lockLog("setMaster()");
+        viewLock.lock();
+        try { 
+            if ( newView != null ) {
             addToView( newView );
+            }
         setMaster( advertisement, true );
+        } finally {
+            viewLock.unlock();
+        }
         return true;
     }
 
@@ -198,19 +206,22 @@ public class ClusterViewManager {
      * @return SystemAdvertisement removed  or null if not in view.
      */
     SystemAdvertisement remove(final SystemAdvertisement advertisement) {
+        boolean removed = false;
         ID id = advertisement.getID();
-        if (containsKey(id)) {
-            lockLog("remove()");
-            viewLock.lock();
-            try {
+        lockLog("remove()");
+        viewLock.lock();
+        try {
+            if (containsKey(id)) {
                 view.remove(id.toString());
-            } finally {
-                viewLock.unlock();
+                removed = true;
             }
-
-            LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   "+ advertisement.getID().toString());
+        } finally {
+            viewLock.unlock();
+        }
+        if (removed) {
+            LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   " + advertisement.getID().toString());
         } else {
-            LOG.log(Level.FINEST, "Skipping removal of " + id+ " Not in view");
+            LOG.log(Level.FINEST, "Skipping removal of " + id + " Not in view");
         }
         return advertisement;
     }
@@ -231,8 +242,6 @@ public class ClusterViewManager {
      * Resets the view
      */
     void reset() {
-        LOG.log(Level.FINEST, "Resetting View");
-        lockLog("reset()");
         viewLock.lock();
         try {
             view.clear();
@@ -284,10 +293,10 @@ public class ClusterViewManager {
      */
     SystemAdvertisement getMasterCandidate() {
         final SystemAdvertisement adv;
-        final String id = view.firstKey();
         lockLog("getMasterCandidate()");
         viewLock.lock();
         try {
+            final String id = view.firstKey();
             adv = view.get(id);
         } finally {
             viewLock.unlock();
@@ -379,10 +388,9 @@ public class ClusterViewManager {
      */
     private boolean addToView( final List<SystemAdvertisement> newView ) {
         boolean changed = false;
-        LOG.log( Level.FINER, "Resetting View" );
-        reset();
-        lockLog( "addToView()" );
+        lockLog( "addToView() - reset and add newView" );
         viewLock.lock();
+        reset();
         try {
             if( !newView.contains( manager.getSystemAdvertisement() ) ) {
                 view.put( manager.getSystemAdvertisement().getID().toString(),

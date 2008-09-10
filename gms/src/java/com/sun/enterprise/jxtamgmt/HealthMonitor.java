@@ -439,14 +439,30 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                                     "Calling handleReadyEvent() for handling the peer's ready state");
                             handleReadyEvent(entry);
                         } else {
-                            LOG.log(Level.FINER, "Discarding out of sequence health message");
+                            LOG.log(Level.FINER, "Discarding out of sequence health message for " + entry.adv.getName() + " Entry info : "  + entry.toString() +
+                                    " and the cachedEntry is " + cachedEntry.adv.getName() + " cachedEntry info : " +
+                                    cachedEntry.toString());
                         }
                         return;
                     }
                 }
-                LOG.log(Level.FINE, "Putting into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id);
-                synchronized (cacheLock) {
-                    cache.put(entry.id, entry);
+                boolean validStateTransition = true;
+                if (cachedEntry != null) {
+                    // check for invalid state transitions before updating cache.
+                    if ((cachedEntry.state.equals(states[STOPPED]) ||
+                            cachedEntry.state.equals(states[CLUSTERSTOPPING]) ||
+                            cachedEntry.state.equals(states[PEERSTOPPING])) &&
+                            (entry.state.equals(states[ALIVEANDREADY]) || entry.state.equals(states[ALIVE]))) {
+                        // invalid state transition.  Not allowed to transition from STOPPED to ALIVE.
+                        validStateTransition = false;
+                    }
+                    // are there other invalid state transitions to check for?
+                }
+                if (validStateTransition) {
+                    LOG.log(Level.FINE, "Putting into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id);
+                    synchronized (cacheLock) {
+                        cache.put(entry.id, entry);
+                    }
                 }
                 //fine("after putting into cache " + cache + " , contents are :-");
                 //print(cache);
@@ -581,20 +597,49 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param id    destination node ID, if null broadcast to group
      */
     private void reportMyState(final short state, final PeerID id) {
-        LOG.log(Level.FINER, MessageFormat.format("Sending state {0} to {1}", states[state], id));
-        if (state == ALIVE) {
-            send(id, getAliveMessage());
-        } else {
-            if (state == ALIVEANDREADY) {
-                send(id, getAliveAndReadyMessage());
-            } else
-                send(id, createHealthMessage(state));
+        final String peerIdString = (id == null) ? "<cluster>" : id.toString();
+        Message msg = null;
+        switch (state) {
+            case ALIVE:
+                msg = getAliveMessage();
+                break;
+            case ALIVEANDREADY:
+                msg = getAliveAndReadyMessage();
+                break;
+            default:
+                msg = createHealthMessage(state);
+                break;
         }
+        if (LOG.isLoggable(Level.FINER)) {
+            LOG.log(Level.FINER, MessageFormat.format("Sending Health Message Sequence Id {0} with state {1} to {2}", 
+                                                      getSeqId(msg), states[state], peerIdString));
+        }
+        send(id, msg);
+    }
+    
+    private long getSeqId(Message msg) {
+        long seqId = 0L;
+        Message.ElementIterator iter = msg.getMessageElements();
+        try {
+            while (iter.hasNext()) {
+                MessageElement msgElement = iter.next();
+                if (msgElement != null && msgElement.getElementName().equals(HEALTHM)) {
+                    HealthMessage hm = getHealthMessage(msgElement);
+                    for (HealthMessage.Entry entry : hm.getEntries()) {
+                        // only one health message entry
+                        seqId = entry.getSeqID();
+                        break;
+                    }
+                }
+            }
+        } catch (IOException e) { }
+        return seqId;
     }
 
     private void reportOtherPeerState(final short state, final SystemAdvertisement adv) {
         final Message msg = createMessage(state, HEALTHM, adv);
-        LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} health state as {1}", adv.getName(), states[state]));
+        LOG.log(Level.FINEST, MessageFormat.format("reportOtherPeerState : Reporting {0} health state as {1} with sequence id {2} to multicast", 
+                adv.getName(), states[state], getSeqId(msg)));
         send(null, msg);
     }
 
@@ -626,7 +671,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 LOG.log(Level.FINEST, "Shoal Health Monitor Thread Stopping as the thread is now interrupted...:" + e.getLocalizedMessage());
                 break;
             } catch (Throwable all) {
-                LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
+                LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName(), all);
             }
         }
     }
@@ -639,6 +684,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param msg    the message to send
      */
     private void send(final PeerID peerid, final Message msg) {
+        boolean sendResult = false;
         sendStopLock.lock();
         try {
                 //the message contains only one messageElement and
@@ -685,14 +731,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         pipeCache.put(peerid, output);
                     }
                 }
-                output.send(msg);
+                sendResult = output.send(msg);
             } else {
-                outputPipe.send(msg);
+                sendResult = outputPipe.send(msg);
             }
         } catch (IOException io) {
             LOG.log(Level.WARNING, "Failed to send message", io);
         } finally {
             sendStopLock.unlock();
+        }
+        if (!sendResult) {
+            final String peerIdString = peerid == null ? "cluster" : peerid.toString();
+            LOG.log(Level.WARNING, "Failed to send message " + msg.toString()  + " to " + peerIdString + " : send returned false");
         }
     }
 
@@ -1088,8 +1138,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 }
             } catch (InterruptedException ex) {
-                LOG.log(Level.FINE, MessageFormat.format("failure Verifier Thread stopping as it is now interrupted: {0}", ex.getLocalizedMessage()), ex);
-                print(cache);
+                LOG.log(Level.FINE, MessageFormat.format("failure Verifier Thread stopping as it is now interrupted: {0}", ex.getLocalizedMessage()));
             }
         }
 
