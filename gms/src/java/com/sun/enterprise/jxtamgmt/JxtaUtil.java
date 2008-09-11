@@ -42,15 +42,13 @@ import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.WireFormatMessage;
 import net.jxta.endpoint.WireFormatMessageFactory;
+import net.jxta.logging.Logging;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.ErrorManager;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -130,6 +128,19 @@ public class JxtaUtil {
         LOG.setUseParentHandlers(false);
         final String level = System.getProperty("LOG_LEVEL", "FINEST");
         LOG.setLevel(Level.parse(level));
+        // Remove all existing handlers for jxta logging
+        Logger jxtaLogger = Logger.getLogger("net.jxta");
+        for( Handler aHandler : jxtaLogger.getHandlers() ) {
+            jxtaLogger.removeHandler(aHandler);
+    }
+
+        String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
+        if (jxtaLoggingPropertyValue == null) {
+            // Only disable jxta logging when jxta logging has not already been explicitly enabled.
+            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.SEVERE.toString());
+        }
+
+        jxtaLogger.addHandler(consoleHandler);         
     }
 
     /**

@@ -217,7 +217,10 @@ public class ClusterManager implements PipeMsgListener {
     }
 
     private long getFailureDetectionTcpRetransmitTimeout(Map props) {
-        long failTcpTimeout = 30000;
+        long failTcpTimeout = 10000;   // sailfin requirement to discover network outage under 30 seconds.
+                                       // fix for sailfin 626.  
+                                       // HealthMonitor.isConnected() is called twice and must time out twice, using 20 seconds.
+                                       // indoubt detection and failure verification takes 8-10 seconds.
         if (props != null && !props.isEmpty()) {
             Object ft = props.get(JxtaConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString());
             if (ft != null) {

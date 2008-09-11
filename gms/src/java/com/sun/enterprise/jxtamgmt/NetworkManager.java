@@ -149,11 +149,6 @@ public class NetworkManager implements RendezvousListener {
     public NetworkManager(final String groupName,
                    final String instanceName,
                    final Map properties) {
-        String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
-        if (jxtaLoggingPropertyValue == null) {
-            // Only disable jxta logging when jxta logging has not already been explicitly enabled.
-            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
-        }
         this.groupName = groupName;
         this.instanceName = instanceName;
 
@@ -196,7 +191,7 @@ public class NetworkManager implements RendezvousListener {
         try {
             initWPGF(home.toURI(), instanceName);
         } catch (PeerGroupException e) {
-            LOG.log(Level.SEVERE, e.getLocalizedMessage());
+            LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
         }
 
 
@@ -423,7 +418,13 @@ public class NetworkManager implements RendezvousListener {
             rendezvous.removeListener(this);
             netPeerGroup.stopApp();
             netPeerGroup.unref();
-            netPeerGroup = null;
+            netPeerGroup = null;                   
+            // stopping or unrefing world peer group results in NPE and
+            // InterruptedIOException when jxta logging enabled.
+            // Comment out for now.
+//          if (worldPG != null) {
+//              worldPG.stopApp();
+//          }
             final File userHome = new File(home, instanceName);
             clearCache(userHome);
             instanceToPeerIdMap.clear();
@@ -574,6 +575,12 @@ public class NetworkManager implements RendezvousListener {
                 worldGroupConfig.setPeerID(peerid);
                 // Disable multicast because we will be using a separate multicast in each group.
                 worldGroupConfig.setUseMulticast(false);
+                if (tcpAddress != null && !tcpAddress.equals("")) {
+                    worldGroupConfig.setTcpInterfaceAddress(tcpAddress);
+                    worldGroupConfig.setMulticastInterface(tcpAddress);
+                }
+                worldGroupConfig.setTcpStartPort(9701);
+                worldGroupConfig.setTcpEndPort(9999);
                 ConfigParams config =  worldGroupConfig.getPlatformConfig();
                 // Instantiate the world peer group factory.
                 wpgf = new WorldPeerGroupFactory(config, storeHome);
@@ -637,15 +644,7 @@ public class NetworkManager implements RendezvousListener {
         }
         LOG.fine("node config adv = " + config.getPlatformConfig().toString());
 
-        //if a machine has multiple network interfaces,
-        //specify which interface the group communication should start on
-        if (tcpAddress != null && !tcpAddress.equals("")) {
-            config.setTcpInterfaceAddress(tcpAddress);
-            config.setMulticastInterface(tcpAddress);
-        }
-
-        PeerGroup worldPG = wpgf.getInterface();
-
+        worldPG = getWorldPeerGroup();
         ModuleImplAdvertisement npgImplAdv;
         try {
             npgImplAdv = worldPG.getAllPurposePeerGroupImplAdvertisement();
@@ -670,6 +669,15 @@ public class NetworkManager implements RendezvousListener {
         }
         LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous() || rendezvous.isRendezVous()));
         return netPeerGroup;
+    }
+    
+    private PeerGroup worldPG = null;
+    
+    synchronized private PeerGroup getWorldPeerGroup() {
+        if (worldPG == null) {
+            worldPG = wpgf.getInterface();
+}
+        return worldPG;
     }
 }
 

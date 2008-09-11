@@ -58,6 +58,7 @@ import net.jxta.impl.pipe.BlockingWireOutputPipe;
 import net.jxta.endpoint.StringMessageElement;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,6 +79,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes
@@ -191,6 +193,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         this.failureDetectionTCPTimeout = failureDetectionTCPTimeout;
         this.failureDetectionTCPPort = failureDetectionTCPPort;
         isConnectedPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        if (LOG.isLoggable(Level.CONFIG)) {
+            LOG.config("HealthMonitor: heartBeatTimeout(ms)=" + timeout + 
+                       " maxMissedBeats=" + maxMissedBeats + 
+                       " failureDetectionTCPTimeout(ms)=" + failureDetectionTCPTimeout + 
+                       " failureDetectionTCPPort=" + failureDetectionTCPPort);
+        }
 
         try {
             mcast = new LWRMulticast(manager,
@@ -697,7 +705,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
                 output.send(msg);
             } else {
-                outputPipe.send(msg);
+                final boolean result = outputPipe.send(msg);
+                if (!result) {
+                    LOG.log(Level.WARNING,"HealthMonitor.send returned false");
+                }
             }
         } catch (IOException io) {
             LOG.log(Level.WARNING, "Failed to send message", io);
@@ -951,7 +962,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             // Commented out since resulted in deadlock with FailureVerifier thread already holding verifierLock and trying to
             // acquire sendStopLock to send a message.
 //            synchronized (verifierLock) {
-//                verifierLock.notify();
+//                verifierLock.notify();<
 //            }
         }
 
@@ -973,10 +984,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     break;
                 }
                 catch (Throwable all) {
-                    if (LOG.isLoggable(Level.FINE)) {
-                        all.printStackTrace();
-                    }
-                    LOG.warning("Uncaught Throwable in failureDetectorThread " + Thread.currentThread().getName() + ":" + all);
+                    LOG.log(Level.FINE, "Uncaught Throwable in failureDetectorThread " + Thread.currentThread().getName() + ":" + all);
                 }
             }
 
@@ -1021,28 +1029,26 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
+                //dont suspect self
+                if (!entry.id.equals(localPeerID)) {
+                    if (canProcessInDoubt(entry)) {
+                        LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
+                                entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
+                    }
+                }
                 if (computeMissedBeat(entry) >= maxMissedBeats && !isConnected(entry)) {
-
-                        LOG.log(Level.FINEST, "timeDiff > maxTime");
-                        if (canProcessInDoubt(entry)) {
-                            LOG.log(Level.FINER, "Designating InDoubtState");
-                            designateInDoubtState(entry);
-                            //delegate verification to Failure Verifier
-                            LOG.log(Level.FINER, "Notifying FailureVerifier for " + entry.adv.getName());
-                            synchronized (verifierLock) {
-                                verifierLock.notify();
-                                LOG.log(Level.FINER, "Done Notifying FailureVerifier for " + entry.adv.getName());
-                            }
-                        }
-
-                } else {
-                    //dont suspect self
-                    if (!entry.id.equals(localPeerID)) {
-                        if (canProcessInDoubt(entry)) {
-                            LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
-                                    entry.adv.getName(), (System.currentTimeMillis() - entry.timestamp), computeMissedBeat(entry), maxMissedBeats));
+                    LOG.log(Level.FINEST, "timeDiff > maxTime");
+                    if (canProcessInDoubt(entry)) {
+                        LOG.log(Level.FINER, "Designating InDoubtState");
+                        designateInDoubtState(entry);
+                        //delegate verification to Failure Verifier
+                        LOG.log(Level.FINER, "Notifying FailureVerifier for " + entry.adv.getName());
+                        synchronized (verifierLock) {
+                            verifierLock.notify();
+                            LOG.log(Level.FINER, "Done Notifying FailureVerifier for " + entry.adv.getName());
                         }
                     }
+
                 }
             }
         }
@@ -1096,7 +1102,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     }
                 }
             } catch (InterruptedException ex) {
-                LOG.log(Level.FINE, MessageFormat.format("failure Verifier Thread stopping as it is now interrupted: {0}", ex.getLocalizedMessage()), ex);
+                LOG.log(Level.FINE, MessageFormat.format("failure Verifier Thread stopping as it is now interrupted: {0}", ex.getLocalizedMessage()));
                 print(cache);
             }
         }
@@ -1198,16 +1204,18 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         //TODO : map  host to uris. and entries to host
 
         List<URI> list = entry.adv.getURIs();
-        List<Future> array = new ArrayList<Future>();
-
+        List<CheckConnectionToPeerMachine> connections = new ArrayList<CheckConnectionToPeerMachine>(list.size());
+        AtomicInteger outstandingConnections = new AtomicInteger(list.size());
+        
         for (URI uri : list) {
             fine("Checking for machine status for network interface : " + uri.toString());
-            CheckConnectionToPeerMachine connectionToPeer = new CheckConnectionToPeerMachine(entry, uri.getHost());
-            Future future = isConnectedPool.submit(connectionToPeer);
-            array.add(future);
+            CheckConnectionToPeerMachine connectToPeer = new CheckConnectionToPeerMachine(entry, uri.getHost(), outstandingConnections);
+            connections.add(connectToPeer);
+            connectToPeer.setFuture(isConnectedPool.submit(connectToPeer));
         }
 
         try {
+            // wait until one network interface is confirmed to be up or all network interface addresses are confirmed to be down.
             synchronized (hwFailureDetectionthreadLock) {
                 hwFailureDetectionthreadLock.wait(failureDetectionTCPTimeout);
             }
@@ -1215,83 +1223,128 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             fine("InterruptedException occurred..." + e.getMessage(), new Object[]{e});
         }
 
-        //check if the interrupt() call really does interrupt the thread
-        //for (int i = 0; i < array.size(); i++) {
-        for (Future future : array) {
+        // check if at least one network interface is up and isConnectable.
+        // also be sure to cancel any outstanding future tasks.  (Could be hung trying to create a socket to a failed network interface)
+        boolean result = false;
+        boolean canceled = false;
+        for (CheckConnectionToPeerMachine connection : connections) {
             try {
+                Future future = connection.getFuture();
                 //if the task has completed after waiting for the
                 //specified timeout
-                if (future.isDone()) {
-                    if (future.get().equals(Boolean.TRUE)) {
-                        fine("Peer Machine for " + entry.adv.getName() + " is up");
-                        boolean connection = masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
-                        fine("routeControl.isConnected() for " + entry.adv.getName() + " is => " + connection);
-                        return connection;
+                if (connection.completedComputation()) {
+                    if (!result && connection.isConnectionUp()) {
+                        boolean isConnected = masterNode.getRouteControl().isConnected(entry.id, manager.getCachedRoute(entry.id));
+                        fine("routeControl.isConnected() for " + entry.adv.getName() + " is => " + isConnected + " using " +
+                              connection.address);
+                        if (isConnected) {
+                            result = isConnected;
+                        }
                     }
-                } else {
-                    //interrupt the thread which is running the task submitted to it
-                    fine("Going to cancel the future task...");
+                } else if (! future.isDone()) {
+                    
+                    //interrupt the thread which is still running the task submitted to it.
+                    // chances are that the thread is hung on socket creation to a failed network interface.
+                    fine("Going to cancel the future task for address " + connection.address);
                     future.cancel(true);
-                    isConnectedPool.purge();
-                    fine("Finished cancelling and purging the future task...");
+                    canceled = true;
+                    fine("Finished cancelling future task for address " + connection.address);
 
                     //cancelling the task is as good as getting false
                     //underlying socket that got created will still be alive.
                 }
-            } catch (ExecutionException e) {
-                fine("Exception occurred while getting the return value from the Future object " + e.getMessage());
-                return false;
-            } catch (InterruptedException e) {
-                fine("InterruptedException occurred..." + e.getMessage(), new Object[]{e});
-                return false;
+            } catch (Throwable t) {
+                // ignore.  must iterate over all connections.
             }
         }
-        fine("Peer Machine for " + entry.adv.getName() + " is down!");
-        return false;
+        if (canceled) {
+            // be sure to purge since there was one or more cancelled future threads.
+            isConnectedPool.purge();
+        }
+        String machineStatus = result ? "up!" : "down!";
+        fine("Peer Machine for " + entry.adv.getName() + " is " + machineStatus);
+        return result;
     }
-
 
     //This is the Callable Object that gets executed by the ExecutorService
     private class CheckConnectionToPeerMachine implements Callable<Object> {
         HealthMessage.Entry entry;
         String address;
+        Boolean connectionIsUp;
+        boolean running;
+        Future future;
+        AtomicInteger outstandingConnectionChecks;
 
-        CheckConnectionToPeerMachine(HealthMessage.Entry entry, String address) {
+        CheckConnectionToPeerMachine(HealthMessage.Entry entry, String address, AtomicInteger outstanding) {
             this.entry = entry;
             this.address = address;
+            this.connectionIsUp = null;   // unknown
+            this.running = true;
+            this.outstandingConnectionChecks = outstanding;
         }
-
+        
+        void setFuture(Future future) {
+            this.future = future;
+        }
+        
+        Future getFuture() {
+            return future;
+        }
+        
+        boolean isConnectionUp() {
+            return connectionIsUp != null && connectionIsUp;
+        }
+        
+        boolean completedComputation() {
+            return !running;
+        }
+        
         public Object call() {
             Socket socket = null;
             try {
                 fine("Going to create a socket at " + address + "port = " + failureDetectionTCPPort);
                 socket = new Socket(InetAddress.getByName(address), failureDetectionTCPPort);
                 fine("Socket created at " + address + "port = " + failureDetectionTCPPort);
-                synchronized (hwFailureDetectionthreadLock) {
-                    hwFailureDetectionthreadLock.notify();
-                }
-                //for whatever reason a socket got created, close it and return true
+                
+                //for whatever reason a socket got created, finally block will close it and return true
                 //i.e. this instance was able to create a socket on that machine so it is up
-                return Boolean.valueOf(true);
-            } catch (IOException e) {
+                connectionIsUp = Boolean.TRUE;
+            } catch (InterruptedIOException intioe) {
+                connectionIsUp = null;
+            }  catch (IOException e) {
                 fine("IOException occurred while trying to connect to peer " + entry.adv.getName() +
                         "'s machine : " + e.getMessage(), new Object[]{e});
                 if (e.getMessage().trim().contains(CONNECTION_REFUSED)) {
                     fine("Going to call notify since the peer machine is up");
-                    synchronized (hwFailureDetectionthreadLock) {
-                        hwFailureDetectionthreadLock.notify();
-                    }
-                    return Boolean.valueOf(true);
+                    connectionIsUp = Boolean.TRUE;
+                } else {
+                    connectionIsUp = Boolean.FALSE;
                 }
-                return Boolean.valueOf(false);
             } finally {
+                running = false;
+                outstandingConnectionChecks.decrementAndGet();
                 if (socket != null) {
                     try {
                         socket.close();
                     } catch (IOException e) {
                         fine("Could not close the socket due to " + e.getMessage());
+                    } catch (Throwable t) {}
+                }
+                
+                if (isConnectionUp() || outstandingConnectionChecks.get() <= 0) {
+                    
+                    // completed computation, notify caller to proceed.
+                    // either one network interface has been verified working OR
+                    // all network interfaces have been confirmed to not be connectable.
+                    if (LOG.isLoggable(Level.FINE)) {
+                        fine("stop waiting for isConnected check.  isConnectionUp="  + isConnectionUp() +
+                             " outstandingNetworkInterfaceChecks=" + outstandingConnectionChecks.get());
+                    }
+                    synchronized (hwFailureDetectionthreadLock) {
+                        hwFailureDetectionthreadLock.notify();
                     }
                 }
+                return connectionIsUp;
             }
         }
     }
