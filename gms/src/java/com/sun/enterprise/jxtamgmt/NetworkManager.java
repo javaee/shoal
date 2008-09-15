@@ -577,7 +577,6 @@ public class NetworkManager implements RendezvousListener {
                 worldGroupConfig.setUseMulticast(false);
                 if (tcpAddress != null && !tcpAddress.equals("")) {
                     worldGroupConfig.setTcpInterfaceAddress(tcpAddress);
-                    worldGroupConfig.setMulticastInterface(tcpAddress);
                 }
                 worldGroupConfig.setTcpStartPort(9701);
                 worldGroupConfig.setTcpEndPort(9999);
@@ -641,6 +640,13 @@ public class NetworkManager implements RendezvousListener {
         }
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
+        }
+        
+        //if a machine has multiple network interfaces,
+        //specify which interface the group communication should start on
+        if (tcpAddress != null && !tcpAddress.equals("")) {
+            config.setTcpInterfaceAddress(tcpAddress);
+            config.setMulticastInterface(tcpAddress);
         }
         LOG.fine("node config adv = " + config.getPlatformConfig().toString());
 
