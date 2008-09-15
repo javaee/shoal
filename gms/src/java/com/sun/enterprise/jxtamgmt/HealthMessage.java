@@ -55,6 +55,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import static com.sun.enterprise.jxtamgmt.JxtaUtil.appendChild;
 
 /**
  * A HealthAdvertisement is described as follows
@@ -129,7 +130,7 @@ public class HealthMessage {
         }
         Element e;
         e = adv.createElement(srcTag, getSrcID().toString());
-        adv.appendChild(e);
+        appendChild(adv, e);
 
         Entry entry;
         for (Entry entry1 : entries) {
@@ -139,7 +140,7 @@ public class HealthMessage {
                 continue;
             }
             e = adv.createElement(entryTag);
-            adv.appendChild(e);
+            appendChild(adv, e);
             ((Attributable) e).addAttribute(stateTag, entry.state);
             StructuredTextDocument doc = (StructuredTextDocument) entry.adv.getDocument(asMimeType);
             StructuredDocumentUtils.copyElements(adv, e, doc);

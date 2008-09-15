@@ -57,6 +57,7 @@ import java.net.URI;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import static com.sun.enterprise.jxtamgmt.JxtaUtil.appendChild;
 
 /**
  * A SystemAdvertisement is described as follows <p/>
@@ -233,7 +234,8 @@ public class SystemAdvertisement extends Advertisement
         }
         customTags.putAll(tags);
     }
-
+    
+    @SuppressWarnings("unchecked")
     public Map<String, String> getCustomTags() {
         return (HashMap<String, String>) customTags.clone();
     }
@@ -259,29 +261,29 @@ public class SystemAdvertisement extends Advertisement
         }
         Element e;
         e = adv.createElement(idTag, getID().toString());
-        adv.appendChild(e);
+        appendChild(adv, e);
         e = adv.createElement(nameTag, getName().trim());
-        adv.appendChild(e);
+        appendChild(adv, e);
         e = adv.createElement(OSNameTag, getOSName().trim());
-        adv.appendChild(e);
+        appendChild(adv, e);
         e = adv.createElement(OSVersionTag, getOSVersion().trim());
-        adv.appendChild(e);
+        appendChild(adv, e);
         e = adv.createElement(OSarchTag, getOSArch().trim());
-        adv.appendChild(e);
+        appendChild(adv, e);
         if (endpointAddresses != null && !endpointAddresses.isEmpty()) {
             for (String address : getEndpointAddresses()) {
                 e = adv.createElement(ipTag, address.toString());
-                adv.appendChild(e);
+                appendChild(adv, e);
             }
         }
         e = adv.createElement(hwarchTag, getHWArch().trim());
-        adv.appendChild(e);
+        appendChild(adv, e);
         e = adv.createElement(hwvendorTag, getHWVendor().trim());
-        adv.appendChild(e);
+        appendChild(adv, e);
         if (customTags != null && !customTags.isEmpty()) {
             for (final String key : customTags.keySet()) {
                 e = adv.createElement(key, customTags.get(key));
-                adv.appendChild(e);
+                appendChild(adv, e);
             }
         }
         return adv;

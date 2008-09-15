@@ -93,6 +93,7 @@ public class NiceLogFormatter extends Formatter {
 
     private long recordNumber = 0;
 
+    @SuppressWarnings("unchecked")
     private static final String LINE_SEPARATOR =
             (String) java.security.AccessController.doPrivileged(
                     new sun.security.action.GetPropertyAction("line.separator"));

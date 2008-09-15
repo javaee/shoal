@@ -41,6 +41,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,7 +57,7 @@ public class ClusterViewManager {
     private SystemAdvertisement masterAdvertisement = null;
     private List<ClusterViewEventListener> cvListeners = new ArrayList<ClusterViewEventListener>();
     private long viewId = 0;
-    private long masterViewID = 0;
+    private AtomicLong masterViewID = new AtomicLong(0);
     private ClusterManager manager;
     private ReentrantLock viewLock = new ReentrantLock();
 
@@ -247,12 +248,13 @@ public class ClusterViewManager {
             viewLock.unlock();
         }
     }
-
+    
     /**
      * Returns a sorted localView
      *
      * @return The localView List
      */
+    @SuppressWarnings("unchecked")
     public ClusterView getLocalView() {
         final TreeMap<String, SystemAdvertisement> temp;
         long localViewId = 0;
@@ -449,11 +451,11 @@ public class ClusterViewManager {
     }
 
     public long getMasterViewID() {
-        return masterViewID;
+        return masterViewID.get();
     }
 
     public void setMasterViewID(long masterViewID) {
-        this.masterViewID = masterViewID;
+        this.masterViewID.set(masterViewID);
     }
     private void lockLog(String method) {
         LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));

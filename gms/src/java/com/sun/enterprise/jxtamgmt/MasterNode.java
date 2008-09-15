@@ -475,7 +475,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (checkMaster(source)) {
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null) {
-                final ArrayList<SystemAdvertisement> newLocalView = (ArrayList<SystemAdvertisement>) getObjectFromByteArray(msgElement);
+                final ArrayList<SystemAdvertisement> newLocalView = getObjectFromByteArray(msgElement);
                 if (newLocalView != null) {
                     LOG.log(Level.FINER, MessageFormat.format("Received an authoritative view from {0}, of size {1}" +
                             " resetting local view containing {2}",
@@ -491,8 +491,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                                 " Current sequence :{1} discarding out of sequence view", seqID, clusterViewManager.getMasterViewID()));
                         return true;
                     }
-                    final ClusterViewEvent cvEvent =
-                            (ClusterViewEvent) getObjectFromByteArray(msgElement);
+                    final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
                     assert newLocalView != null;
                     if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                         LOG.log(Level.FINER, "New ClusterViewManager does not contain self. Publishing Self");
@@ -539,8 +538,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             masterAssigned = true;
             return true;
         }
-        final ArrayList<SystemAdvertisement> newLocalView =
-                (ArrayList<SystemAdvertisement>) getObjectFromByteArray(msgElement);
+        final ArrayList<SystemAdvertisement> newLocalView = getObjectFromByteArray(msgElement);
         msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
         if ( msgElement == null ) {
             clusterViewManager.setMaster( source, true );
@@ -562,8 +560,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                     MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}",
                             source.getName(), seqID, newLocalView.size()));
         }
-        final ClusterViewEvent cvEvent = (ClusterViewEvent)
-                getObjectFromByteArray(msgElement);
+        final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
         if (!newLocalView.contains(manager.getSystemAdvertisement())) {
             clusterViewManager.setMaster( source, true );
             masterAssigned = true;
@@ -601,8 +598,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
         LOG.log(Level.FINER,"Inside processChangeEvent..." );
         if (msgElement != null) {
-            final ClusterViewEvent cvEvent = (ClusterViewEvent)
-                    getObjectFromByteArray(msgElement);
+            final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null && cvEvent != null) {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
@@ -612,9 +608,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                             seqID, clusterViewManager.getMasterViewID()));
                     return true;
                 }
-                final ArrayList<SystemAdvertisement> newLocalView =
-                        (ArrayList<SystemAdvertisement>)
-                                getObjectFromByteArray(msgElement);
+                final ArrayList<SystemAdvertisement> newLocalView = getObjectFromByteArray(msgElement);
                 LOG.log(Level.FINER,
                         MessageFormat.format("Received a new view of size :{0}, event :{1}",
                                 newLocalView.size(), cvEvent.getEvent().toString()));

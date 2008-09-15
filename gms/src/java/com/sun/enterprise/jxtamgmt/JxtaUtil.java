@@ -43,6 +43,8 @@ import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.WireFormatMessage;
 import net.jxta.endpoint.WireFormatMessageFactory;
 import net.jxta.logging.Logging;
+import net.jxta.document.Element;
+import net.jxta.document.StructuredDocument;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -81,13 +83,14 @@ public class JxtaUtil {
         }
     }
 
-    public static Object getObjectFromByteArray(MessageElement element) {
+    @SuppressWarnings("unchecked")
+    public static <T> T getObjectFromByteArray(MessageElement element) {
         if (element == null) {
             return null;
         }
         try {
             ObjectInputStream in = new ObjectInputStream(new GZIPInputStream(element.getStream()));
-            return in.readObject();
+            return (T) in.readObject();
         } catch (Exception ex) {
             throw new IllegalArgumentException(ex.toString());
         }
@@ -181,5 +184,10 @@ public class JxtaUtil {
                     + "Check if group has been created or enabled");
         }
     }
+
+    @SuppressWarnings("unchecked")
+    static public void appendChild(StructuredDocument adv, Element child) {
+        adv.appendChild(child);
+    }    
 }
 
