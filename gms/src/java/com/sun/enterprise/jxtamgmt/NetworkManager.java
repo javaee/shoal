@@ -149,6 +149,7 @@ public class NetworkManager implements RendezvousListener {
     public NetworkManager(final String groupName,
                    final String instanceName,
                    final Map properties) {
+        JxtaUtil.configureJxtaLogging();
         this.groupName = groupName;
         this.instanceName = instanceName;
 
