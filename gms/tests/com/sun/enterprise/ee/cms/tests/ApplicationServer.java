@@ -204,6 +204,10 @@ public class ApplicationServer implements Runnable {
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), "2");
         //Uncomment this to receive loop back messages
         //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
+        final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
+        if(bindInterfaceAddress != null){
+            configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(),bindInterfaceAddress );
+        }
 
         applicationServer = new ApplicationServer(System.getProperty("INSTANCEID"), System.getProperty("CLUSTERNAME"), memberType, configProps);
 

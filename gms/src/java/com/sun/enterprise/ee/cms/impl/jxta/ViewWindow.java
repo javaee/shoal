@@ -36,8 +36,23 @@
 
 package com.sun.enterprise.ee.cms.impl.jxta;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.common.*;
+import com.sun.enterprise.ee.cms.core.DistributedStateCache;
+import com.sun.enterprise.ee.cms.core.GMSCacheable;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.core.Signal;
+import com.sun.enterprise.ee.cms.impl.common.FailureNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.FailureRecoverySignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.impl.common.GMSMember;
+import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.JoinedAndReadyNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.RecoveryTargetSelector;
+import com.sun.enterprise.ee.cms.impl.common.Router;
+import com.sun.enterprise.ee.cms.impl.common.SignalPacket;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.jxtamgmt.ClusterView;
 import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
@@ -88,18 +103,25 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     public void run() {
-
-        while (!getGMSContext().isShuttingDown()) {
-            final EventPacket packet;
-            try {
-                packet = viewQueue.take();
-                logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
-                if (packet != null) {
-                    newViewObserved(packet);
+        try {
+            while (!getGMSContext().isShuttingDown()) {
+                EventPacket packet = null;
+                try {
+                    packet = viewQueue.take();
+                    if (packet != null) {
+                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
+                        newViewObserved(packet);
+                    }
+                } catch (InterruptedException e) {
+                    logger.log(Level.FINEST, e.getLocalizedMessage());
+                } catch (Throwable t) {
+                    final String packetInfo = (packet == null ? "<null>" : packet.toString());
+                    logger.log(Level.FINE, "handled exception processing event packet " + packetInfo, t);
                 }
-            } catch (InterruptedException e) {
-                logger.log(Level.FINEST, e.getLocalizedMessage());
             }
+            logger.info("normal termination of ViewWindow thread");
+        } catch  (Throwable tOuter ) {
+            logger.log(Level.WARNING, "unexpected exception terminated ViewWindow thread", tOuter);
         }
     }
 
@@ -211,13 +233,15 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 addPlannedShutdownSignals(packet);
                 break;
         }
- 
+
         final Signal[] s = new Signal[signals.size()];
         return signals.toArray(s);
     }
 
     private void analyzeMasterChangeView(final EventPacket packet) {
-        //TODO: 01/19/2008 Dont recall why I did this; Need to revisit as join notification of local member does not get sent
+        if (views.size() == 1) { //views list only contains 1 view which is assumed to be the 1st view.
+            addNewMemberJoins(packet);
+        }
         if (views.size() > 1 &&
                 packet.getClusterView().getSize() !=
                         views.get(views.size() - 2).size()) {
@@ -281,8 +305,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
             logger.log(Level.INFO, "plannedshutdownevent.announcement", new Object[]{token, shutdownType});
             signals.add(new PlannedShutdownSignalImpl(token,
-                         advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                         Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())), shutdownType));
+                    advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                    Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())), shutdownType));
         } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
         }
@@ -295,8 +319,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         try {
             logger.log(Level.INFO, "gms.failureSuspectedEventReceived", token);
             signals.add(new FailureSuspectedSignalImpl(token,
-                          advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                          Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
+                    advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                    Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
         } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
         }
@@ -316,8 +340,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
 
                 if (getGMSContext().getRouter().isFailureNotificationAFRegistered()) {
                     signals.add(new FailureNotificationSignalImpl(token,
-                                  advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                                  Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
+                            advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
+                            Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
                 }
 
                 logger.fine("removing newly added node from the suspected list..." + token);
@@ -392,7 +416,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                                     getGMSContext().getServerIdentityToken(), (String) gmsCacheable.getKey(),
                                     getGMSContext().getGroupName());
                         } catch (GMSException e) {
-                            logger.log(Level.WARNING, e.getLocalizedMessage());
+                            logger.log(Level.FINE, e.getLocalizedMessage(), e);
                         }
                     }
                 }
@@ -475,8 +499,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     private void addJoinedAndReadyNotificationSignal(final String token,
-                                    final String groupName,
-                                    final long startTime) {
+                                                     final String groupName,
+                                                     final long startTime) {
         logger.log(Level.FINE, "adding join and ready signal");
         signals.add(new JoinedAndReadyNotificationSignalImpl(token,
                 getCurrentCoreMembers(),
@@ -514,13 +538,17 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 dsc.syncCache(token, true);
                 logger.log(Level.FINER, "Sync request sent..");
             } catch (GMSException e) {
-                logger.log(Level.WARNING, "GMSException during DSC sync" +
-                        e.getLocalizedMessage());
+                if (logger.isLoggable(Level.FINE)) { 
+                    logger.log(Level.FINE, "GMSException during DSC sync " + e.getLocalizedMessage(), e);
+                }
             } catch (InterruptedException e) {
-                logger.log(Level.WARNING, e.getLocalizedMessage());
+                if (logger.isLoggable(Level.FINE)) { 
+                    logger.log(Level.FINE, e.getLocalizedMessage(), e);
+                }
             } catch (Exception e) {
-                logger.log(Level.WARNING, "Exception during DSC sync:" + e);
-                e.printStackTrace();
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "Exception during DSC sync:" + e, e);
+                }
             }
         }
     }

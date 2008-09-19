@@ -119,6 +119,10 @@ public class GMSFactory {
                             final GroupManagementService.MemberType memberType,
                             final Properties properties)
     {
+        if ( serverToken == null )
+            throw new RuntimeException("Server Token was not specified and cannot be null");
+        if ( groupName == null )
+            throw new RuntimeException("Group Name was not specified and cannot be null");
         Runnable gms;
         //if this method is called, GMS is enabled. It is assumed that
         //calling code made checks in configurations about the enablement

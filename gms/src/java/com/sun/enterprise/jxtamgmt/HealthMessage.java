@@ -274,7 +274,7 @@ public class HealthMessage {
     /**
      * Entries class
      */
-    public static final class Entry {
+    public static final class Entry implements Cloneable{
         /**
          * Entry ID entry id
          */
@@ -291,12 +291,12 @@ public class HealthMessage {
         /**
          * Entry timestamp
          */
-        long timestamp;
+        final long timestamp;
 
         /**
          * * Entry sequence ID
          */
-        long seqID = -1;
+        final long seqID;
 
         /**
          * Creates a Entry with id and state
@@ -321,14 +321,14 @@ public class HealthMessage {
          * {@inheritDoc}
          */
         public boolean equals(final Object obj) {
-            return obj instanceof Entry && this == obj || obj != null && id.equals(obj);
+            return obj instanceof Entry && this == obj || obj != null && id.equals(((HealthMessage.Entry)obj).id);
         }
 
         /**
          * {@inheritDoc}
          */
         public int hashCode() {
-            return adv.getID().hashCode() * 45191 + state.hashCode();
+            return id.hashCode() * 45191;
         }
 
         /**
@@ -336,6 +336,10 @@ public class HealthMessage {
          */
         public String toString() {
             return "HealthMessage.Entry: Id = " + id.toString() + "; State = " + state + "; LastTimeStamp = " + timestamp + "sequence ID = " + seqID;
+        }
+
+        public Object clone() throws CloneNotSupportedException {
+            return (HealthMessage.Entry)super.clone();
         }
     }
 }

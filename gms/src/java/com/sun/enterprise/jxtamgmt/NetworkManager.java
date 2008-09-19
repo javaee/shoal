@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Hashtable;
 import java.net.URI;
 
 import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
@@ -98,7 +99,8 @@ public class NetworkManager implements RendezvousListener {
     private String groupName = "defaultGroup";
     private String instanceName;
     private static final String PREFIX = "SHOAL";
-    private static final String networkConnectLock = "networkConnectLock";
+    private final Object networkConnectLock = new Object();
+    private static  final Object digestLock = new Object();
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
     private final PipeID socketID;
     private final PipeID pipeID;
@@ -129,6 +131,7 @@ public class NetworkManager implements RendezvousListener {
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
     private boolean isRendezvousSeed = false;
     private String tcpAddress;
+    private Hashtable<String,PeerID> instanceToPeerIdMap = new Hashtable<String, PeerID>();
 
     /**
      * NetworkManager provides a simple interface to configuring and managing the lifecycle
@@ -146,11 +149,7 @@ public class NetworkManager implements RendezvousListener {
     public NetworkManager(final String groupName,
                    final String instanceName,
                    final Map properties) {
-        String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
-        if (jxtaLoggingPropertyValue == null) {
-            // Only disable jxta logging when jxta logging has not already been explicitly enabled.
-            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.OFF.toString());
-        }
+        JxtaUtil.configureJxtaLogging();
         this.groupName = groupName;
         this.instanceName = instanceName;
 
@@ -193,7 +192,7 @@ public class NetworkManager implements RendezvousListener {
         try {
             initWPGF(home.toURI(), instanceName);
         } catch (PeerGroupException e) {
-            LOG.log(Level.SEVERE, e.getLocalizedMessage());
+            LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
         }
 
 
@@ -210,21 +209,22 @@ public class NetworkManager implements RendezvousListener {
         if (expression == null) {
             throw new IllegalArgumentException("Invalid null expression");
         }
-        if (digest == null) {
-            try {
-                digest = MessageDigest.getInstance("SHA1");
-            } catch (NoSuchAlgorithmException ex) {
-                LOG.log(Level.WARNING, ex.getLocalizedMessage());
+        synchronized(digestLock) {
+            if (digest == null) {
+                try {
+                    digest = MessageDigest.getInstance("SHA1");
+                } catch (NoSuchAlgorithmException ex) {
+                    LOG.log(Level.WARNING, ex.getLocalizedMessage());
+                }
             }
-        }
-        digest.reset();
-        try {
-            digArray = digest.digest(expression.getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException impossible) {
-            LOG.log(Level.WARNING, "digestEncoding unsupported:"
-                    + impossible.getLocalizedMessage() +
-                    ":returning digest with default encoding");
-            digArray = digest.digest(expression.getBytes());
+            digest.reset();
+            try {
+                digArray = digest.digest(expression.getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException impossible) {
+                LOG.log(Level.WARNING, "digestEncoding unsupported:" + impossible.getLocalizedMessage() +
+                        ":returning digest with default encoding");
+                digArray = digest.digest(expression.getBytes());
+            }
         }
         return digArray;
     }
@@ -258,7 +258,12 @@ public class NetworkManager implements RendezvousListener {
      * @return The peerID value
      */
     public PeerID getPeerID(final String instanceName) {
-        return IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+        PeerID id = instanceToPeerIdMap.get(instanceName);
+        if(id == null){
+            id = IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+            instanceToPeerIdMap.put(instanceName, id);
+        }
+        return id;
     }
 
     /**
@@ -403,26 +408,33 @@ public class NetworkManager implements RendezvousListener {
         }
     }
 
-    /**
-     * Stops the NetworkManager and the JXTA platform.
-     */
-    public synchronized void stop() {
-        if (stopped && !started) {
-            return;
+        /**
+         * Stops the NetworkManager and the JXTA platform.
+         */
+        public synchronized void stop() {
+            if (stopped && !started) {
+                return;
+            }
+            try {
+                rendezvous.removeListener(this);
+                netPeerGroup.stopApp();
+                netPeerGroup.unref();
+                netPeerGroup = null;
+                // stopping or unrefing world peer group results in NPE and
+                // InterruptedIOException when jxta logging enabled.
+                // Comment out for now.
+//                if (worldPG != null) {
+//                    worldPG.stopApp();
+//                }
+                final File userHome = new File(home, instanceName);
+                clearCache(userHome);
+                instanceToPeerIdMap.clear();
+            } catch (Throwable th) {
+                LOG.log(Level.FINEST, th.getLocalizedMessage());
+            }
+            stopped = true;
+            started = false;
         }
-        try {
-            rendezvous.removeListener(this);
-            netPeerGroup.stopApp();
-            netPeerGroup.unref();
-            netPeerGroup = null;
-            final File userHome = new File(home, instanceName);
-            clearCache(userHome);
-        } catch (Throwable th) {
-            LOG.log(Level.FINEST, th.getLocalizedMessage());
-        }
-        stopped = true;
-        started = false;
-    }
 
     /**
      * Returns the netPeerGroup instance for this Cluster.
@@ -564,7 +576,12 @@ public class NetworkManager implements RendezvousListener {
                 worldGroupConfig.setPeerID(peerid);
                 // Disable multicast because we will be using a separate multicast in each group.
                 worldGroupConfig.setUseMulticast(false);
-                ConfigParams config =  worldGroupConfig.getPlatformConfig();
+                 if (tcpAddress != null && !tcpAddress.equals("")) {
+                    worldGroupConfig.setTcpInterfaceAddress(tcpAddress);
+                }
+                worldGroupConfig.setTcpStartPort(9701);
+                worldGroupConfig.setTcpEndPort(9999);
+                ConfigParams config =  worldGroupConfig.getPlatformConfig();           
                 // Instantiate the world peer group factory.
                 wpgf = new WorldPeerGroupFactory(config, storeHome);
             }
@@ -583,7 +600,7 @@ public class NetworkManager implements RendezvousListener {
         // Configure the peer name
         final NetworkConfigurator config;
         if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
-            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
+            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());           
             //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
             //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
             String myPort = rendezvousSeedURIs.get(0);
@@ -612,7 +629,7 @@ public class NetworkManager implements RendezvousListener {
             //limit it to configured rendezvous at this point
             config.setUseOnlyRendezvousSeeds(true);
         }
-
+      
         config.setUseMulticast(true);
         config.setMulticastSize(64 * 1024);
         config.setInfrastructureDescriptionStr(groupName + " Infrastructure Group Name");
@@ -622,16 +639,16 @@ public class NetworkManager implements RendezvousListener {
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
         }
-        LOG.fine("node config adv = " + config.getPlatformConfig().toString());
-
+        
         //if a machine has multiple network interfaces,
         //specify which interface the group communication should start on
         if (tcpAddress != null && !tcpAddress.equals("")) {
             config.setTcpInterfaceAddress(tcpAddress);
+            config.setMulticastInterface(tcpAddress);
         }
+        LOG.fine("node config adv = " + config.getPlatformConfig().toString());
 
-        PeerGroup worldPG = wpgf.getInterface();
-
+        worldPG = getWorldPeerGroup();
         ModuleImplAdvertisement npgImplAdv;
         try {
             npgImplAdv = worldPG.getAllPurposePeerGroupImplAdvertisement();
@@ -656,6 +673,15 @@ public class NetworkManager implements RendezvousListener {
         }
         LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous() || rendezvous.isRendezVous()));
         return netPeerGroup;
+    }
+    
+    private PeerGroup worldPG = null;
+    
+    synchronized private PeerGroup getWorldPeerGroup() {
+        if (worldPG == null) {
+            worldPG = wpgf.getInterface();
+        }
+        return worldPG;
     }
 }
 

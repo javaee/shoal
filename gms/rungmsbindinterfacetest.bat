@@ -29,7 +29,7 @@ rem
 setlocal
 set publish_home=.\dist
 set lib_home=.\lib
-set jdk_home=%JAVA_HOME%\bin
+set jdk_home=%JAVA_HOME%
 echo %jdk_home%
 
 
@@ -39,18 +39,19 @@ if "%3a"=="a" goto usage
 if "%4a"=="a" goto usage
 if "%5a"=="a" goto usage
 if "%6a"=="a" goto usage
-if "%7a"=="a" goto usage
 
-echo "%jdk_home%"\java -Dcom.sun.management.jmxremote -DMEMBERTYPE=%3 -DINSTANCEID=%1 -DCLUSTERNAME=%2 -DMESSAGING_MODE=true -DLIFEINMILLIS=%4 -DLOG_LEVEL=%5 -D%6=%7 -D%8=%9 -cp %publish_home%/shoal-gms.jar;%lib_home%/jxta.jar com.sun.enterprise.ee.cms.tests.ApplicationServer
-"%jdk_home%"\java -Dcom.sun.management.jmxremote -DMEMBERTYPE=%3 -DINSTANCEID=%1 -DCLUSTERNAME=%2 -DMESSAGING_MODE=true -DLIFEINMILLIS=%4 -DLOG_LEVEL=%5 -D%6=%7 -D%8=%9 -cp %publish_home%/shoal-gms.jar;%lib_home%/jxta.jar com.sun.enterprise.ee.cms.tests.ApplicationServer
+"%jdk_home%"\bin\java -Dcom.sun.management.jmxremote -DMEMBERTYPE=%3 -DINSTANCEID=%1 -DCLUSTERNAME=%2 -DMESSAGING_MODE=true -DLIFEINMILLIS=%4 -DLOG_LEVEL=%5 -DBIND_INTERFACE_ADDRESS=%6 -cp %publish_home%/shoal-gms.jar;%lib_home%/jxta.jar com.sun.enterprise.ee.cms.tests.ApplicationServer
 
 goto end
+
 
 :usage
 echo Usage: %0 parameters... 
 echo The required parameters are :
-echo instance_id_token groupname membertype{CORE--OR--SPECTATOR} Life-In-Milliseconds log-level IS_INITIAL_HOST={true--OR--false} INITIAL_HOST_LIST={comma separated (no space) list of tcp addresses in the form tcp://ipaddress:port}
+echo instance_id_token groupname membertype{CORE--OR--SPECTATOR} Life-In-Milliseconds log-level <bind_interface_ip_address>
 echo Life in milliseconds should be at least 60000 to demo failure fencing.
+echo <bind_interface_ip_address> refers to the ip address of a virtual or physical network interface 
+echo which should be used by this test to bind to for all communications. Currently this test only accepts IPv4 addresses. 
 
 :end
 endlocal
