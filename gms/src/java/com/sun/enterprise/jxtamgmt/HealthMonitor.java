@@ -1139,17 +1139,21 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             final boolean masterFailed = (masterNode.getMasterNodeID()).equals(entry.id);
             if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
                 LOG.log(Level.FINE, MessageFormat.format("Removing System Advertisement :{0} for name {1}", entry.id.toString(), entry.adv.getName()));
-                removeMasterAdv(entry, DEAD);
+                manager.getClusterViewManager().remove(entry.adv);
                 LOG.log(Level.FINE, MessageFormat.format("Announcing Failure Event of {0} for name {1}...", entry.id, entry.adv.getName()));
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, entry.adv);
                 masterNode.viewChanged(cvEvent);
             } else if (masterFailed) {
                 //remove the failed node
                 LOG.log(Level.FINE, MessageFormat.format("Master Failed. Removing System Advertisement :{0} for master named {1}", entry.id.toString(), entry.adv.getName()));
-                removeMasterAdv(entry, DEAD);
-                //manager.getClusterViewManager().remove(entry.id);
+                manager.getClusterViewManager().remove(entry.adv);
                 masterNode.resetMaster();
                 masterNode.appointMasterNode();
+                if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
+                    LOG.log(Level.FINE, MessageFormat.format("Announcing Failure Event of {0} for name {1}...", entry.id, entry.adv.getName()));
+                    final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.FAILURE_EVENT, entry.adv);
+                    masterNode.viewChanged(cvEvent);
+                }
             }
             cleanAllCaches(entry);
         }
@@ -1215,6 +1219,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
 
         try {
+            fine("failureDetectionTCPTimeout = " + failureDetectionTCPTimeout);
             // wait until one network interface is confirmed to be up or all network interface addresses are confirmed to be down.
             synchronized (hwFailureDetectionthreadLock) {
                 hwFailureDetectionthreadLock.wait(failureDetectionTCPTimeout);

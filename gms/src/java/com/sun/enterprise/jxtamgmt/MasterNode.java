@@ -1088,6 +1088,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      */
     void viewChanged(final ClusterViewEvent event) {
         if (isMaster() && masterAssigned) {
+            clusterViewManager.notifyListeners( event );
             //increment the view seqID
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             Message msg = createSelfNodeAdvertisement();
