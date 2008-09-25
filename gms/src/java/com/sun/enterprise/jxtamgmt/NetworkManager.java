@@ -36,12 +36,14 @@
 
 package com.sun.enterprise.jxtamgmt;
 
+import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
 import net.jxta.document.AdvertisementFactory;
-import net.jxta.document.XMLDocument;
 import net.jxta.document.MimeMediaType;
+import net.jxta.document.XMLDocument;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
-import net.jxta.logging.Logging;
+import net.jxta.impl.endpoint.mcast.McastTransport;
+import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
 import net.jxta.peer.PeerID;
 import net.jxta.peergroup.NetPeerGroupFactory;
 import net.jxta.peergroup.PeerGroup;
@@ -50,14 +52,12 @@ import net.jxta.peergroup.WorldPeerGroupFactory;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeService;
 import net.jxta.platform.NetworkConfigurator;
-import net.jxta.protocol.PipeAdvertisement;
-import net.jxta.protocol.ModuleImplAdvertisement;
 import net.jxta.protocol.ConfigParams;
+import net.jxta.protocol.ModuleImplAdvertisement;
+import net.jxta.protocol.PipeAdvertisement;
 import net.jxta.rendezvous.RendezVousService;
 import net.jxta.rendezvous.RendezvousEvent;
 import net.jxta.rendezvous.RendezvousListener;
-import net.jxta.impl.peergroup.StdPeerGroupParamAdv;
-import net.jxta.impl.endpoint.mcast.McastTransport;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,14 +67,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.Hashtable;
-import java.net.URI;
-
-import static com.sun.enterprise.jxtamgmt.JxtaConfigConstants.*;
 
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
@@ -102,9 +99,11 @@ public class NetworkManager implements RendezvousListener {
     private final Object networkConnectLock = new Object();
     private static  final Object digestLock = new Object();
     private static final File home = new File(System.getProperty("JXTA_HOME", ".shoal"));
-    private final PipeID socketID;
-    private final PipeID pipeID;
+    static private File storeHome;
+    private PipeID socketID;
+    private static PipeID pipeID;
     private static WorldPeerGroupFactory wpgf;
+    private PeerGroup worldPG = null;
 
     /**
      * JxtaSocket Pipe ID seed.
@@ -146,9 +145,8 @@ public class NetworkManager implements RendezvousListener {
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    public NetworkManager(final String groupName,
-                   final String instanceName,
-                   final Map properties) {
+    public NetworkManager(final String groupName, final String instanceName, final Map properties) {
+        JxtaUtil.configureJxtaLogging();
         this.groupName = groupName;
         this.instanceName = instanceName;
 
@@ -189,7 +187,7 @@ public class NetworkManager implements RendezvousListener {
             tcpAddress = (String)properties.get(BIND_INTERFACE_ADDRESS.toString());
         }
         try {
-            initWPGF(home.toURI(), instanceName);
+            initWPGF(instanceName);
         } catch (PeerGroupException e) {
             LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
         }
@@ -249,7 +247,7 @@ public class NetworkManager implements RendezvousListener {
         final String seed = instanceName + SOCKETSEED;
         return IDFactory.newPipeID(PeerGroupID.defaultNetPeerGroupID, hash(seed.toLowerCase()));
     }
-
+    
     /**
      * Given a instance name, it returns a name encoded PeerID to for binding to specific instance.
      *
@@ -258,8 +256,8 @@ public class NetworkManager implements RendezvousListener {
      */
     public PeerID getPeerID(final String instanceName) {
         PeerID id = instanceToPeerIdMap.get(instanceName);
-        if(id == null){
-            id = IDFactory.newPeerID(getInfraPeerGroupID(), hash(PREFIX + instanceName.toUpperCase()));
+        if (id == null) {
+            id = IDFactory.newPeerID(PeerGroupID.worldPeerGroupID, hash(PREFIX + instanceName.toUpperCase()));
             instanceToPeerIdMap.put(instanceName, id);
         }
         return id;
@@ -377,9 +375,6 @@ public class NetworkManager implements RendezvousListener {
         if (started) {
             return;
         }
-
-        final File userHome = new File(home, instanceName);
-        clearCache(userHome);
         startDomain();
     }
 
@@ -391,14 +386,24 @@ public class NetworkManager implements RendezvousListener {
     private static void clearCache(final File rootDir) {
         try {
             if (rootDir.exists()) {
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.finer("clearCache(" + rootDir + ")");
+                }
                 // remove it along with it's content
                 File[] list = rootDir.listFiles();
                 for (File aList : list) {
                     if (aList.isDirectory()) {
                         clearCache(aList);
                     } else {
-                        aList.delete();
+                        boolean value = aList.delete();
+                        if (!value && LOG.isLoggable(Level.FINE)) {
+                            LOG.fine("failed to deleted cache file " + aList);
+                        }
                     }
+                }
+            } else {
+                 if (LOG.isLoggable(Level.FINER)) {
+                    LOG.finer("clearCache(" + rootDir + ") on non-exsistent directory");
                 }
             }
             rootDir.delete();
@@ -419,14 +424,7 @@ public class NetworkManager implements RendezvousListener {
             netPeerGroup.stopApp();
             netPeerGroup.unref();
             netPeerGroup = null;                   
-            // stopping or unrefing world peer group results in NPE and
-            // InterruptedIOException when jxta logging enabled.
-            // Comment out for now.
-//          if (worldPG != null) {
-//              worldPG.stopApp();
-//          }
-            final File userHome = new File(home, instanceName);
-            clearCache(userHome);
+            // don't unref world peer group.  
             instanceToPeerIdMap.clear();
         } catch (Throwable th) {
             LOG.log(Level.FINEST, th.getLocalizedMessage());
@@ -561,28 +559,45 @@ public class NetworkManager implements RendezvousListener {
     /**
      * Configure and start the World Peer Group Factory
      *
-     * @param storeHome    The location JXTA will use to store all persistent data.
      * @param instanceName The name of the peer.
      * @throws PeerGroupException Thrown for errors creating the world peer group.
      */
-    private void initWPGF(URI storeHome, String instanceName) throws PeerGroupException {
+    private void initWPGF(String instanceName) throws PeerGroupException {
         synchronized (NetworkManager.class) {
             if (null == wpgf) {
-                NetworkConfigurator worldGroupConfig = NetworkConfigurator.newAdHocConfiguration(storeHome);
-
-                PeerID peerid = getPeerID(instanceName);
+                storeHome = new File(home, instanceName);
+                if (LOG.isLoggable(Level.CONFIG)) {
+                    LOG.config("initWPGF storeHome=" + storeHome);
+                }
+                clearCache(storeHome);
+                NetworkConfigurator worldGroupConfig;
+                if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
+                    worldGroupConfig = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, storeHome.toURI());
+                    //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
+                    //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
+                    String myPort = rendezvousSeedURIs.get(0);
+                    LOG.fine("myPort is " + myPort);
+                    myPort = myPort.substring(myPort.lastIndexOf(":") + 1, myPort.length());
+                    LOG.fine("myPort is " + myPort);
+                    //TODO: Add a check for port availability and consequent actions
+                    worldGroupConfig.setTcpPort(Integer.parseInt(myPort));
+                    worldGroupConfig.setTcpStartPort(Integer.parseInt(myPort));
+                    worldGroupConfig.setTcpEndPort(Integer.parseInt(myPort));
+                } else {
+                    worldGroupConfig = NetworkConfigurator.newAdHocConfiguration(storeHome.toURI());
+                    worldGroupConfig.setTcpStartPort(9701);
+                    worldGroupConfig.setTcpEndPort(9999);
+                }
                 worldGroupConfig.setName(instanceName);
-                worldGroupConfig.setPeerID(peerid);
+                worldGroupConfig.setPeerID(getPeerID(instanceName));
                 // Disable multicast because we will be using a separate multicast in each group.
                 worldGroupConfig.setUseMulticast(false);
                 if (tcpAddress != null && !tcpAddress.equals("")) {
                     worldGroupConfig.setTcpInterfaceAddress(tcpAddress);
                 }
-                worldGroupConfig.setTcpStartPort(9701);
-                worldGroupConfig.setTcpEndPort(9999);
                 ConfigParams config =  worldGroupConfig.getPlatformConfig();
                 // Instantiate the world peer group factory.
-                wpgf = new WorldPeerGroupFactory(config, storeHome);
+                wpgf = new WorldPeerGroupFactory(config, storeHome.toURI());
             }
         }
     }
@@ -594,12 +609,10 @@ public class NetworkManager implements RendezvousListener {
      * @throws PeerGroupException Thrown for errors creating the domain.
      */
     private PeerGroup startDomain() throws PeerGroupException {
-        final File userHome = new File(home, instanceName);
-        clearCache(userHome);
         // Configure the peer name
         final NetworkConfigurator config;
         if (isRendezvousSeed && rendezvousSeedURIs.size() > 0) {
-            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, userHome.toURI());
+            config = new NetworkConfigurator(NetworkConfigurator.RDV_NODE + NetworkConfigurator.RELAY_NODE, storeHome.toURI());
             //TODO: Need to figure out this process's seed addr from the list so that the right port can be bound to
             //For now, we only pick the first seed URI's port and let the other members be non-seeds even if defined in the list.
             String myPort = rendezvousSeedURIs.get(0);
@@ -610,9 +623,8 @@ public class NetworkManager implements RendezvousListener {
             config.setTcpPort(Integer.parseInt(myPort));
             config.setTcpStartPort(Integer.parseInt(myPort));
             config.setTcpEndPort(Integer.parseInt(myPort));
-
         } else {
-            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, userHome.toURI());
+            config = new NetworkConfigurator(NetworkConfigurator.EDGE_NODE, storeHome.toURI());
             config.setTcpStartPort(9701);
             config.setTcpEndPort(9999);
         }
@@ -650,7 +662,7 @@ public class NetworkManager implements RendezvousListener {
         }
         LOG.fine("node config adv = " + config.getPlatformConfig().toString());
 
-        worldPG = getWorldPeerGroup();
+        PeerGroup worldPG = getWorldPeerGroup();
         ModuleImplAdvertisement npgImplAdv;
         try {
             npgImplAdv = worldPG.getAllPurposePeerGroupImplAdvertisement();
@@ -676,8 +688,6 @@ public class NetworkManager implements RendezvousListener {
         LOG.fine("Connected to the bootstrapping node?: " + (rendezvous.isConnectedToRendezVous() || rendezvous.isRendezVous()));
         return netPeerGroup;
     }
-    
-    private PeerGroup worldPG = null;
     
     synchronized private PeerGroup getWorldPeerGroup() {
         if (worldPG == null) {
