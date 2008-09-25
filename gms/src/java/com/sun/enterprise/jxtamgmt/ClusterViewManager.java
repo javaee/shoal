@@ -148,6 +148,30 @@ public class ClusterViewManager {
     }
 
     /**
+     * Set the master instance with new view
+     *
+     * @param newView list of advertisements
+     * @param advertisement Master system adverisement
+     * @return true if there is master's change, false otherwise
+     */
+    boolean setMaster( final List<SystemAdvertisement> newView, final SystemAdvertisement advertisement ) {
+        if( advertisement.equals( masterAdvertisement ) ) {
+            return false;
+        }
+        lockLog("setMaster()");
+        viewLock.lock();
+        try { 
+            if ( newView != null ) {
+            addToView( newView );
+            }
+        setMaster( advertisement, true );
+        } finally {
+            viewLock.unlock();
+        }
+        return true;
+    }
+
+    /**
      * Gets the master advertisement
      *
      * @return SystemAdvertisement Master system adverisement
@@ -182,19 +206,22 @@ public class ClusterViewManager {
      * @return SystemAdvertisement removed  or null if not in view.
      */
     SystemAdvertisement remove(final SystemAdvertisement advertisement) {
+        boolean removed = false;
         ID id = advertisement.getID();
-        if (containsKey(id)) {
-            lockLog("remove()");
-            viewLock.lock();
-            try {
+        lockLog("remove()");
+        viewLock.lock();
+        try {
+            if (containsKey(id)) {
                 view.remove(id.toString());
-            } finally {
-                viewLock.unlock();
+                removed = true;
             }
-
-            LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   "+ advertisement.getID().toString());
+        } finally {
+            viewLock.unlock();
+        }
+        if (removed) {
+            LOG.log(Level.FINER, "Removed " + advertisement.getName() + "   " + advertisement.getID().toString());
         } else {
-            LOG.log(Level.FINEST, "Skipping removal of " + id+ " Not in view");
+            LOG.log(Level.FINEST, "Skipping removal of " + id + " Not in view");
         }
         return advertisement;
     }
@@ -215,8 +242,6 @@ public class ClusterViewManager {
      * Resets the view
      */
     void reset() {
-        LOG.log(Level.FINEST, "Resetting View");
-        lockLog("reset()");
         viewLock.lock();
         try {
             view.clear();
@@ -268,10 +293,10 @@ public class ClusterViewManager {
      */
     SystemAdvertisement getMasterCandidate() {
         final SystemAdvertisement adv;
-        final String id = view.firstKey();
         lockLog("getMasterCandidate()");
         viewLock.lock();
         try {
+            final String id = view.firstKey();
             adv = view.get(id);
         } finally {
             viewLock.unlock();
@@ -347,35 +372,45 @@ public class ClusterViewManager {
         }
 
         if (authoritative) {
-            boolean changed = false;
-            LOG.log(Level.FINER, "Resetting View");
-            reset();
-            lockLog("addToView()");
-            viewLock.lock();
-            try {
-                if (!newView.contains(manager.getSystemAdvertisement())) {
-                    view.put(manager.getSystemAdvertisement().getID().toString(),
-                            manager.getSystemAdvertisement());
-                }
-                for (SystemAdvertisement elem : newView) {
-                    LOG.log(Level.FINER,
-                            new StringBuffer().append("Adding ")
-                                    .append(elem.getID()).append(" to view")
-                                    .toString());
-                    if (!view.containsKey(elem.getID().toString())) {
-                        changed = true;
-                    }
-                    // Always add the wire version of the adv
-                    view.put(elem.getID().toString(), elem);
-                }
-            } finally {
-                viewLock.unlock();
-            }
+            boolean changed = addToView( newView );
             if (changed) {
                 //only if there are changes that we notify
                 notifyListeners(cvEvent);
             }
         }
+    }
+
+    /**
+     * Adds a list of advertisements to the view
+     *
+     * @param newView       list of advertisements
+     * @return true if there are changes, false otherwise
+     */
+    private boolean addToView( final List<SystemAdvertisement> newView ) {
+        boolean changed = false;
+        lockLog( "addToView() - reset and add newView" );
+        viewLock.lock();
+        reset();
+        try {
+            if( !newView.contains( manager.getSystemAdvertisement() ) ) {
+                view.put( manager.getSystemAdvertisement().getID().toString(),
+                          manager.getSystemAdvertisement() );
+            }
+            for( SystemAdvertisement elem : newView ) {
+                LOG.log( Level.FINER,
+                         new StringBuffer().append( "Adding " )
+                                 .append( elem.getID() ).append( " to view" )
+                                 .toString() );
+                if( !changed && !view.containsKey( elem.getID().toString() ) ) {
+                    changed = true;
+                }
+                // Always add the wire version of the adv
+                view.put( elem.getID().toString(), elem );
+            }
+        } finally {
+            viewLock.unlock();
+        }
+        return changed;
     }
 
     void notifyListeners(final ClusterViewEvent event) {
@@ -433,4 +468,5 @@ public class ClusterViewManager {
 
     }
 }
+
 

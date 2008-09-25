@@ -42,15 +42,13 @@ import net.jxta.endpoint.Message;
 import net.jxta.endpoint.MessageElement;
 import net.jxta.endpoint.WireFormatMessage;
 import net.jxta.endpoint.WireFormatMessageFactory;
+import net.jxta.logging.Logging;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.ErrorManager;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -63,6 +61,7 @@ import java.util.zip.GZIPOutputStream;
 public class JxtaUtil {
     private static Logger LOG = Logger.getLogger(
             System.getProperty("JXTA_MGMT_LOGGER", "JxtaMgmt"));
+    private static String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
 
     private JxtaUtil() {
     }
@@ -130,6 +129,19 @@ public class JxtaUtil {
         LOG.setUseParentHandlers(false);
         final String level = System.getProperty("LOG_LEVEL", "FINEST");
         LOG.setLevel(Level.parse(level));
+        // Remove all existing handlers for jxta logging
+        Logger jxtaLogger = Logger.getLogger("net.jxta");
+        for( Handler aHandler : jxtaLogger.getHandlers() ) {
+            jxtaLogger.removeHandler(aHandler);
+        }
+
+        String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
+        if (jxtaLoggingPropertyValue == null) {
+            // Only initialize jxta logging when jxta logging has not already been explicitly set.
+            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.SEVERE.toString());
+        }
+
+        jxtaLogger.addHandler(consoleHandler);         
     }
 
     /**
@@ -168,6 +180,23 @@ public class JxtaUtil {
         } else {
             throw new IllegalArgumentException("Network Manager Proxy for GroupName " + groupName + "could not be located."
                     + "Check if group has been created or enabled");
+        }
+    }
+    
+    public static void configureJxtaLogging() {
+        if (jxtaLoggingPropertyValue == null) {
+            
+            // Only default jxta logging to SEVERE when jxta logging has not already been explicitly enabled.
+            jxtaLoggingPropertyValue = Level.SEVERE.toString();
+            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, jxtaLoggingPropertyValue);
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("gms configureJxtaLogging: set jxta logging to default of " + jxtaLoggingPropertyValue);
+            }
+        } else {
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("gms configureJxtaLogging: found jxta system property " + Logging.JXTA_LOGGING_PROPERTY + " is already configured to " 
+                           + jxtaLoggingPropertyValue);
+            }
         }
     }
 }
