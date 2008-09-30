@@ -63,6 +63,8 @@ import java.util.zip.GZIPOutputStream;
 public class JxtaUtil {
     private static Logger LOG = Logger.getLogger(
             System.getProperty("JXTA_MGMT_LOGGER", "JxtaMgmt"));
+    
+    private static String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
 
     private JxtaUtil() {
     }
@@ -188,6 +190,23 @@ public class JxtaUtil {
     @SuppressWarnings("unchecked")
     static public void appendChild(StructuredDocument adv, Element child) {
         adv.appendChild(child);
-    }    
+    }
+    
+    public static void configureJxtaLogging() {
+        if (jxtaLoggingPropertyValue == null) {
+            
+            // Only default jxta logging to SEVERE when jxta logging has not already been explicitly enabled.
+            jxtaLoggingPropertyValue = Level.SEVERE.toString();
+            System.setProperty(Logging.JXTA_LOGGING_PROPERTY, jxtaLoggingPropertyValue);
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("gms configureJxtaLogging: set jxta logging to default of " + jxtaLoggingPropertyValue);
+            }
+        } else {
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("gms configureJxtaLogging: found jxta system property " + Logging.JXTA_LOGGING_PROPERTY + " is already configured to " 
+                           + jxtaLoggingPropertyValue);
+            }
+        }
+    }
 }
 
