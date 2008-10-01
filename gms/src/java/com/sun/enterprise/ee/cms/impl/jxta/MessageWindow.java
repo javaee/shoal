@@ -111,14 +111,20 @@ public class MessageWindow implements Runnable {
     private void handleDSCMessage(final DSCMessage dMsg, final String token) {
 
         final String ops = dMsg.getOperation();
-        logger.log(Level.FINER, MessageFormat.format("DSCMessageReceived from :{0}, Operation :{1}", token, ops));
+        if (logger.isLoggable(Level.FINER)) {
+            logger.log(Level.FINER, MessageFormat.format("DSCMessageReceived from :{0}, Operation :{1}", token, ops));
+        }
         final DistributedStateCacheImpl dsc =
                 (DistributedStateCacheImpl) getGMSContext().getDistributedStateCache();
         if (ops.equals(DSCMessage.OPERATION.ADD.toString())) {
-            logger.log(Level.FINER, "Adding Message: " + dMsg.getKey() + ":" + dMsg.getValue());
+            if (logger.isLoggable(Level.FINER)) {
+                logger.log(Level.FINER, "Adding Message: " + dMsg.getKey() + ":" + dMsg.getValue());
+            }
             dsc.addToLocalCache(dMsg.getKey(), dMsg.getValue());
         } else if (ops.equals(DSCMessage.OPERATION.REMOVE.toString())) {
-            logger.log(Level.FINER, "Removing Values with Key: " + dMsg.getKey());
+            if (logger.isLoggable(Level.FINER)) {
+                    logger.log(Level.FINER, "Removing Values with Key: " + dMsg.getKey());
+            }
             dsc.removeFromLocalCache(dMsg.getKey());
         } else if (ops.equals(DSCMessage.OPERATION.ADDALLLOCAL.toString())) {
             if (dMsg.isCoordinator()) {
@@ -165,7 +171,9 @@ public class MessageWindow implements Runnable {
 
     private void writeLog(final String sender, final com.sun.enterprise.ee.cms.spi.GMSMessage message) {
         final String localId = getGMSContext().getServerIdentityToken();
-        logger.log(Level.FINER, MessageFormat.format("Sender:{0}, Receiver :{1}, TargetComponent :{2}, Message :{3}",
-                sender, localId, message.getComponentName(), new String(message.getMessage())));
+        if (logger.isLoggable(Level.FINER)) {
+            logger.log(Level.FINER, MessageFormat.format("Sender:{0}, Receiver :{1}, TargetComponent :{2}, Message :{3}",
+                    sender, localId, message.getComponentName(), new String(message.getMessage())));
+        }
     }
 }

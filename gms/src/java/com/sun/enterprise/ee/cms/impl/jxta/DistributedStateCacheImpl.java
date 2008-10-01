@@ -120,9 +120,11 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             final String componentName, final String memberTokenId,
             final Serializable key, final Serializable state)
             throws GMSException {
-        logger.log(Level.FINER, "Adding to DSC by local Member:" + memberTokenId +
-                ",Component:" + componentName + ",key:" + key +
-                ",State:" + state);
+        if (logger.isLoggable(Level.FINER)) {
+            logger.log(Level.FINER, "Adding to DSC by local Member:" + memberTokenId +
+                    ",Component:" + componentName + ",key:" + key +
+                    ",State:" + state);
+        }
         final GMSCacheable cKey = createCompositeKey(componentName,
                 memberTokenId,
                 key);
@@ -135,7 +137,9 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
                            final Serializable key,
                            final byte[] state)
             throws GMSException {
-        logger.log(Level.FINER, new StringBuilder().append("Adding to DSC by local Member:").append(memberTokenId).append(",Component:").append(componentName).append(",key:").append(key).append(",State:").append(state).toString());
+        if (logger.isLoggable(FINER)) {
+            logger.log(FINER, new StringBuilder().append("Adding to DSC by local Member:").append(memberTokenId).append(",Component:").append(componentName).append(",key:").append(key).append(",State:").append(state).toString());
+        }
         final GMSCacheable cKey = createCompositeKey(componentName,
                 memberTokenId,
                 key);
@@ -170,14 +174,18 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     public void addToLocalCache(GMSCacheable cKey,
                                 final Object state) {
         cKey = getTrueKey(cKey);
-        logger.log(Level.FINEST, "Adding cKey="+cKey.toString()+" state="+state.toString());
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "Adding cKey="+cKey.toString()+" state="+state.toString());
+        }
         cache.put(cKey, state);
         printDSCContents();
     }
 
     private void printDSCContents () {
-        logger.log(FINER, getGMSContext().getServerIdentityToken()+
-                               ":DSC now contains ---------\n"+getDSCContents());
+        if (logger.isLoggable(FINER)) {
+            logger.log(FINER, getGMSContext().getServerIdentityToken() +
+                    ":DSC now contains ---------\n" + getDSCContents());
+        }
     }
 
     private GMSContext getGMSContext(){
@@ -271,8 +279,9 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     }
 
     public Map<Serializable, Serializable> getFromCacheForPattern(final String componentName, final String memberToken) {
-
-        logger.fine("DSCImpl.getCacheFromPattern() for " + memberToken);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("DSCImpl.getCacheFromPattern() for " + memberToken);
+        }
         final Map<Serializable, Serializable> retval = new Hashtable<Serializable, Serializable>();
         if (componentName == null || memberToken == null) {
             return retval;
@@ -324,13 +333,10 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     public boolean contains(final Object key) {
         boolean retval = false;
         for (GMSCacheable c : cache.keySet()) {
-            logger.log(FINER,
-                    new StringBuffer()
-                            .append("key=")
-                            .append(key)
-                            .append(" underlying key=")
-                            .append(c.getKey())
-                            .toString());
+            if (logger.isLoggable(FINER)) {
+                logger.log(FINER,
+                        new StringBuffer().append("key=").append(key).append(" underlying key=").append(c.getKey()).toString());
+            }
             if (key.equals(c.getKey())) {
                 retval = true;
             }
@@ -341,20 +347,12 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     public boolean contains(final String componentName, final Object key) {
         boolean retval = false;
         for (GMSCacheable c : cache.keySet()) {
-            logger.log(FINER,
-                    new StringBuffer()
-                            .append("comp=")
-                            .append(componentName)
-                            .append(" underlying comp=")
-                            .append(c.getComponentName())
-                            .toString());
-            logger.log(FINER,
-                    new StringBuffer()
-                            .append("key=")
-                            .append(key)
-                            .append(" underlying key=")
-                            .append(c.getKey())
-                            .toString());
+            if (logger.isLoggable(FINER)) {
+                logger.log(FINER,
+                        new StringBuffer().append("comp=").append(componentName).append(" underlying comp=").append(c.getComponentName()).toString());
+                logger.log(FINER,
+                        new StringBuffer().append("key=").append(key).append(" underlying key=").append(c.getKey()).toString());
+            }
             if (key.equals(c.getKey())
                     &&
                     componentName.equals(c.getComponentName())) {
@@ -426,7 +424,9 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
 
         final DSCMessage msg = new DSCMessage(temp, DSCMessage.OPERATION.ADDALLLOCAL.toString(), isCoordinator);
         if(!memberToken.equals(getGMSContext().getServerIdentityToken())){
-            logger.log(Level.FINER, "Sending sync message from DistributedStateCache " + "to member " + memberToken);
+            if (logger.isLoggable(Level.FINER)) {
+                logger.log(Level.FINER, "Sending sync message from DistributedStateCache to member " + memberToken);
+            }
             sendMessage(memberToken, msg);
         }
         if (isCoordinator) {
