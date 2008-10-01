@@ -66,9 +66,8 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -138,7 +137,7 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String VIEW_CHANGE_EVENT = "VCE";
     private RouteControl routeControl = null;
     private MessageTransport endpointRouter = null;
-    private transient Map<ID, OutputPipe> pipeCache = new Hashtable<ID, OutputPipe>();
+    private transient ConcurrentHashMap<ID, OutputPipe> pipeCache = new ConcurrentHashMap<ID, OutputPipe>();
 
     private boolean clusterStopping = false;
     final Object discoveryLock = new Object();
@@ -176,6 +175,12 @@ class MasterNode implements PipeMsgListener, Runnable {
                 routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
                         (XMLDocument) route.getDocument(MimeMediaType.XMLUTF8), null);
             }
+        }
+        if (routeAdvElement == null) {
+            LOG.warning("MasterNode constructor: bad constraints endpointRouter= " + endpointRouter +
+                   " routeControl=" + routeControl + " routeAdvElement=" + routeAdvElement);
+        } else if (LOG.isLoggable(Level.FINER)) {
+            LOG.finer("MasterNode() routeAdvElement=" + routeAdvElement);
         }
 
         try {
@@ -303,6 +308,11 @@ class MasterNode implements PipeMsgListener, Runnable {
     void addRoute(Message msg) {
         if (routeAdvElement != null && routeControl != null) {
             msg.addMessageElement(NAMESPACE, routeAdvElement);
+        } else {
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("addRoute(): Did not add route to msg " + msg + " routeAdvElement=" + routeAdvElement +
+                        " routeControl=" + routeControl);
+            }
         }
     }
 
@@ -315,10 +325,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         final Message msg = createSelfNodeAdvertisement();
         final MessageElement el = new StringMessageElement(NODEQUERY, "nodequery", null);
         msg.addMessageElement(NAMESPACE, el);
-        if (routeAdvElement != null && routeControl != null) {
-            msg.addMessageElement(NAMESPACE, routeAdvElement);
-        }
-
+        addRoute(msg);
         LOG.log(Level.FINER, "Created a Node Query Message ");
         return msg;
     }
@@ -338,9 +345,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         final MessageElement el = new StringMessageElement(type, masterID.toString(), null);
         msg.addMessageElement(NAMESPACE, el);
-        if (routeAdvElement != null && routeControl != null) {
-            msg.addMessageElement(NAMESPACE, routeAdvElement);
-        }
+        addRoute(msg);
         LOG.log(Level.FINER, "Created a Master Response Message with masterId = " + masterID.toString());
         return msg;
     }
@@ -718,13 +723,18 @@ class MasterNode implements PipeMsgListener, Runnable {
 
         try {
             final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
-            if (routeElement != null && routeControl != null) {
+            if (routeElement != null) {
                 XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
                         routeElement.getMimeType(), routeElement.getStream());
                 final RouteAdvertisement route = (RouteAdvertisement)
                         AdvertisementFactory.newAdvertisement(asDoc);
                 manager.cacheRoute(route);
-                routeControl.addRoute(route);
+                if (routeControl != null) {
+                    routeControl.addRoute(route);
+                }
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.finer("cached following route from msg " + msg + " route=" + route);
+                }
             }
         } catch (IOException io) {
             io.printStackTrace();
@@ -962,30 +972,35 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINER, "Unicasting Message to :" + name + "ID=" + peerid);
-                OutputPipe output = null;
-                if (!pipeCache.containsKey(peerid)) {
+                OutputPipe output = pipeCache.get(peerid);
+                if (output == null) {
                     RouteAdvertisement route = manager.getCachedRoute((PeerID) peerid);
                     if (route != null) {
                        output = new BlockingWireOutputPipe(manager.getNetPeerGroup(), pipeAdv, (PeerID) peerid, route);
                     }
                     if (output == null) {
-                    // Unicast datagram
-                    // create a op pipe to the destination peer
-                    output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
-                    }
-                    pipeCache.put(peerid, output);
-                } else {
-                    output = pipeCache.get(peerid);
-                    if (output.isClosed()) {
+                        // Unicast datagram
+                        // create a op pipe to the destination peer
                         output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
-                        pipeCache.put(peerid, output);
                     }
+                    pipeCache.putIfAbsent(peerid, output);
+                } else if (output.isClosed()) {
+                    output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
+                    pipeCache.put(peerid, output);
                 }
-                output.send(msg);
+                final boolean sent = output.send(msg);
+                if (!sent) {
+                    LOG.log(Level.WARNING, "OutputPipe.send unexpectedly returned false sending messge " + msg +
+                            " to instance " + name);
+                }
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
-                outputPipe.send(msg);
+                final boolean sent = outputPipe.send(msg);
+                if (!sent) {
+                    LOG.log(Level.WARNING, "OutputPipe.send unexpectedly returned false sending messge " + msg +
+                            " to instance " + name);
+                }
             }
         } catch (IOException io) {
             LOG.log(Level.FINEST, "Failed to send message", io);

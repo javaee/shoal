@@ -64,9 +64,8 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -114,7 +113,7 @@ public class LWRMulticast implements PipeMsgListener {
     private transient int threshold = 0;
     private transient Set<PeerID> ackSet = new HashSet<PeerID>();
     private transient Set<PeerID> ackList = new HashSet<PeerID>();
-    private transient Map<PeerID, OutputPipe> pipeCache = new Hashtable<PeerID, OutputPipe>();
+    private transient ConcurrentHashMap<PeerID, OutputPipe> pipeCache = new ConcurrentHashMap<PeerID, OutputPipe>();
     private RouteControl routeControl = null;
     private MessageElement routeAdvElement = null;
     private static final String ROUTEADV = "ROUTE";
@@ -173,6 +172,10 @@ public class LWRMulticast implements PipeMsgListener {
                 routeAdvElement = new TextDocumentMessageElement(ROUTEADV,
                         (XMLDocument) route.getDocument(MimeMediaType.XMLUTF8), null);
             }
+        }
+        if (routeAdvElement == null) {
+            LOG.warning("LWRMulticast(): bad constraints endpointRouter= " + endpointRouter +
+                   " routeControl=" + routeControl + " routeAdvElement=" + routeAdvElement);
         }
         this.msgListener = msgListener;
         this.pipeAdv = pipeAd;
@@ -432,6 +435,10 @@ public class LWRMulticast implements PipeMsgListener {
         checkState();
         OutputPipe op = null;
         if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
+            if (LOG.isLoggable(Level.FINEST)) {
+                LOG.finest("LWRMulticast.send(Message, int) - sending routeAdv=" +
+                        routeAdvElement);
+            }
             msg.addMessageElement(NAMESPACE, routeAdvElement);
         }
 
@@ -505,14 +512,19 @@ public class LWRMulticast implements PipeMsgListener {
     private void processRoute(final Message msg) {
         try {
             final MessageElement routeElement = msg.getMessageElement(NAMESPACE, ROUTEADV);
-            if (routeElement != null && routeControl != null) {
+            if (routeElement != null) {
                 XMLDocument asDoc = (XMLDocument) StructuredDocumentFactory.newStructuredDocument(
                         routeElement.getMimeType(), routeElement.getStream());
                 final RouteAdvertisement route = (RouteAdvertisement)
                         AdvertisementFactory.newAdvertisement(asDoc);
-                routeControl.addRoute(route);
                 manager.cacheRoute(route);
-            }
+                if (routeControl != null) {
+                    routeControl.addRoute(route);
+                }
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.finer("cached following route from msg " + msg + " route=" + route);
+                }
+             }
         } catch (IOException io) {
             LOG.log(Level.WARNING, io.getLocalizedMessage(), io);
         }

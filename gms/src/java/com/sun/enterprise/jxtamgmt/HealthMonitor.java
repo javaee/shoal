@@ -435,36 +435,44 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //per health message
             for (HealthMessage.Entry entry : hm.getEntries()) {
 
-                LOG.log(Level.FINEST, "Processing Health Message " + entry.getSeqID() + " for entry " + entry.adv.getName());
-                LOG.log(Level.FINEST, "Getting the cachedEntry " + entry.id);
-
-                HealthMessage.Entry cachedEntry = cache.get(entry.id);
-                if (cachedEntry != null) {
-                    LOG.log(Level.FINEST, "cachedEntry is not null");
-                    if (entry.getSeqID() <= cachedEntry.getSeqID()) {
-                        LOG.log(Level.FINER, MessageFormat.format("Received an older health message sequence {0}." +
-                                " Current sequence id is {1}. ",
-                                entry.getSeqID(), cachedEntry.getSeqID()));
-                        if (entry.state.equals(states[CLUSTERSTOPPING]) || entry.state.equals(states[PEERSTOPPING])) {
-                            //dont discard the message
-                            //and don't alter the state if the cachedEntry's state is stopped
-                            LOG.log(Level.FINER, "Received out of order health message " +
-                                    "with clusterstopping state." +
-                                    " Calling handleStopEvent() to handle shutdown state.");
-                            handleStopEvent(entry);
-                        } else if (entry.state.equals(states[READY])) {
-                            LOG.finer("Received out of order health message with Joined and Ready state. " +
-                                    "Calling handleReadyEvent() for handling the peer's ready state");
-                            handleReadyEvent(entry);
-                        } else {
-                            LOG.log(Level.FINER, "Discarding out of sequence health message");
-                        }
-                        return;
-                    }
-                }
-                LOG.log(Level.FINE, "Putting into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id);
+                LOG.log(Level.FINEST, "Processing Health Message " + entry.getSeqID() + " for entry " + entry.adv.getName() + 
+                         " state=" + entry.state);
                 synchronized (cacheLock) {
+                    HealthMessage.Entry cachedEntry = cache.get(entry.id);
+                    if (cachedEntry != null) {
+                        if (LOG.isLoggable(Level.FINEST)) {
+                        LOG.log(Level.FINEST, "cachedEntry id=" + cachedEntry.id + " entry name=" + cachedEntry.adv.getName() + 
+                                " state=" + cachedEntry.state + " seqId=" + cachedEntry.getSeqID());
+                        }
+                        if (entry.getSeqID() <= cachedEntry.getSeqID()) {
+                            LOG.log(Level.FINER, MessageFormat.format("Received an older health message sequence {0}." +
+                                    " Current sequence id is {1}. ",
+                                    entry.getSeqID(), cachedEntry.getSeqID()));
+                            if (entry.state.equals(states[CLUSTERSTOPPING]) || entry.state.equals(states[PEERSTOPPING])) { 
+                                //dont discard the message
+                                //and don't alter the state if the cachedEntry's state is stopped
+                                LOG.log(Level.FINER, "Received out of order health message " +
+                                        "with clusterstopping state." +
+                                        " Calling handleStopEvent() to handle shutdown state.");
+                                if (!cachedEntry.state.equals(states[STOPPED])) {
+                                    cache.put(entry.id, entry);
+                                }
+                                handleStopEvent(entry);
+                            } else if (entry.state.equals(states[READY])) {
+                                LOG.finer("Received out of order health message with Joined and Ready state. " +
+                                        "Calling handleReadyEvent() for handling the peer's ready state");
+                                handleReadyEvent(entry);
+                            } else {
+                                LOG.log(Level.FINER, "Discarding out of sequence health message");
+                            }
+                            return;
+                        }
+                    }
                     cache.put(entry.id, entry);
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.log(Level.FINE, "Put into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id +
+                                " seq id=" + entry.getSeqID());
+                    }
                 }
                 //fine("after putting into cache " + cache + " , contents are :-");
                 //print(cache);
@@ -541,10 +549,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             masterNode.resetMaster();
             masterNode.appointMasterNode();
         } else if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
-            removeMasterAdv(entry, stateByte);
+            manager.getClusterViewManager().remove(entry.adv);
             LOG.log(Level.FINE, "Announcing Peer Stop Event of " + entry.adv.getName() + " to group ...");
             final ClusterViewEvent cvEvent;
-            if (entry.state.equals(states[CLUSTERSTOPPING])) {
+            if (stateByte == CLUSTERSTOPPING) {
                 cvEvent = new ClusterViewEvent(ClusterViewEvents.CLUSTER_STOP_EVENT, entry.adv);
             } else {
                 cvEvent = new ClusterViewEvent(ClusterViewEvents.PEER_STOP_EVENT, entry.adv);
