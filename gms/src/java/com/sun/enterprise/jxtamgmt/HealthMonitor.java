@@ -839,6 +839,28 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         } */
     }
 
+    public String getMemberStateFromHeartBeat(ID peerID, long threshold) {
+
+        HealthMessage.Entry entry;
+        synchronized (cacheLock) {
+            entry  = cache.get((PeerID) peerID);
+        }
+        if (entry != null) {
+            //calculate if the timestamp of the entry and the current time gives a delta that is <= threshold
+            if (System.currentTimeMillis() - entry.timestamp <= threshold) {
+                return entry.state;
+            } else {
+                return states[UNKNOWN]; //this means that either the heartbeat from that instance has'nt come in yet so the state in the cache could be stale
+                //so rather than give a stale state, give it as UNKNOWN
+            }
+        } else {
+            LOG.warning("There is no entry in the cache for the given peerID. " +
+                    "Please check the name of the instance whose state is requested. Returning UNKNOWN state");
+            return states[UNKNOWN];
+        }
+    }
+
+
     public String getMemberState(final ID peerID) {
 
         //don't get the cached member state for that instance

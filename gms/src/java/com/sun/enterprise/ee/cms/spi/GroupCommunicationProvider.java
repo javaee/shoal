@@ -145,6 +145,17 @@ public interface GroupCommunicationProvider {
 
     /**
      * Returns the member state as defined in the Enum MemberStates
+     * @param member
+     * @param threshold is the acceptable delta of time before which the heartbeat from the member was received.
+     * if the threshold is exceeded, it means that the heartbeat from that instance has'nt come in yet
+     * so the state in the cache could be stale
+     * hence rather than give a stale state, the returned state is UNKNOWN
+     * @return MemberStates
+     */
+    MemberStates getMemberStateFromHeartBeat(String member, long threshold);
+
+    /**
+     * Returns the member state as defined in the Enum MemberStates
      * @return MemberStates
      * @param memberIdentityToken identity of member.
      */

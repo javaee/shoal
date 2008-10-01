@@ -294,6 +294,11 @@ public class GroupCommunicationProviderImpl implements
         return clusterManager.isMaster();
     }
 
+    public MemberStates getMemberStateFromHeartBeat(String member, long threshold) {
+        String state = (clusterManager.getNodeStateFromHeartBeat(clusterManager.getID(member), threshold)).toUpperCase();
+        return MemberStates.valueOf(state);
+    }
+
     public MemberStates getMemberState(final String memberIdentityToken) {
         String state =  (clusterManager.getNodeState(clusterManager.getID(memberIdentityToken))).toUpperCase();
         return MemberStates.valueOf(state);
