@@ -394,7 +394,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      */
     public boolean isGroupBeingShutdown(String groupName) {
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
-        logger.log(Level.FINE,
+        logger.log(Level.FINEST,
                 "GMS: checking if the group " + groupName + " is shutting down");
         return gctx.getShutdownHelper().isGroupBeingShutdown(groupName);
     }
