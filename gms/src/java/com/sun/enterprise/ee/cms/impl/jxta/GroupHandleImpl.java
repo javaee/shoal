@@ -435,4 +435,15 @@ public final class GroupHandleImpl implements GroupHandle {
         }
         return currentAliveOrReadyMembers;
     }
+
+    public MemberStates getMemberState(String member) {
+        GroupCommunicationProvider gcp = getGMSContext().getGroupCommunicationProvider();
+        return gcp.getMemberState(member);
+    }
+
+    public MemberStates getMemberState(String member, long threshold, long timeout) {
+        GroupCommunicationProvider gcp = getGMSContext().getGroupCommunicationProvider();
+        return gcp.getMemberState(member, threshold, timeout);
+    }
+
 }

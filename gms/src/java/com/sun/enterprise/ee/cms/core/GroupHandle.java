@@ -36,6 +36,8 @@
 
 package com.sun.enterprise.ee.cms.core;
 
+import com.sun.enterprise.ee.cms.spi.MemberStates;
+
 import java.util.List;
 
 /**
@@ -111,6 +113,39 @@ public interface GroupHandle {
      * @return  List
      */
     List<String> getCurrentAliveOrReadyMembers();
+
+    /**
+     * API for giving the state of the member
+     * Calls #getMemberState(String, long, long) with implementation default values for <code>threshold</code> and <code>timeout</code>.
+     * @param member
+     * @return the state of the <code>member</code>.
+     */
+    MemberStates getMemberState(String member);
+
+    /**
+     * Returns the state of the member.
+     * The parameters <code>threshold</code> and <code>timeout</code> enable the caller to tune this
+     * lookup between accuracy and time it will take to complete the call.  It is lowest cost to just return 
+     * the local computed concept for a member's state. <code>threshold</code> parameter controls this.
+     * If the local state is stale, then the <code>timeout</code> parameter enables one to control how
+     * long they are willing to wait for more accurate state information from the member itself.
+     * @param member
+     * @param threshold allows caller to specify how up-to-date the member state information has to be.
+     *  The  larger this value, the better chance that this method just returns the local concept of this member's state.
+     * The smaller this value, the better chance that the local state is not fresh enough and the method will find out directly
+     * from the instance what its current state is.
+     * @param timeout is the time for which the caller instance should wait to get the state from the concerned member
+     * via a network call.
+     * if timeout and threshold are both 0, then the default values are used
+     * if threshold is 0, then a network call is made to get the state of the member
+     * if timeout is 0, then the caller instance checks for the state of the member stored with it within the
+     * given threshold
+     * @return the state of the member
+     * Returns UNKNOWN when the local state for the member is considered stale (determined by threshold value)
+     * and the network invocation to get the member state times out before getting a reply from the member of what its state is.
+     */
+
+    MemberStates getMemberState(String member, long threshold, long timeout);
     /**
      * returns a List of strings containing the current group membership including
      * spectator members.

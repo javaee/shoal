@@ -161,6 +161,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     //use LWRMulticast to send messages for getting the member state
     LWRMulticast mcast = null;
     int lwrTimeout = 6000;
+    long memberStateTimeout = 3000;
+    long defaultThreshold = 3000;
     private final Object memberStateLock = new Object();
     private String memberState;
     private ReentrantLock sendStopLock = new ReentrantLock(true);
@@ -186,6 +188,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                          final long failureDetectionTCPTimeout,
                          final int failureDetectionTCPPort) {
         this.timeout = timeout;
+        this.memberStateTimeout = timeout;
+        this.defaultThreshold = timeout;
         this.maxMissedBeats = maxMissedBeats;
         this.verifyTimeout = verifyTimeout;
         this.manager = manager;
@@ -841,8 +845,44 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         } */
     }
 
-    public String getMemberStateFromHeartBeat(ID peerID, long threshold) {
+    /**
+     *
+     * @param peerID
+     * @param threshold is a positive value if the user wants to look at the caller's local
+     * cache to get the state
+     * @param timeout is a positive value if the user desires to make a network call directly to the
+     * member whose state it wants
+     * if both the above parameters are specified, then fisrt attempt is to get the state from the local
+     * cache. If it comes back as UNKNOWN, then another attempt is made via LWR multicast to get the state
+     * directly from the concerned member.
+     * @return
+     */
+    public String getMemberState(ID peerID, long threshold, long timeout) {
 
+        //if threshold is a positive value and there is no timeout specified i.e.
+        //timeout is a negative value or simply 0
+
+        if (threshold > 0 && timeout <= 0) {
+          return getMemberStateFromHeartBeat(peerID, threshold);
+        } else if (threshold <= 0 && timeout > 0) {
+            memberStateTimeout = timeout;
+            return getMemberStateViaLWR(peerID);
+        } else {
+            //in this case, threshold and timeout are both either positive or both set to 0
+            //if state is UNKNOWN, it means that the last heartbeat was received longer than the specified
+            //threshold. So we make a network call to that instance to get its state
+            String state = getMemberStateFromHeartBeat(peerID, threshold);
+            if (state == states[UNKNOWN]) {
+                memberStateTimeout = timeout;
+                return getMemberStateViaLWR(peerID);
+            } else return state;
+        }
+    }
+
+    public String getMemberStateFromHeartBeat(final ID peerID, long threshold) {
+        if (threshold <= 0) {
+           threshold = defaultThreshold;
+        }
         HealthMessage.Entry entry;
         synchronized (cacheLock) {
             entry  = cache.get((PeerID) peerID);
@@ -862,24 +902,23 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-
-    public String getMemberState(final ID peerID) {
+    public String getMemberStateViaLWR(final ID peerID) {
 
         //don't get the cached member state for that instance
         //instead send a query to that instance to get the most up-to-date state
-        LOG.fine("inside getMemberState for " + peerID.toString());
+        LOG.fine("inside getMemberStateViaLWR for " + peerID.toString());
         Message msg = createMemberStateQuery();
         //send it via LWRMulticast
         try {
             mcast.send((PeerID) peerID, msg);
-            LOG.fine("send message in getMemberState via LWR...");
+            LOG.fine("send message in getMemberStateViaLWR via LWR...");
         } catch (IOException e) {
             LOG.warning("Could not send the LWR Multicast message to get the member state of " + peerID.toString() + " IOException : " + e.getMessage());
         }
 
         synchronized (memberStateLock) {
             try {
-                memberStateLock.wait(timeout);
+                memberStateLock.wait(memberStateTimeout);
             } catch (InterruptedException e) {
                 LOG.warning("wait() was interrupted : " + e.getMessage());
             }
@@ -888,11 +927,11 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             String state = memberState;
             memberState = null;  //nullify this string before returning so that the next time this method is accessed
             // memberState is null before it is assigned a value in processMemberStateResponse
-            LOG.fine("inside getMemberState got state via lwr " + state);
+            LOG.fine("inside getMemberStateViaLWR got state via lwr " + state);
             return state;
         } else {    //if timeout happened even before notify() was called
             String state = getStateFromCache(peerID);
-            LOG.fine("inside getMemberState got state after timeout " + state);
+            LOG.fine("inside getMemberStateViaLWR got state after timeout " + state);
             return state;
         }
     }

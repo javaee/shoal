@@ -294,13 +294,13 @@ public class GroupCommunicationProviderImpl implements
         return clusterManager.isMaster();
     }
 
-    public MemberStates getMemberStateFromHeartBeat(String member, long threshold) {
-        String state = (clusterManager.getNodeStateFromHeartBeat(clusterManager.getID(member), threshold)).toUpperCase();
+    public MemberStates getMemberState(String member, long threshold, long timeout) {
+        String state = (clusterManager.getNodeState(clusterManager.getID(member), threshold, timeout)).toUpperCase();
         return MemberStates.valueOf(state);
     }
 
     public MemberStates getMemberState(final String memberIdentityToken) {
-        String state =  (clusterManager.getNodeState(clusterManager.getID(memberIdentityToken))).toUpperCase();
+        String state =  (clusterManager.getNodeState(clusterManager.getID(memberIdentityToken), 0, 0)).toUpperCase();
         return MemberStates.valueOf(state);
     }
 
