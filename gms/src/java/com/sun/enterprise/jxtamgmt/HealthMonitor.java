@@ -161,9 +161,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     //use LWRMulticast to send messages for getting the member state
     LWRMulticast mcast = null;
     int lwrTimeout = 6000;
-    long memberStateTimeout = 3000;
+    public static final long DEFAULT_MEMBERSTATE_TIMEOUT = 3000;
     long defaultThreshold = 3000;
-    private final Object memberStateLock = new Object();
     private String memberState;
     private ReentrantLock sendStopLock = new ReentrantLock(true);
 
@@ -171,6 +170,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     private long failureDetectionTCPTimeout;
     private int failureDetectionTCPPort;
     private final ThreadPoolExecutor isConnectedPool;
+    private ConcurrentHashMap<ID, MemberStateResult> memberStateResults = new ConcurrentHashMap<ID, MemberStateResult>();
     //private ShutdownHook shutdownHook;
 
     /**
@@ -188,7 +188,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                          final long failureDetectionTCPTimeout,
                          final int failureDetectionTCPPort) {
         this.timeout = timeout;
-        this.memberStateTimeout = timeout;
         this.defaultThreshold = timeout;
         this.maxMissedBeats = maxMissedBeats;
         this.verifyTimeout = verifyTimeout;
@@ -345,57 +344,77 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             }
         }
     }
+    
+    private SystemAdvertisement getNodeAdvertisement(Message msg) {
+        boolean foundNodeAdv = false;
+        SystemAdvertisement adv = null;
+
+        Message.ElementIterator iter = msg.getMessageElements();
+        MessageElement msgElement = null;
+        while (iter.hasNext()) {
+            msgElement = iter.next();
+            if (msgElement.getElementName().equals(NODEADV)) {
+                foundNodeAdv = true;
+                break;
+            }
+        }
+        if (foundNodeAdv == true) {
+            final StructuredDocument asDoc;
+            try {
+                asDoc = StructuredDocumentFactory.newStructuredDocument(msgElement.getMimeType(), msgElement.getStream());
+                adv = new SystemAdvertisement(asDoc);
+                if (!adv.getID().equals(localPeerID)) {
+                    if (LOG.isLoggable(Level.FINER) ) {
+                        LOG.log(Level.FINER, "Received a System advertisement Name :" + adv.getName());
+                    }                 
+                }
+            } catch (IOException ioe) {
+                LOG.log(Level.WARNING, "unexpected IOException creating system advertisement", ioe);
+            }         
+        }
+        return adv;
+    }
 
     private void processMemberStateQuery(Message msg) {
-        boolean foundNodeAdv = false;
         LOG.fine(" received a MemberStateQuery...");
         try {
-            //SystemAdvertisement adv = masterNode.processNodeAdvertisement(msg);
-            Message.ElementIterator iter = msg.getMessageElements();
-            MessageElement msgElement = null;
-            while (iter.hasNext()) {
-                msgElement = iter.next();
-                if (msgElement.getElementName().equals(NODEADV)) {
-                    foundNodeAdv = true;
-                    break;
-                }
-            }
-            if (foundNodeAdv == true) {
-                final StructuredDocument asDoc;
-                asDoc = StructuredDocumentFactory.newStructuredDocument(msgElement.getMimeType(), msgElement.getStream());
-                final SystemAdvertisement adv = new SystemAdvertisement(asDoc);
-                if (!adv.getID().equals(localPeerID)) {
-                    LOG.log(Level.FINER, "Received a System advertisment Name :" + adv.getName());
-                }
-                if (adv != null) {
-                    ID sender = adv.getID();       //sender of this query
-                    String state = getStateFromCache(localPeerID);
-                    Message response = createMemberStateResponse(state);
-                    LOG.fine(" sending via LWR response to " + sender.toString() + " with state " + state + " for " + localPeerID);
-                    mcast.send((PeerID) sender, response);    //send the response back to the query sender
-                }
+            SystemAdvertisement adv = getNodeAdvertisement(msg);
+            if (adv != null) {
+                ID sender = adv.getID();       //sender of this query
+                String state = getStateFromCache(localPeerID);
+                Message response = createMemberStateResponse(state);
+                LOG.fine(" sending via LWR response to " + sender.toString() + " with state " + state + " for " + localPeerID);
+                mcast.send((PeerID) sender, response);    //send the response back to the query sender
             } else {
                 LOG.warning("Don't know where this query came from. SysAdv is null");
             }
         } catch (IOException e) {
-            if (LOG.isLoggable(Level.FINE)) {
-                e.printStackTrace();
-            }
             LOG.warning("Could not send the message via LWRMulticast : " + e.getMessage());
         }
     }
 
     private void processMemberStateResponse(Message msg) {
-        LOG.fine("received a MemberStateResponse...");
-
-        memberState = msg.getMessageElement(NAMESPACE, MEMBER_STATE_RESPONSE).toString();
-
-        LOG.fine(" member state in processMemberStateResponse() is " + memberState);
-
-        synchronized (memberStateLock) {
-            memberStateLock.notify();
+        String memberState = msg.getMessageElement(NAMESPACE, MEMBER_STATE_RESPONSE).toString();
+        SystemAdvertisement adv = getNodeAdvertisement(msg);
+        if (adv == null) {
+            LOG.severe("ignoring memberStateResponse, received a memberstateresponse with no sender advertisement");
+            return;
         }
-
+        
+        MemberStateResult result = memberStateResults.get(adv.getID());
+        if (result !=  null) {
+            synchronized (result.lock) {
+                result.memberState = memberState;
+                memberStateResults.remove(adv.getID(), result);
+                result.lock.notifyAll();
+            }
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine(" member state in processMemberStateResponse() is " + memberState + " for member " + adv.getName());
+            }         
+        } else if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("memberStateResponse received too late. result already removed by timeout. response from " + adv.getName() 
+                    + " state=" + memberState);
+        }
     }
 
     /**
@@ -861,20 +880,22 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
         //if threshold is a positive value and there is no timeout specified i.e.
         //timeout is a negative value or simply 0
-
+   
         if (threshold > 0 && timeout <= 0) {
-          return getMemberStateFromHeartBeat(peerID, threshold);
-        } else if (threshold <= 0 && timeout > 0) {
-            memberStateTimeout = timeout;
-            return getMemberStateViaLWR(peerID);
+            return getMemberStateFromHeartBeat(peerID, threshold);
+        } else if (threshold <= 0 && timeout > 0 ) { 
+            return getMemberStateViaLWR(peerID, timeout);
         } else {
             //in this case, threshold and timeout are both either positive or both set to 0
             //if state is UNKNOWN, it means that the last heartbeat was received longer than the specified
             //threshold. So we make a network call to that instance to get its state
+            if (timeout == 0 && threshold == 0) {
+                timeout = DEFAULT_MEMBERSTATE_TIMEOUT;
+                threshold = defaultThreshold;
+            }
             String state = getMemberStateFromHeartBeat(peerID, threshold);
-            if (state == states[UNKNOWN]) {
-                memberStateTimeout = timeout;
-                return getMemberStateViaLWR(peerID);
+            if (state == states[UNKNOWN]) {  
+                return getMemberStateViaLWR(peerID, timeout);
             } else return state;
         }
     }
@@ -902,36 +923,75 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    public String getMemberStateViaLWR(final ID peerID) {
-
-        //don't get the cached member state for that instance
-        //instead send a query to that instance to get the most up-to-date state
-        LOG.fine("inside getMemberStateViaLWR for " + peerID.toString());
-        Message msg = createMemberStateQuery();
-        //send it via LWRMulticast
-        try {
-            mcast.send((PeerID) peerID, msg);
-            LOG.fine("send message in getMemberStateViaLWR via LWR...");
-        } catch (IOException e) {
-            LOG.warning("Could not send the LWR Multicast message to get the member state of " + peerID.toString() + " IOException : " + e.getMessage());
+    static class MemberStateResult {
+        final Object lock = new Object();
+        String memberState = null;
+    }
+    
+    public String getMemberStateViaLWR(final ID peerID, long timeout) {
+        if (peerID.equals(localPeerID)){
+            // handle getting your own member state
+            return getStateFromCache(peerID);
         }
+        
+        // never allow a non-timed wait
+        if (timeout <= 0) {
+            return getStateFromCache(peerID);
+        }
+        
+        if (!manager.getClusterViewManager().containsKey(peerID)) {
+            // avoid race condition of checking alive and ready state for a member that has not joined the cluster yet.
+            // speeds up start-cluster case when not all instances are up yet.
+            return states[UNKNOWN];
+        }
+        
+        // check if there are any outstanding calls, if so just wait for reply
+        MemberStateResult result = memberStateResults.get(peerID);
+        if ( result == null) {
+            // no outstanding calls at this time.
+            result = new MemberStateResult();
+            MemberStateResult prevResult = memberStateResults.putIfAbsent(peerID, result);
+            if (prevResult != null ) {
+                // some other thread put a result into result cache, let that thread send the query, we will wait for the reply
+                result = prevResult; 
+            } else {
+                // only thread that puts result into result cache will send a message to peerID
+                //instead send a query to that instance to get the most up-to-date state
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.finer("getMemberStateViaLWR send query to " + peerID.toString());
+                }
+                Message msg = createMemberStateQuery();
 
-        synchronized (memberStateLock) {
+                //send it via LWRMulticast
+                try {
+                    mcast.send((PeerID) peerID, msg);
+                } catch (IOException e) {
+                    LOG.warning("Could not send the LWR Multicast message to get the member state of " + peerID.toString() + " IOException : " + e.getMessage());
+                }
+            } 
+        }
+       
+        synchronized(result.lock) {
             try {
-                memberStateLock.wait(memberStateTimeout);
+                if (result.memberState == null) {  // check for result coming back 
+                    result.lock.wait(timeout);
+                }
             } catch (InterruptedException e) {
                 LOG.warning("wait() was interrupted : " + e.getMessage());
             }
         }
-        if (memberState != null) {
-            String state = memberState;
-            memberState = null;  //nullify this string before returning so that the next time this method is accessed
-            // memberState is null before it is assigned a value in processMemberStateResponse
-            LOG.fine("inside getMemberStateViaLWR got state via lwr " + state);
-            return state;
-        } else {    //if timeout happened even before notify() was called
+        if (result.memberState != null) {
+            if (LOG.isLoggable(Level.FINER)) {
+                LOG.finer("getMemberStateViaLWR got state=" + result.memberState + " id=" + peerID);
+            }
+            return result.memberState;
+        } else {
+            // timed out, remove result from result cache.
+            memberStateResults.remove(peerID, result);
             String state = getStateFromCache(peerID);
-            LOG.fine("inside getMemberStateViaLWR got state after timeout " + state);
+            if (LOG.isLoggable(Level.FINER)) {
+                LOG.finer("getMemberStateViaLWR got state from local cache timeout " + state + " id=" + peerID);
+            }
             return state;
         }
     }

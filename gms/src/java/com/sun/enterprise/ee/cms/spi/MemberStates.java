@@ -54,5 +54,6 @@ public enum MemberStates {
     DEAD,
     CLUSTERSTOPPING,
     PEERSTOPPING,
-    STOPPED
+    STOPPED, 
+    UNKNOWN
 }

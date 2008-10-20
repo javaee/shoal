@@ -39,12 +39,14 @@ package com.sun.enterprise.ee.cms.tests;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.jxtamgmt.JxtaUtil;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -66,6 +68,7 @@ public class ApplicationServer implements Runnable {
     private GMSClientService gcs2;
     private String serverName;
     private String groupName;
+    private volatile boolean stopped = false;
 
     public ApplicationServer(final String serverName, final String groupName,
                              final GroupManagementService.MemberType memberType,
@@ -160,6 +163,7 @@ public class ApplicationServer implements Runnable {
         logger.log(Level.FINE, "ApplicationServer: Stopping GMSClient");
         gcs1.stopClient();
         gcs2.stopClient();
+        stopped = true;
     }
 
     public void sendMessage(final String message) {
@@ -170,14 +174,52 @@ public class ApplicationServer implements Runnable {
             logger.log(Level.INFO, e.getLocalizedMessage());
         }
     }
+    
+    // simulate CLB polling getMemberState
+    public class CLB implements Runnable {
+        boolean getMemberState;
+        long threshold;
+        long timeout;
+        
+        public CLB(boolean getMemberState, long threshold, long timeout) {
+            this.getMemberState = getMemberState;
+            this.threshold = threshold;
+            this.timeout = timeout;
+        }
+        
+        private void getAllMemberStates() {
+            long startTime = System.currentTimeMillis();
+            List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
+            for (String member : members) {
+                MemberStates state = gms.getGroupHandle().getMemberState(member, threshold, timeout);
+                logger.fine("getMemberState member=" + member + " state=" + state + 
+                        " threshold=" + threshold + " timeout=" + timeout);
+            }
+            logger.fine("exit getAllMemberStates()  elapsed time=" + (System.currentTimeMillis() - startTime) +
+                    " ms " + "currentMembers#=" + members.size());
+        }
+        
+        public void run() {
+            while (getMemberState && !stopped) {
+                getAllMemberStates();
+                try { 
+                    Thread.sleep(500);
+                } catch (InterruptedException ie) {}
+            }
+        }
+    }
 
     public static void main(final String[] args) {
+        CLB clb = null;
         if (args.length > 0 && "--usage".equals(args[1])) {
             logger.log(Level.INFO, new StringBuffer().append("USAGE: java -DMEMBERTYPE <CORE|SPECTATOR>")
                     .append(" -DINSTANCEID=<instanceid>")
                     .append(" -DCLUSTERNAME=<clustername")
                     .append(" -DLIFEINMILLIS= <length of time for this demo")
                     .append(" -DMESSAGING_MODE=[true|false] ApplicationServer")
+                    .append(" -DGETMEMBERSTATE=[true]")
+                    .append(" -DGETMEMBERSTATE_THRESHOLD=[xxxx] ms")
+                    .append(" -DGETMEMBERSTATE_TIMEOUT=[xxx] ms")
                     .toString());
         }
         JxtaUtil.setLogger(logger);
@@ -190,6 +232,7 @@ public class ApplicationServer implements Runnable {
         } else {
             memberType = GroupManagementService.MemberType.SPECTATOR;
         }
+        
         Properties configProps = new Properties();
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
                                     System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
@@ -210,10 +253,22 @@ public class ApplicationServer implements Runnable {
         }
 
         applicationServer = new ApplicationServer(System.getProperty("INSTANCEID"), System.getProperty("CLUSTERNAME"), memberType, configProps);
-
+        if ("true".equals(System.getProperty("GETMEMBERSTATE"))) {
+            boolean getMemberState = true;
+            String threshold = System.getProperty("GETMEMBERSTATE_THRESHOLD","3000");
+            long getMemberStateThreshold = Long.parseLong(threshold);
+            long getMemberStateTimeout = Long.parseLong(System.getProperty("GETMEMBERSTATE_TIMEOUT", "3000"));
+            logger.fine("getMemberState=true threshold=" + getMemberStateThreshold + 
+                    " timeout=" + getMemberStateTimeout);
+            clb = applicationServer.new CLB(getMemberState, getMemberStateThreshold, getMemberStateTimeout);
+        }
         final Thread appServThread = new Thread(applicationServer, "ApplicationServer");
         appServThread.start();
         try {
+            if (clb != null){
+                final Thread clbThread = new Thread(clb, "CLB");
+                clbThread.start();
+            }
             appServThread.join();
         } catch (InterruptedException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
