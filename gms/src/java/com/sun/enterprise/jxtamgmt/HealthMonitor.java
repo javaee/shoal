@@ -917,8 +917,6 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 //so rather than give a stale state, give it as UNKNOWN
             }
         } else {
-            LOG.warning("There is no entry in the cache for the given peerID. " +
-                    "Please check the name of the instance whose state is requested. Returning UNKNOWN state");
             return states[UNKNOWN];
         }
     }
