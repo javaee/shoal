@@ -190,12 +190,14 @@ public class ApplicationServer implements Runnable {
         private void getAllMemberStates() {
             long startTime = System.currentTimeMillis();
             List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
+            logger.info("Enter getAllMemberStates currentMembers=" + members.size() + " threshold(ms)=" + threshold +
+                          " timeout(ms)=" + timeout);
             for (String member : members) {
                 MemberStates state = gms.getGroupHandle().getMemberState(member, threshold, timeout);
-                logger.fine("getMemberState member=" + member + " state=" + state + 
+                logger.info("getMemberState member=" + member + " state=" + state + 
                         " threshold=" + threshold + " timeout=" + timeout);
             }
-            logger.fine("exit getAllMemberStates()  elapsed time=" + (System.currentTimeMillis() - startTime) +
+            logger.info("exit getAllMemberStates()  elapsed time=" + (System.currentTimeMillis() - startTime) +
                     " ms " + "currentMembers#=" + members.size());
         }
         

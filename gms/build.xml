@@ -215,4 +215,25 @@
             </classpath>
 	</java>
     </target>
+    <target name="test-mcastsender" depends="build" description="Run MulticastSender">
+        <java classname="net.MulticastSender" fork="true">
+            <classpath>
+                <path refid="compile.classpath"/>              
+                <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
+            </classpath>
+            <arg value="229.9.1.1"/>
+            <arg value="2299"/>
+	</java>
+    </target>
+
+    <target name="test-mcastsniffer" depends="build" description="Run MulticastSniffer">
+        <java classname="net.MulticastSniffer" fork="true">
+            <classpath>
+                <path refid="compile.classpath"/>              
+                <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
+            </classpath>
+            <arg value="229.9.1.1"/>
+            <arg value="2299"/>
+	</java>
+    </target>
 </project>
