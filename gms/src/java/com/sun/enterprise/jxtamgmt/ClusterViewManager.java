@@ -109,6 +109,17 @@ public class ClusterViewManager {
 
                 view.put(advertisement.getID().toString(), advertisement);
                 LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
+            } else {
+                //if view does contain the same sys adv but the start time is different from what
+                //was already in the view
+                //then add the new sys adv
+                SystemAdvertisement adv = view.get(advertisement.getID().toString());
+                if (manager.getMasterNode().confirmInstanceHasRestarted(adv, advertisement)) {
+                    if (LOG.isLoggable(Level.FINE))  {
+                        LOG.fine("ClusterViewManager .add() : Instance "+ advertisement.getName() + " has restarted. Adding it to the view.");
+                    }
+                    view.put(advertisement.getID().toString(), advertisement);
+                }
             }
         } finally {
             viewLock.unlock();

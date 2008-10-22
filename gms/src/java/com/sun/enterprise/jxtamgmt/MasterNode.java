@@ -37,6 +37,7 @@ package com.sun.enterprise.jxtamgmt;
 
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
+import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocument;
@@ -67,6 +68,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -656,7 +658,99 @@ class MasterNode implements PipeMsgListener, Runnable {
             clusterViewManager.notifyListeners(cvEvent);
             sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
         }
+        //for issue 484
+        //when the master is killed and restarted very quickly
+        //there is no failure notification sent out and no new master elected
+        //this results in the instance coming back up and assuming group leadership
+        //instance which is the master never sends out a join notif for itself.
+        //this will get fixed with the following code
+
+        //check if this instance has an older start time of the restarted instance
+        //i.e. check if the restarted instance is in the cache of this instance
+
+        //check if the adv.getID was the master before ...
+        SystemAdvertisement madv = clusterViewManager.getMaster();
+        SystemAdvertisement oldSysAdv = clusterViewManager.get(adv.getID());
+        if (madv.getID().equals(adv.getID())) {
+            //master restarted
+            //check for the start times for both advs i.e. the one in the view and the one passed into this method.
+            //If they are different that means the master has restarted for sure
+            //put a warning that master has restarted without failure
+
+            if (confirmInstanceHasRestarted(oldSysAdv, adv)) {
+                LOG.warning("Previously elected Master node " + madv.getName() +
+                        " has restarted. There was no failure notification sent out for it.");
+                //re-elect a new master so that a join and joinedandready event
+                //can be sent for the restarted master
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.finer("MasterNode.processMasterNodeQuery() : clusterViewManager.getMaster().getID() = " +
+                            clusterViewManager.getMaster().getID());
+                    LOG.finer("MasterNode.processMasterNodeQuery() : adv.getID() = " + adv.getID());
+                    LOG.finer("MasterNode.processMasterNodeQuery() : clusterViewManager.getMaster().getname() = " +
+                            clusterViewManager.getMaster().getName());
+                    LOG.finer("MasterNode.processMasterNodeQuery() : adv.getID() = " + adv.getName());
+                }
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("MasterNode.processMasterNodeQuery() : re-electing the master...");
+                }
+                manager.getClusterViewManager().remove(adv);
+                resetMaster();
+                appointMasterNode();
+            } else {
+                LOG.fine("MasterNode.processMasterNodeQuery() : master node did not restart as suspected");    
+            }
+        } else {
+            //some instance other than the master has restarted
+            //without a failure notification
+             confirmInstanceHasRestarted(oldSysAdv, adv);
+
+        }
         return true;
+    }
+
+    boolean confirmInstanceHasRestarted(SystemAdvertisement oldSysAdv, SystemAdvertisement newSysAdv) {
+        if (oldSysAdv != null && newSysAdv != null) {
+            LOG.fine("MasterNode.confirmInstanceHasRestarted() : oldSysAdv.getName() = " + oldSysAdv.getName());
+            long cachedAdvStartTime = -1;
+            try {
+                cachedAdvStartTime = Long.valueOf(oldSysAdv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+                LOG.fine("MasterNode.confirmInstanceHasRestarted() : cachedAdvStartTime = " + cachedAdvStartTime);
+            } catch (NoSuchFieldException ex) {
+                LOG.fine("MasterNode.confirmInstanceHasRestarted : Could not find the START_TIME field in the cached system advertisement");
+                return false;
+            }
+
+            if (cachedAdvStartTime != -1) {
+                //that means this instance already had the restarted instance in its view
+                //get the new start time for the restarted instance
+                long currentAdvStartTime = -1;
+                try {
+                    currentAdvStartTime = Long.valueOf(newSysAdv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+                } catch (NoSuchFieldException ex) {
+                    LOG.fine("MasterNode.confirmInstanceHasRestarted : Could not find the START_TIME field in the current system advertisement");
+                    return false;
+                }
+                LOG.fine("MasterNode.confirmInstanceHasRestarted() : currentAdvStartTime = " + currentAdvStartTime);
+                if (currentAdvStartTime != cachedAdvStartTime) {
+                    //that means the instance has really restarted
+                    LOG.log(Level.WARNING, MessageFormat.format("Instance {0} was restarted at  {1,time,full} on {1,date}.",
+                            newSysAdv.getName(), new Date(currentAdvStartTime)));
+                    LOG.log(Level.WARNING, MessageFormat.format("Note that there was no Failure notification sent out for " +
+                            "this instance that was previously started at  {0,time,full} on {0,date}", new Date(cachedAdvStartTime)));
+                    return true;
+                } else {
+                    LOG.fine("MasterNode.confirmInstanceHasRestarted : currentAdvStartTime and cachedAdvStartTime have the same value = " +
+                    new Date(cachedAdvStartTime) + " .Instance " + newSysAdv.getName() + "was not restarted.");
+                    return false;
+                }
+            } else {
+                LOG.fine("MasterNode.confirmInstanceHasRestarted : cachedAdvStartTime does not havea valid value = " + cachedAdvStartTime);
+                return false;
+            }
+        } else {
+            LOG.fine("MasterNode.confirmInstanceHasRestarted : oldSysAdv or newSysAdv is null");
+            return false;
+        }
     }
 
     /**
