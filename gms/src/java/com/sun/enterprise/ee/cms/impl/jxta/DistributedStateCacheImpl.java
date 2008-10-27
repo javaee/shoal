@@ -36,6 +36,18 @@
 
 package com.sun.enterprise.ee.cms.impl.jxta;
 
+import static java.util.logging.Level.FINER;
+
+import java.io.Serializable;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.sun.enterprise.ee.cms.core.DistributedStateCache;
 import com.sun.enterprise.ee.cms.core.GMSCacheable;
 import com.sun.enterprise.ee.cms.core.GMSException;
@@ -43,13 +55,6 @@ import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 import com.sun.enterprise.ee.cms.impl.common.DSCMessage;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
-
-import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import static java.util.logging.Level.FINER;
-import java.util.logging.Logger;
 
 /**
  * Messaging based implementation of a shared distributed state cache(DSC).
@@ -85,29 +90,39 @@ import java.util.logging.Logger;
  * @version $Revision$
  */
 public class DistributedStateCacheImpl implements DistributedStateCache {
-    private final ConcurrentHashMap<GMSCacheable, Object> cache =
-            new ConcurrentHashMap<GMSCacheable, Object>();
-    private GMSContext ctx = null;
-    private final Logger logger =
-            GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private boolean firstSyncDone = false;
-    private static final Map<String, DistributedStateCacheImpl> ctxCache =
-            new HashMap<String, DistributedStateCacheImpl>();
+    private final static Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private static final ConcurrentHashMap<String, DistributedStateCacheImpl> ctxCache = new ConcurrentHashMap<String, DistributedStateCacheImpl>();
+
     private final String groupName;
+    private final ConcurrentHashMap<GMSCacheable, Object> cache;
+    private final AtomicReference<GMSContext> ctxRef;
+    private volatile boolean firstSyncDone; 
 
     //private constructor for single instantiation
     private DistributedStateCacheImpl(final String groupName) {
         this.groupName = groupName;
+        this.cache = new ConcurrentHashMap<GMSCacheable, Object>();
+        this.ctxRef = new AtomicReference<GMSContext>(null);
+        this.firstSyncDone = false;
     }
 
     //return the only instance we want to return
     static DistributedStateCache getInstance(final String groupName) {
-        DistributedStateCacheImpl instance;
-        if (ctxCache.get(groupName) == null) {
-            instance = new DistributedStateCacheImpl(groupName);
-            ctxCache.put(groupName, instance);
-        } else {
-            instance = ctxCache.get(groupName);
+    	// NOTE: assumes, that constructing an DistributedStateCacheImpl instance is light weight 
+    	// and does not introduce any other dependencies (like registering itself somewhere, etc)
+    	
+    	// is there another instance already with that name?
+        DistributedStateCacheImpl instance = ctxCache.get(groupName);
+        if (instance == null) {
+        	// no, there is no one, create a new one then
+        	instance = new DistributedStateCacheImpl(groupName);
+        	
+        	// put the new instance to the map, unless another thread won the race and has put its own instance already. 
+        	// if there is another instance already, use that one instead and discard ours
+        	DistributedStateCacheImpl otherInstance = ctxCache.putIfAbsent(groupName, instance);
+        	if (otherInstance != null) {
+        		instance = otherInstance;
+        	}
         }
         return instance;
     }
@@ -189,10 +204,28 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     }
 
     private GMSContext getGMSContext(){
-        if(ctx == null ){
-            ctx = ( GMSContext ) GMSContextFactory.getGMSContext( groupName );
-        }
-        return ctx;
+    	// get the current set ctx
+    	GMSContext ctx = ctxRef.get();
+    	if (ctx == null) {
+    		// ctxRef had null as value
+    		// -> get a ctx from factory (assuming, we never get "null" from there)
+    		ctx = ( GMSContext ) GMSContextFactory.getGMSContext( groupName );    		
+    		
+    		if (ctx == null) {    		
+    			// TODO: ouch, we have received null from the factory. what to do? throwing an exception? log at least  
+    			logger.log(Level.WARNING, "GMSContext from GMSContextFactory is null for groupName: "+groupName);    			
+    		} else {
+        		// set our not null ctx as the new value on ctxRef, expecting its value is still null
+        		boolean oldValueWasNull = ctxRef.compareAndSet(null, ctx);
+
+        		// ctxRef's value was not null anymore. another thread won the race and has set a ctx as value already. 
+        		// -> we use that one instead (assuming, that ctxRef is not set back to null by any other thread)
+        		if (!oldValueWasNull) {
+        			ctx = ctxRef.get();
+        		}    			
+    		}
+    	}
+    	return ctx;
     }
 
     private String getDSCContents() {
@@ -372,7 +405,9 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         if (map!= null && map.size() > 0) {
             cache.putAll(map);
         }
-        firstSyncDone = true;
+        
+        indicateFirstSyncDone();
+        
         logger.log(FINER, "done adding all to Distributed State Cache");
     }
 
@@ -430,7 +465,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             sendMessage(memberToken, msg);
         }
         if (isCoordinator) {
-            firstSyncDone = true;
+        	indicateFirstSyncDone();
         }
     }
 
@@ -462,6 +497,15 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         }
     }
 
+    private void indicateFirstSyncDone() {
+    	// - we can use volatile variable instead of AtomicBoolean.
+    	// - we change only from "false" to "true" and never back.
+    	// => it is ok, in a race condition, that many threads write "true", if they have read "false" before 
+        if (!firstSyncDone) {
+        	firstSyncDone = true;
+        }
+    }
+    
     public boolean isFirstSyncDone() {
         return firstSyncDone;
     }
