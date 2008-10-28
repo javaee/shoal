@@ -429,9 +429,13 @@ public class LWRMulticast implements PipeMsgListener {
      *
      * @param pid destination PeerID
      * @param msg the message to send
+     * @return boolean <code>true</code> if the message has been sent otherwise
+     * <code>false</code>. <code>false</code>. is commonly returned for
+     * non-error related congestion, meaning that you should be able to send
+     * the message after waiting some amount of time.
      * @throws IOException if an i/o error occurs
      */
-    public void send(PeerID pid, Message msg) throws IOException {
+    public boolean send(PeerID pid, Message msg) throws IOException {
         checkState();
         OutputPipe op = null;
         if (routeAdvElement != null && routeControl != null && sequence.intValue() < 2) {
@@ -458,10 +462,10 @@ public class LWRMulticast implements PipeMsgListener {
             } else {
                 op = pipeCache.get(pid);
             }
-            op.send(msg);
+            return JxtaUtil.send(op, msg);
         } else {
             // multicast
-            outputPipe.send(msg);
+            return JxtaUtil.send(outputPipe, msg);
             //wait for ack's
         }
     }
@@ -471,9 +475,14 @@ public class LWRMulticast implements PipeMsgListener {
      *
      * @param ids destination PeerIDs
      * @param msg the message to send
+     * @return boolean <code>true</code> if the message has been sent otherwise
+     * <code>false</code>. <code>false</code>. is commonly returned for
+     * non-error related congestion, meaning that you should be able to send
+     * the message after waiting some amount of time.
      * @throws IOException if an i/o error occurs
      */
-    public void send(Set<PeerID> ids, Message msg) throws IOException {
+    public boolean send(Set<PeerID> ids, Message msg) throws IOException {
+        boolean sent = false;
         checkState();
         this.threshold = ids.size();
         ackList.clear();
@@ -487,15 +496,21 @@ public class LWRMulticast implements PipeMsgListener {
             // Unicast datagram
             // create a op pipe to the destination peer
             OutputPipe op = pipeSvc.createOutputPipe(pipeAdv, ids, 1000);
-            op.send(msg);
-            op.close();
+            try {
+                sent = JxtaUtil.send(op, msg);
+            } finally {
+                op.close();
+            }
+            if (!sent) {
+                return sent;
+            }
             synchronized (ackLock) {
                 try {
                     ackLock.wait(timeout);
                     if (ackSet.size() >= threshold) {
                         ackList = new HashSet<PeerID>(ackSet);
                         ackSet.clear();
-                        return;
+                        return sent;
                     }
                 } catch (InterruptedException ie) {
                     LOG.log(Level.FINEST, "Interrupted " + ie.toString());
@@ -507,6 +522,7 @@ public class LWRMulticast implements PipeMsgListener {
                 }
             }
         }
+         return sent;
     }
 
     private void processRoute(final Message msg) {

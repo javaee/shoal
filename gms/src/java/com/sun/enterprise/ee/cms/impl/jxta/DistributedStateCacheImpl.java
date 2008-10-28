@@ -317,6 +317,10 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         }
         final Map<Serializable, Serializable> retval = new Hashtable<Serializable, Serializable>();
         if (componentName == null || memberToken == null) {
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "DistributedStateCacheImpl.getFromCachePattern() parameter is null.  component=" + 
+                                    componentName + " member=" + memberToken);
+            }
             return retval;
         }
         retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
@@ -332,14 +336,27 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
                 DSCMessage msg = new DSCMessage(temp,
                         DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
                 try {
-                    sendMessage(memberToken, msg);
-                    Thread.sleep(3000);
+                    boolean sent = sendMessage(memberToken, msg);
+                    if (sent) {
+                        Thread.sleep(3000);
+                    } else {
+                        if (logger.isLoggable(Level.FINE)) {
+                            logger.log(Level.FINE, "DistributedStateCacheImpl.getFromCachePattern() send failed for component=" + 
+                                    componentName + " member=" + memberToken);
+                        }
+                    }
                     retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
                 } catch (GMSException e) {
                     logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...." + e);                   
                 } catch (InterruptedException e) {
                     //ignore
                 }
+            } else {
+                logger.log(Level.FINE, 
+                        "getFromCacheForPattern(" + componentName + "," + memberToken + ")" +
+                        ": returning empty map. " +
+                        "reason: isShuttingDown()=" + getGMSContext().isShuttingDown() + 
+                        " isCurrentMember=" + getGMSContext().getGroupHandle().getAllCurrentMembers().contains(memberToken));
             }
         }
         if (retval.isEmpty()) {
@@ -488,13 +505,28 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         return new GMSCacheable(componentName, memberTokenId, key);
     }
 
-    private void sendMessage(final String member, final DSCMessage msg) throws GMSException {
+    /**
+     * Send <code>msg</code> to <code>member</code>.  
+     * @param member  if null, send <code>msg</code> to all members of the group
+     * @param msg
+     * @return boolean <code>true</code> if the message has been sent otherwise
+     * <code>false</code>. <code>false</code>. is commonly returned for
+     * non-error related congestion, meaning that you should be able to send
+     * the message after waiting some amount of time.
+     * @throws com.sun.enterprise.ee.cms.core.GMSException
+     */
+    private boolean sendMessage(final String member, final DSCMessage msg) throws GMSException {
+        boolean sent = false;
         try {
             getGMSContext().getGroupCommunicationProvider().sendMessage(member, msg, true);
+            sent = true;
         } catch (MemberNotInViewException e) {
             logger.log(Level.WARNING, "Member " + member +
                     " is not in the view anymore. Hence not performing sendMessage operation");
+        } catch (GMSException ge) {
+            logger.log(Level.WARNING, "DistributedStateCacheImpl.sendMessage failed to " + member + " " + " message:" + msg);
         }
+        return sent;
     }
 
     private void indicateFirstSyncDone() {

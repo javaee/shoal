@@ -444,10 +444,14 @@ public class ClusterManager implements PipeMsgListener {
      *
      * @param peerid the node ID
      * @param msg    the message to send
+     * @return boolean <code>true</code> if the message has been sent otherwise
+     * <code>false</code>. <code>false</code>. is commonly returned for
+     * non-error related congestion, meaning that you should be able to send
+     * the message after waiting some amount of time.
      * @throws java.io.IOException if an io error occurs
      */
-    public void send(final ID peerid, final Serializable msg) throws IOException, MemberNotInViewException {
-
+    public boolean send(final ID peerid, final Serializable msg) throws IOException, MemberNotInViewException {
+        boolean sent = false;
         if (!stopping) {
             final Message message = new Message();
             message.addMessageElement(NAMESPACE, sysAdvElement);
@@ -491,14 +495,15 @@ public class ClusterManager implements PipeMsgListener {
                     }
                     if (output != null) {
                         pipeCache.put(peerid, output);
-                        boolean sent = output.send(message);
+                        sent = JxtaUtil.send(output, message);
                         if (!sent) {
-                            LOG.warning("ClusterManager.send: message " + message + " not sent to " + peerid + " OutputPipe.send returned false.");
+                            LOG.warning("ClusterManager.send: message " + message + " not sent to " + peerid + " OutputPipe.send attempted resend " +
+                                    + JxtaUtil.MAX_SEND_RETRIES + " and they all returned false.");
                         }
                     } else {
                         LOG.log(Level.WARNING, "ClusterManager.send : sending of message " + message + " failed. Unable to create an OutputPipe for " + peerid +
                                     " route = " + route, lastOne);
-                        return;
+                        return sent;
                     } 
                 } else {
                     LOG.fine("ClusterManager.send : Cluster View does not contain " + peerid.toString() + " hence will not send message.");
@@ -508,10 +513,15 @@ public class ClusterManager implements PipeMsgListener {
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
-                outputPipe.send(message);
+                sent = JxtaUtil.send(outputPipe, message);
+                if (!sent) {
+                    LOG.warning("ClusterManager.send: broadcast of message " + message + " failed." + " OutputPipe.send attempted resend " +
+                            + JxtaUtil.MAX_SEND_RETRIES + " and they all returned false.");
+                }
             }
-        }
+        }   
         //JxtaUtil.printMessageStats(message, true);
+        return sent;
     }
 
     /**

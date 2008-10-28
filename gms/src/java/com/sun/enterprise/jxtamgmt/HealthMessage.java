@@ -35,6 +35,7 @@
  */
 package com.sun.enterprise.jxtamgmt;
 
+import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
 import net.jxta.document.Attributable;
 import net.jxta.document.Attribute;
 import net.jxta.document.Document;
@@ -55,6 +56,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.logging.Logger;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.appendChild;
 
 /**
@@ -69,13 +71,16 @@ import static com.sun.enterprise.jxtamgmt.JxtaUtil.appendChild;
  * </pre>
  */
 public class HealthMessage {
+    private static final Logger LOG = JxtaUtil.getLogger(HealthMessage.class.getName());
+    
     private List<Entry> entries;
     private PeerID srcID;
 
     private static final String entryTag = "Entry";
     private static final String srcTag = "src";
     private static final String stateTag = "state";
-
+    private static final String seqIdTag = "seqId";
+    
     /**
      * Default Constructor
      */
@@ -142,6 +147,9 @@ public class HealthMessage {
             e = adv.createElement(entryTag);
             appendChild(adv, e);
             ((Attributable) e).addAttribute(stateTag, entry.state);
+            
+            // send sender's hm sequence id for use in ensuring that hm are processed in sender's order on receiving side.
+            ((Attributable) e).addAttribute(seqIdTag, Long.toString(entry.seqID));
             StructuredTextDocument doc = (StructuredTextDocument) entry.adv.getDocument(asMimeType);
             StructuredDocumentUtils.copyElements(adv, e, doc);
         }
@@ -165,7 +173,7 @@ public class HealthMessage {
     public PeerID getSrcID() {
         return srcID;
     }
-
+    
     /**
      * Process an individual element from the document.
      *
@@ -204,13 +212,26 @@ public class HealthMessage {
                     state = stateAttr.getValue();
                 }
 
+                // get hm sequence id from sender.
+                final Attribute seqIDAttr = ((Attributable) elem).getAttribute(seqIdTag);
+                long seqID = 0;
+                if (seqIDAttr != null) {
+                    seqID = Long.parseLong(seqIDAttr.getValue());
+                } else {
+                    // backwards compatibility mode.
+                    // received an XML representation of HealthMessage.Entry that does not contain
+                    // seqidTag, uses prior method of creating hm seqid on receiving side of heatlh message.
+                    LOG.warning("missing sender's sequence id in xml representation of HealthMessage.Entry, generating hm sequence id on receiving side");
+                    seqID = hmSeqID;
+                }
+
                 //current assumption is that each health message
                 //has only 1 entry in it. Hence the HMSeqID is simply
                 // passed by value (i.e. a copy is passed after incrementing it in
                 //HealthMonitor
                 for (Enumeration each = elem.getChildren(); each.hasMoreElements();) {
                     SystemAdvertisement adv = new SystemAdvertisement((TextElement) each.nextElement());
-                    final Entry entry = new Entry(adv, state, hmSeqID);
+                    final Entry entry = new Entry(adv, state, seqID);
                     add(entry);
                 }
             }
@@ -250,7 +271,7 @@ public class HealthMessage {
     public void setSrcID(final PeerID id) {
         this.srcID = (id == null ? null : id);
     }
-
+    
     /**
      * returns the document string representation of this object
      *
@@ -298,7 +319,8 @@ public class HealthMessage {
          * * Entry sequence ID
          */
         final long seqID;
-
+        transient long srcStartTime = 0;
+        
         /**
          * Creates a Entry with id and state
          *
@@ -316,6 +338,43 @@ public class HealthMessage {
         
         public long getSeqID() {
             return seqID;
+        }
+        
+        public long getSrcStartTime() {
+            String startTime = null;
+            if (srcStartTime == 0) {
+                try {
+                    startTime = adv.getCustomTagValue(CustomTagNames.START_TIME.toString());
+                } catch (NoSuchFieldException ex) {
+                    LOG.warning("SystemAdvertisement is missing CustomTag START_TIME adv=" + adv.toString());
+                }
+                if (startTime != null) {
+                    srcStartTime = Long.parseLong(startTime);
+                } else {
+                    srcStartTime = -1;  // make it an impossible value to detect it was missing
+                }
+            }
+            return srcStartTime;
+        }
+        
+        /**
+         * Since MasterNode reports on other peers that they are DEAD or INDOUBT, be sure not to compare sequence ids between
+         * a peer and a MasterNode health message report on that peer.
+         * 
+         * @param other
+         * @return true if this HM.entry and other are from same member.
+         */
+        public boolean isFromSameMember(HealthMessage.Entry other) {
+            return (other != null && id.equals(other.id));
+        }
+        
+        /**
+         * Detect when one hm is from a failed member and the new hm is from the restart of that member.
+         * @param other
+         * @return true if same instantiation of member sent this health message.
+         */
+        public boolean isFromSameMemberStartup(HealthMessage.Entry other) {
+            return (other != null && id.equals(other.id) && getSrcStartTime() == other.getSrcStartTime());
         }
 
         /**

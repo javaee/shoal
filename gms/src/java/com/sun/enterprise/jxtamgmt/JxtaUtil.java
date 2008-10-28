@@ -53,6 +53,7 @@ import java.io.ObjectOutputStream;
 import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import net.jxta.pipe.OutputPipe;
 
 /**
  * Utility class that can be used by any calling code to do common routines
@@ -207,6 +208,28 @@ public class JxtaUtil {
                            + jxtaLoggingPropertyValue);
             }
         }
+    }
+    
+    static final public int MAX_SEND_RETRIES = 4;
+    
+    /**
+     * Send <code>msg</code> over <code>pipe</code>.
+     *  
+     * @param pipe
+     * @param msg
+     * @return boolean <code>true</code> if the message has been sent otherwise
+     * <code>false</code>. <code>false</code>. is commonly returned for
+     * non-error related congestion, meaning that you should be able to send
+     * the message after waiting some amount of time.
+     * @throws java.io.IOException
+     */
+    public static boolean send(OutputPipe pipe, Message msg) throws IOException {
+        
+        boolean sent = false;
+        for (int i = 0; i < MAX_SEND_RETRIES && !sent; i++) {
+            sent = pipe.send(msg);
+        }
+        return sent;
     }
 }
 

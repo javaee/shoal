@@ -150,6 +150,10 @@ public final class GroupHandleImpl implements GroupHandle {
                     getGMSContext().getGroupCommunicationProvider().sendMessage(token, gMsg, false  );
                 } catch (MemberNotInViewException e) {
                     logger.warning("GroupHandleImpl.sendMessage : Could not send message : " + e.getMessage());
+                } catch (GMSException gmsEx) {
+                    logger.warning("GroupHandleImpl.sendMesage: could not send message " + message + " for component " + targetComponentName + " to member " + token + " exception:" + gmsEx.getMessage());
+                } catch (Throwable t) {
+                    logger.warning("GroupHandleImpl.sendMesage: could not send message " + message + " for component " + targetComponentName + " to member " + token + " exception:" + t.getMessage());
                 }
             }
         }

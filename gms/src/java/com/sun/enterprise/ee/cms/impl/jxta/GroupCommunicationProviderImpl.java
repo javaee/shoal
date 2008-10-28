@@ -153,7 +153,11 @@ public class GroupCommunicationProviderImpl implements
 
     public void announceClusterShutdown(final GMSMessage gmsMessage) {
         try {
-            clusterManager.send(null, gmsMessage);
+            boolean sent = clusterManager.send(null, gmsMessage);
+             if (!sent && logger.isLoggable(Level.FINE)) {
+                logger.fine("failed to send announceClusterShutdown to group.  gmsMessage=" + gmsMessage);
+             }
+                            
         } catch (IOException e) {
             logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[]{e});
         } catch (MemberNotInViewException e) {
@@ -191,6 +195,7 @@ public class GroupCommunicationProviderImpl implements
     public void sendMessage(final String targetMemberIdentityToken,
                             final Serializable message,
                             final boolean synchronous) throws GMSException, MemberNotInViewException {
+        boolean sent = false;
         try {
             if (targetMemberIdentityToken == null) {
                 if (synchronous) {
@@ -214,7 +219,12 @@ public class GroupCommunicationProviderImpl implements
                         */
                         logger.log(Level.FINER, "sending message to member: " + currentMemberAdv.getName());
                         try {
-                            clusterManager.send(id, message);
+                            boolean localSent = clusterManager.send(id, message);
+                            if (!localSent) {
+                                if (logger.isLoggable(Level.FINE)) {
+                                    logger.fine("sendMessage(synchronous=true, to=group) failed to send msg " + message + " to member " + id);
+                                }
+                            }
                         } catch (MemberNotInViewException e) {
                             if (logger.isLoggable(Level.FINE)) {
                                 logger.fine("MemberNotInViewException : " + e.toString());
@@ -241,13 +251,19 @@ public class GroupCommunicationProviderImpl implements
                         }
                     }
                 } else {
-                    clusterManager.send(null, message);//sends to whole group
+                    sent = clusterManager.send(null, message);//sends to whole group
+                    if (!sent) {
+                        throw new GMSException("message " + message + " not sent to group, send returned false");
+                    }
                 }
             } else {
                 final ID id = clusterManager.getID(targetMemberIdentityToken);
                 if (clusterManager.getClusterViewManager().containsKey(id)) {
                     logger.log(Level.FINE, "sending message to PeerID: " + id);
-                    clusterManager.send(id, message);
+                    sent = clusterManager.send(id, message);
+                    if (!sent) {
+                        throw new GMSException("message " + message + " not sent to " + id + ", send returned false");
+                    }
                 } else {
                     logger.log(Level.FINE, "message not sent to  " + targetMemberIdentityToken +
                             " since it is not in the View");
@@ -363,7 +379,12 @@ public class GroupCommunicationProviderImpl implements
         }
 
         public Object call() throws Exception {
-            clusterManager.send(member, msg);
+            boolean sent = clusterManager.send(member, msg);
+            if (!sent) {
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("CallableMessageSend failed to send msg " + msg + " to member " + member);
+                }
+            }
             return null;
         }
     }

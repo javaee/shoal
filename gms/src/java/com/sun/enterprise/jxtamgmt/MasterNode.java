@@ -1082,7 +1082,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                     output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
                     pipeCache.put(peerid, output);
                 }
-                final boolean sent = output.send(msg);
+                final boolean sent = JxtaUtil.send(output, msg);
                 if (!sent) {
                     LOG.log(Level.WARNING, "OutputPipe.send unexpectedly returned false sending messge " + msg +
                             " to instance " + name);
@@ -1090,10 +1090,10 @@ class MasterNode implements PipeMsgListener, Runnable {
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
-                final boolean sent = outputPipe.send(msg);
+                final boolean sent = JxtaUtil.send(outputPipe, msg);
                 if (!sent) {
-                    LOG.log(Level.WARNING, "OutputPipe.send unexpectedly returned false sending messge " + msg +
-                            " to instance " + name);
+                    LOG.log(Level.WARNING, "OutputPipe.send unexpectedly returned false broadcasting messge " + msg +
+                            " to cluster");
                 }
             }
         } catch (IOException io) {

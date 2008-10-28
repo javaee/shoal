@@ -376,17 +376,21 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private void processMemberStateQuery(Message msg) {
+        SystemAdvertisement adv = null;
         LOG.fine(" received a MemberStateQuery...");
         try {
-            SystemAdvertisement adv = getNodeAdvertisement(msg);
+            adv = getNodeAdvertisement(msg);
             if (adv != null) {
                 ID sender = adv.getID();       //sender of this query
                 String state = getStateFromCache(localPeerID);
                 Message response = createMemberStateResponse(state);
                 LOG.fine(" sending via LWR response to " + sender.toString() + " with state " + state + " for " + localPeerID);
-                mcast.send((PeerID) sender, response);    //send the response back to the query sender
+                final boolean sent = mcast.send((PeerID) sender, response);    //send the response back to the query sender
+                if (!sent){
+                    LOG.warning("processMemberStateQuery failed to send memberStateResponse msg to " + adv.getName() + " send returned false");
+                }
             } else {
-                LOG.warning("Don't know where this query came from. SysAdv is null");
+                LOG.warning("ignoring memberstatequery. SysAdv is null");
             }
         } catch (IOException e) {
             LOG.warning("Could not send the message via LWRMulticast : " + e.getMessage());
@@ -397,7 +401,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         String memberState = msg.getMessageElement(NAMESPACE, MEMBER_STATE_RESPONSE).toString();
         SystemAdvertisement adv = getNodeAdvertisement(msg);
         if (adv == null) {
-            LOG.severe("ignoring memberStateResponse, received a memberstateresponse with no sender advertisement");
+            LOG.warning("ignoring memberStateResponse, received a memberstateresponse with no sender advertisement");
             return;
         }
         
@@ -459,36 +463,49 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //current assumption is that there is only 1 entry
             //per health message
             for (HealthMessage.Entry entry : hm.getEntries()) {
-
-                LOG.log(Level.FINEST, "Processing Health Message " + entry.getSeqID() + " for entry " + entry.adv.getName() + 
-                         " state=" + entry.state);
+                if (LOG.isLoggable(Level.FINEST)){
+                    LOG.log(Level.FINEST, "Processing Health Message " + entry.getSeqID() + " for entry " + entry.adv.getName() + 
+                             " startTime=" + entry.getSrcStartTime() + " state=" + entry.state);
+                }
                 synchronized (cacheLock) {
                     HealthMessage.Entry cachedEntry = cache.get(entry.id);
                     if (cachedEntry != null) {
                         if (LOG.isLoggable(Level.FINEST)) {
-                        LOG.log(Level.FINEST, "cachedEntry id=" + cachedEntry.id + " entry name=" + cachedEntry.adv.getName() + 
-                                " state=" + cachedEntry.state + " seqId=" + cachedEntry.getSeqID());
+                            LOG.log(Level.FINEST, "cached entry name=" + cachedEntry.adv.getName() + 
+                                    " startTime=" + cachedEntry.getSrcStartTime() +
+                                    " seqId=" + cachedEntry.getSeqID() +
+                                    " state=" + cachedEntry.state );
                         }
-                        if (entry.getSeqID() <= cachedEntry.getSeqID()) {
-                            LOG.log(Level.FINER, MessageFormat.format("Received an older health message sequence {0}." +
-                                    " Current sequence id is {1}. ",
-                                    entry.getSeqID(), cachedEntry.getSeqID()));
+                        if (entry.isFromSameMember(cachedEntry) && entry.getSrcStartTime() < cachedEntry.getSrcStartTime()) {
+                            LOG.fine("Discarding older health message from a previously failed run of member " + entry.adv.getName());
+                            return;
+                        }
+                        
+                        // only compare sequence ids if heathmessage entrys from same member with same start time
+                        //if (entry.getSeqID() <= cachedEntry.getSeqId()) { 
+                        if (cachedEntry.isFromSameMemberStartup(entry) && entry.getSeqID() < cachedEntry.getSeqID()) {
+                            if (LOG.isLoggable(Level.FINE)) {
+                                LOG.log(Level.FINE, MessageFormat.format("Received an older health message from source member {2} seqId={0}." +
+                                        " Current cached health message seqId:{1}. ",
+                                        entry.getSeqID(), cachedEntry.getSeqID(), entry.adv.getName()));
+                            }
                             if (entry.state.equals(states[CLUSTERSTOPPING]) || entry.state.equals(states[PEERSTOPPING])) { 
                                 //dont discard the message
                                 //and don't alter the state if the cachedEntry's state is stopped
-                                LOG.log(Level.FINER, "Received out of order health message " +
-                                        "with clusterstopping state." +
-                                        " Calling handleStopEvent() to handle shutdown state.");
+                                LOG.log(Level.FINE, "Received an older health message " +
+                                           "with clusterstopping state." +
+                                         " Calling handleStopEvent() to handle shutdown state.");
+                                
                                 if (!cachedEntry.state.equals(states[STOPPED])) {
                                     cache.put(entry.id, entry);
                                 }
                                 handleStopEvent(entry);
                             } else if (entry.state.equals(states[READY])) {
-                                LOG.finer("Received out of order health message with Joined and Ready state. " +
+                                LOG.fine("Received an older health message with Joined and Ready state. " +
                                         "Calling handleReadyEvent() for handling the peer's ready state");
                                 handleReadyEvent(entry);
                             } else {
-                                LOG.log(Level.FINER, "Discarding out of sequence health message");
+                                LOG.log(Level.FINER, "Discarding older health message");
                             }
                             return;
                         }
@@ -632,21 +649,32 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      * @param id    destination node ID, if null broadcast to group
      */
     private void reportMyState(final short state, final PeerID id) {
-        LOG.log(Level.FINER, MessageFormat.format("Sending state {0} to {1}", states[state], id));
+        if (LOG.isLoggable(Level.FINER)){
+            LOG.log(Level.FINER, MessageFormat.format("Sending state {0} to {1}", states[state], 
+                    id == null ? "group" : id));
+        }
+        boolean sent = true;
         if (state == ALIVE) {
-            send(id, getAliveMessage());
+            sent = send(id, getAliveMessage());
         } else {
             if (state == ALIVEANDREADY) {
-                send(id, getAliveAndReadyMessage());
+                sent = send(id, getAliveAndReadyMessage());
             } else
-                send(id, createHealthMessage(state));
+                sent = send(id, createHealthMessage(state));
+        }
+        if (!sent) {
+            LOG.warning("failed to send heartbeatmessage with state=" + states[state] + " to " + 
+                    id == null ? "group" : id + ", send returned false");
         }
     }
 
     private void reportOtherPeerState(final short state, final SystemAdvertisement adv) {
         final Message msg = createMessage(state, HEALTHM, adv);
         LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} health state as {1}", adv.getName(), states[state]));
-        send(null, msg);
+        boolean sent = send(null, msg);
+        if (!sent) {
+            LOG.warning("send returned false. failed to report member " + adv.getName() + " state=" + states[state] + " to group");
+        }
     }
 
     /**
@@ -688,8 +716,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      *
      * @param peerid Peer ID to send massage to
      * @param msg    the message to send
+     * @return boolean <code>true</code> if the message has been sent otherwise
+     * <code>false</code>. <code>false</code>. is commonly returned for
+     * non-error related congestion, meaning that you should be able to send
+     * the message after waiting some amount of time.
      */
-    private void send(final PeerID peerid, final Message msg) {
+    private boolean send(final PeerID peerid, final Message msg) {
+        boolean sent = false;
         sendStopLock.lock();
         try {
                 //the message contains only one messageElement and
@@ -708,7 +741,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                                         !entry.state.equals(states[PEERSTOPPING]) &&
                                         !entry.state.equals(states[STOPPED]))) {
                             LOG.fine("HealthMonitor.send()=> not sending the message since HealthMonitor is trying to stop. state = " + entry.state);
-                            return;
+                            // don't flag this send as a failure to send, it is a graceful stop
+                            return true;
                         }
                     }
                 }
@@ -736,18 +770,16 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                         pipeCache.put(peerid, output);
                     }
                 }
-                output.send(msg);
+                sent = JxtaUtil.send(output, msg);
             } else {
-                final boolean result = outputPipe.send(msg);
-                if (!result) {
-                    LOG.log(Level.WARNING,"HealthMonitor.send returned false");
-                }
+                sent = JxtaUtil.send(outputPipe, msg);
             }
         } catch (IOException io) {
             LOG.log(Level.WARNING, "Failed to send message", io);
         } finally {
             sendStopLock.unlock();
         }
+        return sent;
     }
 
     /**
@@ -878,6 +910,10 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
      */
     public String getMemberState(ID peerID, long threshold, long timeout) {
 
+        if (peerID.equals(localPeerID)){
+            // handle getting your own member state
+            return getStateFromCache(peerID);
+        }
         //if threshold is a positive value and there is no timeout specified i.e.
         //timeout is a negative value or simply 0
    
@@ -945,13 +981,16 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         
         // check if there are any outstanding calls, if so just wait for reply
         MemberStateResult result = memberStateResults.get(peerID);
+        boolean sent = false;
+        boolean ioe = false;
         if ( result == null) {
             // no outstanding calls at this time.
             result = new MemberStateResult();
             MemberStateResult prevResult = memberStateResults.putIfAbsent(peerID, result);
             if (prevResult != null ) {
                 // some other thread put a result into result cache, let that thread send the query, we will wait for the reply
-                result = prevResult; 
+                result = prevResult;
+                sent = true;
             } else {
                 // only thread that puts result into result cache will send a message to peerID
                 //instead send a query to that instance to get the most up-to-date state
@@ -962,16 +1001,20 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
                 //send it via LWRMulticast
                 try {
-                    mcast.send((PeerID) peerID, msg);
+                    sent = mcast.send((PeerID) peerID, msg);
                 } catch (IOException e) {
+                    ioe = true;
                     LOG.warning("Could not send the LWR Multicast message to get the member state of " + peerID.toString() + " IOException : " + e.getMessage());
+                }
+                if (!sent && !ioe) {
+                    LOG.warning("failed to send LWRMulticast message, send returned false");
                 }
             } 
         }
        
         synchronized(result.lock) {
             try {
-                if (result.memberState == null) {  // check for result coming back 
+                if (sent && result.memberState == null) {  // check for result coming back 
                     result.lock.wait(timeout);
                 }
             } catch (InterruptedException e) {
@@ -986,9 +1029,9 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         } else {
             // timed out, remove result from result cache.
             memberStateResults.remove(peerID, result);
-            String state = getStateFromCache(peerID);
+            String state = states[UNKNOWN];
             if (LOG.isLoggable(Level.FINER)) {
-                LOG.finer("getMemberStateViaLWR got state from local cache timeout " + state + " id=" + peerID);
+                LOG.finer("getMemberStateViaLWR timeout id=" + peerID);
             }
             return state;
         }
