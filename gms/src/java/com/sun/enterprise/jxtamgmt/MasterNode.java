@@ -671,7 +671,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         //check if the adv.getID was the master before ...
         SystemAdvertisement madv = clusterViewManager.getMaster();
         SystemAdvertisement oldSysAdv = clusterViewManager.get(adv.getID());
-        if (madv.getID().equals(adv.getID())) {
+        if (madv != null && adv != null && madv.getID().equals(adv.getID())) {
             //master restarted
             //check for the start times for both advs i.e. the one in the view and the one passed into this method.
             //If they are different that means the master has restarted for sure
