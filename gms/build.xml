@@ -184,6 +184,34 @@
         </javadoc>    
     </target>
 
+    <target name="bundle-src">
+        <antcall target="gms-javadocs"/>
+        <echo message="Bundling up the sources under ${dist.dir}/shoal-gms-src.jar"/>
+        <mkdir dir="${bundle.gms.javadocs}"/>
+        <mkdir dir="${bundle.gms.sources}"/>
+        <mkdir dir="${bundle.gms.lib}"/>
+
+        <copy todir="${bundle.gms.javadocs}">
+            <fileset dir="${javadocs.dir}"/>
+        </copy>
+        <copy todir="${bundle.gms.sources}">
+            <fileset dir="${src.dir}"/>
+        </copy>
+        <copy todir="${bundle.gms.lib}">
+            <fileset file="${jxta.jar}"/>
+        </copy>
+        <copy todir="${bundle.gms}">
+            <fileset file="${license.dir}"/>
+            <fileset file="./project.properties"/>
+            <fileset file="./build.properties"/>
+            <fileset file="./build.xml"/>
+            <fileset file="./README"/>
+            <fileset file="./maven.xml"/>
+            <fileset file="./project.xml"/>
+        </copy>
+        <jar jarfile="${dist.dir}/shoal-gms-src.jar" basedir="${bundle.gms}"/>
+    </target>
+    
     <target name="test-sender" depends="build" description="Run LWRMulticastSenderTest">
         <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastSenderTest" fork="true">
             <classpath>
