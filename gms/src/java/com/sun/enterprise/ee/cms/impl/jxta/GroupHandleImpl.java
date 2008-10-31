@@ -413,7 +413,7 @@ public final class GroupHandleImpl implements GroupHandle {
     }
 
     public String toString() {
-        return getClass().getName();
+        return "group:" + groupName + " server:" + serverToken;
     }
 
     private static String setStateAndTime() {
