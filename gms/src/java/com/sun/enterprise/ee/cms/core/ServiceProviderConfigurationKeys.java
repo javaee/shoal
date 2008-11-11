@@ -151,5 +151,10 @@ public enum ServiceProviderConfigurationKeys {
      * blocks for the above-mentioned FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT, then the health
      * monitoring protocol would return a failure event. </p>
      */
-    FAILURE_DETECTION_TCP_RETRANSMIT_PORT
+    FAILURE_DETECTION_TCP_RETRANSMIT_PORT,
+    /**
+     * <p>OPTIONAL: not a meaningful option for all implementations.
+     * Specify the max number of threads allocated to run handlers for incoming multicast messages.
+     */
+    MULTICAST_POOLSIZE
 }

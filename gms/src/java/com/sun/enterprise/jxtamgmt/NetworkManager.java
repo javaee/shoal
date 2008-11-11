@@ -127,6 +127,8 @@ public class NetworkManager implements RendezvousListener {
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
     private int mcastPort = 0;
+    private static final int DEFAULT_MULTICAST_POOLSIZE = 12;
+    private int multicastPoolsize = DEFAULT_MULTICAST_POOLSIZE;
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
     private boolean isRendezvousSeed = false;
     private String tcpAddress;
@@ -185,6 +187,29 @@ public class NetworkManager implements RendezvousListener {
             }
 
             tcpAddress = (String)properties.get(BIND_INTERFACE_ADDRESS.toString());
+
+            multicastPoolsize = DEFAULT_MULTICAST_POOLSIZE;
+            Object multicastPoolsizeString = properties.get(MULTICAST_POOLSIZE.toString());
+
+            // remove this code when app server is updated to set this property in <code>properties</code>
+            // passed into this constructor.
+            if (multicastPoolsizeString == null){
+                multicastPoolsizeString = System.getProperty("jxtaMulticastPoolsize");
+            }
+            // end temporary short term configuration by system property
+
+            if (multicastPoolsizeString != null && multicastPoolsizeString instanceof String) {
+                try {
+                    multicastPoolsize = Integer.parseInt((String) multicastPoolsizeString);
+                } catch (NumberFormatException nfe) {
+                    LOG.warning("Invalid value for Shoal property to configure jxta " + MULTICAST_POOLSIZE.toString() + "=" + (String)multicastPoolsizeString);
+                }
+                if (multicastPoolsize < DEFAULT_MULTICAST_POOLSIZE) {
+                    multicastPoolsize = DEFAULT_MULTICAST_POOLSIZE;
+                } else if (multicastPoolsize > 300) {
+                    multicastPoolsize = 300;
+                }
+            }
         }
         try {
             initWPGF(instanceName);
@@ -652,6 +677,12 @@ public class NetworkManager implements RendezvousListener {
         }
         if (mcastPort > 0) {
             config.setMulticastPort(mcastPort);
+        }
+        if (multicastPoolsize != 0) {
+            config.setMulticastPoolSize(multicastPoolsize);
+            if (LOG.isLoggable(Level.CONFIG)) {
+                LOG.config("set jxta Multicast Poolsize to " + config.getMulticastPoolSize());
+            }
         }
         
         //if a machine has multiple network interfaces,

@@ -68,5 +68,6 @@ public enum JxtaConfigConstants {
                            // This is the address which Shoal should bind to for communication.
     FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT, //admin can specify the timeout after which the HealthMonitor.isConnected() thread can
                             //quit checking if the peer's machine is up or not.
-    FAILURE_DETECTION_TCP_RETRANSMIT_PORT   //port where a socket can be created to see if the instance's machine is up or down        
+    FAILURE_DETECTION_TCP_RETRANSMIT_PORT,   //port where a socket can be created to see if the instance's machine is up or down
+    MULTICAST_POOLSIZE    // how many simultaneous multicast messages can be processed before multicast messages start getting dropped.
 }
