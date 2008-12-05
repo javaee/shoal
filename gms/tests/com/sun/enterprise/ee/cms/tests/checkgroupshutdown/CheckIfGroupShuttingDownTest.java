@@ -89,6 +89,11 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
 
         leaveGroupAndShutdown(serverName, gms);
 
+
+        if (serverName.equals("C1"))
+            logger.info("After leaveGroupAndShutdown : Now is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
+
+
         System.exit(0);
     }
 

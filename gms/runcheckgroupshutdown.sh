@@ -29,5 +29,5 @@
 publish_home=./dist
 lib_home=./lib
 
-java -Dcom.sun.management.jmxremote -cp ${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DTYPE=$1 com.sun.enterprise.ee.cms.tests.checkgroupshutdown.CheckIfGroupShuttingDownTest;
+java -DCheckIfGroupShuttingDownTest=INFO -Dcom.sun.management.jmxremote -cp ${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DTYPE=$1 com.sun.enterprise.ee.cms.tests.checkgroupshutdown.CheckIfGroupShuttingDownTest;
 

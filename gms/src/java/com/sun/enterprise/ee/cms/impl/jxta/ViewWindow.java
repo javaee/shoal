@@ -479,7 +479,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private void addReadyMembers(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
-        logger.log(Level.FINE, "Adding Joined And Ready member : " + token);
+        logger.log(Level.INFO, "Adding Joined And Ready member : " + token);
         try {
             if (advert.getCustomTagValue(
                     CustomTagNames.MEMBER_TYPE.toString()).equalsIgnoreCase(CORETYPE)) {

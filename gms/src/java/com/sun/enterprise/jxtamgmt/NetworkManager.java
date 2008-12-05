@@ -127,7 +127,7 @@ public class NetworkManager implements RendezvousListener {
     private static String APPSERVICESEED = "APPSERVICE";
     private String mcastAddress;
     private int mcastPort = 0;
-    private static final int DEFAULT_MULTICAST_POOLSIZE = 12;
+    private static final int DEFAULT_MULTICAST_POOLSIZE = 300;
     private int multicastPoolsize = DEFAULT_MULTICAST_POOLSIZE;
     private List<String> rendezvousSeedURIs = new ArrayList<String>();
     private boolean isRendezvousSeed = false;
@@ -691,8 +691,10 @@ public class NetworkManager implements RendezvousListener {
             config.setTcpInterfaceAddress(tcpAddress);
             config.setMulticastInterface(tcpAddress);
         }
-        LOG.fine("node config adv = " + config.getPlatformConfig().toString());
-
+        if (LOG.isLoggable(Level.CONFIG)) {
+            LOG.config("node config adv = " + config.getPlatformConfig().toString());
+        }
+        
         PeerGroup worldPG = getWorldPeerGroup();
         ModuleImplAdvertisement npgImplAdv;
         try {

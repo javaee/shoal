@@ -69,5 +69,8 @@ public enum JxtaConfigConstants {
     FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT, //admin can specify the timeout after which the HealthMonitor.isConnected() thread can
                             //quit checking if the peer's machine is up or not.
     FAILURE_DETECTION_TCP_RETRANSMIT_PORT,   //port where a socket can be created to see if the instance's machine is up or down
-    MULTICAST_POOLSIZE    // how many simultaneous multicast messages can be processed before multicast messages start getting dropped.
+    MULTICAST_POOLSIZE,    // how many simultaneous multicast messages can be processed before multicast messages start getting dropped.
+    TCP_MAX_POOLSIZE,      // max threads for tcp processing.   See max parameter for ThreadPoolExecutor constructor.
+    TCP_CORE_POOLSIZE,     // core threads for tcp processing.  See core parameter for ThreadPoolExecutor constructor.
+    TCP_BLOCKING_QUEUESIZE  // queue for pending incoming tcp requests (out of CORE threads).  When full, new threads created till MAX.
 }

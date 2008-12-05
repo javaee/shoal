@@ -118,4 +118,6 @@ public interface GMSContext {
      * */
 
      void assumeGroupLeadership();
+
+     boolean isGroupBeingShutdown(String groupName);
 }

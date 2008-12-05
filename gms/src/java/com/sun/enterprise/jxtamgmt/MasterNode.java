@@ -610,9 +610,21 @@ class MasterNode implements PipeMsgListener, Runnable {
             if (msgElement != null && cvEvent != null) {
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
-                    LOG.log(Level.FINER, MessageFormat.format("Received an older clusterView sequence {0}." +
-                            " Current sequence :{1} discarding out of sequence view",
-                            seqID, clusterViewManager.getMasterViewID()));
+                    LOG.log(Level.WARNING, MessageFormat.format("Received a stale clusterview, older clusterview sequence {0}." +
+                            " Current sequence :{1} discarding out of sequence view.  ChangeEvent={2} from {3}",
+                            seqID, clusterViewManager.getMasterViewID(), cvEvent.getEvent().toString(),
+                             cvEvent.getAdvertisement().getName()));
+                    if (cvEvent.getEvent()  == ClusterViewEvents.JOINED_AND_READY_EVENT) {
+                        // fix for sailfin 1427
+                        clusterViewManager.notifyListeners(cvEvent);
+                        LOG.log(Level.INFO, "Received a stale clusterview. Notified JOINED_AND_READY_EVENT listeners for instance " +
+                                cvEvent.getAdvertisement().getName()); 
+                    } else {
+                        // too close to freeze to change this.  Consider other changeevents that
+                        // should still occur even when a stale one arrives.
+                        LOG.warning("Received a stale clusterview. ClusterViewListeners not notified of Change Event " + cvEvent.getEvent().toString() +
+                                    " from " + cvEvent.getAdvertisement().getName());
+                    }
                     return true;
                 }
                 final ArrayList<SystemAdvertisement> newLocalView = getObjectFromByteArray(msgElement);
@@ -654,9 +666,13 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINER, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            Message masterResponseMsg = createMasterResponse(false, localNodeID);
+            synchronized(masterViewID) {
+                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                addAuthoritativeView(masterResponseMsg);
+            }
             clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
+            sendNewView(null, cvEvent, masterResponseMsg, false);
         }
         //for issue 484
         //when the master is killed and restarted very quickly
@@ -774,9 +790,13 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            Message responseMsg = createMasterResponse(false, localNodeID);
+            synchronized(masterViewID) {
+                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                addAuthoritativeView(responseMsg);
+            }
             clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
+            sendNewView(null, cvEvent, responseMsg, false);
         } else {
             final Message response = createSelfNodeAdvertisement();
             final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
@@ -805,9 +825,13 @@ class MasterNode implements PipeMsgListener, Runnable {
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINER, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            Message responseMsg = createMasterResponse(false, localNodeID);
+            synchronized(masterViewID) {
+                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                addAuthoritativeView(responseMsg);
+            }
             clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, createMasterResponse(false, localNodeID), true);
+            sendNewView(null, cvEvent, responseMsg, false);
         }
         return true;
     }
@@ -1198,10 +1222,13 @@ class MasterNode implements PipeMsgListener, Runnable {
     void viewChanged(final ClusterViewEvent event) {
         if (isMaster() && masterAssigned) {
             clusterViewManager.notifyListeners( event );
-            //increment the view seqID
-            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             Message msg = createSelfNodeAdvertisement();
-            sendNewView(null, event, msg, true);
+            synchronized(masterViewID) {
+                //increment the view seqID
+                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                addAuthoritativeView(msg);
+            }
+            sendNewView(null, event, msg, false);
         }
     }
 
@@ -1282,8 +1309,12 @@ class MasterNode implements PipeMsgListener, Runnable {
     ClusterViewEvent sendReadyEventView(final SystemAdvertisement adv) {
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.JOINED_AND_READY_EVENT, adv);        
         LOG.log(Level.FINEST, MessageFormat.format("Sending to Group, Joined and Ready Event View for peer :{0}", adv.getName()));
-        clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-        sendNewView(null, cvEvent, createSelfNodeAdvertisement(), true);
+        Message msg = this.createSelfNodeAdvertisement();
+        synchronized(masterViewID) {
+            clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+            this.addAuthoritativeView(msg);
+        }
+        sendNewView(null, cvEvent, msg, false);
         return cvEvent;
     }
 

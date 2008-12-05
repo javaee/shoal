@@ -61,6 +61,7 @@ public class GMSContext extends GMSContextBase {
     private DistributedStateCache distributedStateCache;
     private GroupHandle gh;
     private Properties configProperties;
+    private boolean isGroupShutdown = false;  //remember if this context has left the group during a group shutdown.
 
     public GMSContext(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -128,6 +129,7 @@ public class GMSContext extends GMSContextBase {
         if(shutdownHelper.isGroupBeingShutdown(groupName)){
             logger.log(Level.INFO, "shutdown.groupshutdown", new Object[] {groupName});
             groupCommunicationProvider.leave(true);
+            isGroupShutdown = true;
             shutdownHelper.removeFromGroupShutdownList(groupName);
         }
         else {
@@ -207,5 +209,9 @@ public class GMSContext extends GMSContextBase {
 
     public void assumeGroupLeadership() {
         groupCommunicationProvider.assumeGroupLeadership();
+    }
+    
+    public boolean isGroupBeingShutdown(String groupName) {
+        return isGroupShutdown || getShutdownHelper().isGroupBeingShutdown(groupName);
     }
 }

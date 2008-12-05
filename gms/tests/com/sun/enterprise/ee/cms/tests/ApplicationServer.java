@@ -38,6 +38,8 @@ package com.sun.enterprise.ee.cms.tests;
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
+import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.jxtamgmt.JxtaUtil;
@@ -51,6 +53,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.sun.enterprise.ee.cms.core.CallBack;
 
 /**
  * This is an example used to demonstrate the application layer that controls the
@@ -60,7 +63,7 @@ import java.util.logging.Logger;
  * @author Shreedhar Ganapathy"
  * @version $Revision$
  */
-public class ApplicationServer implements Runnable {
+public class ApplicationServer implements Runnable, CallBack {
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
     private GroupManagementService gms = null;
@@ -148,6 +151,8 @@ public class ApplicationServer implements Runnable {
     public void startGMS() {
         logger.log(Level.FINE, "ApplicationServer: Starting GMS service");
         try{
+            gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
+            gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
             gms.join();
         } catch (GMSException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
@@ -173,6 +178,23 @@ public class ApplicationServer implements Runnable {
         } catch (GMSException e) {
             logger.log(Level.INFO, e.getLocalizedMessage());
         }
+    }
+
+    public void processNotification(Signal notification) {
+        logger.fine("received a notification " + notification.getClass().getName());
+
+        logger.info("processing notification " + notification.getClass().getName() + " for group " +
+                notification.getGroupName() + " memberName=" + notification.getMemberToken());
+        if (notification instanceof JoinedAndReadyNotificationSignal) {
+            MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());
+            if (state != MemberStates.READY && state != MemberStates.ALIVEANDREADY) {
+                logger.warning("incorrect memberstate inside of JoinedAndReadyNotification signal processing " +
+                        " expected: READY or ALIVEANDREADY, actual value: " + state);
+            } else {
+                logger.info("getMemberState(" + notification.getMemberToken() + ")=" + state);
+            }
+        }
+
     }
     
     // simulate CLB polling getMemberState

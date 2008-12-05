@@ -148,7 +148,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     private static final String MEMBER_STATE_QUERY = "MEMBERSTATEQUERY";
     private static final String MEMBER_STATE_RESPONSE = "MEMBERSTATERESPONSE";
-    private boolean readyStateComplete = false;
+    private volatile boolean readyStateComplete = false;
 
     private Message aliveMsg = null;
     private Message aliveAndReadyMsg = null;
@@ -1085,6 +1085,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 }
             }
         }
+        readyStateComplete = true;
         if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
             LOG.log(Level.FINEST, "Sending Ready Event View for " + manager.getSystemAdvertisement().getName());
             ClusterViewEvent cvEvent = masterNode.sendReadyEventView(manager.getSystemAdvertisement());
@@ -1092,9 +1093,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     "Joined and Ready Event View for peer :{0}", manager.getSystemAdvertisement().getName()));
             manager.getClusterViewManager().notifyListeners(cvEvent);
         }
-        LOG.log(Level.FINEST, "Calling reportMyState() with READY...");
+        LOG.log(Level.INFO, "Calling reportMyState() with READY...");
         reportMyState(READY, null);
-        readyStateComplete = true;
     }
 
     /**
