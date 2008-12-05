@@ -41,7 +41,7 @@ public class MulticastSender {
             }
             ms.joinGroup(ia);
             for (int i = 1; i < 10; i++) {
-                ms.send(dp, ttl);
+                ms.send(dp);
             }
             ms.leaveGroup(ia);
             ms.close();
