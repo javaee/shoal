@@ -198,7 +198,7 @@ public class NetworkManager implements RendezvousListener {
             }
             // end temporary short term configuration by system property
 
-            if (multicastPoolsizeString != null && multicastPoolsizeString instanceof String) {
+            if (multicastPoolsizeString != null) {
                 try {
                     multicastPoolsize = Integer.parseInt((String) multicastPoolsizeString);
                 } catch (NumberFormatException nfe) {
@@ -206,8 +206,6 @@ public class NetworkManager implements RendezvousListener {
                 }
                 if (multicastPoolsize < DEFAULT_MULTICAST_POOLSIZE) {
                     multicastPoolsize = DEFAULT_MULTICAST_POOLSIZE;
-                } else if (multicastPoolsize > 300) {
-                    multicastPoolsize = 300;
                 }
             }
         }
