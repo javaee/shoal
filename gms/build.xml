@@ -264,4 +264,15 @@
             <arg value="2299"/>
 	</java>
     </target>
+
+    <target name="simplejointest" depends="build" description="Simple JoinTest">
+        <java classname="com.sun.enterprise.shoal.jointest.SimpleJoinTest" fork="true">
+            <classpath>
+                <path refid="compile.classpath"/>              
+                <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
+            </classpath>
+            <arg value="-Dcom.sun.management.jmxremote"/>
+	    <arg value="-DLOG_LEVEL=FINE"/>
+	</java>
+    </target>
 </project>
