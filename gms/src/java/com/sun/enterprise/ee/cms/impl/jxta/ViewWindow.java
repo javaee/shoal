@@ -141,44 +141,42 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     private ArrayList<GMSMember> getMemberTokens(final EventPacket packet) {
-        synchronized (currentCoreMembers) {
-            currentCoreMembers.clear();
-        }
-        synchronized (allCurrentMembers) {
-            allCurrentMembers.clear();
-        }
         final List<GMSMember> tokens = new ArrayList<GMSMember>(); // contain list of GMSMember objects.
-        ClusterView view = packet.getClusterView();
-        GMSMember member;
-        SystemAdvertisement advert;
-        int count = 0;
         final StringBuffer sb =
-                new StringBuffer("GMS View Change Received for group ").append(groupName).append(" : Members in view for ").append("(before change analysis) are :\n");
-        for (SystemAdvertisement systemAdvertisement : view.getView()) {
-            advert = systemAdvertisement;
-            member = getGMSMember(advert);
-            member.setSnapShotId(view.getClusterViewId());
-            sb.append(++count)
-                    .append(": MemberId: ")
-                    .append(member.getMemberToken())
-                    .append(", MemberType: ")
-                    .append(member.getMemberType())
-                    .append(", Address: ")
-                    .append(advert.getID().toString()).append('\n');
-            if (member.getMemberType().equals(CORETYPE)) {
-                synchronized (currentCoreMembers) {
-                    currentCoreMembers.add(
-                            new StringBuffer(member.getMemberToken())
-                                    .append("::")
-                                    .append(member.getStartTime()).toString());
+                        new StringBuffer("GMS View Change Received for group ").append(groupName).append(" : Members in view for ").append("(before change analysis) are :\n");
+
+        // NOTE:  always synchronize currentCoreMembers and allCurrentMembers in this order when getting both locks at same time.
+        synchronized (currentCoreMembers) {
+            synchronized(allCurrentMembers) {
+                currentCoreMembers.clear();
+                allCurrentMembers.clear();
+                ClusterView view = packet.getClusterView();
+                GMSMember member;
+                SystemAdvertisement advert;
+                int count = 0;
+                for (SystemAdvertisement systemAdvertisement : view.getView()) {
+                    advert = systemAdvertisement;
+                    member = getGMSMember(advert);
+                    member.setSnapShotId(view.getClusterViewId());
+                    sb.append(++count)
+                            .append(": MemberId: ")
+                            .append(member.getMemberToken())
+                            .append(", MemberType: ")
+                            .append(member.getMemberType())
+                            .append(", Address: ")
+                            .append(advert.getID().toString()).append('\n');
+                    if (member.getMemberType().equals(CORETYPE)) {
+                        currentCoreMembers.add(
+                                new StringBuffer(member.getMemberToken())
+                                        .append("::")
+                                        .append(member.getStartTime()).toString());
+                    }
+                    tokens.add(member);
+                    allCurrentMembers.add(new StringBuffer()
+                            .append(member.getMemberToken())
+                            .append("::")
+                            .append(member.getStartTime()).toString());
                 }
-            }
-            tokens.add(member);
-            synchronized (allCurrentMembers) {
-                allCurrentMembers.add(new StringBuffer()
-                        .append(member.getMemberToken())
-                        .append("::")
-                        .append(member.getStartTime()).toString());
             }
         }
         logger.log(Level.INFO, sb.toString());
