@@ -37,6 +37,7 @@
 package com.sun.enterprise.jxtamgmt;
 
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
 import net.jxta.document.*;
 import net.jxta.endpoint.*;
@@ -759,6 +760,18 @@ public class ClusterManager implements PipeMsgListener {
     void clearAllCaches() {
         routeCache.clear();
         pipeCache.clear();
+    }
+
+    public void groupStartup(GMSConstants.groupStartupState startupState, List<String> memberTokens) {
+        getMasterNode().groupStartup(startupState, memberTokens);
+    }
+
+    public boolean isGroupStartup() {
+        return getMasterNode().isGroupStartup();
+    }
+    
+    public String getGroupName() {
+        return groupName;
     }
 
 }

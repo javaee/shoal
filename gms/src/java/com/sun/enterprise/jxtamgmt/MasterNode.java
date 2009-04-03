@@ -38,6 +38,9 @@ package com.sun.enterprise.jxtamgmt;
 import static com.sun.enterprise.jxtamgmt.ClusterViewEvents.ADD_EVENT;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
 import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
+import com.sun.enterprise.ee.cms.impl.jxta.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import net.jxta.document.AdvertisementFactory;
 import net.jxta.document.MimeMediaType;
 import net.jxta.document.StructuredDocument;
@@ -65,10 +68,7 @@ import net.jxta.peer.PeerID;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Date;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -85,6 +85,11 @@ import java.util.logging.Logger;
  * <p/>
  * -"AMV", is the MasterView of the cluster
  * <p/>
+ * -"GS", true if MasterNode is aware that all members in group are starting as part of a GroupStarting, sent as part
+ * of MasterNodeResponse NR
+ * <p/>
+ * -"GSC", sent when GroupStarting phase has completed.  Subsequent JOIN & JoinedAndReady are considered INSTANCE_STARTUP.
+ * * <p/>
  * -"CCNTL", is used to indicate collision between two nodes
  * <p/>
  * -"NADV", contains a node's <code>SystemAdvertisement</code>
@@ -132,6 +137,8 @@ class MasterNode implements PipeMsgListener, Runnable {
     private static final String ROUTEADV = "ROUTE";
     private static final String AMASTERVIEW = "AMV";
     private static final String MASTERVIEWSEQ = "SEQ";
+    private static final String GROUPSTARTING = "GS";
+    private static final String GROUPSTARTUPCOMPLETE = "GSC";
 
     private int interval = 6;
     // Default master node discovery timeout
@@ -141,8 +148,16 @@ class MasterNode implements PipeMsgListener, Runnable {
     private MessageTransport endpointRouter = null;
     private transient ConcurrentHashMap<ID, OutputPipe> pipeCache = new ConcurrentHashMap<ID, OutputPipe>();
 
+    private boolean groupStarting = false;
+    private List<String> groupStartingMembers = null;
+    private final Timer timer;
+    private DelayedSetGroupStartingCompleteTask groupStartingTask = null;
+    static final private long MAX_GROUPSTARTING_TIME = 240000;  // 4 minute limit for group starting duration.
+    static final private long GROUPSTARTING_COMPLETE_DELAY = 1000;   // delay before completing group shutdown.  Allow late arriving JoinedAndReady notifications
+                                                                     // to be group starting.
     private boolean clusterStopping = false;
     final Object discoveryLock = new Object();
+    private GMSContext ctx = null;
 
     /**
      * Constructor for the MasterNode object
@@ -194,6 +209,7 @@ class MasterNode implements PipeMsgListener, Runnable {
             io.printStackTrace();
             LOG.log(Level.WARNING, "Failed to create master outputPipe : " + io);
         }
+        timer = new Timer(true);
     }
 
     /**
@@ -293,6 +309,14 @@ class MasterNode implements PipeMsgListener, Runnable {
         send(id, name, msg);
     }
 
+    private void sendGroupStartupComplete() {
+        final Message msg = createSelfNodeAdvertisement();
+        LOG.log(Level.FINER, "Sending GroupStartupComplete Message for group:" + manager.getGroupName());
+        final MessageElement el = new StringMessageElement(GROUPSTARTUPCOMPLETE, "true", null);
+        msg.addMessageElement(NAMESPACE, el);
+        send(null, null, msg);
+    }
+
     /**
      * Creates a Master Query Message
      *
@@ -347,8 +371,15 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         final MessageElement el = new StringMessageElement(type, masterID.toString(), null);
         msg.addMessageElement(NAMESPACE, el);
+        if (groupStarting) {
+            // note that we are currently not sending static list of known group members in MasterNodeResponse at this time
+            final MessageElement e2 = new StringMessageElement(GROUPSTARTING, Boolean.toString(groupStarting), null);
+            msg.addMessageElement(NAMESPACE, e2);
+        }
         addRoute(msg);
-        LOG.log(Level.FINER, "Created a Master Response Message with masterId = " + masterID.toString());
+        if (LOG.isLoggable(Level.FINER)) {
+            LOG.log(Level.FINER, "Created a Master Response Message with masterId = " + masterID.toString() + " groupStarting=" + Boolean.toString(groupStarting));
+        }
         return msg;
     }
 
@@ -538,6 +569,12 @@ class MasterNode implements PipeMsgListener, Runnable {
         if ( msgElement == null )
             return false;
         LOG.log(Level.FINE, "Received a MasterNode Response from Name :" + source.getName());
+        msgElement = msg.getMessageElement(NAMESPACE, GROUPSTARTING);
+        if (msgElement != null) {
+            LOG.log(Level.INFO, "MNR indicates GroupStart for group: " + manager.getGroupName());
+            setGroupStarting(true);
+            delayedSetGroupStarting(false, MAX_GROUPSTARTING_TIME);  // place a boundary on length of time that GroupStarting state is true.  Default is 10 minutes.
+        }
         processRoute(msg);
         msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
         if ( msgElement == null ) {
@@ -589,6 +626,27 @@ class MasterNode implements PipeMsgListener, Runnable {
         }
         return true;
     }
+
+/**
+     * Processes a Group Startup Complete message
+     *
+     * @param msg    the Message
+     * @param source the source node SystemAdvertisement
+     * @return true if the message is a Group Startup Complete message
+     * @throws IOException if an io error occurs
+     */
+    boolean processGroupStartupComplete(final Message msg,
+                                        final SystemAdvertisement source) throws IOException {
+        MessageElement msgElement = msg.getMessageElement(NAMESPACE, GROUPSTARTUPCOMPLETE);
+        if ( msgElement == null )
+            return false;
+
+        // provide wiggle room to enable JoinedAndReady Notifications to be considered part of group startup.
+        // have a small delay before transitioning out of GROUP_STARTUP state.
+        delayedSetGroupStarting(false, GROUPSTARTING_COMPLETE_DELAY);
+        return true;
+    }
+
 
     /**
      * Processes a cluster change event. This results in adding the new
@@ -963,6 +1021,9 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (processNodeResponse(msg, adv)) {
                     return;
                 }
+                if (processGroupStartupComplete(msg, adv)) {
+                    return;
+                }
             } catch (IOException e) {
                 e.printStackTrace();
                 LOG.log(Level.WARNING, e.getLocalizedMessage());
@@ -1320,6 +1381,114 @@ class MasterNode implements PipeMsgListener, Runnable {
 
     boolean isDiscoveryInProgress() {
         return discoveryInProgress;
+    }
+
+    void setGroupStarting(boolean value) {
+        groupStarting = value;
+        getGMSContext().setGroupStartup(value);
+    }
+
+    /**
+     * Avoid boundary conditions for group startup completed.  Delay setting to false for delaySet time.
+     *
+     * @param value
+     * @param delaySet in milliseconds, time to delay setting group starting to value
+     */
+    private void delayedSetGroupStarting(boolean value, long delaySet) {
+        synchronized(timer) {
+            if (groupStartingTask != null) {
+                groupStartingTask.cancel();
+            }
+            groupStartingTask = new DelayedSetGroupStartingCompleteTask(delaySet);
+
+            // place a delay duration on group startup duration to allow possibly late arriving JoinedAndReady notifications to be considered part of group.
+            timer.schedule(groupStartingTask, delaySet);
+        }
+    }
+
+    public boolean isGroupStartup() {
+        return groupStarting;
+    }
+
+    /**
+     * Demarcate start and end of group startup.
+     *
+     * All members started with in this duration of time are considered part of GROUP_STARTUP in GMS JoinNotification and JoinAndReadyNotifications.
+     * All other members restarted after this duration are INSTANCE_STARTUP.
+     *
+     * Method is called once when group startup is initiated with <code>INITIATED</code> as startupState.
+     * Method is called again when group startup has completed and indication of success or failure is
+     * indicated by startupState of <code>COMPLETED_SUCCESS</code> or <code>COMPLATED_FAILED</code>.
+     *
+     * @param startupState  either the start or successful or failed completion of group startup.
+     * @param memberTokens  list of members associated with <code>startupState</code>
+     */
+    void groupStartup(GMSConstants.groupStartupState startupState, List<String> memberTokens) {
+        StringBuffer sb = new StringBuffer();
+        groupStartingMembers = memberTokens;
+        switch(startupState) {
+            case INITIATED:
+                // Optimization:  Rather than broadcast to members of cluster (that have not been started yet when INIATIATED group startup),
+                // assume this is called by a static administration utility that is running in same process as master node.
+                // This call toggles state of whether gms MasterNode is currently part of group startup depending on the value of startupState.
+                // See createMasterResponse() for how this group starting is sent from Master to members of the group.
+                // See processMasterNodeResponse() for how members process this sent info.
+                setGroupStarting(true);
+                sb.append(" Starting Members: ");
+                break;
+            case COMPLETED_FAILED:
+                setGroupStarting(false);
+                sb.append(" Failed Members: ");
+                if (this.isMaster() && this.isMasterAssigned()) {
+                    // send a message to other instances in cluster that group startup has completed
+                    sendGroupStartupComplete();
+                }
+                break;
+            case COMPLETED_SUCCESS:
+                setGroupStarting(false);
+                sb.append(" Started Members: ");
+                if (this.isMaster() && this.isMasterAssigned()) {
+                    // send a message to other instances in cluster that group startup has completed
+                    sendGroupStartupComplete();
+                }
+                break;
+        }
+        for (String member: memberTokens) {
+            sb.append(member).append(",");
+        }
+        LOG.info("GroupStart for group: " +  getGMSContext().getGroupName()  + " State:" + startupState.toString() + sb);
+    }
+
+    private GMSContext getGMSContext() {
+        if (ctx == null) {
+            ctx = (GMSContext) GMSContextFactory.getGMSContext(manager.getGroupName());
+        }
+        return ctx;
+    }
+
+    class DelayedSetGroupStartingCompleteTask extends TimerTask {
+        final private long delay;  //millisecs
+
+        public DelayedSetGroupStartingCompleteTask(long delay) {
+            this.delay = delay;
+            if (LOG.isLoggable(Level.FINER)) {
+                LOG.finer("GroupStartupCompleteTask scheduled in " + delay + " ms");
+            }
+        }
+
+        public void run() {
+            if (delay == MasterNode.MAX_GROUPSTARTING_TIME) {
+                LOG.warning("missed GroupStartupComplete message. Timed out group startup after " +
+                            MasterNode.MAX_GROUPSTARTING_TIME / 1000 + " secs");
+            }
+            synchronized (timer) {
+                setGroupStarting(false);
+                groupStartingTask = null;
+            }
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("Received GroupStartupComplete for group:" + manager.getGroupName() + " delay(ms)=" + delay);
+            }
+        }
     }
 }
 

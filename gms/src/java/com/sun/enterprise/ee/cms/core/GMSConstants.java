@@ -1,3 +1,4 @@
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -51,4 +52,6 @@ public class GMSConstants {
                 DEFAULT_GROUP_COMMUNICATION_PROVIDER);
     public static enum shutdownType { INSTANCE_SHUTDOWN, GROUP_SHUTDOWN }
     public static enum shutdownState { INITIATED, COMPLETED }
+    public static enum startupType { INSTANCE_STARTUP, GROUP_STARTUP }
+    public static enum groupStartupState { INITIATED, COMPLETED_SUCCESS, COMPLETED_FAILED }
 }

@@ -62,6 +62,7 @@ public class GMSContext extends GMSContextBase {
     private GroupHandle gh;
     private Properties configProperties;
     private boolean isGroupShutdown = false;  //remember if this context has left the group during a group shutdown.
+    private boolean isGroupStartup = false;
 
     public GMSContext(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -150,6 +151,13 @@ public class GMSContext extends GMSContextBase {
                                 groupName, null));
     }
 
+     public void announceGroupStartup(final String groupName,
+                                      final GMSConstants.groupStartupState startupState,
+                                     final List<String> memberTokens) {
+       groupCommunicationProvider.
+                announceGroupStartup(groupName, startupState, memberTokens);
+    }
+
     public boolean addToSuspectList(final String token) {
         boolean retval = false;
         synchronized (suspectList) {
@@ -213,5 +221,13 @@ public class GMSContext extends GMSContextBase {
     
     public boolean isGroupBeingShutdown(String groupName) {
         return isGroupShutdown || getShutdownHelper().isGroupBeingShutdown(groupName);
+    }
+
+    public boolean isGroupStartup() {
+        return isGroupStartup;
+    }
+    
+    public void  setGroupStartup(boolean value) {
+        isGroupStartup = value;
     }
 }

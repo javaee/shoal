@@ -59,9 +59,10 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     private List<String> allCurrentMembers;
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
     private GMSContext ctx;
+    final private GMSConstants.startupType startupKind;
 
     //Logging related stuff
-     protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private long startTime;
 
     public JoinedAndReadyNotificationSignalImpl(final String memberToken,
@@ -75,15 +76,15 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
         this.groupName = groupName;
         this.startTime=startTime;
         ctx = GMSContextFactory.getGMSContext( groupName );
+        this.startupKind = ctx.isGroupStartup() ? GMSConstants.startupType.GROUP_STARTUP : GMSConstants.startupType.INSTANCE_STARTUP;
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("JoinAndReadyNotificationSignalImpl ctor: member=" + memberToken + " group=" + groupName +  " startupKind=" + startupKind.toString());
+        }
     }
 
     JoinedAndReadyNotificationSignalImpl ( final JoinedAndReadyNotificationSignal signal ) {
-        this.memberToken=signal.getMemberToken();
-        this.currentCoreMembers = signal.getCurrentCoreMembers();
-        this.allCurrentMembers = signal.getAllCurrentMembers();
-        this.groupName = signal.getGroupName();
-        this.startTime = signal.getStartTime();
-        ctx = GMSContextFactory.getGMSContext( groupName );
+        this(signal.getMemberToken(), signal.getCurrentCoreMembers(), signal.getAllCurrentMembers(),
+            signal.getGroupName(), signal.getStartTime());
     }
 
     /**
@@ -161,5 +162,9 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
 
     public long getStartTime () {
         return startTime;
+    }
+
+    public GMSConstants.startupType getEventSubType() {
+        return startupKind;
     }
 }

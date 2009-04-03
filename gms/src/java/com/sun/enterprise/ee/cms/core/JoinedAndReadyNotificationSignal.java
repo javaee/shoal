@@ -47,7 +47,7 @@ import java.util.List;
  * @author Sheetal Vartak
  * Date: Nov 13 2007
  */
-public interface JoinedAndReadyNotificationSignal extends Signal{
+public interface JoinedAndReadyNotificationSignal extends Signal, GroupStartupNotificationSignal{
     List<String> getCurrentCoreMembers();
     List<String> getAllCurrentMembers();
 }

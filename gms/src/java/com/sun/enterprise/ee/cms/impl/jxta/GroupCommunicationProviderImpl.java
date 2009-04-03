@@ -38,6 +38,7 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
@@ -163,6 +164,23 @@ public class GroupCommunicationProviderImpl implements
         } catch (MemberNotInViewException e) {
             //ignore since this is a broadcast
         }
+    }
+
+    /**
+     * Demarcate the INITIATION and COMPLETION of group startup.
+     *
+     * Only useful for an administration utility that statically knows of all members in group and starts them at same time.
+     * This API allows for an optimization by GMS clients to know whether GMS Join and JoinedAndReady events are happening
+     * as part of group startup or individual instance startups.
+     *
+     * @param groupName     name of group
+     * @param startupState  INITATED, COMPLETED_SUCCESS or COMPLETED_FAILED
+     * @param memberTokens  static list of members associated with startupState.  Failed members if state is COMPLETED_FAILED>
+     */
+    public void announceGroupStartup(String groupName,
+                                     GMSConstants.groupStartupState startupState,
+                                     List<String> memberTokens) {
+       clusterManager.groupStartup(startupState, memberTokens);
     }
 
     /**

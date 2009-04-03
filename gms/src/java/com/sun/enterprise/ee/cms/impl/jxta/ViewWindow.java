@@ -39,6 +39,7 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 import com.sun.enterprise.ee.cms.core.DistributedStateCache;
 import com.sun.enterprise.ee.cms.core.GMSCacheable;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
+import static com.sun.enterprise.ee.cms.core.GMSConstants.startupType.*;
 import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.core.Signal;
@@ -459,6 +460,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         try {
             if (advert.getCustomTagValue(
                     CustomTagNames.MEMBER_TYPE.toString()).equalsIgnoreCase(CORETYPE)) {
+                final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+                logger.log(Level.INFO, "Adding ADD_EVENT member : " + token + " StartupState:" + startupState.toString());                                                                                                  
                 addJoinNotificationSignal(token,
                         advert.getCustomTagValue(
                                 CustomTagNames.GROUP_NAME.toString()),
@@ -477,10 +480,11 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private void addReadyMembers(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
-        logger.log(Level.INFO, "Adding Joined And Ready member : " + token);
         try {
             if (advert.getCustomTagValue(
                     CustomTagNames.MEMBER_TYPE.toString()).equalsIgnoreCase(CORETYPE)) {
+                final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;                                            
+                logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " StartupState:" + startupState.toString());
                 addJoinedAndReadyNotificationSignal(token,
                         advert.getCustomTagValue(
                                 CustomTagNames.GROUP_NAME.toString()),

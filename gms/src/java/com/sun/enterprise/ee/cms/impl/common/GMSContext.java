@@ -92,9 +92,13 @@ public interface GMSContext {
 
     long getStartTime();
 
-    void announceGroupShutdown (final String groupName,
+    public void announceGroupStartup(final String groupName,
+                                     final GMSConstants.groupStartupState startupState,
+                                     final List<String> memberTokens);
+
+    void announceGroupShutdown(final String groupName,
                            final GMSConstants.shutdownState shutdownState );
-    
+
     boolean addToSuspectList( final String token );
 
     void removeFromSuspectList( final String token );
@@ -120,4 +124,8 @@ public interface GMSContext {
      void assumeGroupLeadership();
 
      boolean isGroupBeingShutdown(String groupName);
+
+     boolean isGroupStartup();
+
+     void setGroupStartup(boolean value);
 }

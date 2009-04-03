@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.List;
 
 public class GroupManagementServiceImpl implements GroupManagementService, Runnable{
     private final GMSContext ctx;
@@ -361,6 +362,22 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         gctx.announceGroupShutdown( groupName, shutdownState );
         gctx.assumeGroupLeadership();
  
+    }
+
+    public void announceGroupStartup(String groupName,
+                                     GMSConstants.groupStartupState startupState,
+                                     List<String> memberTokens) {
+        final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
+        final StringBuffer sb = new StringBuffer(160);
+        sb.append("GMS:Announcing GroupStartup[" + startupState.toString() + "]" +
+                  " for Group:" + groupName + " Members: ");
+        if (memberTokens != null) {
+            for (String memberToken : memberTokens) {
+                sb.append(memberToken).append(",");
+            }
+        }
+        logger.log(Level.INFO, sb.toString());
+        gctx.announceGroupStartup(groupName, startupState, memberTokens);
     }
 
     /**

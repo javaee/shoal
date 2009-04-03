@@ -38,7 +38,10 @@ package com.sun.enterprise.ee.cms.core;
 
 import java.io.Serializable;
 import java.util.Map;
-
+import java.util.List;
+import static com.sun.enterprise.ee.cms.core.GMSConstants.groupStartupState.INITIATED;
+import static com.sun.enterprise.ee.cms.core.GMSConstants.groupStartupState.COMPLETED_SUCCESS;
+import static com.sun.enterprise.ee.cms.core.GMSConstants.groupStartupState.COMPLETED_FAILED;
 /**
  * Provides API for joining, and leaving the group and to register Action Factories of
  * specific types for specific Group Event Signals.
@@ -249,6 +252,24 @@ public interface GroupManagementService {
      */
     Map<Serializable, Serializable> getAllMemberDetails(Serializable key);
 
+    /**
+     * This method can be used by a controlling parent application that has a static preconfiguration
+     * of all members of the group to announce that the parent application is "initiating" and then
+     * that it has "completed" startup of all preconfigured members of this group.
+     *
+     * <P>Group members in parameter <code>members</code> is interpreted differently based on startupState.
+     * All preconfigured members of group are passed in <code>members</code> when
+     * {@link INITIATED} or {@link COMPLETED_SUCCESS}.
+     * When startupState is  {@link COMPLETED_FAILED}, <code>members</code> is a list of the
+     * members that failed to start.
+     *
+     * @param groupName
+     * @param startupState  demarcate initiation of groupStartup and completion of group startup
+     * @param memberTokens  list of memberTokens.
+     */
+    void announceGroupStartup(String groupName,
+                              GMSConstants.groupStartupState startupState,
+                              List<String> memberTokens);
     /**
      * This method can be used by parent application to notify all group members
      * that the parent application is "initiating" or has "completed" shutdown of
