@@ -665,6 +665,11 @@ public class NetworkManager implements RendezvousListener {
             config.setRendezvousSeeds(new HashSet<String>(rendezvousSeedURIs));
             //limit it to configured rendezvous at this point
             config.setUseOnlyRendezvousSeeds(true);
+
+            LOG.fine("Setting Relay seeding uri's to network configurator:" + rendezvousSeedURIs);
+            config.setRelaySeedingURIs(new HashSet<String>(rendezvousSeedURIs));
+            //limit it to configured rendezvous at this point
+            config.setUseOnlyRelaySeeds(true);
         }
 
         config.setUseMulticast(true);
