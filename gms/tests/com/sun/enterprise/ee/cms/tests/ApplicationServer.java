@@ -36,10 +36,18 @@
 
 package com.sun.enterprise.ee.cms.tests;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
-import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.core.CallBack;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.GMSFactory;
+import com.sun.enterprise.ee.cms.core.GroupHandle;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationSignal;
+import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
+import com.sun.enterprise.ee.cms.core.Signal;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.jxtamgmt.JxtaUtil;
@@ -53,7 +61,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.sun.enterprise.ee.cms.core.CallBack;
 
 /**
  * This is an example used to demonstrate the application layer that controls the
@@ -110,7 +117,7 @@ public class ApplicationServer implements Runnable, CallBack {
         logger.log(Level.FINE,"reporting joined and ready state...");
         gms.reportJoinedAndReadyState(groupName);
         try {
-            Thread.sleep(Integer.parseInt(System.getProperty("LIFEINMILLIS", "15000")));
+            Thread.sleep(Long.parseLong(System.getProperty("LIFEINMILLIS", "15000")));
         } catch (InterruptedException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
         }
