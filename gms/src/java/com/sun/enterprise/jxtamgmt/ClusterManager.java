@@ -37,6 +37,8 @@
 package com.sun.enterprise.jxtamgmt;
 
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import static com.sun.enterprise.jxtamgmt.JxtaUtil.getObjectFromByteArray;
 import net.jxta.document.*;
@@ -93,6 +95,7 @@ public class ClusterManager implements PipeMsgListener {
     private transient Map<ID, OutputPipe> pipeCache = new ConcurrentHashMap<ID, OutputPipe>();
 
     final Object MASTERBYFORCELOCK = new Object();
+     final private String memberType;
 
     /**
      * The ClusterManager is created using the instanceName,
@@ -126,6 +129,7 @@ public class ClusterManager implements PipeMsgListener {
                           final Map props,
                           final List<ClusterViewEventListener> viewListeners,
                           final List<ClusterMessageListener> messageListeners) {
+        this.memberType = (String)identityMap.get(CustomTagNames.MEMBER_TYPE.toString());
         this.groupName = groupName;
         this.instanceName = instanceName;
         this.loopbackMessages = isLoopBackEnabled(props);
@@ -146,8 +150,13 @@ public class ClusterManager implements PipeMsgListener {
         }
         systemAdv = createSystemAdv(netManager.getNetPeerGroup(), instanceName, identityMap, bindInterfaceAddress);
         LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
-        this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
-        this.masterNode = new MasterNode(this, getDiscoveryTimeout(props), 1);
+        if (isWatchdog()) {
+            this.clusterViewManager = null;
+            this.masterNode = null;
+        } else {
+            this.clusterViewManager = new ClusterViewManager(getSystemAdvertisement(), this, viewListeners);
+            this.masterNode = new MasterNode(this, getDiscoveryTimeout(props), 1);
+        }
 
         this.healthMonitor = new HealthMonitor(this,
                 getFailureDetectionTimeout(props),
@@ -171,6 +180,10 @@ public class ClusterManager implements PipeMsgListener {
                 (XMLDocument) getSystemAdvertisement()
                         .getDocument(MimeMediaType.XMLUTF8), null);
     }
+
+     public boolean isWatchdog() {
+         return GroupManagementService.MemberType.WATCHDOG.toString().equals(memberType);
+     }
 
     private boolean isLoopBackEnabled(final Map props) {
         boolean loopback = false;
@@ -219,7 +232,7 @@ public class ClusterManager implements PipeMsgListener {
 
     private long getFailureDetectionTcpRetransmitTimeout(Map props) {
         long failTcpTimeout = 10000;   // sailfin requirement to discover network outage under 30 seconds.
-                                       // fix for sailfin 626.  
+                                       // fix for sailfin 626.
                                        // HealthMonitor.isConnected() is called twice and must time out twice, using 20 seconds.
                                        // indoubt detection and failure verification takes 8-10 seconds.
         if (props != null && !props.isEmpty()) {
@@ -323,13 +336,15 @@ public class ClusterManager implements PipeMsgListener {
      * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
      */
     public synchronized void stop(final boolean isClusterShutdown) {
-        if (!stopped) {           
+        if (!stopped) {
             stopping = true;
             healthMonitor.stop(isClusterShutdown);
             outputPipe.close();
             inputPipe.close();
             pipeCache.clear();
-            masterNode.stop();
+            if (!isWatchdog()) {
+                masterNode.stop();
+            }
             netManager.stop();
             NetworkManagerRegistry.remove(groupName);
             stopped = true;
@@ -349,7 +364,9 @@ public class ClusterManager implements PipeMsgListener {
             } catch (IOException ioe) {
                 LOG.log(Level.SEVERE, "Failed to create service input pipe: " + ioe);
             }
-            masterNode.start();
+            if (!isWatchdog()) {
+                masterNode.start();
+            }
             healthMonitor.start();
             started = true;
             stopped = false;
@@ -437,7 +454,7 @@ public class ClusterManager implements PipeMsgListener {
      */
     public void removePipeFromCache(ID token) {
         pipeCache.remove(token);
-    }   
+    }
 
     /**
      * Send a message to a specific node or the group. In the case where the id
@@ -484,12 +501,12 @@ public class ClusterManager implements PipeMsgListener {
                         if (output == null) {
                             // Unicast datagram
                             // create a op pipe to the destination peer
-                            try { 
+                            try {
                                 output = pipeService.createOutputPipe(pipeAdv, Collections.singleton(peerid), 1);
                                 if (LOG.isLoggable(Level.FINE) && output != null) {
                                     LOG.fine("ClusterManager.send : adding output to cache without route creation : " + peerid);
-                                } 
-                            } catch (IOException ioe) { 
+                                }
+                            } catch (IOException ioe) {
                                 lastOne = ioe;
                             }
                         }
@@ -505,7 +522,7 @@ public class ClusterManager implements PipeMsgListener {
                         LOG.log(Level.WARNING, "ClusterManager.send : sending of message " + message + " failed. Unable to create an OutputPipe for " + peerid +
                                     " route = " + route, lastOne);
                         return sent;
-                    } 
+                    }
                 } else {
                     LOG.fine("ClusterManager.send : Cluster View does not contain " + peerid.toString() + " hence will not send message.");
                     throw new MemberNotInViewException("Member " + peerid +
@@ -520,7 +537,7 @@ public class ClusterManager implements PipeMsgListener {
                             + JxtaUtil.MAX_SEND_RETRIES + " and they all returned false.");
                 }
             }
-        }   
+        }
         //JxtaUtil.printMessageStats(message, true);
         return sent;
     }
@@ -648,7 +665,7 @@ public class ClusterManager implements PipeMsgListener {
         sysAdv.setCustomTags(customTags);
         return sysAdv;
     }
-    
+
     static private void setBindInterfaceAddress(SystemAdvertisement sysAdv, String bindInterfaceAddress, PeerGroup group) {
         EndpointAddress bindInterfaceEndpointAddress = null;
         if (bindInterfaceAddress != null && !bindInterfaceAddress.equals("")) {
@@ -670,7 +687,7 @@ public class ClusterManager implements PipeMsgListener {
                            " value=" + bindInterfaceAddress);
             }
             sysAdv.addEndpointAddress(bindInterfaceEndpointAddress);
-        } else {                
+        } else {
             // lookup all public addresses
             TcpTransport tcpTransport = (TcpTransport) group.getEndpointService().getMessageTransport("tcp");
             Iterator it = tcpTransport.getPublicAddresses();
@@ -769,7 +786,7 @@ public class ClusterManager implements PipeMsgListener {
     public boolean isGroupStartup() {
         return getMasterNode().isGroupStartup();
     }
-    
+
     public String getGroupName() {
         return groupName;
     }

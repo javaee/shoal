@@ -54,6 +54,9 @@ import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import net.jxta.pipe.OutputPipe;
+import com.sun.enterprise.ee.cms.impl.common.GMSMember;
+import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
 
 /**
  * Utility class that can be used by any calling code to do common routines
@@ -224,12 +227,36 @@ public class JxtaUtil {
      * @throws java.io.IOException
      */
     public static boolean send(OutputPipe pipe, Message msg) throws IOException {
-        
+
         boolean sent = false;
         for (int i = 0; i < MAX_SEND_RETRIES && !sent; i++) {
             sent = pipe.send(msg);
         }
         return sent;
+    }
+
+    public static GMSMember getGMSMember(final SystemAdvertisement systemAdvertisement) {
+        GMSMember member;
+        try {
+            member = new GMSMember(systemAdvertisement.getName(),
+                    systemAdvertisement.getCustomTagValue(
+                            CustomTagNames.MEMBER_TYPE.toString()),
+                    systemAdvertisement.getCustomTagValue(
+                            CustomTagNames.GROUP_NAME.toString()),
+                    Long.valueOf(systemAdvertisement.getCustomTagValue(CustomTagNames.START_TIME.toString())));
+        } catch (NoSuchFieldException e) {
+            LOG.log(Level.WARNING,
+                    new StringBuffer("SystemAdvertisement did not contain one of the ")
+                            .append("specified tag values:")
+                            .append(e.getLocalizedMessage()).toString());
+            member = new GMSMember(systemAdvertisement.getName(), null, null, null);
+        }
+        return member;
+    }
+
+    public static boolean isWatchDog(SystemAdvertisement sysAdv) {
+        GMSMember member = getGMSMember(sysAdv);
+        return GroupManagementService.MemberType.WATCHDOG.toString().equalsIgnoreCase(member.getMemberType());
     }
 }
 

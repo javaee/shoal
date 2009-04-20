@@ -377,6 +377,10 @@ public class HealthMessage {
             return (other != null && id.equals(other.id) && getSrcStartTime() == other.getSrcStartTime());
         }
 
+        public boolean isState(int theState) {
+            return state.equals(HealthMonitor.states[theState]);
+        }
+
         /**
          * {@inheritDoc}
          */

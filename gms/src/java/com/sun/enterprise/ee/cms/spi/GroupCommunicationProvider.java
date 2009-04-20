@@ -215,6 +215,14 @@ public interface GroupCommunicationProvider {
     void reportJoinedAndReadyState();
 
     /**
+     * Allow for enhanced GMS failure detection by external control entities (one example is NodeAgent of Glassfish Application Server.)
+     * Only a GMS MemberType of WATCHDOG is allowed to broadcast to all members of a group that this <code>serverToken</code> has failed.
+     * @param serverToken     failed member
+     * @throws GMSException   if called by a member that is not a WATCHDOG member or if serverToken is not currently running in group.
+     */
+    void announceWatchdogObservedFailure(String serverToken) throws GMSException;
+
+    /**
      * Invoked indirectly by a controlling parent application that has a static preconfiguration
      * of all members of the group to announce that the parent application is "initiating" and then
      * that it has "completed" startup of all preconfigured members of this group.
@@ -231,5 +239,5 @@ public interface GroupCommunicationProvider {
      */
     void announceGroupStartup(String groupName,
                               GMSConstants.groupStartupState startupState,
-                              List<String> memberTokens); 
+                              List<String> memberTokens);
 }

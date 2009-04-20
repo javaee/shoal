@@ -54,9 +54,21 @@ public interface GroupManagementService {
      * Members joining the group should be one of the following
      * types. Core members are ones whose failure is a material event
      * to the group, Spectators are those whose failure is not a
-     * material event to other group members. 
+     * material event to other group members. A Watchdog member of the group
+     * can report to the group that a member of the group has failed. The failure of a Watchdog
+     * is not a material event to the other group members. In order to lower overhead for a WATCHDOG,
+     * Distributed State Cache management is disabled for a WATCHDOG member. Additionally, a WATCHDOG
+     * member does not receive any GMS event notifications nor can it ever be the MASTER of a GMS
+     * group.
+     *
+     * <p>
+     * Motivation for WATCHDOG member is to enable Framework Agents that control and monitor the runtime status of
+     * GMS members to be able to report failures to GMS when they are detected. If a Framework Agent runs on same
+     * machine as processes it monitors, it can detect failure sooner and more reliably than heartbeat based failure
+     * detection can.  A WATCHDOG member can lessen the amount of time that GMS takes to notify a group that a member
+     * has failed.
      */
-    public static enum MemberType {CORE, SPECTATOR}
+    public static enum MemberType {CORE, SPECTATOR, WATCHDOG}
 
     /**
      * These are possible recovery states used by GMS's recovery selection
@@ -316,4 +328,18 @@ public interface GroupManagementService {
      */
      boolean isGroupBeingShutdown(String groupName);
 
+    /**
+     * GMS WATCHDOG member reports <code>serverToken</code> has been observed to have failed to this GMS group.
+     * <p/>
+     * This is merely a hint and the GMS system validates that the GMS member has truely failed using
+     * the same verification algorithm used when GMS heartbeat reports a member is INDOUBT and SUSPECTED of
+     * failure.
+     * <p/>
+     * Allows for enhanced GMS failure detection by external control entities (one example is NodeAgent of Glassfish Application Server.)
+     * Only a GMS MemberType of WATCHDOG is allowed to broadcast to all members of a group that this <code>serverToken</code> has likely failed.
+     *
+     * @param serverToken failed member
+     * @throws GMSException if called by a member that is not a WATCHDOG member or if serverToken is not currently running in group.
+     */
+     public void announceWatchdogObservedFailure(String serverToken) throws GMSException;
 }

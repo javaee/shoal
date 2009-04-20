@@ -58,6 +58,7 @@ import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.jxtamgmt.ClusterView;
 import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
 import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
+import com.sun.enterprise.jxtamgmt.JxtaUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -76,7 +77,7 @@ import java.util.logging.Logger;
  */
 class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Runnable {
     private GMSContext ctx;
-    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private int size = 100;  // 100 is some default.
     private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
     private List<Signal> signals = new Vector<Signal>();
@@ -127,12 +128,13 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     private void newViewObserved(final EventPacket packet) {
+        final GMSMember member = JxtaUtil.getGMSMember(packet.getSystemAdvertisement());
         synchronized (views) {
             views.add(getMemberTokens(packet));
             if (views.size() > size) {
                 views.remove(0);
             }
-            logger.log(Level.INFO, "membership.snapshot.analysis", new Object[]{packet.getClusterViewEvent().toString()});
+            logger.log(Level.INFO, "membership.snapshot.analysis", new Object[]{packet.getClusterViewEvent().toString(), member.getMemberToken(), member.getGroupName()});
             Signal[] activeSignals = analyzeViewChange(packet);
 
             if (activeSignals.length != 0) {
@@ -157,7 +159,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 int count = 0;
                 for (SystemAdvertisement systemAdvertisement : view.getView()) {
                     advert = systemAdvertisement;
-                    member = getGMSMember(advert);
+                    member = JxtaUtil.getGMSMember(advert);
                     member.setSnapShotId(view.getClusterViewId());
                     sb.append(++count)
                             .append(": MemberId: ")
@@ -182,25 +184,6 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         }
         logger.log(Level.INFO, sb.toString());
         return (ArrayList<GMSMember>) tokens;
-    }
-
-    private GMSMember getGMSMember(final SystemAdvertisement systemAdvertisement) {
-        GMSMember member;
-        try {
-            member = new GMSMember(systemAdvertisement.getName(),
-                    systemAdvertisement.getCustomTagValue(
-                            CustomTagNames.MEMBER_TYPE.toString()),
-                    systemAdvertisement.getCustomTagValue(
-                            CustomTagNames.GROUP_NAME.toString()),
-                    Long.valueOf(systemAdvertisement.getCustomTagValue(CustomTagNames.START_TIME.toString())));
-        } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,
-                    new StringBuffer("SystemAdvertisement did not contain one of the ")
-                            .append("specified tag values:")
-                            .append(e.getLocalizedMessage()).toString());
-            member = new GMSMember(systemAdvertisement.getName(), null, null, null);
-        }
-        return member;
     }
 
     private Signal[] analyzeViewChange(final EventPacket packet) {
@@ -301,8 +284,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                     dsc.removeAllForMember(token);
                 }
             }
-            //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
-            logger.log(Level.INFO, "plannedshutdownevent.announcement", new Object[]{token, shutdownType});
+            logger.log(Level.INFO, "plannedshutdownevent.announcement", new Object[]{token, shutdownType, groupName});
             signals.add(new PlannedShutdownSignalImpl(token,
                     advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
                     Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())), shutdownType));
@@ -331,7 +313,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         try {
             final String type = advert.getCustomTagValue(CustomTagNames.MEMBER_TYPE.toString());
             if (type.equalsIgnoreCase(CORETYPE)) {
-                logger.log(Level.INFO, "member.failed", new Object[]{token});
+                logger.log(Level.INFO, "member.failed", new Object[]{token, groupName});
                 generateFailureRecoverySignals(views.get(views.size() - 2),
                         token,
                         advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
@@ -453,15 +435,13 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private void addNewMemberJoins(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
+        final GMSMember member = JxtaUtil.getGMSMember(advert);
         if (packet.getClusterView().getSize() > 1) {
             // TODO: Figure out a better way to sync
             syncDSC(token);
         }
         try {
-            if (advert.getCustomTagValue(
-                    CustomTagNames.MEMBER_TYPE.toString()).equalsIgnoreCase(CORETYPE)) {
-                final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-                logger.log(Level.INFO, "Adding ADD_EVENT member : " + token + " StartupState:" + startupState.toString());                                                                                                  
+            if (member.isCore()) {
                 addJoinNotificationSignal(token,
                         advert.getCustomTagValue(
                                 CustomTagNames.GROUP_NAME.toString()),
@@ -480,9 +460,9 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private void addReadyMembers(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
+        final GMSMember member = JxtaUtil.getGMSMember(advert);
         try {
-            if (advert.getCustomTagValue(
-                    CustomTagNames.MEMBER_TYPE.toString()).equalsIgnoreCase(CORETYPE)) {
+            if (member.isCore()) {
                 final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;                                            
                 logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " StartupState:" + startupState.toString());
                 addJoinedAndReadyNotificationSignal(token,
@@ -515,13 +495,14 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                                            final String groupName,
                                            final long startTime) {
 
-        logger.log(Level.FINE, "adding join signal");
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "adding join signal member: " + token + " group: " + groupName);
+        }
         signals.add(new JoinNotificationSignalImpl(token,
                 getCurrentCoreMembers(),
                 getAllCurrentMembers(),
                 groupName,
                 startTime));
-        logger.log(Level.FINE, "gms.newMemberAdded", token);
     }
 
     private void syncDSC(final String token) {

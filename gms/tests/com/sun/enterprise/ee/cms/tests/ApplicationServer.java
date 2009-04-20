@@ -78,6 +78,7 @@ public class ApplicationServer implements Runnable, CallBack {
     private GMSClientService gcs2;
     private String serverName;
     private String groupName;
+    final private GroupManagementService.MemberType memberType;
     private volatile boolean stopped = false;
 
     public ApplicationServer(final String serverName, final String groupName,
@@ -85,6 +86,7 @@ public class ApplicationServer implements Runnable, CallBack {
                              final Properties props) {
         this.serverName = serverName;
         this.groupName = groupName;
+        this.memberType = memberType;
         gms = (GroupManagementService) GMSFactory.startGMSModule(serverName, groupName, memberType, props);
         initClientServices(Boolean.valueOf(System.getProperty("MESSAGING_MODE", "true")));
     }
@@ -243,7 +245,7 @@ public class ApplicationServer implements Runnable, CallBack {
     public static void main(final String[] args) {
         CLB clb = null;
         if (args.length > 0 && "--usage".equals(args[1])) {
-            logger.log(Level.INFO, new StringBuffer().append("USAGE: java -DMEMBERTYPE <CORE|SPECTATOR>")
+            logger.log(Level.INFO, new StringBuffer().append("USAGE: java -DMEMBERTYPE <CORE|SPECTATOR|WATCHDOG>")
                     .append(" -DINSTANCEID=<instanceid>")
                     .append(" -DCLUSTERNAME=<clustername")
                     .append(" -DLIFEINMILLIS= <length of time for this demo")
@@ -251,18 +253,14 @@ public class ApplicationServer implements Runnable, CallBack {
                     .append(" -DGETMEMBERSTATE=[true]")
                     .append(" -DGETMEMBERSTATE_THRESHOLD=[xxxx] ms")
                     .append(" -DGETMEMBERSTATE_TIMEOUT=[xxx] ms")
+                    .append(" -DKILLINSTANCE=<anotherinstanceid>")
                     .toString());
         }
         JxtaUtil.setLogger(logger);
         JxtaUtil.setupLogHandler();
         final ApplicationServer applicationServer;
-        final GroupManagementService.MemberType memberType;
-
-        if ("CORE".equals(System.getProperty("MEMBERTYPE", "CORE").toUpperCase())) {
-            memberType = GroupManagementService.MemberType.CORE;
-        } else {
-            memberType = GroupManagementService.MemberType.SPECTATOR;
-        }
+        final String MEMBERTYPE_STRING = System.getProperty("MEMBERTYPE", "CORE").toUpperCase();
+        final GroupManagementService.MemberType memberType = GroupManagementService.MemberType.valueOf(MEMBERTYPE_STRING);
         
         Properties configProps = new Properties();
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
@@ -296,13 +294,45 @@ public class ApplicationServer implements Runnable, CallBack {
         final Thread appServThread = new Thread(applicationServer, "ApplicationServer");
         appServThread.start();
         try {
-            if (clb != null){
+            if (clb != null && ! applicationServer.isWatchdog()){
                 final Thread clbThread = new Thread(clb, "CLB");
                 clbThread.start();
+            }
+            // developer level manual WATCHDOG test.
+            // Start each of the following items in a different terminal window.
+            // Fix permissions for shell scripts: chmod +x rungmsdemo.sh killmember.sh
+            // 1. ./rungmsdemo.sh server cluster1 SPECTATOR 600000 FINE &> server.log 
+            // 2. ./rungmsdemo.sh instance1 cluster1 CORE 600000 FINE
+            // 3. ./rungmsdemo.sh instance10 cluster1 CORE 600000 FINE
+            // 4. ./rungmsdemo.sh nodeagent cluster1 WATCHDOG 600000 FINE
+            //
+            // If WATCHDOG, then test reporting failure to cluster. 
+            // kill instance10 15 seconds after starting nodeagent WATCHDOG.  
+            // Broadcast failure and check server.log for
+            // immediate FAILURE detection, not FAILURE detected by GMS heartbeat.
+            // grep server.log for WATCHDOG to see watchdog notification time compared to FAILURE report.
+            if (applicationServer.isWatchdog()) {
+                try {
+                    Thread.sleep(15000);
+                    final String TOBEKILLED_MEMBER="instance10";
+
+                    GroupHandle gh = GMSFactory.getGMSModule("cluster").getGroupHandle();
+                    Runtime.getRuntime().exec("./killmember.sh " + TOBEKILLED_MEMBER);
+                    logger.info("killed member " + TOBEKILLED_MEMBER);
+                    gh.announceWatchdogObservedFailure(TOBEKILLED_MEMBER);
+                    logger.info("Killed instance10 and WATCHDOG notify group cluster that instance10 has failed.");
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Unexpected exception while starting server instance for WATCHDOG to kill and report failed",
+                            e);
+                }
             }
             appServThread.join();
         } catch (InterruptedException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
         }
+    }
+
+    boolean isWatchdog() {
+        return memberType == GroupManagementService.MemberType.WATCHDOG;
     }
 }

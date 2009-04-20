@@ -36,10 +36,7 @@
 
 package com.sun.enterprise.ee.cms.impl.common;
 
-import com.sun.enterprise.ee.cms.core.DistributedStateCache;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GroupHandle;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 
 import java.util.List;
@@ -120,12 +117,15 @@ public interface GMSContext {
      * of a explicit leader role assumption, the implementation of this method
      * would be a no-op.
      * */
+    void assumeGroupLeadership();
 
-     void assumeGroupLeadership();
+    boolean isGroupBeingShutdown(String groupName);
 
-     boolean isGroupBeingShutdown(String groupName);
+    boolean isGroupStartup();
 
-     boolean isGroupStartup();
+    void setGroupStartup(boolean value);
 
-     void setGroupStartup(boolean value);
+    public GroupManagementService.MemberType getMemberType();
+
+    public boolean isWatchdog(); 
 }

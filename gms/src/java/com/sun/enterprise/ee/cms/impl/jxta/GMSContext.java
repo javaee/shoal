@@ -39,8 +39,11 @@ package com.sun.enterprise.ee.cms.impl.jxta;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
+import com.sun.enterprise.ee.cms.impl.common.GMSMember;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
+import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
+import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
 
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -72,12 +75,16 @@ public class GMSContext extends GMSContextBase {
         groupCommunicationProvider =
                 new GroupCommunicationProviderImpl(groupName);
 
-        viewQueue = new ArrayBlockingQueue<EventPacket>(MAX_VIEWS_IN_QUEUE,
-                Boolean.TRUE);
-
-        viewWindow = new ViewWindow(groupName, viewQueue);
+        if (isWatchdog()) {
+            // lower overhead by not having view management for WATCHDOG.
+            viewQueue = null;
+            viewWindow = null;
+        } else {
+            viewQueue = new ArrayBlockingQueue<EventPacket>(MAX_VIEWS_IN_QUEUE,
+                    Boolean.TRUE);
+            viewWindow = new ViewWindow(groupName, viewQueue);
+        }
         messageQueue = new ArrayBlockingQueue<MessagePacket>(MAX_MSGS_IN_QUEUE, Boolean.TRUE);
-
         gh = new GroupHandleImpl(groupName, serverToken);
         //TODO: consider untying the Dist State Cache creation from GMSContext.
         // It should be driven independent of GMSContext through a factory as
@@ -87,7 +94,11 @@ public class GMSContext extends GMSContextBase {
     }
 
     protected void createDistributedStateCache() {
-        distributedStateCache = DistributedStateCacheImpl.getInstance(groupName);
+        if (isWatchdog()) {
+            distributedStateCache = null;
+        } else {
+            distributedStateCache = DistributedStateCacheImpl.getInstance(groupName);
+        }
     }
 
     /**
@@ -100,21 +111,25 @@ public class GMSContext extends GMSContextBase {
     }
 
     public DistributedStateCache getDistributedStateCache() {
-        if (distributedStateCache == null) {
+        // Never create a distributed state cache for a WATCHDOG.
+        if (distributedStateCache == null && !isWatchdog()) {
             createDistributedStateCache();
         }
         return distributedStateCache;
     }
 
     public void join() throws GMSException {
-        final Thread viewWindowThread =
+        final Thread viewWindowThread = isWatchdog() ? null :
                 new Thread(viewWindow, "ViewWindowThread");
         MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
 
         final Thread messageWindowThread =
                 new Thread(messageWindow, "MessageWindowThread");
         messageWindowThread.start();
-        viewWindowThread.start();
+
+        if (viewWindowThread != null) {
+            viewWindowThread.start();
+        }
 
         final Map<String, String> idMap = new HashMap<String, String>();
         idMap.put(CustomTagNames.MEMBER_TYPE.toString(), memberType);
@@ -229,5 +244,9 @@ public class GMSContext extends GMSContextBase {
     
     public void  setGroupStartup(boolean value) {
         isGroupStartup = value;
+    }
+
+    public boolean isWatchdog() {
+        return this.getMemberType() == WATCHDOG;
     }
 }

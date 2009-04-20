@@ -263,6 +263,9 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                                       final Serializable value )
             throws GMSException
     {
+        if (isWatchdog()) {
+            return;
+        }
         ctx.getDistributedStateCache()
                 .addToCache(MEMBER_DETAILS,
                             memberToken,
@@ -287,6 +290,11 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     public Map<Serializable, Serializable> getMemberDetails (
                                                 final String memberToken )
     {
+        if (isWatchdog()) {
+            final Map<Serializable, Serializable> retval =
+                                           new HashMap<Serializable, Serializable>();
+            return retval;
+        }
         return ctx.getDistributedStateCache()
                 .getFromCacheForPattern( MEMBER_DETAILS, memberToken  );
     }
@@ -296,6 +304,9 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
 
         final Map<Serializable, Serializable> retval =
                 new HashMap<Serializable, Serializable>();
+        if (isWatchdog()) {
+            return retval;
+        }
         final Map<GMSCacheable, Object> ret = ctx.getDistributedStateCache()
                                                 .getFromCache( key );
 
@@ -318,7 +329,10 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                   final Map<? extends Object, ? extends Object> keyValuePairs)
             throws GMSException
     {
-        for(Object key : keyValuePairs.keySet()){
+        if (isWatchdog()) {
+            return;
+        }
+        for (Object key : keyValuePairs.keySet()){
             ctx.getDistributedStateCache()
                     .addToLocalCache(MEMBER_DETAILS,
                                     serverToken,
@@ -414,4 +428,16 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         return ctx.isGroupBeingShutdown(groupName);
     }
 
+    public void announceWatchdogObservedFailure(String serverToken) throws GMSException {
+        if (!isWatchdog()) {
+            throw new GMSException("illegal state: announceWatchdogObservedFailure operation is only valid for a WATCHDOG member.");
+
+        }
+        GroupHandle gh = ctx.getGroupHandle();
+        ctx.getGroupCommunicationProvider().announceWatchdogObservedFailure(serverToken);
+    }
+
+    private boolean isWatchdog() {
+        return ctx.getMemberType() == MemberType.WATCHDOG;
+    }
 }

@@ -37,6 +37,8 @@
 package com.sun.enterprise.ee.cms.impl.common;
 
 import java.io.Serializable;
+import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
+import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.CORE;
 
 /**
  * Encapsulates the member token and the member type in a serializable
@@ -98,5 +100,17 @@ public class GMSMember implements Serializable {
 
     public long getStartTime() {
         return startTime;
+    }
+
+    public boolean isWatchDog() {
+        return WATCHDOG.toString().equalsIgnoreCase(memberType);
+    }
+
+    public boolean isCore() {
+        return CORE.toString().equalsIgnoreCase(memberType);
+    }
+
+    public String toString() {
+        return "name:" + memberToken + " group:" + groupName + " MemberType:" + memberType;
     }
 }

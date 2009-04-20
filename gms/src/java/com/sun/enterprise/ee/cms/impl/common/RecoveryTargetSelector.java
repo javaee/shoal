@@ -331,6 +331,9 @@ public class RecoveryTargetSelector {
                                 .append( ":for group:" )
                                 .append( groupName ).toString());
         final GMSContext ctx = GMSContextFactory.getGMSContext( groupName );
+        if (ctx.isWatchdog()) {
+            return;
+        }
         final DistributedStateCache dsc = ctx.getDistributedStateCache();
         final Hashtable<String,FailureRecoveryActionFactory> reg =
                         ctx.getRouter().getFailureRecoveryAFRegistrations();

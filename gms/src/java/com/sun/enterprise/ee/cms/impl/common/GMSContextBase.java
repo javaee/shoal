@@ -59,11 +59,13 @@ public abstract class GMSContextBase implements GMSContext {
     protected final Long startTime;
     protected boolean shuttingDown = false;
     protected final ShutdownHelper shutdownHelper;
+    protected final GroupManagementService.MemberType gmsMemberType;
 
     protected GMSContextBase(final String serverToken, final String groupName,
                              final GroupManagementService.MemberType memberType) {
         this.serverToken = serverToken;
         this.groupName = groupName;
+        this.gmsMemberType = memberType;
         this.memberType = getMemberType(memberType);
         startTime = System.currentTimeMillis();
         gmsMember = new GMSMember(serverToken, this.memberType, groupName,
@@ -79,6 +81,10 @@ public abstract class GMSContextBase implements GMSContext {
             return GroupManagementService.MemberType.CORE.toString();
         else
             return memberType.toString();
+    }
+
+    public GroupManagementService.MemberType getMemberType() {
+        return gmsMemberType;
     }
 
     /**

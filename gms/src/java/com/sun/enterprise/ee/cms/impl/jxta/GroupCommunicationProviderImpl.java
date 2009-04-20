@@ -56,8 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -77,13 +75,15 @@ public class GroupCommunicationProviderImpl implements
     private final String groupName;
     private GMSContext ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private final ExecutorService msgSendPool;
+    // TBD:  Reintroduce this in future. Comment out unused field for now.
+    // private final ExecutorService msgSendPool;
     private Map<ID, CallableMessageSend> instanceCache = new Hashtable<ID, CallableMessageSend>();
 
     public GroupCommunicationProviderImpl(final String groupName) {
         this.groupName = groupName;
         System.setProperty("JXTA_MGMT_LOGGER", logger.getName());
-        msgSendPool = Executors.newCachedThreadPool();
+        // TBD: Reintroduce this in future.  Comment unused field for now.
+        // msgSendPool = Executors.newCachedThreadPool();
     }
 
     private GMSContext getGMSContext() {
@@ -95,17 +95,22 @@ public class GroupCommunicationProviderImpl implements
 
     public void clusterViewEvent(final ClusterViewEvent clusterViewEvent,
                                  final ClusterView clusterView) {
+        // TBD: verify okay to delete
         if (!getGMSContext().isShuttingDown()) {
-            logger.log(Level.FINER, "Received Cluster View Event..." + clusterViewEvent.getEvent().toString() +
-                    " from " + clusterViewEvent.getAdvertisement().getName());
-            logger.log(Level.FINER, clusterView.getView().toString());
+            if (logger.isLoggable(Level.FINER)) {
+                logger.log(Level.FINER, "Received Cluster View Event..." + clusterViewEvent.getEvent().toString() +
+                        " from " + clusterViewEvent.getAdvertisement().getName() +
+                        " view:" + clusterView.getView().toString());
+            }
             final EventPacket ePacket = new EventPacket(clusterViewEvent.getEvent(),
                     clusterViewEvent.getAdvertisement(),
                     clusterView);
             final ArrayBlockingQueue<EventPacket> viewQueue = getGMSContext().getViewQueue();
             try {
                 viewQueue.put(ePacket);
-                logger.log(Level.FINER, "Adding " + clusterViewEvent.getEvent() + " to viewQueue");
+                if (logger.isLoggable(Level.FINER)) {
+                    logger.log(Level.FINER, "Adding " + clusterViewEvent.getEvent() + " to viewQueue");
+                }
             } catch (InterruptedException e) {
                 //TODO: Examine all InterruptedException and thread.interrupt cases for better logging.
                 logger.log(Level.WARNING, "interruptedexception.occurred",
@@ -132,7 +137,10 @@ public class GroupCommunicationProviderImpl implements
                                                      final Map configProperties) {
         final List<ClusterViewEventListener> cvListeners =
                 new ArrayList<ClusterViewEventListener>();
-        cvListeners.add(this);
+        if (! getGMSContext().isWatchdog()) {
+            // don't process cluster view events for WATCHDOG member.
+            cvListeners.add(this);
+        }
         final List<ClusterMessageListener> cmListeners =
                 new ArrayList<ClusterMessageListener>();
         cmListeners.add(this);
@@ -405,6 +413,19 @@ public class GroupCommunicationProviderImpl implements
             }
             return null;
         }
+    }
+    
+    public void announceWatchdogObservedFailure(String serverToken) throws GMSException {
+        if (clusterManager == null) {
+            logger.severe("cluster manager unexpectedly null");
+            return;
+        }
+        final HealthMonitor hm = clusterManager.getHealthMonitor();
+        if (hm == null) {
+            logger.severe("clusterManager.getHealthMonitor() unexpectedly null");
+            return;
+        }
+        hm.announceWatchdogObservedFailure(serverToken);
     }
 
 }

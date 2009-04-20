@@ -48,6 +48,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -74,6 +75,7 @@ public final class GroupHandleImpl implements GroupHandle {
                     .RECOVERY_SERVER_APPOINTED.toString();
 
     private static final int SYNC_WAIT = 2000;
+    private static final List<String> EMPTY_LIST = new LinkedList<String>();
     private List<String> selfRecoveryList;
 
     public GroupHandleImpl(
@@ -167,6 +169,12 @@ public final class GroupHandleImpl implements GroupHandle {
      * @see com.sun.enterprise.ee.cms.core.DistributedStateCache
      */
     public DistributedStateCache getDistributedStateCache() {
+        // TBD: code review comment to follow up on in future.
+        //      consider an empty no-op DistributedStateCache instead of null when member type is WATCHDOG.
+        //      makes code cleaner not to have to check for null or isWatchdogy() all over.
+        if (isWatchdog()) {
+            return null;
+        }
         return getGMSContext().getDistributedStateCache();
     }
 
@@ -178,7 +186,11 @@ public final class GroupHandleImpl implements GroupHandle {
      */
     public List<String> getCurrentCoreMembers() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
-        return viewWindow.getCurrentCoreMembers();
+        if (viewWindow == null) {
+            return EMPTY_LIST;
+        } else {
+            return viewWindow.getCurrentCoreMembers();
+        }
     }
 
     /**
@@ -189,17 +201,29 @@ public final class GroupHandleImpl implements GroupHandle {
      */
     public List<String> getAllCurrentMembers() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
-        return viewWindow.getAllCurrentMembers();
+        if (viewWindow == null) {
+            return EMPTY_LIST;
+        } else {
+            return viewWindow.getAllCurrentMembers();
+        }
     }
 
     public List<String> getCurrentCoreMembersWithStartTimes() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
-        return viewWindow.getCurrentCoreMembersWithStartTimes();
+        if (viewWindow == null) {
+            return EMPTY_LIST;
+        } else {
+            return viewWindow.getCurrentCoreMembersWithStartTimes();
+        }
     }
 
     public List<String> getAllCurrentMembersWithStartTimes() {
         final ViewWindow viewWindow = getGMSContext().getViewWindow();
-        return viewWindow.getAllCurrentMembersWithStartTimes();
+        if (viewWindow == null) {
+            return EMPTY_LIST;
+        } else {
+            return viewWindow.getAllCurrentMembersWithStartTimes();
+        }
     }
 
     /**
@@ -230,6 +254,9 @@ public final class GroupHandleImpl implements GroupHandle {
     public void raiseFence(final String componentName,
                            final String failedMemberToken)
             throws GMSException {
+        if (isWatchdog()) {
+            return;
+        }
         if (!isFenced(componentName, failedMemberToken)) {
             final DistributedStateCache dsc = getGMSContext().
                     getDistributedStateCache();
@@ -277,6 +304,9 @@ public final class GroupHandleImpl implements GroupHandle {
     public void lowerFence(final String componentName,
                            final String failedMemberToken)
             throws GMSException {   //If there is a fence for delegated recovery  or self recovery
+        if (isWatchdog()) {
+            return;
+        }
         if (isFenced(componentName, failedMemberToken)
                 ||
                 selfRecoveryList.contains(componentName + failedMemberToken)) {
@@ -301,6 +331,10 @@ public final class GroupHandleImpl implements GroupHandle {
     private void removeRecoveryAppointments(
             final Map<GMSCacheable, Object> fromCache,
             final String failedMemberToken) throws GMSException {
+        if (isWatchdog()) {
+            return;
+        }
+
         final DistributedStateCache dsc = getGMSContext()
                 .getDistributedStateCache();
 
@@ -339,6 +373,10 @@ public final class GroupHandleImpl implements GroupHandle {
      */
     public boolean isFenced(final String componentName,
                             final String memberToken) {
+        if (isWatchdog()) {
+            return false;
+        }
+
         boolean retval = false;
         final DistributedStateCache dsc = getDistributedStateCache();
         final Map<GMSCacheable, Object> entries;
@@ -380,6 +418,9 @@ public final class GroupHandleImpl implements GroupHandle {
     }
 
     private void forceDSCSync(final DistributedStateCacheImpl dsc) {
+        if (isWatchdog()) {
+            return;
+        }
         try {
             final String token = getGMSContext().getGroupCommunicationProvider()
                     .getGroupLeader();
@@ -448,6 +489,14 @@ public final class GroupHandleImpl implements GroupHandle {
     public MemberStates getMemberState(String member, long threshold, long timeout) {
         GroupCommunicationProvider gcp = getGMSContext().getGroupCommunicationProvider();
         return gcp.getMemberState(member, threshold, timeout);
+    }
+
+    public boolean isWatchdog() {
+        return getGMSContext().getMemberType() == GroupManagementService.MemberType.WATCHDOG;
+    }
+
+    public void announceWatchdogObservedFailure(String serverToken) throws GMSException {
+        getGMSContext().getGroupCommunicationProvider().announceWatchdogObservedFailure(serverToken);
     }
 
 }

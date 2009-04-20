@@ -109,6 +109,10 @@ public class MessageWindow implements Runnable {
     }
 
     private void handleDSCMessage(final DSCMessage dMsg, final String token) {
+        if (ctx.isWatchdog()) {
+            // Distributed State Cache is disabled for WATCHDOG member.
+            return;
+        }
 
         final String ops = dMsg.getOperation();
         if (logger.isLoggable(Level.FINER)) {
@@ -150,7 +154,7 @@ public class MessageWindow implements Runnable {
         if (gMsg.getComponentName() != null &&
                 gMsg.getComponentName().equals(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString())) {
             final ShutdownHelper sh = GMSContextFactory.getGMSContext(gMsg.getGroupName()).getShutdownHelper();
-            logger.log(Level.INFO, "member.groupshutdown", new Object[]{sender});
+            logger.log(Level.INFO, "member.groupshutdown", new Object[]{sender, groupName});
             sh.addToGroupShutdownList(gMsg.getGroupName());
             logger.log(Level.FINE, "setting clusterStopping variable to true");
             GMSContextFactory.getGMSContext(gMsg.getGroupName()).getGroupCommunicationProvider().setGroupStoppingState();

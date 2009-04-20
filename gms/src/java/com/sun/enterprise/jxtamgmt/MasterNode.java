@@ -666,6 +666,10 @@ class MasterNode implements PipeMsgListener, Runnable {
             final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
             if (msgElement != null && cvEvent != null) {
+                if (cvEvent.getEvent()  == ClusterViewEvents.JOINED_AND_READY_EVENT &&
+                    cvEvent.getAdvertisement().getID().equals(localNodeID)){
+                    manager.getHealthMonitor().setJoinedAndReadyReceived();
+                }
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
                     LOG.log(Level.WARNING, MessageFormat.format("Received a stale clusterview, older clusterview sequence {0}." +
@@ -806,6 +810,8 @@ class MasterNode implements PipeMsgListener, Runnable {
                 }
                 LOG.fine("MasterNode.confirmInstanceHasRestarted() : currentAdvStartTime = " + currentAdvStartTime);
                 if (currentAdvStartTime != cachedAdvStartTime) {
+                     // previous instance has restarted w/o a FAILURE detection.  Clean cache of references to previous instantiation of the instance.
+                    manager.getHealthMonitor().cleanAllCaches(oldSysAdv.getName());
                     //that means the instance has really restarted
                     LOG.log(Level.WARNING, MessageFormat.format("Instance {0} was restarted at  {1,time,full} on {1,date}.",
                             newSysAdv.getName(), new Date(currentAdvStartTime)));

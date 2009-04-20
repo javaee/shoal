@@ -262,5 +262,19 @@ public interface GroupHandle {
      * @return true if this peer is the group leader
      */
     boolean isGroupLeader();
+    
+    /**
+     * GMS WATCHDOG member reports <code>serverToken</code> has been observed to have failed to this GMS group.
+     * <p>
+     * This is merely a hint and the GMS system validates that the GMS member has truely failed using
+     * the same verification algorithm used when GMS heartbeat reports a member is INDOUBT and SUSPECTED of
+     * failure.
+     * <p>
+     * Allows for enhanced GMS failure detection by external control entities (one example is NodeAgent of Glassfish Application Server.)
+     * Only a GMS MemberType of WATCHDOG is allowed to broadcast to all members of a group that this <code>serverToken</code> has likely failed.
+     * @param serverToken     failed member
+     * @throws GMSException   if called by a member that is not a WATCHDOG member or if serverToken is not currently running in group.
+     */
+    void announceWatchdogObservedFailure(String serverToken) throws GMSException;
 }
 
