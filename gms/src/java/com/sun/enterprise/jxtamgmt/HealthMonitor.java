@@ -1765,8 +1765,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
 
     public void setJoinedAndReadyReceived() {
         JoinedAndReadyReceived = true;
-        if (LOG.isLoggable(Level.INFO)) {
-            LOG.info("JoinedAndReady notification received from master, set JoinedAndReadyReceived to true for member:" +
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("JoinedAndReady notification received from master, set JoinedAndReadyReceived to true for member:" +
                       manager.getInstanceName());
         }
     }
