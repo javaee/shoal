@@ -441,7 +441,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
              }
              String failedTokenName = msg.getMessageElement(NAMESPACE, WATCHDOG_NOTIFICATION).toString();
              final ID failedMemberId = manager.getID(failedTokenName);
-             LOG.info("WATCHDOG notification for member name:" + failedTokenName + " id: " + failedMemberId);
+             LOG.info("WATCHDOG notification for member name:" + failedTokenName + " id: " + failedMemberId + " from watchdog:" + watchdogMember.getMemberToken());
 
              HealthMessage.Entry failedEntry;
              synchronized (cache) {
@@ -482,6 +482,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                  }
              }
              if (!isCon) {
+                 LOG.info("validated FAILURE reported by WATCHDOG failure notification for " + failedTokenName);                             
                  assignAndReportFailure(failedEntry);
              } else {
                  LOG.warning("ignoring WATCHDOG failure notification for " + failedTokenName + ". Failure verification was able to connect " +

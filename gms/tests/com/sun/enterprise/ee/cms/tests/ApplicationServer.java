@@ -73,7 +73,7 @@ import java.util.logging.Logger;
 public class ApplicationServer implements Runnable, CallBack {
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
-    private GroupManagementService gms = null;
+    public GroupManagementService gms = null;
     private GMSClientService gcs1;
     private GMSClientService gcs2;
     private String serverName;
@@ -87,6 +87,7 @@ public class ApplicationServer implements Runnable, CallBack {
         this.serverName = serverName;
         this.groupName = groupName;
         this.memberType = memberType;
+        GMSFactory.setGMSEnabledState(groupName, Boolean.TRUE);
         gms = (GroupManagementService) GMSFactory.startGMSModule(serverName, groupName, memberType, props);
         initClientServices(Boolean.valueOf(System.getProperty("MESSAGING_MODE", "true")));
     }
@@ -316,11 +317,11 @@ public class ApplicationServer implements Runnable, CallBack {
                     Thread.sleep(15000);
                     final String TOBEKILLED_MEMBER="instance10";
 
-                    GroupHandle gh = GMSFactory.getGMSModule("cluster").getGroupHandle();
+                    GroupHandle gh = applicationServer.gms.getGroupHandle();
                     Runtime.getRuntime().exec("./killmember.sh " + TOBEKILLED_MEMBER);
                     logger.info("killed member " + TOBEKILLED_MEMBER);
                     gh.announceWatchdogObservedFailure(TOBEKILLED_MEMBER);
-                    logger.info("Killed instance10 and WATCHDOG notify group cluster that instance10 has failed.");
+                    logger.info("Killed instance10 and WATCHDOG notify group " + gh.toString() + " that instance10 has failed.");
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "Unexpected exception while starting server instance for WATCHDOG to kill and report failed",
                             e);
