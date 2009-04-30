@@ -37,6 +37,7 @@
 package com.sun.enterprise.jxtamgmt;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -84,5 +85,13 @@ public class NetworkManagerRegistry {
         synchronized (registry) {
             registry.remove(groupName);
         }
+    }
+
+    /**
+     * Returns all registered domain names
+     * @return an interator of domain names
+     */
+    public static Iterator<String> getGroups() {
+        return registry.keySet().iterator();
     }
 }
