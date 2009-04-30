@@ -54,42 +54,40 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.List;
 
-public class GroupManagementServiceImpl implements GroupManagementService, Runnable{
+public class GroupManagementServiceImpl implements GroupManagementService, Runnable {
     private final GMSContext ctx;
     private Router router;
 
     //Logging related stuff
-    private static final Logger logger =  GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
 
     /**
      * Creates a GMSContext instance with the given paramters. GMSContext calls the
      * underlying Group Communication Provider to initialize it with these parameters.
-     * @param serverToken    identity token of this member process
-     * @param groupName      name of the group
-     * @param membertype     Type of member as specified in GroupManagementService.MemberType
-     * @param properties     Configuration Properties
+     *
+     * @param serverToken identity token of this member process
+     * @param groupName   name of the group
+     * @param membertype  Type of member as specified in GroupManagementService.MemberType
+     * @param properties  Configuration Properties
      */
     public GroupManagementServiceImpl(final String serverToken, final String groupName,
                                       final GroupManagementService.MemberType membertype,
-                                      final Properties properties)
-    {
-        ctx = GMSContextFactory.produceGMSContext(serverToken,
-                                    groupName, membertype,
-                                    properties);
+                                      final Properties properties) {
+        ctx = GMSContextFactory.produceGMSContext(serverToken, groupName, membertype, properties);
         router = ctx.getRouter();
     }
 
-    public void run(){
+    public void run() {
         startup();
     }
 
     private void startup() {
-        try{
+        try {
             logger.log(Level.INFO, "gms.joinMessage");
             join();
         } catch (GMSException e) {
-            logger.log(Level.FINE,"gms.joinException", e);
+            logger.log(Level.FINE, "gms.joinException", e);
         }
     }
 
@@ -98,8 +96,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * To add MessageActionFactory instance, use the method
      * addActionFactory(MessageActionFactory maf, String componentName);
      *
-     * @param failureNotificationActionFactory   implementation of this interface
-     *
+     * @param failureNotificationActionFactory
+     *         implementation of this interface
      */
     public void addActionFactory(final FailureNotificationActionFactory failureNotificationActionFactory) {
         router.addDestination(failureNotificationActionFactory);
@@ -109,34 +107,35 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * Registers a FailureRecoveryActionFactory instance.
      * To add MessageActionFactory instance, use the method
      * addActionFactory(MessageActionFactory maf, String componentName);
-     * @param componentName   name of component
-     * @param failureRecoveryActionFactory  implmentation of this interface
+     *
+     * @param componentName                name of component
+     * @param failureRecoveryActionFactory implmentation of this interface
      */
-    public void addActionFactory(final String componentName,
-                         final FailureRecoveryActionFactory failureRecoveryActionFactory) {
+    public void addActionFactory(final String componentName, final FailureRecoveryActionFactory failureRecoveryActionFactory) {
         router.addDestination(componentName, failureRecoveryActionFactory);
     }
 
     /**
      * Registers a JoinedAndReadyNotificationActionFactory instance.
+     *
      * @param joinedAndReadyNotificationActionFactory
-     * Implementation of this interface produces
-     * a JoinedAndReadyNotificationAction instance which consumes the member
-     * joined and ready notification signal.
+     *         Implementation of this interface produces
+     *         a JoinedAndReadyNotificationAction instance which consumes the member
+     *         joined and ready notification signal.
      */
 
     public void addActionFactory(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
         router.addDestination(joinedAndReadyNotificationActionFactory);
     }
 
-       /**
-       * Registers a JoinNotificationActionFactory instance.
-       *
-       * @param joinNotificationActionFactory   implementation of this interface
-       */
-      public void addActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
-          router.addDestination(joinNotificationActionFactory);
-      }
+    /**
+     * Registers a JoinNotificationActionFactory instance.
+     *
+     * @param joinNotificationActionFactory implementation of this interface
+     */
+    public void addActionFactory(final JoinNotificationActionFactory joinNotificationActionFactory) {
+        router.addDestination(joinNotificationActionFactory);
+    }
 
     /**
      * Registers a PlannedShuttdownActionFactory instance.
@@ -152,18 +151,16 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     /**
      * Registers a MessageActionFactory instance for the specified component
      * name.
+     *
      * @param messageActionFactory implementation of this interface
-     * @param componentName name of component to identify target component for message delivery
+     * @param componentName        name of component to identify target component for message delivery
      */
-    public void addActionFactory(final MessageActionFactory messageActionFactory,
-                                 final String componentName)
-    {
+    public void addActionFactory(final MessageActionFactory messageActionFactory, final String componentName) {
         router.addDestination(messageActionFactory, componentName);
     }
 
-    public void addActionFactory (
-            final FailureSuspectedActionFactory failureSuspectedActionFactory ) {
-        router.addDestination( failureSuspectedActionFactory );
+    public void addActionFactory(final FailureSuspectedActionFactory failureSuspectedActionFactory) {
+        router.addDestination(failureSuspectedActionFactory);
     }
 
     /**
@@ -172,8 +169,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * use the method:
      * removeActionFactory(String componentName);
      *
-     * @param failureNotificationActionFactory  implementation of this interface
-     *
+     * @param failureNotificationActionFactory
+     *         implementation of this interface
      */
     public void removeActionFactory(final FailureNotificationActionFactory failureNotificationActionFactory) {
         router.removeDestination(failureNotificationActionFactory);
@@ -184,16 +181,16 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * To remove a MessageActionFactory for a specific component,
      * use the method:
      * removeActionFactory(String componentName);
+     *
      * @param componentName name of component
      */
     public void removeFailureRecoveryActionFactory(final String componentName) {
-        router.removeFailureRecoveryAFDestination( componentName );
+        router.removeFailureRecoveryAFDestination(componentName);
     }
 
-    public void removeFailureSuspectedActionFactory (
-            final FailureSuspectedActionFactory failureSuspectedActionFactory )
-    {
-        router.removeDestination( failureSuspectedActionFactory );    
+    public void removeFailureSuspectedActionFactory(
+            final FailureSuspectedActionFactory failureSuspectedActionFactory) {
+        router.removeDestination(failureSuspectedActionFactory);
     }
 
     /**
@@ -208,13 +205,14 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         router.removeDestination(joinNotificationActionFactory);
     }
 
-       /**
+    /**
      * Removes a JoinedAndReadyNotificationActionFactory instance
      * To remove a MessageActionFactory for a specific component,
      * use the method:
      * removeActionFactory(String componentName);
      *
-     * @param joinedAndReadyNotificationActionFactory implementation of this interface
+     * @param joinedAndReadyNotificationActionFactory
+     *         implementation of this interface
      */
     public void removeActionFactory(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
         router.removeDestination(joinedAndReadyNotificationActionFactory);
@@ -235,15 +233,16 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     /**
      * Removes a MessageActionFactory instance belonging to the
      * specified component
-     * @param componentName    name of component
+     *
+     * @param componentName name of component
      */
-    public void removeMessageActionFactory(final String componentName)
-    {
-        router.removeMessageAFDestination( componentName);
+    public void removeMessageActionFactory(final String componentName) {
+        router.removeMessageAFDestination(componentName);
     }
 
     /**
      * Returns an implementation of GroupHandle
+     *
      * @return com.sun.enterprise.ee.cms.GroupHandle
      */
     public GroupHandle getGroupHandle() {
@@ -258,24 +257,17 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         leave(shutdownType);
     }
 
-    public void updateMemberDetails ( final String memberToken,
-                                      final Serializable key,
-                                      final Serializable value )
-            throws GMSException
-    {
+    public void updateMemberDetails(final String memberToken,
+                                    final Serializable key,
+                                    final Serializable value) throws GMSException {
         if (isWatchdog()) {
             return;
         }
-        ctx.getDistributedStateCache()
-                .addToCache(MEMBER_DETAILS,
-                            memberToken,
-                            key,
-                            value );
+        ctx.getDistributedStateCache().addToCache(MEMBER_DETAILS, memberToken, key, value);
 
     }
 
     /**
-     *
      * returns the details pertaining to the given member. At times, details
      * pertaining to all members may be stored in the Cache but keyed by the
      * given member token. Through this route, details of all members could be
@@ -283,36 +275,31 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
      *
-     * @param memberToken   identity token of the member process
+     * @param memberToken identity token of the member process
      * @return Map  <Serializable, Serializable>
      */
 
-    public Map<Serializable, Serializable> getMemberDetails (
-                                                final String memberToken )
-    {
+    public Map<Serializable, Serializable> getMemberDetails(final String memberToken) {
         if (isWatchdog()) {
-            final Map<Serializable, Serializable> retval =
-                                           new HashMap<Serializable, Serializable>();
+            final Map<Serializable, Serializable> retval = new HashMap<Serializable, Serializable>();
             return retval;
         }
-        return ctx.getDistributedStateCache()
-                .getFromCacheForPattern( MEMBER_DETAILS, memberToken  );
+        return ctx.getDistributedStateCache().getFromCacheForPattern(MEMBER_DETAILS, memberToken);
     }
 
     public Map<Serializable, Serializable> getAllMemberDetails(
-                                            final Serializable key){
+            final Serializable key) {
 
         final Map<Serializable, Serializable> retval =
                 new HashMap<Serializable, Serializable>();
         if (isWatchdog()) {
             return retval;
         }
-        final Map<GMSCacheable, Object> ret = ctx.getDistributedStateCache()
-                                                .getFromCache( key );
+        final Map<GMSCacheable, Object> ret = ctx.getDistributedStateCache().getFromCache(key);
 
-        for(GMSCacheable c : ret.keySet()){
-            if(c.getComponentName().equals( MEMBER_DETAILS )){
-                retval.put( c.getMemberTokenId(), ( Serializable )ret.get( c ));
+        for (GMSCacheable c : ret.keySet()) {
+            if (c.getComponentName().equals(MEMBER_DETAILS)) {
+                retval.put(c.getMemberTokenId(), (Serializable) ret.get(c));
             }
         }
         return retval;
@@ -321,23 +308,23 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     /**
      * for this serverToken, use the map to derive key value pairs
      * that constitute data pertaining to this member's details
-     * @param serverToken - member token id for this member.
+     *
+     * @param serverToken   - member token id for this member.
      * @param keyValuePairs - a Map containing key-value pairs
-     * @throws com.sun.enterprise.ee.cms.core.GMSException wraps underlying exception that caused adding of member details to fail.
+     * @throws com.sun.enterprise.ee.cms.core.GMSException
+     *          wraps underlying exception that caused adding of member details to fail.
      */
-    public void setMemberDetails ( final String serverToken,
-                  final Map<? extends Object, ? extends Object> keyValuePairs)
-            throws GMSException
-    {
+    public void setMemberDetails(final String serverToken,
+                                 final Map<? extends Object, ? extends Object> keyValuePairs) throws GMSException {
         if (isWatchdog()) {
             return;
         }
-        for (Object key : keyValuePairs.keySet()){
+        for (Object key : keyValuePairs.keySet()) {
             ctx.getDistributedStateCache()
                     .addToLocalCache(MEMBER_DETAILS,
-                                    serverToken,
-                                    (Serializable)key,
-                                    (Serializable) keyValuePairs.get(key) );
+                            serverToken,
+                            (Serializable) key,
+                            (Serializable) keyValuePairs.get(key));
         }
     }
 
@@ -349,8 +336,9 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     /**
      * Called when the application layer is shutting down and this member needs to leave
      * the group formally for a graceful shutdown event.
+     *
      * @param shutdownType shutdown type corresponds to the shutdown types specified
-     * in GMSConstants.shudownType enum.
+     *                     in GMSConstants.shudownType enum.
      */
     private void leave(final GMSConstants.shutdownType shutdownType) {
         logger.log(Level.FINE, "Deregistering ActionFactory instances...");
@@ -365,17 +353,17 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
 
     /**
      * This method is used to announce that the group is about to be shutdown.
+     *
      * @param groupName name of group being shutdown.
      */
-    public void announceGroupShutdown ( final String groupName,
-                            final GMSConstants.shutdownState shutdownState) {
+    public void announceGroupShutdown(final String groupName,
+                                      final GMSConstants.shutdownState shutdownState) {
 
-        final GMSContext gctx = GMSContextFactory.getGMSContext( groupName );
-        logger.log(Level.FINE,
-                   "GMS:Announcing GroupShutdown to group with State = " + shutdownState);       
-        gctx.announceGroupShutdown( groupName, shutdownState );
+        final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
+        logger.log(Level.FINE, "GMS:Announcing GroupShutdown to group with State = " + shutdownState);
+        gctx.announceGroupShutdown(groupName, shutdownState);
         gctx.assumeGroupLeadership();
- 
+
     }
 
     public void announceGroupStartup(String groupName,
@@ -383,8 +371,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                                      List<String> memberTokens) {
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
         final StringBuffer sb = new StringBuffer(160);
-        sb.append("GMS:Announcing GroupStartup[" + startupState.toString() + "]" +
-                  " for Group:" + groupName + " Members: ");
+        sb.append("GMS:Announcing GroupStartup[").append(startupState.toString()).append("]" + " for Group:").append(groupName).append(" Members: ");
         if (memberTokens != null) {
             for (String memberToken : memberTokens) {
                 sb.append(memberToken).append(",");
@@ -395,8 +382,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     }
 
     /**
-
-     *<p>This API is provided for the parent application to report to the group
+     * <p>This API is provided for the parent application to report to the group
      * its joined and ready state to begin processing its operations.
      * The group member that this parent application represents is now ready to
      * process its operations at the time of this announcement to the group.
@@ -409,9 +395,9 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * @param groupName name of the group
      */
     public void reportJoinedAndReadyState(String groupName) {
-        final GMSContext gctx = GMSContextFactory.getGMSContext( groupName );
+        final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
         logger.log(Level.INFO,
-                   "GMS:Reporting Joined and Ready state to group " + groupName);
+                "GMS:Reporting Joined and Ready state to group " + groupName);
         gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
         logger.log(Level.FINE, "GMS : JoinedAndReady state reported to group " + groupName);
     }
@@ -421,7 +407,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * This helps with any pre-shutdown processing that may be required to be done on the
      * application's side.</p>
      * <p>Also returns true when called after the gms context has left the group during a group shutdown.</p>
-     * @param groupName
+     *
+     * @param groupName the group name
      * @return boolean
      */
     public boolean isGroupBeingShutdown(String groupName) {
