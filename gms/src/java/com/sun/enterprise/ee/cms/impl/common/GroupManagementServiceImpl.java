@@ -43,16 +43,27 @@ package com.sun.enterprise.ee.cms.impl.common;
  * @version $Revision$
  */
 
-import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.core.FailureNotificationActionFactory;
+import com.sun.enterprise.ee.cms.core.FailureRecoveryActionFactory;
+import com.sun.enterprise.ee.cms.core.FailureSuspectedActionFactory;
+import com.sun.enterprise.ee.cms.core.GMSCacheable;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.GroupHandle;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.core.JoinNotificationActionFactory;
+import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationActionFactory;
+import com.sun.enterprise.ee.cms.core.MessageActionFactory;
+import com.sun.enterprise.ee.cms.core.PlannedShutdownActionFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.List;
 
 public class GroupManagementServiceImpl implements GroupManagementService, Runnable {
     private final GMSContext ctx;
@@ -287,11 +298,9 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         return ctx.getDistributedStateCache().getFromCacheForPattern(MEMBER_DETAILS, memberToken);
     }
 
-    public Map<Serializable, Serializable> getAllMemberDetails(
-            final Serializable key) {
+    public Map<Serializable, Serializable> getAllMemberDetails(final Serializable key) {
 
-        final Map<Serializable, Serializable> retval =
-                new HashMap<Serializable, Serializable>();
+        final Map<Serializable, Serializable> retval = new HashMap<Serializable, Serializable>();
         if (isWatchdog()) {
             return retval;
         }
@@ -305,6 +314,20 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         return retval;
     }
 
+    public String getGroupName() {
+        if (isWatchdog()) {
+            return "";
+        }
+        return ctx.getGroupName();
+    }
+
+    public GroupManagementService.MemberType getMemberType() {
+        return ctx.getMemberType();
+    }
+
+    public String getInstanceName() {
+        return ctx.getServerIdentityToken();
+    }
     /**
      * for this serverToken, use the map to derive key value pairs
      * that constitute data pertaining to this member's details
@@ -396,8 +419,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      */
     public void reportJoinedAndReadyState(String groupName) {
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
-        logger.log(Level.INFO,
-                "GMS:Reporting Joined and Ready state to group " + groupName);
+        logger.log(Level.INFO, "GMS:Reporting Joined and Ready state to group " + groupName);
         gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
         logger.log(Level.FINE, "GMS : JoinedAndReady state reported to group " + groupName);
     }

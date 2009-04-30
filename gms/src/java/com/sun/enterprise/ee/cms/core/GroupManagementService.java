@@ -172,16 +172,14 @@ public interface GroupManagementService {
      *
      * @param failureSuspectedActionFactory the factory to remove
      */
-    void removeFailureSuspectedActionFactory(
-            FailureSuspectedActionFactory failureSuspectedActionFactory);
+    void removeFailureSuspectedActionFactory(FailureSuspectedActionFactory failureSuspectedActionFactory);
 
     /**
      * Removes a JoinNotificationActionFactory instance
      *
      * @param joinNotificationActionFactory the factory to remove
      */
-    void removeActionFactory(
-            JoinNotificationActionFactory joinNotificationActionFactory);
+    void removeActionFactory(JoinNotificationActionFactory joinNotificationActionFactory);
 
     /**
      * Removes a JoinedAndReadyNotificationActionFactory instance
@@ -189,8 +187,7 @@ public interface GroupManagementService {
      * @param joinedAndReadyNotificationActionFactory the factory to remove
      *
      */
-    void removeActionFactory(
-            JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
+    void removeActionFactory(JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
 
     /**
      * Removes a PlannedShutdownActionFactory instance
@@ -353,4 +350,23 @@ public interface GroupManagementService {
      * @throws GMSException if called by a member that is not a WATCHDOG member or if serverToken is not currently running in group.
      */
      public void announceWatchdogObservedFailure(String serverToken) throws GMSException;
+
+    /**
+     * Returns the group name for this context
+     *
+     * @return the group name for this context
+     */
+     public String getGroupName();
+
+    /**
+     * Returns the MemberType for this context
+     * @return the MemberType for this context
+     */
+     public GroupManagementService.MemberType getMemberType();
+
+    /**
+     * Returns the Instance name for this context
+     * @return the Instance name for this context
+     */
+     public String getInstanceName();
 }
