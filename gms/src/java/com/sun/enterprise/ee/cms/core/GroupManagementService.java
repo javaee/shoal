@@ -37,14 +37,13 @@
 package com.sun.enterprise.ee.cms.core;
 
 import java.io.Serializable;
-import java.util.Map;
 import java.util.List;
-import static com.sun.enterprise.ee.cms.core.GMSConstants.groupStartupState.INITIATED;
-import static com.sun.enterprise.ee.cms.core.GMSConstants.groupStartupState.COMPLETED_SUCCESS;
-import static com.sun.enterprise.ee.cms.core.GMSConstants.groupStartupState.COMPLETED_FAILED;
+import java.util.Map;
+
 /**
  * Provides API for joining, and leaving the group and to register Action Factories of
  * specific types for specific Group Event Signals.
+ *
  * @author Shreedhar Ganapathy
  * Date: June 10, 2006
  * @version $Revision$
@@ -74,151 +73,162 @@ public interface GroupManagementService {
      * These are possible recovery states used by GMS's recovery selection
      * and failure fencing functions
      */
-    public static enum RECOVERY_STATE { RECOVERY_SERVER_APPOINTED, RECOVERY_IN_PROGRESS }
+    public static enum RECOVERY_STATE {
+        RECOVERY_SERVER_APPOINTED, RECOVERY_IN_PROGRESS
+    }
 
-  
+
     /**
      * Registers a FailureNotificationActionFactory instance.
-     * @param failureNotificationActionFactory  Implementation of this interface produces
-     * a FailureNotificationAction instance which consumes the failure notification Signal
+     *
+     * @param failureNotificationActionFactory
+     *         Implementation of this interface produces
+     *         a FailureNotificationAction instance which consumes the failure notification Signal
      */
-    void addActionFactory(
-          FailureNotificationActionFactory failureNotificationActionFactory);
+    void addActionFactory(FailureNotificationActionFactory failureNotificationActionFactory);
 
     /**
      * Registers a FailureRecoveryActionFactory instance.
-     * @param componentName The name of the parent application's component
-     * that should be notified of being selected for performing recovery
-     * operations. One or more components in the parent application may
-     * want to be notified of such selection for their respective recovery
-     * operations
+     *
+     * @param componentName                The name of the parent application's component
+     *                                     that should be notified of being selected for performing recovery
+     *                                     operations. One or more components in the parent application may
+     *                                     want to be notified of such selection for their respective recovery
+     *                                     operations
      * @param failureRecoveryActionFactory Implementation of this interface produces
-     * a FailureRecoveryAction instance which consumes the failure recovery selection
-     * notification Signal
+     *                                     a FailureRecoveryAction instance which consumes the failure recovery selection
+     *                                     notification Signal
      */
-    void addActionFactory(String componentName,
-                     FailureRecoveryActionFactory failureRecoveryActionFactory);
+    void addActionFactory(String componentName, FailureRecoveryActionFactory failureRecoveryActionFactory);
 
     /**
      * Registers a JoinNotificationActionFactory instance.
-     * @param joinNotificationActionFactory  Implementation of this interface produces
-     * a JoinNotificationAction instance which consumes the member join notification
-     * signal. 
+     *
+     * @param joinNotificationActionFactory Implementation of this interface produces
+     *                                      a JoinNotificationAction instance which consumes the member join notification
+     *                                      signal.
      */
-    void addActionFactory(
-            JoinNotificationActionFactory joinNotificationActionFactory);
+    void addActionFactory(JoinNotificationActionFactory joinNotificationActionFactory);
 
     /**
      * Registers a JoinedAndReadyNotificationActionFactory instance.
+     *
      * @param joinedAndReadyNotificationActionFactory
-     * Implementation of this interface produces
-     * a JoinedAndReadyNotificationAction instance which consumes the member
-     * joined and ready notification signal. 
+     *         Implementation of this interface produces
+     *         a JoinedAndReadyNotificationAction instance which consumes the member
+     *         joined and ready notification signal.
      */
 
-    void addActionFactory(
-            JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
+    void addActionFactory(JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
 
     /**
      * Registers a PlannedShutdownActionFactory instance.
-     * @param plannedShutdownActionFactory   Implementation of this interface produces
-     * a PlannedShutdownAction instance which consumes the planned shutdown notification
-     * Signal
+     *
+     * @param plannedShutdownActionFactory Implementation of this interface produces
+     *                                     a PlannedShutdownAction instance which consumes the planned shutdown notification
+     *                                     Signal
      */
-    void addActionFactory(
-            PlannedShutdownActionFactory plannedShutdownActionFactory);
+    void addActionFactory(PlannedShutdownActionFactory plannedShutdownActionFactory);
 
-     /**
+    /**
      * Registers a MessageActionFactory instance for the specified component
      * name.
-     * @param messageActionFactory Implementation of this interface produces a
-     * MessageAction instance that consumes a MessageSignal.
-     * @param componentName Name of the component that would like to consume
-     * Messages. One or more components in the parent application would want to
-     * be notified when messages arrive addressed to them. This registration
-     * allows GMS to deliver messages to specific components.  
      *
+     * @param messageActionFactory Implementation of this interface produces a
+     *                             MessageAction instance that consumes a MessageSignal.
+     * @param componentName        Name of the component that would like to consume
+     *                             Messages. One or more components in the parent application would want to
+     *                             be notified when messages arrive addressed to them. This registration
+     *                             allows GMS to deliver messages to specific components.
      */
-     void addActionFactory(MessageActionFactory messageActionFactory,
-                           String componentName);
+    void addActionFactory(MessageActionFactory messageActionFactory, String componentName);
 
     /**
      * Registers a FailureSuspectedActionFactory Instance.
-     * @param failureSuspectedActionFactory   Implementation of this interface produces
-     * a Failure Suspected Action instance that would consume the FailureSuspectedSignal
+     *
+     * @param failureSuspectedActionFactory Implementation of this interface produces
+     *                                      a Failure Suspected Action instance that would consume the FailureSuspectedSignal
      */
-    void addActionFactory (
-         FailureSuspectedActionFactory failureSuspectedActionFactory );
+    void addActionFactory(FailureSuspectedActionFactory failureSuspectedActionFactory);
 
 
     /**
      * Removes a FailureNotificationActionFactory instance
-     * @param failureNotificationActionFactory
+     *
+     * @param failureNotificationActionFactory the factory to remove
+     *
      */
-    void removeActionFactory(
-            FailureNotificationActionFactory failureNotificationActionFactory);
+    void removeActionFactory(FailureNotificationActionFactory failureNotificationActionFactory);
 
     /**
      * Removes a FailureRecoveryActionFactory instance
-     * @param componentName
+     *
+     * @param componentName the component name to remove
      */
     void removeFailureRecoveryActionFactory(String componentName);
 
     /**
      * Removes a FailureSuspectedActionFactory instance
-     * @param failureSuspectedActionFactory
+     *
+     * @param failureSuspectedActionFactory the factory to remove
      */
     void removeFailureSuspectedActionFactory(
             FailureSuspectedActionFactory failureSuspectedActionFactory);
 
     /**
      * Removes a JoinNotificationActionFactory instance
-     * @param joinNotificationActionFactory
+     *
+     * @param joinNotificationActionFactory the factory to remove
      */
     void removeActionFactory(
             JoinNotificationActionFactory joinNotificationActionFactory);
 
     /**
      * Removes a JoinedAndReadyNotificationActionFactory instance
-     * @param joinedAndReadyNotificationActionFactory
+     *
+     * @param joinedAndReadyNotificationActionFactory the factory to remove
+     *
      */
     void removeActionFactory(
             JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
 
     /**
      * Removes a PlannedShutdownActionFactory instance
-     * @param plannedShutdownActionFactory
+     *
+     * @param plannedShutdownActionFactory the factory to remove
      */
-    void removeActionFactory(
-            PlannedShutdownActionFactory plannedShutdownActionFactory);
+    void removeActionFactory(PlannedShutdownActionFactory plannedShutdownActionFactory);
 
     /**
      * Removes a MessageActionFactory instance belonging to the
      * specified component
-     * @param componentName
+     *
+     * @param componentName the component name
      */
     void removeMessageActionFactory(String componentName);
 
     /**
      * Returns an implementation of GroupHandle
+     *
      * @return com.sun.enterprise.ee.cms.core.GroupHandle
      */
     GroupHandle getGroupHandle();
 
     /**
      * Invokes the underlying group communication library's group creation and joining operations.
+     *
      * @throws GMSException wraps any underlying exception that causes join to not occur
      */
     void join() throws GMSException;
-    
+
     /**
      * Sends a shutdown command to the GMS indicating that the parent thread
      * is about to be shutdown as part of a planned shutdown operation for the
      * given shutdown type. The given shutdown type is specified by GMSConstants
-     *
-
+     * @param shutdownType the shutdown type
      */
     void shutdown(GMSConstants.shutdownType shutdownType);
+
     /**
      * Enables the client to update the Member Details shared datastructure
      * The implementation of this api updates an existing datastructure that is
@@ -229,37 +239,35 @@ public interface GroupManagementService {
      * to the particular member would be readily available. There is nothing
      * preventing other state information from being stored here but this is
      * intended as a lightweight mechanism in terms of messaging overhead.
-     * 
+     *
      * @param memberToken - identifier token of this member
-     * @param key  - Serializable object that uniquely identifies this cachable
-     * state
-     * @param value - Serializable object that is to be stored in the shared
-     * cache
-     * @throws GMSException
+     * @param key         - Serializable object that uniquely identifies this cachable
+     *                    state
+     * @param value       - Serializable object that is to be stored in the shared
+     *                    cache
+     * @throws GMSException if a group membership service error occurs
      */
-    void updateMemberDetails(String memberToken, Serializable key,
-                              Serializable value) throws GMSException;
+    void updateMemberDetails(String memberToken, Serializable key, Serializable value) throws GMSException;
 
     /**
      * returns the details pertaining to the given member.
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
-
-     * @param memberToken
+     *
+     * @param memberToken the member
      * @return Map  <Serializable, Serializable>
      */
     Map<Serializable, Serializable> getMemberDetails(String memberToken);
 
     /**
-     *
      * returns the member details pertaining to the given key. This is particularly
      * useful when the details pertain to all members and not just one member
      * and such details are keyed by a common key.
      * Through this route, details of all members could be obtained.
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details for the given key.
-
-     * @param key
+     *
+     * @param key the map key
      * @return Map  <Serializable, Serializable>
      */
     Map<Serializable, Serializable> getAllMemberDetails(Serializable key);
@@ -268,30 +276,32 @@ public interface GroupManagementService {
      * This method can be used by a controlling parent application that has a static preconfiguration
      * of all members of the group to announce that the parent application is "initiating" and then
      * that it has "completed" startup of all preconfigured members of this group.
-     *
+     * <p/>
      * <P>Group members in parameter <code>members</code> is interpreted differently based on startupState.
      * All preconfigured members of group are passed in <code>members</code> when
-     * {@link INITIATED} or {@link COMPLETED_SUCCESS}.
-     * When startupState is  {@link COMPLETED_FAILED}, <code>members</code> is a list of the
+     * {@see GMSConstants.groupStartupState.INITIATED} or {@see GMSConstants.groupStartupState.COMPLETED_SUCCESS}.
+     * When startupState is  {@see GMSConstants.groupStartupState.COMPLETED_FAILED}, <code>members</code> is a list of the
      * members that failed to start.
      *
-     * @param groupName
-     * @param startupState  demarcate initiation of groupStartup and completion of group startup
-     * @param memberTokens  list of memberTokens.
+     * @param groupName the group name
+     * @param startupState demarcate initiation of groupStartup and completion of group startup
+     * @param memberTokens list of memberTokens.
      */
     void announceGroupStartup(String groupName,
                               GMSConstants.groupStartupState startupState,
                               List<String> memberTokens);
+
     /**
      * This method can be used by parent application to notify all group members
      * that the parent application is "initiating" or has "completed" shutdown of
      * this group.
-     * @param groupName
+     *
+     * @param groupName the group name
      * @param shutdownState from GMSConstants.shutdownState - one of Initiated
-     * or Completed
+     *                      or Completed
      */
-    void announceGroupShutdown ( String groupName,
-                                 GMSConstants.shutdownState shutdownState);
+    void announceGroupShutdown(String groupName, GMSConstants.shutdownState shutdownState);
+
     /**
      * <p>This API is provided for the parent application to report to the group
      * its joined and ready state to begin processing its operations.
@@ -303,8 +313,8 @@ public interface GroupManagementService {
      * Currently this API can only be used by cluster members which are of the type CORE and
      * not the SPECTATOR members. Shoal makes the assumption that only the CORE members will
      * act as servers for serving the client requests and not the SPECTATOR members.</p>
-     *
-     *<p> The behavioral semantics of this feature is that as each member reports its
+     * <p/>
+     * <p> The behavioral semantics of this feature is that as each member reports its
      * joined and ready state, the corresponding JoinedAndReadyNotificationSignal will be
      * delivered to other cluster members who have already joined the group and have components
      * who have registered for this event to be delivered. There may be members who may not
@@ -313,20 +323,21 @@ public interface GroupManagementService {
      * of this particular member and call the <code>getMemberState()</code> api.
      * The implementation currently does not require the joined and ready notification
      * to be sent out to members joining the group after a member reported its
-     * joined and ready state.</p> 
+     * joined and ready state.</p>
      *
      * @param groupName name of the group
      */
-     void reportJoinedAndReadyState(String groupName);
+    void reportJoinedAndReadyState(String groupName);
 
-       /**
+    /**
      * <p>This API allows applications to query GMS to see if the group is shutting down.
      * This helps with any pre-shutdown processing that may be required to be done on the
      * application's side.</p>
-     * @param groupName
-     * @return boolean
+     *
+     * @param groupName The group name
+     * @return boolean true if it is being shutdown
      */
-     boolean isGroupBeingShutdown(String groupName);
+    boolean isGroupBeingShutdown(String groupName);
 
     /**
      * GMS WATCHDOG member reports <code>serverToken</code> has been observed to have failed to this GMS group.
