@@ -36,15 +36,22 @@
 
 package com.sun.enterprise.ee.cms.impl.jxta;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.core.ViewWindow;
+import com.sun.enterprise.ee.cms.core.DistributedStateCache;
+import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.GroupHandle;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 
@@ -226,7 +233,7 @@ public class GMSContext extends GMSContextBase {
     }
 
     public ViewWindow getViewWindow() {
-        return ((com.sun.enterprise.ee.cms.impl.jxta.ViewWindow)viewWindow).getViewWindowProxy();
+        return viewWindow;
     }
 
     public void assumeGroupLeadership() {

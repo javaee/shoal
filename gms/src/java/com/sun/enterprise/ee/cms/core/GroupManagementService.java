@@ -36,8 +36,6 @@
 
 package com.sun.enterprise.ee.cms.core;
 
-import com.sun.enterprise.ee.cms.core.ViewWindow;
-
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -377,5 +375,4 @@ public interface GroupManagementService {
      */
     public String getInstanceName();
 
-    public ViewWindow getViewWindow();
 }

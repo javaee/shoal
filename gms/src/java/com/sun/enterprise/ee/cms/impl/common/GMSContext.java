@@ -77,8 +77,6 @@ public interface GMSContext {
      */
     Router getRouter();
 
-    ViewWindow getViewWindow(); 
-
     DistributedStateCache getDistributedStateCache();
 
     void join() throws GMSException ;

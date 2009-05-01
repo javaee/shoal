@@ -55,7 +55,6 @@ import com.sun.enterprise.ee.cms.core.JoinNotificationActionFactory;
 import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationActionFactory;
 import com.sun.enterprise.ee.cms.core.MessageActionFactory;
 import com.sun.enterprise.ee.cms.core.PlannedShutdownActionFactory;
-import com.sun.enterprise.ee.cms.core.ViewWindow;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.io.Serializable;
@@ -330,9 +329,6 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         return ctx.getServerIdentityToken();
     }
 
-    public ViewWindow getViewWindow() {
-        return ctx.getViewWindow();
-    }
 
     /**
      * for this serverToken, use the map to derive key value pairs

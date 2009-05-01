@@ -37,7 +37,6 @@
 package com.sun.enterprise.ee.cms.impl.common;
 
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.ViewWindow;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.util.ArrayList;

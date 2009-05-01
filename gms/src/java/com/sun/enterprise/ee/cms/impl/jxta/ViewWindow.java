@@ -59,7 +59,6 @@ import com.sun.enterprise.jxtamgmt.ClusterView;
 import com.sun.enterprise.jxtamgmt.ClusterViewEvents;
 import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 import com.sun.enterprise.jxtamgmt.JxtaUtil;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,9 +73,8 @@ import java.util.logging.Logger;
  *         Date: Jun 26, 2006
  * @version $Revision$
  */
-class ViewWindow implements com.sun.enterprise.ee.cms.core.ViewWindow, Runnable {
+class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Runnable {
     private GMSContext ctx;
-    private ViewWindowProxy vwp;
     static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private int size = 100;  // 100 is some default.
     private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
@@ -95,11 +93,6 @@ class ViewWindow implements com.sun.enterprise.ee.cms.core.ViewWindow, Runnable 
     ViewWindow(final String groupName, final ArrayBlockingQueue<EventPacket> viewQueue) {
         this.groupName = groupName;
         this.viewQueue = viewQueue;
-        this.vwp = new ViewWindowProxy(this);
-    }
-
-    public ViewWindowProxy getViewWindowProxy() {
-        return vwp;
     }
 
     private GMSContext getGMSContext() {
