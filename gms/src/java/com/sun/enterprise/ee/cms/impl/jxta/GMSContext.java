@@ -37,12 +37,11 @@
 package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.core.ViewWindow;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
-import com.sun.enterprise.ee.cms.impl.common.GMSMember;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
-import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
 import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
 
 import java.util.*;
@@ -82,7 +81,7 @@ public class GMSContext extends GMSContextBase {
         } else {
             viewQueue = new ArrayBlockingQueue<EventPacket>(MAX_VIEWS_IN_QUEUE,
                     Boolean.TRUE);
-            viewWindow = new ViewWindow(groupName, viewQueue);
+            viewWindow = new com.sun.enterprise.ee.cms.impl.jxta.ViewWindow(groupName, viewQueue);
         }
         messageQueue = new ArrayBlockingQueue<MessagePacket>(MAX_MSGS_IN_QUEUE, Boolean.TRUE);
         gh = new GroupHandleImpl(groupName, serverToken);
@@ -120,7 +119,7 @@ public class GMSContext extends GMSContextBase {
 
     public void join() throws GMSException {
         final Thread viewWindowThread = isWatchdog() ? null :
-                new Thread(viewWindow, "ViewWindowThread");
+                new Thread((com.sun.enterprise.ee.cms.impl.jxta.ViewWindow) viewWindow, "ViewWindowThread");
         MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
 
         final Thread messageWindowThread =
@@ -226,8 +225,8 @@ public class GMSContext extends GMSContextBase {
         return groupCommunicationProvider;
     }
 
-    public com.sun.enterprise.ee.cms.impl.common.ViewWindow getViewWindow() {
-        return viewWindow;
+    public ViewWindow getViewWindow() {
+        return ((com.sun.enterprise.ee.cms.impl.jxta.ViewWindow)viewWindow).getViewWindowProxy();
     }
 
     public void assumeGroupLeadership() {

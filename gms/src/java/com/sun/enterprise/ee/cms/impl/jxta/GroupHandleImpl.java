@@ -37,8 +37,8 @@
 package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.core.ViewWindow;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
-import com.sun.enterprise.ee.cms.impl.common.ViewWindow;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;

@@ -34,7 +34,7 @@
  * holder.
  */
 
-package com.sun.enterprise.ee.cms.impl.common;
+package com.sun.enterprise.ee.cms.core;
 
 import java.util.List;
 

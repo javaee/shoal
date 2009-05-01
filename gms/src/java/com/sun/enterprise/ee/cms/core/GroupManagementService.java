@@ -36,6 +36,8 @@
 
 package com.sun.enterprise.ee.cms.core;
 
+import com.sun.enterprise.ee.cms.core.ViewWindow;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +47,7 @@ import java.util.Map;
  * specific types for specific Group Event Signals.
  *
  * @author Shreedhar Ganapathy
- * Date: June 10, 2006
+ *         Date: June 10, 2006
  * @version $Revision$
  */
 public interface GroupManagementService {
@@ -59,15 +61,17 @@ public interface GroupManagementService {
      * Distributed State Cache management is disabled for a WATCHDOG member. Additionally, a WATCHDOG
      * member does not receive any GMS event notifications nor can it ever be the MASTER of a GMS
      * group.
-     *
-     * <p>
+     * <p/>
+     * <p/>
      * Motivation for WATCHDOG member is to enable Framework Agents that control and monitor the runtime status of
      * GMS members to be able to report failures to GMS when they are detected. If a Framework Agent runs on same
      * machine as processes it monitors, it can detect failure sooner and more reliably than heartbeat based failure
      * detection can.  A WATCHDOG member can lessen the amount of time that GMS takes to notify a group that a member
      * has failed.
      */
-    public static enum MemberType {CORE, SPECTATOR, WATCHDOG}
+    public static enum MemberType {
+        CORE, SPECTATOR, WATCHDOG
+    }
 
     /**
      * These are possible recovery states used by GMS's recovery selection
@@ -155,8 +159,8 @@ public interface GroupManagementService {
     /**
      * Removes a FailureNotificationActionFactory instance
      *
-     * @param failureNotificationActionFactory the factory to remove
-     *
+     * @param failureNotificationActionFactory
+     *         the factory to remove
      */
     void removeActionFactory(FailureNotificationActionFactory failureNotificationActionFactory);
 
@@ -184,8 +188,8 @@ public interface GroupManagementService {
     /**
      * Removes a JoinedAndReadyNotificationActionFactory instance
      *
-     * @param joinedAndReadyNotificationActionFactory the factory to remove
-     *
+     * @param joinedAndReadyNotificationActionFactory
+     *         the factory to remove
      */
     void removeActionFactory(JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory);
 
@@ -222,6 +226,7 @@ public interface GroupManagementService {
      * Sends a shutdown command to the GMS indicating that the parent thread
      * is about to be shutdown as part of a planned shutdown operation for the
      * given shutdown type. The given shutdown type is specified by GMSConstants
+     *
      * @param shutdownType the shutdown type
      */
     void shutdown(GMSConstants.shutdownType shutdownType);
@@ -280,7 +285,7 @@ public interface GroupManagementService {
      * When startupState is  {@see GMSConstants.groupStartupState.COMPLETED_FAILED}, <code>members</code> is a list of the
      * members that failed to start.
      *
-     * @param groupName the group name
+     * @param groupName    the group name
      * @param startupState demarcate initiation of groupStartup and completion of group startup
      * @param memberTokens list of memberTokens.
      */
@@ -293,7 +298,7 @@ public interface GroupManagementService {
      * that the parent application is "initiating" or has "completed" shutdown of
      * this group.
      *
-     * @param groupName the group name
+     * @param groupName     the group name
      * @param shutdownState from GMSConstants.shutdownState - one of Initiated
      *                      or Completed
      */
@@ -349,24 +354,28 @@ public interface GroupManagementService {
      * @param serverToken failed member
      * @throws GMSException if called by a member that is not a WATCHDOG member or if serverToken is not currently running in group.
      */
-     public void announceWatchdogObservedFailure(String serverToken) throws GMSException;
+    public void announceWatchdogObservedFailure(String serverToken) throws GMSException;
 
     /**
      * Returns the group name for this context
      *
      * @return the group name for this context
      */
-     public String getGroupName();
+    public String getGroupName();
 
     /**
      * Returns the MemberType for this context
+     *
      * @return the MemberType for this context
      */
-     public GroupManagementService.MemberType getMemberType();
+    public GroupManagementService.MemberType getMemberType();
 
     /**
      * Returns the Instance name for this context
+     *
      * @return the Instance name for this context
      */
-     public String getInstanceName();
+    public String getInstanceName();
+
+    public ViewWindow getViewWindow();
 }

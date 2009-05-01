@@ -69,14 +69,14 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 /**
  * @author Shreedhar Ganapathy
  *         Date: Jun 26, 2006
  * @version $Revision$
  */
-class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Runnable {
+class ViewWindow implements com.sun.enterprise.ee.cms.core.ViewWindow, Runnable {
     private GMSContext ctx;
+    private ViewWindowProxy vwp;
     static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private int size = 100;  // 100 is some default.
     private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
@@ -95,6 +95,11 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     ViewWindow(final String groupName, final ArrayBlockingQueue<EventPacket> viewQueue) {
         this.groupName = groupName;
         this.viewQueue = viewQueue;
+        this.vwp = new ViewWindowProxy(this);
+    }
+
+    public ViewWindowProxy getViewWindowProxy() {
+        return vwp;
     }
 
     private GMSContext getGMSContext() {
