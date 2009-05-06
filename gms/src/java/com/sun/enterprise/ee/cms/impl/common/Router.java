@@ -40,11 +40,15 @@ import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.text.MessageFormat;
-import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Set;
 import java.util.Vector;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -324,24 +328,17 @@ public class Router {
     }
 
     void notifyMessageAction(final MessageSignal signal) {
-        MessageAction a;
-        MessageActionFactory maf;
-        String target;
+
         synchronized (messageAF) {
-            for (Enumeration<String> i = messageAF.keys();
-                 i.hasMoreElements();) {
-                target = i.nextElement();
-                if (target.equals(signal.getTargetComponent())) {
-                    maf = messageAF.get(target);
-                    a = (MessageAction) maf.produceAction();
-                    try {
-                        //due to message ordering requirements, 
-                        //this call is not delegated to a the thread pool
-                        a.consumeSignal(signal);
-                    }
-                    catch (ActionException e) {
-                        logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
-                    }
+            MessageActionFactory maf = messageAF.get(signal.getTargetComponent());
+            if (maf != null) {
+                MessageAction a = (MessageAction) maf.produceAction();
+                try {
+                    //due to message ordering requirements,
+                    //this call is not delegated to a the thread pool
+                    a.consumeSignal(signal);
+                } catch (ActionException e) {
+                    logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
                 }
             }
         }
