@@ -54,7 +54,7 @@ import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import net.jxta.pipe.OutputPipe;
-import com.sun.enterprise.ee.cms.impl.common.GMSMember;
+import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 

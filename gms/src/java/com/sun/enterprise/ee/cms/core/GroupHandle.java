@@ -295,5 +295,21 @@ public interface GroupHandle {
      * @throws GMSException if called by a member that is not a WATCHDOG member or if serverToken is not currently running in group.
      */
     void announceWatchdogObservedFailure(String serverToken) throws GMSException;
+
+    /**
+     * Return a snapshot of members in current view.
+     * <p>
+     * Note: returns an empty list if no current view.
+     * @return current members
+     */
+    List<GMSMember> getCurrentView();
+
+    /**
+     * Return snapshot of members in previous view.
+     * <p>
+     * Note: returns an empty list if no previous view.
+     * @return members from previous view
+     */
+    List<GMSMember> getPreviousView();
 }
 

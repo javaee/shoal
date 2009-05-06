@@ -36,18 +36,13 @@
 
 package com.sun.enterprise.ee.cms.impl.jxta;
 
-import com.sun.enterprise.ee.cms.core.DistributedStateCache;
-import com.sun.enterprise.ee.cms.core.GMSCacheable;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
 import static com.sun.enterprise.ee.cms.core.GMSConstants.startupType.*;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.Signal;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.FailureNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.FailureRecoverySignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
-import com.sun.enterprise.ee.cms.impl.common.GMSMember;
+import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.JoinedAndReadyNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
@@ -76,7 +71,8 @@ import java.util.logging.Logger;
 class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Runnable {
     private GMSContext ctx;
     static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private int size = 100;  // 100 is some default.
+    private static final int MAX_VIEWS = 100;  // 100 is some default.
+    private static final List<GMSMember> EMPTY_GMS_MEMBER_LIST = new ArrayList<GMSMember>();
     private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
     private List<Signal> signals = new Vector<Signal>();
     private final List<String> currentCoreMembers = new ArrayList<String>();
@@ -129,7 +125,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         final GMSMember member = JxtaUtil.getGMSMember(packet.getSystemAdvertisement());
         synchronized (views) {
             views.add(getMemberTokens(packet));
-            if (views.size() > size) {
+            if (views.size() > MAX_VIEWS) {
                 views.remove(0);
             }
             logger.log(Level.INFO, "membership.snapshot.analysis", new Object[]{packet.getClusterViewEvent().toString(), member.getMemberToken(), member.getGroupName()});
@@ -223,14 +219,13 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             addNewMemberJoins(packet);
         }
         if (views.size() > 1 &&
-                packet.getClusterView().getSize() !=
-                        views.get(views.size() - 2).size()) {
+            packet.getClusterView().getSize() != getPreviousView().size()) {
             determineAndAddNewMemberJoins();
         }
     }
 
     private void determineAndAddNewMemberJoins() {
-        final List<GMSMember> newMembership = views.get(views.size() - 1);
+        final List<GMSMember> newMembership = getCurrentView();
         String token;
         if (views.size() == 1) {
             if (newMembership.size() > 1) {
@@ -246,7 +241,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 }
             }
         } else if (views.size() > 1) {
-            final List<String> oldMembers = getTokens(views.get(views.size() - 2));
+            final List<String> oldMembers = getTokens(getPreviousView());
             for (GMSMember member : newMembership) {
                 token = member.getMemberToken();
                 if (!oldMembers.contains(token)) {
@@ -312,7 +307,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             final String type = advert.getCustomTagValue(CustomTagNames.MEMBER_TYPE.toString());
             if (type.equalsIgnoreCase(CORETYPE)) {
                 logger.log(Level.INFO, "member.failed", new Object[]{token, groupName});
-                generateFailureRecoverySignals(views.get(views.size() - 2),
+                generateFailureRecoverySignals(getPreviousView(),
                         token,
                         advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
                         Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())));
@@ -538,12 +533,26 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         return getGMSContext().getGroupCommunicationProvider().isGroupLeader();
     }
 
-    public List getPreviousView() {
-        return views.get(views.size() - 2);
+    public List<GMSMember> getPreviousView() {
+        List<GMSMember> result = EMPTY_GMS_MEMBER_LIST;
+        synchronized(views) {
+            final int INDEX = views.size() - 2;
+            if (INDEX >= 0) {
+                result = views.get(INDEX);
+            }
+        }
+        return result;
     }
 
-    public List getCurrentView() {
-        return views.get(views.size() - 1);
+    public List<GMSMember> getCurrentView() {
+        List<GMSMember> result = EMPTY_GMS_MEMBER_LIST;
+        synchronized(views) {
+            final int INDEX = views.size() - 1;
+            if (INDEX >= 0) {
+                result = views.get(INDEX);
+            }
+        }
+        return result;
     }
 
     public List<String> getCurrentCoreMembers() {

@@ -37,13 +37,9 @@
 package com.sun.enterprise.ee.cms.impl.jxta;
 
 import com.sun.enterprise.ee.cms.impl.common.ViewWindow;
-import com.sun.enterprise.ee.cms.core.DistributedStateCache;
-import com.sun.enterprise.ee.cms.core.GMSCacheable;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GroupHandle;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
@@ -504,10 +500,10 @@ public final class GroupHandleImpl implements GroupHandle {
         getGMSContext().getGroupCommunicationProvider().announceWatchdogObservedFailure(serverToken);
     }
 
-    public List getCurrentView() {
+    public List<GMSMember> getCurrentView() {
         return ctx.getViewWindow().getCurrentView();
     }
-    public List getPreviousView() {
+    public List<GMSMember> getPreviousView() {
         return ctx.getViewWindow().getPreviousView();
     }
 }

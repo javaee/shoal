@@ -77,8 +77,7 @@ import java.net.URI;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.sun.enterprise.ee.cms.impl.common.GMSMember;
-import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.core.GMSMember;
 
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes

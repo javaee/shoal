@@ -34,7 +34,7 @@
  * holder.
  */
 
-package com.sun.enterprise.ee.cms.impl.common;
+package com.sun.enterprise.ee.cms.core;
 
 import java.io.Serializable;
 import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
@@ -98,6 +98,10 @@ public class GMSMember implements Serializable {
         return groupName;
     }
 
+    /**
+     * Returns the time the member joined the group.
+     * @return the time the member joined the group
+     */
     public long getStartTime() {
         return startTime;
     }
@@ -111,6 +115,6 @@ public class GMSMember implements Serializable {
     }
 
     public String toString() {
-        return "name:" + memberToken + " group:" + groupName + " MemberType:" + memberType;
+        return "name:" + memberToken + " group:" + groupName + " MemberType:" + memberType + " startTime:" + startTime;
     }
 }
