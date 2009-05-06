@@ -83,11 +83,14 @@ public class Router {
     private long startupTime;
     private static final int GROUP_WARMUP_TIME = 30000;
     private static final int BUFSIZE = 100;
+    private Thread signalHandlerThread;
 
     public Router() {
         queue = new ArrayBlockingQueue<SignalPacket>(BUFSIZE);
         final SignalHandler signalHandler = new SignalHandler(queue, this);
-        new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread").start();
+        //todo: there's no lifecycle handling here.  it would be good to add it deal with a graceful shutdown
+        signalHandlerThread = new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread");
+        signalHandlerThread.start();
         actionPool = Executors.newCachedThreadPool();
         startupTime = System.currentTimeMillis();
     }
