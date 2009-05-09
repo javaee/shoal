@@ -291,7 +291,7 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
         final String token = advert.getName();
         getGMSContext().addToSuspectList(token);
         try {
-            logger.log(Level.INFO, "gms.failureSuspectedEventReceived", token);
+            logger.log(Level.INFO, "gms.failureSuspectedEventReceived", new Object[]{token, groupName});
             signals.add(new FailureSuspectedSignalImpl(token,
                     advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
                     Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
