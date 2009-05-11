@@ -60,18 +60,22 @@ public class PlannedShutdownActionImpl implements PlannedShutdownAction {
      * promptly back to the thread that has delivered the Signal.
      */
     public void consumeSignal(final Signal s) throws ActionException {
+        boolean signalAcquired = false;
         try {
             s.acquire();
+            signalAcquired = true;
             callBack.processNotification(s);
 
         } catch (SignalAcquireException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-
-        try {
-            s.release();
-        } catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+        } finally {
+            if (signalAcquired) {
+                try {
+                    s.release();
+                } catch (SignalReleaseException e) {
+                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                }
+            }
         }
     }
 }

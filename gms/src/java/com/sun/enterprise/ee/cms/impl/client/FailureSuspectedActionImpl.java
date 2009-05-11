@@ -63,17 +63,23 @@ public class FailureSuspectedActionImpl implements FailureSuspectedAction {
      * @param signal
      */
     public void consumeSignal(final Signal signal) {
+        boolean signalAcquired = false;
         //ALWAYS call Acquire before doing any other processing
         try {
             signal.acquire();
+            signalAcquired = true;
             notifyListeners(signal);
-            //ALWAYS call Release after completing any other processing.
-            signal.release();
         } catch (SignalAcquireException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-        catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+        } finally {
+            if (signalAcquired) {
+                try {
+                    //ALWAYS call Release after completing any other processing.
+                    signal.release();
+                } catch (SignalReleaseException e) {
+                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                }
+            }
         }
     }
 

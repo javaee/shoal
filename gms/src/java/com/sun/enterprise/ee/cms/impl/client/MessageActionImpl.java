@@ -61,22 +61,36 @@ public class MessageActionImpl implements MessageAction {
      * promptly back to the thread that has delivered the Signal.
      */
     public void consumeSignal(final Signal signal) throws ActionException {
+        boolean signalAcquired = false;
         //Always Acquire before doing any other processing
         try {
             signal.acquire();
+            signalAcquired = true;
             processMessage(signal);
         } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-        //Always Release after completing any other processing.
-        try {
-            signal.release();
-        } catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+            logger.log(Level.SEVERE, "Failed to consumeSignal(" + signal + ") due to exception " + e.getLocalizedMessage());
+        } finally {
+            //Always Release after completing any other processing.
+            if (signalAcquired) {
+                try {
+                    signal.release();
+                } catch (SignalReleaseException e) {
+                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                }
+            }
         }
     }
 
-    private void processMessage(final Signal signal) {
-        callback.processNotification(signal);
+    private void processMessage(final Signal signal) throws ActionException {
+        try {
+            callback.processNotification(signal);
+        } catch (Throwable t) {
+            final String callbackClassName = callback == null ? "<null>" : callback.getClass().getName();
+            logger.log(Level.WARNING, "handled unexpected exception " + t.getClass().getName() + " when calling registered application callback method " +
+                        callbackClassName + ".processNotification.  The method should have handled this exception.", t);
+            ActionException ae = new ActionException("unhandled exception processing signal " + signal.toString());
+            ae.initCause(t);
+            throw ae;
+        }
     }
 }

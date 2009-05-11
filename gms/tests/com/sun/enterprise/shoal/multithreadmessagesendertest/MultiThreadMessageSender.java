@@ -83,31 +83,41 @@ public class MultiThreadMessageSender implements CallBack{
 	private void startSenderThread(){
         for(int i=0;i<sendingThreadNum; i++){
             final int i1 = i;
-            new Thread(new Runnable(){
+            Thread t = new Thread(new Runnable(){
                 String msg1 = msg + " "+ i1;
                 public void run() {
+                    try {
                     List<String> members;
+                    int i = 0;
+                    members = gms.getGroupHandle().getAllCurrentMembers();
+                    System.out.println("Thead id: " + i1 + " members: " + members.toString());
                     while(true){
-                        members = gms.getGroupHandle().getAllCurrentMembers();
-                        System.out.println(members.toString());
-                        try {
-							Thread.sleep(10);
-                            if(members.size()>=2){
-                                gms.getGroupHandle().sendMessage(destMemberToken, "SimpleSampleComponent",msg1.getBytes());
+                        i++;
+                        msg1 = msg + " " + " threadid:" + i1 + " msgid:" + i;
+                        while (true) {
+                            members = gms.getGroupHandle().getAllCurrentMembers();
+                            try {
+							    Thread.sleep(10);
+                                if(members.size()>=2){
+                                    gms.getGroupHandle().sendMessage(destMemberToken, "SimpleSampleComponent",msg1.getBytes());
+                                    break;
+                                }
+                            } catch (InterruptedException e) {
+							    e.printStackTrace();
+                                //break;
+                            } catch (GMSException e) {
+                                System.out.println("thread " + i + "caught GMSException " + e );
+                                e.printStackTrace();
+                            //break;                            
                             }
-                        } catch (InterruptedException e) {
-							e.printStackTrace();
-                            break;
-                        } catch (GMSException e) {							
-                            e.printStackTrace();
-
-                            break;                            
                         }
 					}
-					
-				}
-				
-			}).start();
+                    } finally {
+					    System.out.println("Exiting threadid " + i1);
+                    }
+                }
+			});
+            t.start();
 		}
 	}
 	

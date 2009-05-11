@@ -63,20 +63,25 @@ public class FailureNotificationActionImpl implements FailureNotificationAction{
      * the signal
      * @param signal
      */
-    public void consumeSignal(final Signal signal) {
+    public void consumeSignal(final Signal signal) throws ActionException {
         //ALWAYS call Acquire before doing any other processing
+        boolean signalAcquired = false;
         try {
             signal.acquire();
+            signalAcquired = true;
             notifyListeners(signal);
         } catch (SignalAcquireException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
+        } finally {
 
-        //ALWAYS call Release after completing any other processing.
-        try {
-            signal.release();
-        } catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+            //ALWAYS call Release after completing any other processing.
+            if (signalAcquired) {
+                try {
+                    signal.release();
+                } catch (SignalReleaseException e) {
+                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                }
+            }
         }
     }
 

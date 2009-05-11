@@ -339,6 +339,9 @@ public class Router {
                     a.consumeSignal(signal);
                 } catch (ActionException e) {
                     logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
+                } catch (Throwable t) {
+                    // just in case application provides own ActionImpl.
+                    logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
                 }
             }
         }
@@ -506,7 +509,16 @@ public class Router {
         }
 
         public Object call() throws ActionException {
-            action.consumeSignal(signal);
+            try {
+                action.consumeSignal(signal);
+            } catch (ActionException ae) {
+                // don't wrap an ActionException within an ActionException.
+                throw ae;
+            } catch (Throwable t) {
+                ActionException nae = new ActionException();
+                nae.initCause(t);
+                throw nae;
+            }
             return null;
         }
     }
