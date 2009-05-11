@@ -72,6 +72,8 @@ public class GMSContext extends GMSContextBase {
     private Properties configProperties;
     private boolean isGroupShutdown = false;  //remember if this context has left the group during a group shutdown.
     private boolean isGroupStartup = false;
+    private Thread viewWindowThread = null;
+    private Thread messageWindowThread = null;
 
     public GMSContext(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -125,12 +127,10 @@ public class GMSContext extends GMSContextBase {
     }
 
     public void join() throws GMSException {
-        final Thread viewWindowThread = isWatchdog() ? null :
-                new Thread((com.sun.enterprise.ee.cms.impl.jxta.ViewWindow) viewWindow, "ViewWindowThread");
+        viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "ViewWindowThread");
         MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
 
-        final Thread messageWindowThread =
-                new Thread(messageWindow, "MessageWindowThread");
+        messageWindowThread = new Thread(messageWindow, "MessageWindowThread");
         messageWindowThread.start();
 
         if (viewWindowThread != null) {

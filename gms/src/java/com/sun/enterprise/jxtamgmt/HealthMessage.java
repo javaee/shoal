@@ -335,6 +335,10 @@ public class HealthMessage {
             this.timestamp =System.currentTimeMillis();
             this.seqID = seqID;
         }
+
+        public Entry(final Entry previousEntry, final String newState) {
+            this(previousEntry.adv,  newState, previousEntry.seqID + 1);
+        }
         
         public long getSeqID() {
             return seqID;

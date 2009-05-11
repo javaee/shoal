@@ -445,47 +445,29 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
              HealthMessage.Entry failedEntry;
              synchronized (cache) {
                  failedEntry = cache.get(failedMemberId);
-             }
-             if (failedEntry == null) {
-                 LOG.info("ignoring WATCHDOG FAILURE NOTIFICATION: can not find member " + failedTokenName + " with id:" + failedMemberId);
-                 return;
-             }
 
-             if (failedEntry.isState(STOPPED) || failedEntry.isState(DEAD) ||
-                     failedEntry.isState(PEERSTOPPING) || failedEntry.isState(CLUSTERSTOPPING)) {
-                 LOG.info("ignoring WATCHDOG FAILURE NOTIFICATION for member " + failedTokenName + " which already has a state of " + failedEntry.state);
-                 return;
-             }
+                if (failedEntry == null) {
+                    LOG.info("ignoring WATCHDOG FAILURE NOTIFICATION: can not find member: " + failedTokenName + " of group: "  + manager.getGroupName() +
+                             " with id:" + failedMemberId);
+                    return;
+                }
 
-             // Failure validation
-             if (failedEntry.isState(INDOUBT)) {
-                 LOG.info("received WATCHDOG failure notification for " + failedTokenName + " with local hm state=" + failedEntry.state);
-             }
+                if (failedEntry.isState(STOPPED) || failedEntry.isState(DEAD) || failedEntry.isState(PEERSTOPPING) || failedEntry.isState(CLUSTERSTOPPING) ||
+                     failedEntry.isState(STARTING)) {
+                     String logMsg = MessageFormat.format("ignoring WATCHDOG FAILURE Notification for member: {0} of group: {1} with last heartbeat state of {2} at {3,time,full} on {3,date}.",
+                                 failedTokenName,  manager.getGroupName(), failedEntry.state,  new Date(failedEntry.timestamp));
+                    LOG.info(logMsg);
+                    return;
+                }
 
-             // Verify that it is not possible to contact failedTokenName before reporting failure.
-             boolean isCon = false;
-             final int MAX_CHECKS = 8;
-             for (int i = 0; i < MAX_CHECKS; i++) {
-                 isCon = isConnected(failedEntry);
-                 if (!isCon) {
-                     break;
-                 } else {
-                     if (LOG.isLoggable(Level.FINE)) {
-                         LOG.fine("received WATCHDOG failure notification for " + failedTokenName +
-                                 " but it is still connected[Check " + i + " ]. WAITING for member to be unreachable ...");
-                     }
-                     try {
-                         Thread.sleep(1000);
-                     } catch (InterruptedException ie) {
-                     }
-                 }
-             }
-             if (!isCon) {
-                 LOG.info("validated FAILURE reported by WATCHDOG failure notification for " + failedTokenName);                             
-                 assignAndReportFailure(failedEntry);
-             } else {
-                 LOG.warning("ignoring WATCHDOG failure notification for " + failedTokenName + ". Failure verification was able to connect " +
-                         MAX_CHECKS + " times.");
+                // Failure validation
+                if (failedEntry.isState(INDOUBT)) {
+                    LOG.info("received WATCHDOG failure notification for " + failedTokenName + " with local hm state=" + failedEntry.state);
+                }
+
+                LOG.info("validated FAILURE reported by WATCHDOG FAILURE notification for " + failedTokenName + " of group: " + manager.getGroupName() + " last heartbeat state:"
+             + failedEntry.state + " received at " + MessageFormat.format(" {0,time,full} on {0,date}", new Date(failedEntry.timestamp)));
+                assignAndReportFailure(failedEntry);
              }
          }
      }
@@ -1442,12 +1424,14 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     // another thread has already called assignedAndReportFailure.  There exist 2 ways to declare an instance dead.
                     // The FailureVerifier is one thread and processWatchdogNotification is second way.  Ensure only one thread ever runs
                     // this method.
-                    LOG.log(Level.FINE, "assignAndReportFailure already called for member " + entry.id +
-                                        " ignoring this invocation since member is already DEAD");
+                    // TBD:  change back to FINE before checkin.
+                    String deadTime =  lastCheck == null ? "" : MessageFormat.format(" at {0,time,full} on {0,date}", new Date(lastCheck.timestamp));
+
+                    LOG.log(Level.INFO, "assignAndReportFailure already called for member " + entry.id +
+                                        " ignoring this invocation since member already declared DEAD" + deadTime);
                     return;
                 }
-                entry.state = states[DEAD];
-                cache.put(entry.id, entry);
+                cache.put(lastCheck.id, new HealthMessage.Entry(lastCheck, states[DEAD]));
             }
             if (LOG.isLoggable(Level.FINE)){
                 fine(" assignAndReportFailure => going to put into cache " + entry.adv.getName() +

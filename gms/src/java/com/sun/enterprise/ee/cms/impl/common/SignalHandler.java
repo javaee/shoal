@@ -76,6 +76,7 @@ public class SignalHandler implements Runnable {
     }
 
     public void run() {
+        try {
         Signal[] signals;
         while (!interrupted) {
             SignalPacket signalPacket;
@@ -92,6 +93,11 @@ public class SignalHandler implements Runnable {
                 logger.log(Level.FINEST, e.getLocalizedMessage());
                 interrupted = true;
             }
+        }
+        } catch (Throwable e) {
+            logger.log(Level.SEVERE,"unhandled exception in thread " + Thread.currentThread().getName(), e);
+        } finally {
+            logger.log(Level.INFO, "SignalHandler task named " + Thread.currentThread().getName() + " exiting");
         }
     }
 

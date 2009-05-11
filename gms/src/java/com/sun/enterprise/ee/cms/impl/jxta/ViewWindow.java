@@ -288,16 +288,11 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
 
     private void addInDoubtMemberSignals(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
-        final String token = advert.getName();
+        final GMSMember member = JxtaUtil.getGMSMember(advert);
+        final String token = member.getMemberToken();
         getGMSContext().addToSuspectList(token);
-        try {
-            logger.log(Level.INFO, "gms.failureSuspectedEventReceived", new Object[]{token, groupName});
-            signals.add(new FailureSuspectedSignalImpl(token,
-                    advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                    Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
-        } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
-        }
+        logger.log(Level.INFO, "gms.failureSuspectedEventReceived", new Object[]{token, groupName});
+        signals.add(new FailureSuspectedSignalImpl(token, member.getGroupName(), member.getStartTime()));
     }
 
     private void addFailureSignals(final EventPacket packet) {
@@ -488,9 +483,8 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                                            final String groupName,
                                            final long startTime) {
 
-        if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, "adding join signal member: " + token + " group: " + groupName);
-        }
+        final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+        logger.log(Level.INFO, "Adding Join member: " + token + " group: " + groupName + " StartupState:" + startupState.toString());
         signals.add(new JoinNotificationSignalImpl(token,
                 getCurrentCoreMembers(),
                 getAllCurrentMembers(),
