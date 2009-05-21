@@ -230,7 +230,14 @@ public class JxtaUtil {
 
         boolean sent = false;
         for (int i = 0; i < MAX_SEND_RETRIES && !sent; i++) {
-            sent = pipe.send(msg);
+            // Short term fix is to introduce a synchronized on pipe
+            // since msg send is failing when too many threads try to send on same
+            // pipe at same time.  (i.e. MultiThreadMessageSender sending msg using 100 threads)
+            //TBD:   Future optimization is to introduce a pipe pool where each pipe is
+            //       only used by one thread at a time.
+            synchronized(pipe) {
+                sent = pipe.send(msg);
+            }
         }
         return sent;
     }
