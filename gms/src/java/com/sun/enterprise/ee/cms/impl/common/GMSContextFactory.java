@@ -38,6 +38,7 @@ package com.sun.enterprise.ee.cms.impl.common;
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -61,7 +62,9 @@ public class GMSContextFactory {
                             final GroupManagementService.MemberType memberType,
                             final Properties properties){
         GMSContext ctx;
-        final String gmsContextProvider = GMSConstants.GROUP_COMMUNICATION_PROVIDER;
+        final String gmsContextProvider = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
+                                                                     GMSConstants.GROUP_COMMUNICATION_PROVIDER,
+                                                                     properties );
         if((ctx = ctxCache.get( groupName )) ==  null){
             if( gmsContextProvider.equalsIgnoreCase( GMSConstants.DEFAULT_GROUP_COMMUNICATION_PROVIDER ) ) {
                 ctx = new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );

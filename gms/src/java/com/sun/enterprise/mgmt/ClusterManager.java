@@ -43,6 +43,7 @@ import com.sun.enterprise.ee.cms.impl.base.CustomTagNames;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisementImpl;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.mgmt.transport.NetworkUtility;
 import com.sun.enterprise.mgmt.transport.NetworkManager;
@@ -129,7 +130,9 @@ public class ClusterManager implements MessageListener {
         //TODO: revisit and document auto composition of transports
 
         // todo carryel, let's use the factory
-        final String gmsContextProvider = GMSConstants.GROUP_COMMUNICATION_PROVIDER;
+        final String gmsContextProvider = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
+                                                                     GMSConstants.GROUP_COMMUNICATION_PROVIDER,
+                                                                     props );
         if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ) {
             this.netManager = new GrizzlyNetworkManager();
         } else if( gmsContextProvider.equalsIgnoreCase( GMSConstants.JXTA_NEW_GROUP_COMMUNICATION_PROVIDER ) ) {
