@@ -1,0 +1,132 @@
+---++ Goal
+   * Abstracting out the transport layer of Shoal
+
+
+---++ Motive
+   * Current Shoal are using JXTA as group communication technology 
+   * But most of Shoal's clustering functionality like leadership, failure and discovery are tightly coupled to JXTA
+   * If we want to change JXTA into JGroup, Grizzly or other transport layer, should we implement a separate clustering functionality?
+   * I would like to say NO. The initiative intention of Shoal is that users should be able to integrate any group communication modules easily through SPI.
+
+
+---++ Current status
+   * Shoal GMS utilizes JxtaManagement component(a JXTA based group service provide) for dynamic cluster configuration, formation and monitoring.
+   * Main components
+      * ClusterManager
+         * Manages lifecycle of this SPI
+         * Sends application messages to other members and receives them
+      * MasterNode
+         * Has a lightweight protocol allowing a set of nodes to discover one another and autonomously elect a master for the cluster
+         * Resolves master's collisions
+         * Sends a cluster view to other members and received them
+      * HealthMonitor
+         * Has a lightweight protocol allowing a set of nodes to monitor the health of a cluster
+         * becomes aware of indoubt or failure of members
+         * Sends health messages to other members and received them
+      * SystemAdvertisement
+         * An extensible XML document describing system characteristics(HW/SW configuration, CPU load and etc...)
+         * Represents the symbol of the unique member
+
+
+---++ Improvement
+   * Functions and implementations related to the transport layer could be separated from ClusterManager, MasterNode, HealthMonitor
+   * A common transport manager which is called by NetworkManager could be in charge of their functions.
+   * SystemAdvertisement could become to be not a class but a interface. So all modules can use the interface for getting the specification of any members.
+   * The network entity which is dependent on a transport layer like net.jxta.peer.PeerID could be replaced by PeerID which Shoal itself contains.
+   * The network message which is dependent on a transport layer like net.jxta.endpoint.Message could be replaced by Message which Shoal itself contains.
+
+
+---++ Details
+   * Repackage
+      * com.sun.enterprise.ee.cms.impl.jxta.* -> com.sun.enterprise.ee.cms.impl.base.*
+         * com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement interface
+         * com.sun.enterprise.ee.cms.impl.base.SystemAdvertisementImpl
+            * Implements default SystemAdvertisement which is serializable
+         * com.sun.enterprise.ee.cms.impl.base.PeerID
+            * Has group name and instance name and unique id which is serializable with generic type
+         * com.sun.enterprise.ee.cms.impl.Utility
+            * Can be used by any calling code to do common routines
+
+      * com.sun.enterprise.jxtamgmt.* --> com.sun.enterprise.mgmt.*
+         * Has ClusterManager, MasterNode, HealthMonitor and etc... which has common clustering functionality.
+
+      * com.sun.enterprise.mgmt.transport.*
+         * Have interfaces of a transport specification for common cluster management
+         * com.sun.enterprise.mgmt.transport.Message interface
+         * com.sun.enterprise.mgmt.transport.MessageImpl
+            * Implements default Message which is based on ByteBuffer
+            * Supports addMessageElement(), getMessageElement() and removeMessageElement() with key-value pair like net.jxta.endpoint.Message
+         * com.sun.enterprise.mgmt.transport.MessageListener interface
+         * com.sun.enterprise.mgmt.transport.MessageSender interface
+            * Has send( PeerID, Message ) API
+         * com.sun.enterprise.mgmt.transport.MulticastMessageSender interface
+            * Has broadcast( Message ) API
+         * com.sun.enterprise.mgmt.transport.NetworkManager interface
+            * Extends MulticastMessageSender and MessageSender
+            * All cluster modules in Shoal can use this for transfering messages.
+            * Support multicast, TCP and UDP sending API
+         * com.sun.enterprise.mgmt.transport.Abstract*
+            * Help you to implement interfaces easily
+            * Have common or specific logic of transport layers
+
+      * com.sun.enterprise.mgmt.transport.grizzly
+         * Has the implementation of Grizzly transport layer
+         * Implements most of interfaces of com.sun.enterprise.mgmt.transport
+         
+      * com.sun.enterprise.mgmt.transport.jxta
+         * Has the implementation of JXTA transport layer
+         * Implements most of interfaces of com.sun.enterprise.mgmt.transport
+
+
+---++ Others
+   * Using Grizzly
+      * Grizzly version 1.9.16
+      * com.sun.enterprise.mgmt.transport.grizzly.*
+      * Unfortunately, current Grizzly doesn't support multicast
+      * So I implements NIO.2's multicast which is integrated into Grizzly on JDK7
+      * And I also implements a blocking multicast server for supporting JDK5 or 6
+      * The multicast server will be switched automatically according to runtime JDK version
+      * The connections will be cached like jxta's output cache. I used the CacheableConnectorHandlerPool of Grizzly
+      * For configuration
+         * You can use system property or property map
+         * See the GrizzlyConfigConstants
+         * If you set "-DTCPPORT=9090" with system property, TCP port 9090 will be used for listening, sending and receiving
+         * Set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="grizzly" with system property
+         * If you would like to default configurations, See GrizzlyNetworkManager#configure()
+
+   * Using JXTA
+      * Most of packages and classes are not changed as well as not removed, so if you run Shoal by default, the behavior is same to old version.
+         * Run by default or set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="jxta" with system property
+      * I created new packages for supporting JXTA on this Shoal version to which abstraction is applied  
+         * Set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="jxtanew" with system property
+         * com.sun.enterprise.mgmt.transport.jxta.*
+         * Most of original algorithms are also preserved.
+
+---++ How to compile
+   * Required JDK6 or JDK7
+   * Use the ant script and shoal/gms/build.xml which has been modified simply
+      
+---++ How to run
+   * Required additional grizzly-framework-1.9.16.jar and grizzly-utils-1.9.16.jar libraries
+   * You can test this simply with SimpleJoinTest.java
+      * For using grizzly transport
+         * java -cp grizzly-framework-1.9.16.jar;grizzly-utils-1.9.16.jar -DTCPPORT=9090 -DSHOAL_GROUP_COMMUNICATION_PROVIDER="grizzly" SimpleJoinTest server1
+         * If you run this on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
+      * For using original jxta transport
+         * java -cp jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER="jxta" SimpleJoinTest server1
+         * java -cp jxta.jar SimpleJoinTest server1
+         * Same to original Shoal
+      * For using new jxta transport
+         * java -cp jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER="jxtanew" SimpleJoinTest server1
+
+
+---++ Tests
+   * Simple gms functions of Shoal are tested like join, shutdown, failure, DSC, application message's sending and receiving
+
+
+---++ TODO
+   * Should write java doc about new classes and interfaces
+   * Various tests are needed on complicated environments
+   * Packages and class names should be reviewed
+   * Should consider that cluster members are located beyond one subnet or multicast traffic is disabled
+   * etc...
