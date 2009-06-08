@@ -36,26 +36,64 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import java.io.Serializable;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class GrizzlyPeerID implements Serializable {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    static final long serialVersionUID = 9093067296675025106L;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    private final String host;
+    private final int tcpPort;
+    private final int multicastPort;
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    public GrizzlyPeerID( String host, int tcpPort, int multicastPort ) {
+        this.host = host;
+        this.tcpPort = tcpPort;
+        this.multicastPort = multicastPort;
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public String getHost() {
+        return host;
+    }
+
+    public int getTcpPort() {
+        return tcpPort;
+    }
+
+    public int getMulticastPort() {
+        return multicastPort;
+    }
+
+    public boolean equals( Object other ) {
+        if( other instanceof GrizzlyPeerID ) {
+            GrizzlyPeerID otherPeerID = (GrizzlyPeerID)other;
+            if( tcpPort == otherPeerID.getTcpPort() && multicastPort == otherPeerID.getMulticastPort() ) {
+                if( host == otherPeerID.getHost() )
+                    return true;
+                if( host != null && host.equals( otherPeerID.getHost() ) )
+                    return true;
+                return false;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    public int hashCode() {
+        int result = 17;
+        if( host != null )
+            result = 37 * result + host.hashCode();
+        result = 37 * result + tcpPort;
+        result = 37 * result + multicastPort;
+        return result;
+    }
+
+    public String toString() {
+        return host + ":" + tcpPort + ":" + multicastPort;
+    }
 }

@@ -1,0 +1,18 @@
+2009-06-08
+Description: 
+   initial version is committed
+
+Modified:
+   com.sun.enterprise.ee.cms.core.GMSConstans.java
+   com.sun.enterprise.ee.cms.impl.common.GMSContext.java
+   com.sun.enterprise.ee.cms.impl.common.GMSContextFactory.java
+   com.sun.enterprise.ee.cms.impl.common.ViewWindow.java
+   build.properties
+   build.xml
+
+Added:
+   com.sun.enterprise.ee.cms.impl.base.*
+   com.sun.enterprise.mgmt.transport.*
+   history_transport_abstraction.txt
+   readme_transport_abstraction.txt
+

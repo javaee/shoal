@@ -36,6 +36,8 @@
 
 package com.sun.enterprise.ee.cms.impl.common;
 
+import com.sun.enterprise.ee.cms.core.GMSMember;
+
 import java.util.List;
 
 /**
@@ -51,9 +53,9 @@ public interface ViewWindow {
 
     boolean isCoordinator ();
 
-    List getPreviousView();
+    List<GMSMember> getPreviousView();
 
-    List getCurrentView();
+    List<GMSMember> getCurrentView();
 
     List<String> getCurrentCoreMembers();
 

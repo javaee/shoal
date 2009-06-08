@@ -36,26 +36,48 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.grizzly.util.LoggerUtils;
+
+import java.util.logging.Logger;
+import java.lang.reflect.Method;
+import java.nio.channels.DatagramChannel;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class GrizzlyUtil {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    private static Logger LOG = LoggerUtils.getLogger();
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    private static final boolean IS_SUPPORT_NIO_MULTICAST = ( getNIOMulticastMethod() != null );
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    private GrizzlyUtil() {
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public static Logger getLogger() {
+        return LOG;
+    }
+
+    public static void setLogger( Logger logger ) {
+        if( logger == null )
+            return;
+        LoggerUtils.setLogger( logger );
+        LOG = logger;
+    }
+
+    public static boolean isSupportNIOMulticast() {
+        return IS_SUPPORT_NIO_MULTICAST;
+    }
+
+    private static Method getNIOMulticastMethod() {
+        Method method = null;
+        try {
+            method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
+        } catch( Throwable t ) {
+            method = null;
+        }
+        return method;
+    }
 }

@@ -34,28 +34,19 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport;
+
+import java.io.IOException;
 
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public interface ShoalMessageSender {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    public static final int TCP_TRANSPORT = 0;
+    public static final int UDP_TRANSPORT = 1;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public void start() throws IOException;
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
-
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public void stop() throws IOException;
 }

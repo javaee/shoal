@@ -36,26 +36,29 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.grizzly.UDPConnectorHandler;
+import com.sun.grizzly.Controller;
+
+import java.nio.channels.SelectionKey;
+import java.io.IOException;
+import java.util.logging.Level;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class MulticastConnectorHandler extends UDPConnectorHandler {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
-
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
-
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
-
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    @Override
+    public void finishConnect( SelectionKey key) throws IOException {
+        if ( Controller.logger().isLoggable( Level.FINE)) {
+            Controller.logger().log(Level.FINE, "Finish connect");
+        }
+        underlyingChannel = key.channel();
+        isConnected = true;
+        synchronized(this) {
+            if (isConnectedLatch != null) {
+                isConnectedLatch.countDown();
+            }
+        }
+    }
 }

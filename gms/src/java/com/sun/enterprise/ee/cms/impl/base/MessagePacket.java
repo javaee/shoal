@@ -34,28 +34,27 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.ee.cms.impl.base;
 
 /**
- * @author Bongjae Chang
+ * @author Shreedhar Ganapathy
+ *         Date: Jul 11, 2006
+ * @version $Revision$
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class MessagePacket {
+    private SystemAdvertisement advertisement;
+    private Object message;
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    public MessagePacket(final SystemAdvertisement advertisement, final Object message) {
+        this.advertisement = advertisement;
+        this.message = message;
+    }
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public SystemAdvertisement getAdvertisement() {
+        return advertisement;
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
-
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public Object getMessage() {
+        return message;
+    }
 }

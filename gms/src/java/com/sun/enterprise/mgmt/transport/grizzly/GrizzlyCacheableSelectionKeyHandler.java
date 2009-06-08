@@ -36,26 +36,39 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.grizzly.util.Copyable;
+import com.sun.grizzly.connectioncache.server.CacheableSelectionKeyHandler;
+
+import java.nio.channels.SelectionKey;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class GrizzlyCacheableSelectionKeyHandler extends CacheableSelectionKeyHandler {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    private GrizzlyNetworkManager networkManager;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public GrizzlyCacheableSelectionKeyHandler() {
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    public GrizzlyCacheableSelectionKeyHandler( int highWaterMark, int numberToReclaim, GrizzlyNetworkManager networkManager ) {
+        super( highWaterMark, numberToReclaim );
+        this.networkManager = networkManager;
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    @Override
+    public void cancel( SelectionKey key ) {
+        super.cancel( key );
+        if( networkManager != null )
+            networkManager.removeRemotePeer( key );
+    }
+
+    @Override
+    public void copyTo( Copyable copy ) {
+        super.copyTo( copy );
+        if( copy instanceof GrizzlyCacheableSelectionKeyHandler ) {
+            GrizzlyCacheableSelectionKeyHandler copyHandler = (GrizzlyCacheableSelectionKeyHandler)copy;
+            copyHandler.networkManager = networkManager;
+        }
+    }
 }

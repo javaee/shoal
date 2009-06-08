@@ -36,26 +36,53 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.enterprise.mgmt.transport.MessageListener;
+import com.sun.enterprise.mgmt.transport.MessageEvent;
+import com.sun.enterprise.mgmt.transport.Message;
+import com.sun.enterprise.mgmt.transport.NetworkManager;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
+import com.sun.enterprise.mgmt.transport.MessageImpl;
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
+
+import java.io.IOException;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class PingMessageListener implements MessageListener {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    private static final Logger LOG = GrizzlyUtil.getLogger();
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public void receiveMessageEvent( final MessageEvent event ) throws MessageIOException {
+        if( event == null )
+            return;
+        final Message msg = event.getMessage();
+        if( msg == null )
+            return;
+        Object obj = event.getSource();
+        if( !( obj instanceof NetworkManager ) )
+            return;
+        NetworkManager networkManager = (NetworkManager)obj;
+        PeerID sourcePeerId = event.getSourcePeerID();
+        if( sourcePeerId == null )
+            return;
+        PeerID targetPeerId = event.getTargetPeerID();
+        if( targetPeerId == null )
+            return;
+        if( networkManager.getLocalPeerID().equals( targetPeerId ) ) {
+            // send a pong message
+            try {
+                networkManager.send( sourcePeerId, new MessageImpl( Message.TYPE_PONG_MESSAGE ));
+            } catch( IOException ie ) {
+                if( LOG.isLoggable( Level.WARNING ) )
+                    LOG.log( Level.WARNING, "failed to send a pong message" , ie );
+            }
+        }
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
-
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public int getType() {
+        return Message.TYPE_PING_MESSAGE;
+    }
 }

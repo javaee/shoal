@@ -34,28 +34,60 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+
+package com.sun.enterprise.mgmt;
+
+import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
+
+import java.io.Serializable;
 
 /**
- * @author Bongjae Chang
+ * Denotes a Cluster View Change Event. Provides the event and the system
+ * advertisement in question.
+ *
+ * @author Shreedhar Ganapathy
+ *         Date: Jun 29, 2006
+ * @version $Revision$
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class ClusterViewEvent implements Serializable {
+    private final ClusterViewEvents event;
+    private final SystemAdvertisement advertisement;
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    /**
+     * Constructor for the ClusterViewEvent object
+     *
+     * @param event         the Event
+     * @param advertisement The system advertisement associated with the event
+     */
+    ClusterViewEvent(final ClusterViewEvents event,
+                     final SystemAdvertisement advertisement) {
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+        if (event == null) {
+            throw new IllegalArgumentException("Null event not allowed");
+        }
+        if (advertisement == null) {
+            throw new IllegalArgumentException("Null advertisement not allowed");
+        }
+        this.event = event;
+        this.advertisement = advertisement;
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    /**
+     * Gets the event attribute of the ClusterViewEvent object
+     *
+     * @return The event value
+     */
+    public ClusterViewEvents getEvent() {
+        return event;
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    /**
+     * Gets the advertisement attribute of the ClusterViewEvent object
+     *
+     * @return The advertisement value
+     */
+    public SystemAdvertisement getAdvertisement() {
+        return advertisement;
+    }
 }
+

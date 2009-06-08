@@ -77,12 +77,14 @@ public interface GMSContext {
      */
     Router getRouter();
 
+    ViewWindow getViewWindow();
+
     DistributedStateCache getDistributedStateCache();
 
     void join() throws GMSException ;
 
     void leave(final GMSConstants.shutdownType shutdownType) ;
-    
+
     boolean isShuttingDown ();
 
     long getStartTime();
@@ -105,12 +107,12 @@ public interface GMSContext {
     ShutdownHelper getShutdownHelper ();
 
     GroupCommunicationProvider getGroupCommunicationProvider();
-    
+
     /**
      * lets this instance become a group leader explicitly
      * Typically this can be employed by an administrative member to become
      * a group leader prior to shutting down a group of members simultaneously.
-     *     
+     *
      * For underlying Group Communication Providers who don't support the feature
      * of a explicit leader role assumption, the implementation of this method
      * would be a no-op.
@@ -125,5 +127,5 @@ public interface GMSContext {
 
     public GroupManagementService.MemberType getMemberType();
 
-    public boolean isWatchdog(); 
+    public boolean isWatchdog();
 }

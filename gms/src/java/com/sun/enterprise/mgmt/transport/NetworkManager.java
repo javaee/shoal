@@ -34,28 +34,39 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport;
+
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
+
+import java.util.Map;
+import java.io.IOException;
 
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public interface NetworkManager extends MulticastMessageSender, MessageSender {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    public void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public void start() throws IOException;
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    public void stop() throws IOException;
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public void addMessageListener( final MessageListener messageListener );
+
+    public void removeMessageListener( final MessageListener messageListener );
+
+    public void receiveMessage( Message message, Map piggyback );
+
+    public PeerID getLocalPeerID();
+
+    public PeerID getPeerID( final String instanceName );
+
+    public void removePeerID( final PeerID peerID );
+
+    public boolean isConnected( final PeerID peerID );
+
+    public MessageSender getMessageSender( int transport );
+
+    public MulticastMessageSender getMulticastMessageSender();
 }

@@ -34,28 +34,44 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.ee.cms.impl.base;
+
+import com.sun.enterprise.mgmt.ClusterView;
+import com.sun.enterprise.mgmt.ClusterViewEvents;
 
 /**
- * @author Bongjae Chang
+ * @author Shreedhar Ganapathy
+ *         Date: Jun 27, 2006
+ * @version $Revision$
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class EventPacket {
+    private final ClusterViewEvents clusterViewEvent;
+    private final SystemAdvertisement systemAdvertisement;
+    private final ClusterView clusterView;
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    public EventPacket(
+            final ClusterViewEvents clusterViewEvent,
+            final SystemAdvertisement systemAdvertisement,
+            final ClusterView clusterView) {
+        this.clusterViewEvent = clusterViewEvent;
+        this.systemAdvertisement = systemAdvertisement;
+        this.clusterView = clusterView;
+    }
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public ClusterViewEvents getClusterViewEvent() {
+        return clusterViewEvent;
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    public SystemAdvertisement getSystemAdvertisement() {
+        return systemAdvertisement;
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public ClusterView getClusterView() {
+        return clusterView;
+    }
+
+    public String toString() {
+        final String token = systemAdvertisement.getName();
+        return clusterViewEvent.toString() + " from " + token;
+    }
 }

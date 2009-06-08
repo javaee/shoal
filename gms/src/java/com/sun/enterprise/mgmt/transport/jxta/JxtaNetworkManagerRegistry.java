@@ -34,28 +34,64 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.jxta;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
- * @author Bongjae Chang
+ * This is a registry that holds the network manager instances based on group name.
+ *
+ * @author Shreedhar Ganapathy
+ *         Date: Oct 12, 2006
+ *         Time: 10:46:25 AM
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class JxtaNetworkManagerRegistry {
+    private static final Map<String, JxtaNetworkManagerProxy> registry = new HashMap<String, JxtaNetworkManagerProxy>();
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    private JxtaNetworkManagerRegistry() {
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    /**
+     * Adds a Network Manager Proxy to the registry for the given GroupName and NetworkManager Instance
+     *
+     * @param groupName - name of the group
+     * @param manager   - Network Manager instance for which a proxy is registered
+     */
+    static void add(final String groupName, final JxtaNetworkManager manager) {
+        synchronized ( registry ) {
+            registry.put(groupName, new JxtaNetworkManagerProxy(manager));
+        }
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    /**
+     * returns a NetworkManagerProxy for the given groupName
+     *
+     * @param groupName name of the group
+     * @return NetworkManagerProxy instance wrapping a network manager corresponding to the group
+     */
+    static JxtaNetworkManagerProxy getNetworkManagerProxy(final String groupName) {
+        return registry.get(groupName);
+    }
+
+    /**
+     * removes the NetworkManagerProxy instance from the registry.
+     *
+     * @param groupName name of the group
+     */
+    public static void remove(final String groupName) {
+        synchronized ( registry ) {
+            registry.remove(groupName);
+        }
+    }
+
+    /**
+     * Returns all registered domain names
+     * @return an interator of domain names
+     */
+    public static Iterator<String> getGroups() {
+        return registry.keySet().iterator();
+    }
 }

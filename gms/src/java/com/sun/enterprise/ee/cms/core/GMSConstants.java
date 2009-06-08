@@ -47,6 +47,8 @@ package com.sun.enterprise.ee.cms.core;
 public class GMSConstants {
 
     public static final String DEFAULT_GROUP_COMMUNICATION_PROVIDER="Jxta";
+    public static final String GRIZZLY_GROUP_COMMUNICATION_PROVIDER="Grizzly";
+    public static final String JXTA_NEW_GROUP_COMMUNICATION_PROVIDER="JxtaNew";
     public static final String GROUP_COMMUNICATION_PROVIDER =
         System.getProperty ("SHOAL_GROUP_COMMUNICATION_PROVIDER",
                 DEFAULT_GROUP_COMMUNICATION_PROVIDER);

@@ -34,28 +34,36 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+
+package com.sun.enterprise.mgmt;
+
+import java.util.EventListener;
 
 /**
- * @author Bongjae Chang
+ * The listener interface for receiving ClusterViewManager events.
+ * <p/>
+ * The following example illustrates how to implement a {@link com.sun.enterprise.mgmt.ClusterViewEventListener}:
+ * <pre><tt>
+ * ClusterViewEventListener myListener = new ClusterViewEventListener() {
+ * <p/>
+ *   public void clusterViewEvent(int event, , SystemAdvertisement advertisement) {
+ *        if (event == ClusterViewManager.ADD_EVENT) {
+ *          .....
+ *        }
+ *   }
+ * }
+ * <p/>
+ * </tt></pre>
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+public interface ClusterViewEventListener extends EventListener {
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
-
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
-
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    /**
+     * Called when a cluster view event occurs.
+     *
+     * @param event       The event that occurred.
+     * @param clusterView the current membership snapshot after the event.
+     */
+    void clusterViewEvent(ClusterViewEvent event,
+                          ClusterView clusterView);
 }

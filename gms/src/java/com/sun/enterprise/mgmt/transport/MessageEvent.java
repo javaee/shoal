@@ -34,28 +34,55 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport;
+
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
+
+import java.util.EventObject;
 
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class MessageEvent extends EventObject {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    /**
+     * The received Message
+     */
+    private final Message message;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    private final PeerID sourcePeerID;
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    private final PeerID targetPeerID;
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    /**
+     * Creates a new event
+     *
+     * @param source  The object on which the message was received.
+     * @param message The message object
+     * @param sourcePeerID source peer id
+     * @param targetPeerID target peer id
+     */
+    public MessageEvent( Object source, Message message, PeerID sourcePeerID, PeerID targetPeerID ) {
+        super( source );
+        this.message = message;
+        this.sourcePeerID = (PeerID)sourcePeerID;
+        this.targetPeerID = (PeerID)targetPeerID;
+    }
+
+    /**
+     * Returns the message associated with the event
+     *
+     * @return message
+     */
+    public Message getMessage() {
+        return message;
+    }
+
+    public PeerID getSourcePeerID() {
+        return sourcePeerID;
+    }
+
+    public PeerID getTargetPeerID() {
+        return targetPeerID;
+    }
 }

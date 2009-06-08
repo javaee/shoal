@@ -36,26 +36,38 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.enterprise.mgmt.transport.MessageListener;
+import com.sun.enterprise.mgmt.transport.MessageEvent;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
+import com.sun.enterprise.mgmt.transport.Message;
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
+
+import java.util.concurrent.CountDownLatch;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class PongMessageListener implements MessageListener {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    public void receiveMessageEvent( final MessageEvent event ) throws MessageIOException {
+        if( event == null )
+            return;
+        final Message msg = event.getMessage();
+        if( msg == null )
+            return;
+        Object obj = event.getSource();
+        if( !( obj instanceof GrizzlyNetworkManager ) )
+            return;
+        GrizzlyNetworkManager networkManager = (GrizzlyNetworkManager)obj;
+        PeerID sourcePeerId = event.getSourcePeerID();
+        if( sourcePeerId == null )
+            return;
+        CountDownLatch pingMessageLock = networkManager.getPingMessageLock( sourcePeerId );
+        if( pingMessageLock != null )
+            pingMessageLock.countDown();
+    }
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
-
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
-
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public int getType() {
+        return Message.TYPE_PONG_MESSAGE;
+    }
 }

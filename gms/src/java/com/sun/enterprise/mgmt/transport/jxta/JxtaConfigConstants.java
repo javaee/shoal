@@ -34,28 +34,43 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.jxta;
 
 /**
- * @author Bongjae Chang
+ * Specifies constants that are allowed to be used as keys for configuration
+ * elements that are sought to be set or retrieved for/from Jxta platform
+ * configuration
+ *
+ * @author Shreedhar Ganapathy
+ *         Date: Jun 22, 2006
+ * @version $Revision$
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public enum JxtaConfigConstants {
+    PRINCIPAL,
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    PASSWORD,
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    JXTAHOME,
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    TCPSTARTPORT,
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    TCPENDPORT,
+
+    HTTPADDRESS,
+
+    HTTPPORT,
+
+    // specifies if this node is a rendezvous seed peer
+    IS_BOOTSTRAPPING_NODE,
+
+    //comma separated list of tcp/http rendezvous seed uri endpoints
+    VIRTUAL_MULTICAST_URI_LIST,
+
+    MULTICAST_POOLSIZE,    // how many simultaneous multicast messages can be processed before multicast messages start getting dropped.
+
+    TCP_MAX_POOLSIZE,      // max threads for tcp processing.   See max parameter for ThreadPoolExecutor constructor.
+
+    TCP_CORE_POOLSIZE,     // core threads for tcp processing.  See core parameter for ThreadPoolExecutor constructor.
+
+    TCP_BLOCKING_QUEUESIZE,  // queue for pending incoming tcp requests (out of CORE threads).  When full, new threads created till MAX.
 }

@@ -36,26 +36,43 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.grizzly.ProtocolFilter;
+import com.sun.grizzly.Context;
+import com.sun.grizzly.ProtocolParser;
+import com.sun.enterprise.mgmt.transport.Message;
+
+import java.io.IOException;
+import java.nio.channels.SelectionKey;
+import java.util.Map;
+import java.util.HashMap;
+
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public class GrizzlyMessageDispatcherFilter implements ProtocolFilter {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    private final GrizzlyNetworkManager networkManager;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public GrizzlyMessageDispatcherFilter( GrizzlyNetworkManager networkManager ) {
+        this.networkManager = networkManager;
+    }
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    public boolean execute( Context ctx ) throws IOException {
+        Object obj = ctx.removeAttribute( ProtocolParser.MESSAGE );
+        if( !( obj instanceof Message ) )
+            throw new IOException( "received message is not valid: " + obj );
+        final Message incomingMessage = (Message)obj;
+        final SelectionKey selectionKey = ctx.getSelectionKey();
+        Map<String, Object> piggyback = null;
+        if( selectionKey != null ) {
+            piggyback = new HashMap<String, Object>();
+            piggyback.put( GrizzlyNetworkManager.MESSAGE_SELECTION_KEY_TAG, selectionKey );
+        }
+        networkManager.receiveMessage( incomingMessage, piggyback );
+        return false;
+    }
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public boolean postExecute( Context context ) throws IOException {
+        return true;
+    }
 }

@@ -56,24 +56,26 @@ public class GMSContextFactory {
     private GMSContextFactory () { }
 
     //TODO: Shreedhar's comment: The invocation of appropriate provider's context has got to get better
-    static GMSContext produceGMSContext(final String serverToken, 
+    static GMSContext produceGMSContext(final String serverToken,
                             final String groupName,
                             final GroupManagementService.MemberType memberType,
                             final Properties properties){
         GMSContext ctx;
         final String gmsContextProvider = GMSConstants.GROUP_COMMUNICATION_PROVIDER;
         if((ctx = ctxCache.get( groupName )) ==  null){
-            if(gmsContextProvider.equals(
-                    GMSConstants.DEFAULT_GROUP_COMMUNICATION_PROVIDER))
-            {
-                ctx =  new com.sun.enterprise.ee.cms.impl.jxta.GMSContext(
-                            serverToken, groupName, memberType, properties);
+            if( gmsContextProvider.equalsIgnoreCase( GMSConstants.DEFAULT_GROUP_COMMUNICATION_PROVIDER ) ) {
+                ctx = new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );
+            } else if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ||
+                       gmsContextProvider.equalsIgnoreCase( GMSConstants.JXTA_NEW_GROUP_COMMUNICATION_PROVIDER ) ) {
+                ctx = new com.sun.enterprise.ee.cms.impl.base.GMSContextImpl( serverToken, groupName, memberType, properties );
+            } else {
+                ctx = new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );
             }
             ctxCache.put(groupName, ctx);
         }
         return ctx;
     }
- 
+
     public static GMSContext getGMSContext( final String groupName ){
         return ctxCache.get(groupName);
     }

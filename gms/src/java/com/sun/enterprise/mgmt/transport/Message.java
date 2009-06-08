@@ -34,28 +34,59 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport;
+
+import java.nio.ByteBuffer;
+import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Bongjae Chang
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public interface Message extends Serializable {
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    static final long serialVersionUID = -8835127468511258700L;
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    public static final int TYPE_CLUSTER_MANAGER_MESSAGE = 1;
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    public static final int TYPE_HEALTH_MONITOR_MESSAGE = 2;
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    public static final int TYPE_MASTER_NODE_MESSAGE = 3;
+
+    public static final int TYPE_MCAST_MESSAGE = 4;
+
+    public static final int TYPE_PING_MESSAGE = 5;
+
+    public static final int TYPE_PONG_MESSAGE = 6;
+
+    public static final String SOURCE_PEER_ID_TAG = "sourcePeerId";
+    
+    public static final String TARGET_PEER_ID_TAG = "targetPeerId";
+
+    public void initialize( final int type, final Map<String, Serializable> messages ) throws IllegalArgumentException;
+
+    public int parseHeader( final byte[] bytes, final int offset ) throws IllegalArgumentException;
+
+    public int parseHeader( final ByteBuffer byteBuffer, final int offset ) throws IllegalArgumentException;
+
+    public void parseMessage( final byte[] bytes, final int offset, final int length ) throws IllegalArgumentException, MessageIOException;
+
+    public void parseMessage( final ByteBuffer byteBuffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException;
+
+    public int getVersion();
+
+    public int getType();
+
+    public Object addMessageElement( final String key, final Serializable value );
+
+    public Object getMessageElement( final String key );
+
+    public Object removeMessageElement( final String key );
+
+    public Set<Map.Entry<String, Serializable>> getMessageElements();
+
+    public ByteBuffer getPlainByteBuffer() throws MessageIOException;
+
+    public byte[] getPlainBytes() throws MessageIOException;
 }

@@ -79,6 +79,8 @@
 
     <path id="compile.classpath">
          <pathelement location="${jxta.jar}"/>
+         <pathelement location="${grizzly-framework.jar}"/>
+         <pathelement location="${grizzly-utils.jar}"/>
     </path>
 
 
@@ -199,6 +201,8 @@
         </copy>
         <copy todir="${bundle.gms.lib}">
             <fileset file="${jxta.jar}"/>
+            <fileset file="${grizzly-framework.jar}"/>
+            <fileset file="${grizzly-utils.jar}"/>
         </copy>
         <copy todir="${bundle.gms}">
             <fileset file="${license.dir}"/>

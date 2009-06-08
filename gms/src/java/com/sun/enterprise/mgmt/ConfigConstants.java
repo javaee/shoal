@@ -34,28 +34,41 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt;
 
 /**
- * @author Bongjae Chang
+ * Specifies constants that are allowed to be used as keys for configuration
+ * elements that are sought to be set or retrieved for/from transport configuration
+ *
+ * @author Shreedhar Ganapathy
+ *         Date: Jun 22, 2006
+ * @version $Revision$
  */
-public enum GrizzlyConfigConstants {
-    TCPPORT,
-    BIND_INTERFACE_NAME,
+public enum ConfigConstants {
+    MULTICASTADDRESS,
 
-    // thread pool
-    MAX_POOLSIZE, // max threads for tcp and multicast processing. See max parameter for ThreadPoolExecutor constructor.
-    CORE_POOLSIZE, // core threads for tcp and multicast processing. See core parameter for ThreadPoolExecutor constructor.
-    KEEP_ALIVE_TIME, // ms
-    POOL_QUEUE_SIZE,
+    MULTICASTPORT,
 
-    // pool management
-    HIGH_WATER_MARK, // maximum number of active outbound connections Controller will handle
-    NUMBER_TO_RECLAIM, // number of LRU connections, which will be reclaimed in case highWaterMark limit will be reached
-    MAX_PARALLEL, // maximum number of active outbound connections to single destination (usually <host>:<port>)
+    MULTICAST_PACKET_SIZE,
 
-    START_TIMEOUT, // ms
-    WRITE_TIMEOUT, // ms
+    FAILURE_DETECTION_TIMEOUT,
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    FAILURE_DETECTION_RETRIES,
+
+    FAILURE_VERIFICATION_TIMEOUT,
+
+    DISCOVERY_TIMEOUT,
+
+    LOOPBACK,
+
+    //used for specifying which interface to use for group communication
+    // This is the address which Shoal should bind to for communication.
+    BIND_INTERFACE_ADDRESS,
+
+    //admin can specify the timeout after which the HealthMonitor.isConnected() thread can
+    //quit checking if the peer's machine is up or not.
+    FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT,
+
+    //port where a socket can be created to see if the instance's machine is up or down
+    FAILURE_DETECTION_TCP_RETRANSMIT_PORT
 }
