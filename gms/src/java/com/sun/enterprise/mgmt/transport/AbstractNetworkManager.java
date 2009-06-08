@@ -86,6 +86,11 @@ public abstract class AbstractNetworkManager implements NetworkManager {
             if( element instanceof PeerID )
                 targetPeerID = (PeerID)element;
         }
+        if( sourcePeerID != null && !localPeerID.getGroupName().equals( sourcePeerID.getGroupName() ) )
+            return; // drop the different group's packet
+        // this is redundant check
+        //if( targetPeerID != null && !localPeerID.getGroupName().equals( targetPeerID.getGroupName() ) )
+        //    return; // drop the different group's packet
         MessageEvent messageEvent = new MessageEvent( this, message, sourcePeerID, targetPeerID );
         try {
             beforeDispatchingMessage( messageEvent, piggyback );
