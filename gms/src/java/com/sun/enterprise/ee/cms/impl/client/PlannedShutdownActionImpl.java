@@ -1,4 +1,4 @@
- /*
+/*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
  * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
@@ -34,44 +34,48 @@
  * holder.
  */
 
-package com.sun.enterprise.ee.cms.impl.client;
+   package com.sun.enterprise.ee.cms.impl.client;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+   import com.sun.enterprise.ee.cms.core.*;
+   import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+   import java.util.logging.Level;
+   import java.util.logging.Logger;
 
-/**
- * Reference Implementation of PlannedShutdownAction
- * @author Shreedhar Ganapathy
- *         Date: Mar 15, 2005
- * @version $Revision$
- */
-public class PlannedShutdownActionImpl implements PlannedShutdownAction {
-    private CallBack callBack;
-    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    public PlannedShutdownActionImpl(final CallBack callBack) {
-        this.callBack=callBack;
-    }
+   /**
+* Reference Implementation of PlannedShutdownAction
+* @author Shreedhar Ganapathy
+*         Date: Mar 15, 2005
+* @version $Revision$
+*/
+   public class PlannedShutdownActionImpl implements PlannedShutdownAction {
+   private CallBack callBack;
+   private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+   public PlannedShutdownActionImpl(final CallBack callBack) {
+       this.callBack=callBack;
+   }
 
-    /**
-     * Implementations of consumeSignal should strive to return control
-     * promptly back to the thread that has delivered the Signal.
-     */
-    public void consumeSignal(final Signal s) throws ActionException {
-        try {
-            s.acquire();
-            callBack.processNotification(s);
+   /**
+    * Implementations of consumeSignal should strive to return control
+    * promptly back to the thread that has delivered the Signal.
+    */
+   public void consumeSignal(final Signal s) throws ActionException {
+       boolean signalAcquired = false;
+       try {
+           s.acquire();
+           signalAcquired = true;
+           callBack.processNotification(s);
 
-        } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-
-        try {
-            s.release();
-        } catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-    }
+       } catch (SignalAcquireException e) {
+           logger.log(Level.SEVERE, e.getLocalizedMessage());
+       } finally {
+           if (signalAcquired) {
+               try {
+                   s.release();
+               } catch (SignalReleaseException e) {
+                   logger.log(Level.SEVERE, e.getLocalizedMessage());
+               }
+           }
+       }
+   }
 }

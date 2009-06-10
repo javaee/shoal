@@ -339,6 +339,9 @@ public class Router {
                     a.consumeSignal(signal);
                 } catch (ActionException e) {
                     logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
+                } catch (Throwable t) {
+                    // just in case application provides own ActionImpl.
+                    logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
                 }
             }
         }
@@ -347,7 +350,7 @@ public class Router {
     void notifyJoinNotificationAction(final JoinNotificationSignal signal) {
         JoinNotificationAction a;
         JoinNotificationSignal jns;
-        //todo: NEED to be able to predetermine the number of GMS clients 
+        //todo: NEED to be able to predetermine the number of GMS clients
         //that would register for join notifications.
         if (isJoinNotificationAFRegistered()) {
             logger.log(Level.FINE,
@@ -364,7 +367,7 @@ public class Router {
             // put it back to the queue if it is less than
             // 30 secs since start time. we give 30 secs for join notif
             // registrations to happen until which time, the signals are
-            // available in queue. 
+            // available in queue.
             try {
                 queue.put(new SignalPacket(signal));
             } catch (InterruptedException e) {
@@ -461,7 +464,7 @@ public class Router {
         return retval;
     }
 
-       public boolean isJoinedAndReadyNotificationAFRegistered() {
+    public boolean isJoinedAndReadyNotificationAFRegistered() {
         boolean retval = true;
         synchronized (joinedAndReadyNotificationAF) {
             if (joinedAndReadyNotificationAF.isEmpty())
@@ -506,7 +509,16 @@ public class Router {
         }
 
         public Object call() throws ActionException {
-            action.consumeSignal(signal);
+            try {
+                action.consumeSignal(signal);
+            } catch (ActionException ae) {
+                // don't wrap an ActionException within an ActionException.
+                throw ae;
+            } catch (Throwable t) {
+                ActionException nae = new ActionException();
+                nae.initCause(t);
+                throw nae;
+            }
             return null;
         }
     }

@@ -1,4 +1,4 @@
- /*
+/*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
  * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
@@ -34,51 +34,57 @@
  * holder.
  */
 
- package com.sun.enterprise.ee.cms.impl.client;
+package com.sun.enterprise.ee.cms.impl.client;
 
-import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+   import com.sun.enterprise.ee.cms.core.*;
+   import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+   import java.util.logging.Level;
+   import java.util.logging.Logger;
 
-/**
- * Reference Implementation of FailureSuspicionAction interface
- * 
- * @author Shreedhar Ganapathy
- *         Date: Sep 21, 2005
- * @version $Revision$
- */
-public class FailureSuspectedActionImpl implements FailureSuspectedAction {
-    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private CallBack caller;
+   /**
+* Reference Implementation of FailureSuspicionAction interface
+*
+* @author Shreedhar Ganapathy
+*         Date: Sep 21, 2005
+* @version $Revision$
+*/
+   public class FailureSuspectedActionImpl implements FailureSuspectedAction {
+   private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+   private CallBack caller;
 
-    public FailureSuspectedActionImpl (final CallBack caller) {
-        this.caller=caller;
-    }
-    /**
-     * processes the signal. typically involves getting information
-     * from the signal, acquiring the signal and after processing, releasing
-     * the signal
-     * @param signal
-     */
-    public void consumeSignal(final Signal signal) {
-        //ALWAYS call Acquire before doing any other processing
-        try {
-            signal.acquire();
-            notifyListeners(signal);
-            //ALWAYS call Release after completing any other processing.
-            signal.release();
-        } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-        catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
-    }
+   public FailureSuspectedActionImpl (final CallBack caller) {
+       this.caller=caller;
+   }
+   /**
+    * processes the signal. typically involves getting information
+    * from the signal, acquiring the signal and after processing, releasing
+    * the signal
+    * @param signal
+    */
+   public void consumeSignal(final Signal signal) {
+       boolean signalAcquired = false;
+       //ALWAYS call Acquire before doing any other processing
+       try {
+           signal.acquire();
+           signalAcquired = true;
+           notifyListeners(signal);
+       } catch (SignalAcquireException e) {
+           logger.log(Level.SEVERE, e.getLocalizedMessage());
+       } finally {
+           if (signalAcquired) {
+               try {
+                   //ALWAYS call Release after completing any other processing.
+                   signal.release();
+               } catch (SignalReleaseException e) {
+                   logger.log(Level.SEVERE, e.getLocalizedMessage());
+               }
+           }
+       }
+   }
 
-    private void notifyListeners(final Signal signal) {
-        caller.processNotification(signal);
-    }
+   private void notifyListeners(final Signal signal) {
+       caller.processNotification(signal);
+   }
 
-}
+   }

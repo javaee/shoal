@@ -63,25 +63,31 @@ public class FailureRecoveryActionImpl implements FailureRecoveryAction {
      * the signal
      * @param signal
      */
-    public void consumeSignal(final Signal signal) {
+    public void consumeSignal(final Signal signal) throws ActionException {
+        boolean signalAcquired = false;
+        final String component = ((FailureRecoverySignal)signal).getComponentName();
         try {
             //This is a mandatory call.
             // Always call acquire before doing any other processing as this
             // results in Failure Fencing which protects other members from
             // doing the same recovery operation
             signal.acquire();
-            final String component =
-                    ((FailureRecoverySignal)signal).getComponentName();
+            signalAcquired = true;
             logger.log(Level.FINE,component+":Failure Recovery Signal acquired");
             notifyListeners(signal);
-            //Always Release after completing any other processing.This call is
-            // also mandatory.
-            signal.release();
-            logger.log(Level.FINE, component+":Failure Recovery Signal released");
         } catch (SignalAcquireException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
-        } catch (SignalReleaseException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+        } finally {
+            if (signalAcquired) {
+                //Always Release after completing any other processing.This call is
+                // also mandatory.
+                try{
+                    signal.release();
+                    logger.log(Level.FINE, component+":Failure Recovery Signal released");
+                } catch (SignalReleaseException e) {
+                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                }
+            }
         }
     }
 

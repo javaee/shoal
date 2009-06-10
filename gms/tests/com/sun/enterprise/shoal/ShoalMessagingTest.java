@@ -139,6 +139,9 @@ public class ShoalMessagingTest implements Runnable, CallBack {
             if (total_msgs_received % 1000 == 0) {
                 System.out.println("-- received " + total_msgs_received);
             }
+	    if (total_msgs_received == 2001) {
+		throw new NullPointerException("simulated unchecked exception test");
+	    }
         } else {
             System.err.println(new StringBuffer().append(serviceName)
                     .append(": Notification Received from:")
