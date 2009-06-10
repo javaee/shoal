@@ -72,7 +72,7 @@ import static com.sun.enterprise.jxtamgmt.JxtaUtil.appendChild;
  */
 public class HealthMessage {
     private static final Logger LOG = JxtaUtil.getLogger(HealthMessage.class.getName());
-    
+
     private List<Entry> entries;
     private PeerID srcID;
 
@@ -80,7 +80,7 @@ public class HealthMessage {
     private static final String srcTag = "src";
     private static final String stateTag = "state";
     private static final String seqIdTag = "seqId";
-    
+
     /**
      * Default Constructor
      */
@@ -147,7 +147,7 @@ public class HealthMessage {
             e = adv.createElement(entryTag);
             appendChild(adv, e);
             ((Attributable) e).addAttribute(stateTag, entry.state);
-            
+
             // send sender's hm sequence id for use in ensuring that hm are processed in sender's order on receiving side.
             ((Attributable) e).addAttribute(seqIdTag, Long.toString(entry.seqID));
             StructuredTextDocument doc = (StructuredTextDocument) entry.adv.getDocument(asMimeType);
@@ -173,7 +173,7 @@ public class HealthMessage {
     public PeerID getSrcID() {
         return srcID;
     }
-    
+
     /**
      * Process an individual element from the document.
      *
@@ -271,7 +271,7 @@ public class HealthMessage {
     public void setSrcID(final PeerID id) {
         this.srcID = (id == null ? null : id);
     }
-    
+
     /**
      * returns the document string representation of this object
      *
@@ -320,7 +320,7 @@ public class HealthMessage {
          */
         final long seqID;
         transient long srcStartTime = 0;
-        
+
         /**
          * Creates a Entry with id and state
          *
@@ -335,11 +335,15 @@ public class HealthMessage {
             this.timestamp =System.currentTimeMillis();
             this.seqID = seqID;
         }
-        
+
+        public Entry(final Entry previousEntry, final String newState) {
+            this(previousEntry.adv,  newState, previousEntry.seqID + 1);
+        }
+
         public long getSeqID() {
             return seqID;
         }
-        
+
         public long getSrcStartTime() {
             String startTime = null;
             if (srcStartTime == 0) {
@@ -356,18 +360,18 @@ public class HealthMessage {
             }
             return srcStartTime;
         }
-        
+
         /**
          * Since MasterNode reports on other peers that they are DEAD or INDOUBT, be sure not to compare sequence ids between
          * a peer and a MasterNode health message report on that peer.
-         * 
+         *
          * @param other
          * @return true if this HM.entry and other are from same member.
          */
         public boolean isFromSameMember(HealthMessage.Entry other) {
             return (other != null && id.equals(other.id));
         }
-        
+
         /**
          * Detect when one hm is from a failed member and the new hm is from the restart of that member.
          * @param other
