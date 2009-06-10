@@ -67,7 +67,7 @@ import com.sun.enterprise.ee.cms.core.GroupManagementService;
 public class JxtaUtil {
     private static Logger LOG = Logger.getLogger(
             System.getProperty("JXTA_MGMT_LOGGER", "JxtaMgmt"));
-    
+
     private static String jxtaLoggingPropertyValue = System.getProperty(Logging.JXTA_LOGGING_PROPERTY);
 
     private JxtaUtil() {
@@ -149,7 +149,7 @@ public class JxtaUtil {
             System.setProperty(Logging.JXTA_LOGGING_PROPERTY, Level.SEVERE.toString());
         }
 
-        jxtaLogger.addHandler(consoleHandler);         
+        jxtaLogger.addHandler(consoleHandler);
     }
 
     /**
@@ -195,10 +195,10 @@ public class JxtaUtil {
     static public void appendChild(StructuredDocument adv, Element child) {
         adv.appendChild(child);
     }
-    
+
     public static void configureJxtaLogging() {
         if (jxtaLoggingPropertyValue == null) {
-            
+
             // Only default jxta logging to SEVERE when jxta logging has not already been explicitly enabled.
             jxtaLoggingPropertyValue = Level.SEVERE.toString();
             System.setProperty(Logging.JXTA_LOGGING_PROPERTY, jxtaLoggingPropertyValue);
@@ -207,17 +207,17 @@ public class JxtaUtil {
             }
         } else {
             if (LOG.isLoggable(Level.CONFIG)) {
-                LOG.config("gms configureJxtaLogging: found jxta system property " + Logging.JXTA_LOGGING_PROPERTY + " is already configured to " 
+                LOG.config("gms configureJxtaLogging: found jxta system property " + Logging.JXTA_LOGGING_PROPERTY + " is already configured to "
                            + jxtaLoggingPropertyValue);
             }
         }
     }
-    
+
     static final public int MAX_SEND_RETRIES = 4;
-    
+
     /**
      * Send <code>msg</code> over <code>pipe</code>.
-     *  
+     *
      * @param pipe
      * @param msg
      * @return boolean <code>true</code> if the message has been sent otherwise
@@ -230,7 +230,14 @@ public class JxtaUtil {
 
         boolean sent = false;
         for (int i = 0; i < MAX_SEND_RETRIES && !sent; i++) {
-            sent = pipe.send(msg);
+            // Short term fix is to introduce a synchronized on pipe
+            // since msg send is failing when too many threads try to send on same
+            // pipe at same time.  (i.e. MultiThreadMessageSender sending msg using 100 threads)
+            //TBD:   Future optimization is to introduce a pipe pool where each pipe is
+            //       only used by one thread at a time.
+            synchronized(pipe) {
+                sent = pipe.send(msg);
+            }
         }
         return sent;
     }
