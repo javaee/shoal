@@ -90,7 +90,7 @@
       * For configuration
          * You can use system property or property map
          * See the GrizzlyConfigConstants
-         * If you set "-DTCPPORT=9090" with system property, TCP port 9090 will be used for listening, sending and receiving
+         * If you set "-DTCPSTARTPORT=9090 -DTCPENDPORT=9120" with system property, an available TCP port between TCPSTARTPORT and TCPENDPORT will be used for listening, sending and receiving
          * Set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="grizzly" with system property
          * If you would like to default configurations, See GrizzlyNetworkManager#configure()
 
@@ -110,7 +110,7 @@
    * Required additional grizzly-framework-1.9.16.jar and grizzly-utils-1.9.16.jar libraries
    * You can test this simply with SimpleJoinTest.java
       * For using grizzly transport
-         * java -cp grizzly-framework-1.9.16.jar;grizzly-utils-1.9.16.jar -DTCPPORT=9090 -DSHOAL_GROUP_COMMUNICATION_PROVIDER="grizzly" SimpleJoinTest server1
+         * java -cp grizzly-framework-1.9.16.jar;grizzly-utils-1.9.16.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER="grizzly" SimpleJoinTest server1
          * If you run this on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
       * For using original jxta transport
          * java -cp jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER="jxta" SimpleJoinTest server1

@@ -19,3 +19,12 @@ Description:
     Fixed the bug which allowed different group's multicast packet.
 Modified:
     com.sun.enterprise.mgmt.transport.AbstractNetworkManager.java
+
+2009-06-11
+Description:
+    When Grizzly transport layer used, the network manager sets an available tcp port between TCPSTARTPORT and TCPENDPORT.
+    This case is useful for member's joining the different group in same JVM.
+Modified:
+    com.sun.enterprise.mgmt.transport.NetworkUtility.java
+    com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager.java
+    com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.java

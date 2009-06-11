@@ -109,7 +109,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     private void configure( final Map properties ) {
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
-        tcpPort = Utility.getIntProperty( TCPPORT.toString(), 9090, properties );
+        int tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
+        int tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
+        tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), "230.30.1.1", properties );
         networkInterfaceName = Utility.getStringProperty( BIND_INTERFACE_NAME.toString(), null, properties );

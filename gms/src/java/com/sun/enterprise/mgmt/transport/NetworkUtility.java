@@ -41,6 +41,7 @@ import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Collections;
@@ -288,6 +289,28 @@ public class NetworkUtility {
                 }
             }
         }
+    }
+
+    public static int getAvailableTCPPort( String host, int tcpStartPort, int tcpEndPort ) {
+        if( tcpStartPort > tcpEndPort )
+            tcpEndPort = tcpStartPort + 30;
+        for( int i = tcpStartPort; tcpStartPort <= tcpEndPort; i++ ) {
+            ServerSocket testSocket = null;
+            try {
+                testSocket = new ServerSocket( i, -1, host == null ? null : InetAddress.getByName( host ) );
+            } catch( IOException ie ) {
+                continue;
+            } finally {
+                if( testSocket != null ) {
+                    try {
+                        testSocket.close();
+                    } catch( IOException e ) {
+                    }
+                }
+            }
+            return i;
+        }
+        return tcpStartPort;
     }
 
     private static final Field DEPTH_FIELD;

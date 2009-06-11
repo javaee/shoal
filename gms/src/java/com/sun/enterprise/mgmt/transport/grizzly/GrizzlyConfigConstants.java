@@ -40,7 +40,8 @@ package com.sun.enterprise.mgmt.transport.grizzly;
  * @author Bongjae Chang
  */
 public enum GrizzlyConfigConstants {
-    TCPPORT,
+    TCPSTARTPORT,
+    TCPENDPORT,
     BIND_INTERFACE_NAME,
 
     // thread pool
