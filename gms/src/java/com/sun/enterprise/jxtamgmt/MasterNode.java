@@ -106,6 +106,7 @@ import java.util.logging.Logger;
  */
 class MasterNode implements PipeMsgListener, Runnable {
     private static final Logger LOG = JxtaUtil.getLogger(MasterNode.class.getName());
+    private static final Logger masterLogger = Logger.getLogger("ShoalLogger.MasterNode");
     private final ClusterManager manager;
     private InputPipe inputPipe;
     private OutputPipe outputPipe;
@@ -428,7 +429,11 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return The master value
      */
     boolean isMaster() {
-        LOG.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
+        if (masterLogger.isLoggable(Level.FINER)) {
+            masterLogger.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
+        } else {
+            LOG.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
+        }
         return clusterViewManager.isMaster();
     }
 
@@ -1044,8 +1049,9 @@ class MasterNode implements PipeMsgListener, Runnable {
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
         if(masterAssigned && isMaster()){
-            LOG.log(Level.FINER, MessageFormat.format("Announcing Master Node designation Local view contains" +
-                "                                      {0} entries", clusterViewManager.getViewSize()));
+            LOG.log(Level.INFO, MessageFormat.format("Announcing Master Node designation for member: {1} of group: {2}. Local view contains " +
+                           "{0} entries", clusterViewManager.getViewSize(), manager.getInstanceName(), manager.getGroupName()));
+                                              
             sendNewView(null, cvEvent, msg, true);
         }
     }
