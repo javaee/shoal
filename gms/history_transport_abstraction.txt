@@ -37,3 +37,17 @@ Modified:
     com.sun.enterprise.mgmt.ClusterViewManager.java
     com.sun.enterprise.mgmt.HealthMonitor.java
     com.sun.enterprise.mgmt.MasterNode.java
+
+Description:
+    When Grizzly transport layer is used, use ReusableTCP|UDPSelectorHandler which has been supported from grizzly-framework-1.9.17-SNAPSHOT.jar
+    For more information, please see https://grizzly.dev.java.net/issues/show_bug.cgi?id=676
+    Update grizzly libraries from 1.9.16 to 1.9.17-SNAPSHOT(2009/06/23)    
+Modified:
+    com.sun.enterprise.mgmt.transport.grizzly.MulticastSelectorHandler.java
+    com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager.java
+Added:
+    lib/grizzly-framework.jar
+    lib/grizzly-utils.jar
+Removed:
+    lib/grizzly-framework-1.9.16.jar
+    lib/grizzly-utils-1.9.16.jar

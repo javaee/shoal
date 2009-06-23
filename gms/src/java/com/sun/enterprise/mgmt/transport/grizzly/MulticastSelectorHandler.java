@@ -60,7 +60,7 @@ import java.lang.reflect.Method;
 /**
  * @author Bongjae Chang
  */
-public class MulticastSelectorHandler extends UDPSelectorHandler {
+public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
 
     private volatile InetAddress multicastAddress;
     private volatile NetworkInterface anInterface;
@@ -72,15 +72,6 @@ public class MulticastSelectorHandler extends UDPSelectorHandler {
     private final Method joinMethod;
 
     public MulticastSelectorHandler() {
-        this( Role.CLIENT_SERVER );
-    }
-
-    public MulticastSelectorHandler( boolean isClient ) {
-        this( boolean2Role( isClient ) );
-    }
-
-    public MulticastSelectorHandler( Role role ) {
-        super( role );
         try {
             anInterface = NetworkUtility.getFirstNetworkInterface();
         } catch( IOException e ) {

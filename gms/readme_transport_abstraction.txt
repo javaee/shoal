@@ -80,7 +80,7 @@
 
 ---++ Others
    * Using Grizzly
-      * Grizzly version 1.9.16
+      * Grizzly version 1.9.17
       * com.sun.enterprise.mgmt.transport.grizzly.*
       * Unfortunately, current Grizzly doesn't support multicast
       * So I implements NIO.2's multicast which is integrated into Grizzly on JDK7
@@ -107,10 +107,10 @@
    * Use the ant script and shoal/gms/build.xml which has been modified simply
       
 ---++ How to run
-   * Required additional grizzly-framework-1.9.16.jar and grizzly-utils-1.9.16.jar libraries
+   * Required additional grizzly-framework.jar and grizzly-utils.jar libraries
    * You can test this simply with SimpleJoinTest.java
       * For using grizzly transport
-         * java -cp grizzly-framework-1.9.16.jar;grizzly-utils-1.9.16.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER="grizzly" SimpleJoinTest server1
+         * java -cp grizzly-framework.jar;grizzly-utils.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER="grizzly" SimpleJoinTest server1
          * If you run this on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
       * For using original jxta transport
          * java -cp jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER="jxta" SimpleJoinTest server1

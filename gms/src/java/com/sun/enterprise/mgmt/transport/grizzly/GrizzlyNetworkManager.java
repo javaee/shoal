@@ -164,7 +164,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallel );
         controller.setConnectorHandlerPool( cacheableHandlerPool );
 
-        TCPSelectorHandler tcpSelectorHandler = new TCPSelectorHandler();
+        TCPSelectorHandler tcpSelectorHandler = new ReusableTCPSelectorHandler();
         tcpSelectorHandler.setPort( tcpPort );
         tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
         tcpSelectorHandler.setInet( localInetAddress );
