@@ -47,34 +47,59 @@ import java.util.logging.Logger;
 import java.io.IOException;
 
 /**
+ * This class implements a common {@link NetworkManager} logic simply in order to help the specific transport layer to be implemented easily
+ *
+ * Mainly, this manages {@link MessageListener} and dispatches an inbound {@link Message} into the appropriate listener 
+ * 
  * @author Bongjae Chang
- * @date 2009. 6. 3
  */
 public abstract class AbstractNetworkManager implements NetworkManager {
 
     private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
 
+    /**
+     * Represents local {@link PeerID}.
+     * This value should be assigned in real {@link NetworkManager}'s implementation correspoinding to the specific transport layer
+     */
     protected PeerID localPeerID;
 
+    /**
+     * The list of registered {@link MessageListener}
+     */
     private final List<MessageListener> messageListeners = new CopyOnWriteArrayList<MessageListener>();
 
+    /**
+     * {@inheritDoc}
+     */
     public void start() throws IOException {
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void stop() throws IOException {
         messageListeners.clear();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void addMessageListener( final MessageListener messageListener ) {
         if( messageListener != null )
             messageListeners.add( messageListener );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void removeMessageListener( final MessageListener messageListener ) {
         if( messageListener != null )
             messageListeners.remove( messageListener );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void receiveMessage( Message message, Map piggyback ) {
         PeerID sourcePeerID = null;
         PeerID targetPeerID = null;
@@ -116,11 +141,26 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public PeerID getLocalPeerID() {
         return localPeerID;
     }
 
+    /**
+     * Before executing {@link MessageListener#receiveMessageEvent(MessageEvent)}} callback, this method will be called
+     *
+     * @param messageEvent a received {@link MessageEvent}
+     * @param piggyback piggyback
+     */
     protected abstract void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback );
 
+    /**
+     * After executing {@link MessageListener#receiveMessageEvent(MessageEvent)}} callback, this method will be called
+     *
+     * @param messageEvent a received {@link MessageEvent}
+     * @param piggyback piggyback
+     */
     protected abstract void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback );
 }

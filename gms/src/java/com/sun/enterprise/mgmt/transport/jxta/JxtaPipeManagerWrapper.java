@@ -59,6 +59,14 @@ import net.jxta.pipe.PipeMsgEvent;
 import net.jxta.endpoint.ByteArrayMessageElement;
 
 /**
+ * This class wraps {@link JxtaPipeManager} and extends {@link AbstractMultiMessageSender}
+ * which supports both {@link com.sun.enterprise.mgmt.transport.MulticastMessageSender}
+ * and {@link com.sun.enterprise.mgmt.transport.MessageSender} transport layer
+ *
+ * This stores and caches {@link JxtaPipeManager} according to {@link Message}'s type
+ * This implements Jxta's PipeMsgListener, receives Jxta's PipeMsgEvent, parses Jxta's message,
+ * converts it into {@link Message} and forwards it to {@link com.sun.enterprise.mgmt.transport.NetworkManager}
+ *
  * @author Bongjae Chang
  */
 public class JxtaPipeManagerWrapper extends AbstractMultiMessageSender implements PipeMsgListener {
@@ -100,6 +108,9 @@ public class JxtaPipeManagerWrapper extends AbstractMultiMessageSender implement
         return pipeAdv;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void start() throws IOException {
         super.start();
@@ -111,6 +122,9 @@ public class JxtaPipeManagerWrapper extends AbstractMultiMessageSender implement
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void stop() throws IOException {
         super.stop();
@@ -123,6 +137,9 @@ public class JxtaPipeManagerWrapper extends AbstractMultiMessageSender implement
         pipeManagerMap.clear();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     protected boolean doBroadcast( final Message message ) throws IOException {
         if( message == null )
             throw new IOException( "message is null" );
@@ -137,6 +154,9 @@ public class JxtaPipeManagerWrapper extends AbstractMultiMessageSender implement
         return pipeManager.broadcast( createMessage( message ) );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     protected boolean doSend( final PeerID peerID, final Message message ) throws IOException {
         if( peerID == null )
             throw new IOException( "peer ID can not be null" );

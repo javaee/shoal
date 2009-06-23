@@ -39,6 +39,10 @@ package com.sun.enterprise.mgmt.transport;
 import java.io.IOException;
 
 /**
+ * This is the top interface of the message sender
+ *
+ * Currently, TCP and UDP(includes Multicast) transport layers are supported.
+ *
  * @author Bongjae Chang
  */
 public interface ShoalMessageSender {

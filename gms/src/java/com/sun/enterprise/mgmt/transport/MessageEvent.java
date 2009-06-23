@@ -41,17 +41,27 @@ import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import java.util.EventObject;
 
 /**
+ * This class represents a received message event
+ *
+ * Management modules will use this message event in order to process a received network packet internally 
+ *
  * @author Bongjae Chang
  */
 public class MessageEvent extends EventObject {
 
     /**
-     * The received Message
+     * The received {@link Message}
      */
     private final Message message;
 
+    /**
+     * The received message's source {@link PeerID}
+     */
     private final PeerID sourcePeerID;
 
+    /**
+     * The received message's destination {@link PeerID}
+     */
     private final PeerID targetPeerID;
 
     /**
@@ -78,10 +88,20 @@ public class MessageEvent extends EventObject {
         return message;
     }
 
+    /**
+     * Returns the source peer id from which this message is sent
+     *
+     * @return peer id
+     */
     public PeerID getSourcePeerID() {
         return sourcePeerID;
     }
 
+    /**
+     * Returns the target peer id to which this message is sent 
+     *
+     * @return peer id
+     */
     public PeerID getTargetPeerID() {
         return targetPeerID;
     }

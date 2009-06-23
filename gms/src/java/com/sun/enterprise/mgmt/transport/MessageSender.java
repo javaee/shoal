@@ -41,9 +41,21 @@ import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import java.io.IOException;
 
 /**
+ * This interface is for sending a {@link Message} to the specific destination
+ *
+ * This interface can be implemented for only TCP or only UDP or both TCP and UDP transport layer
+ *
  * @author Bongjae Chang
  */
 public interface MessageSender extends ShoalMessageSender {
 
+    /**
+     * Sends the given {@link Message} to the destination
+     *
+     * @param peerID the destination {@link PeerID}. <code>null</code> is not allowed
+     * @param message a message which is sent to the peer
+     * @return true if the message is sent to the destination successfully, otherwise false
+     * @throws IOException if I/O error occurs or given parameters are not valid
+     */
     public boolean send( final PeerID peerID, final Message message ) throws IOException;
 }

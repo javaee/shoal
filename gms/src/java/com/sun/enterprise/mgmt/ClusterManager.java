@@ -63,8 +63,8 @@ import java.util.logging.Logger;
 import java.net.InetAddress;
 
 /**
- * The ClusterManager is the entry point for using the JxtaClusterManagement module
- * which provides group communications and membership semantics on top of JXTA.
+ * The ClusterManager is the entry point for using the cluster management module
+ * which provides group communications and membership semantics on top of JXTA, Grizzly and others.
  */
 public class ClusterManager implements MessageListener {
     private static final Logger LOG = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);

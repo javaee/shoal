@@ -39,6 +39,11 @@ package com.sun.enterprise.ee.cms.impl.base;
 import java.io.Serializable;
 
 /**
+ * This class is representative of the identifier of a member
+ *
+ * <code>uniqueID</code> is used in order to identify a unique member.
+ * According to a kind of transport layers, <code>uniqueID</code> type will be determined.
+ *
  * @author Bongjae Chang
  */
 public class PeerID<T extends Serializable> implements Serializable, Comparable<PeerID> {

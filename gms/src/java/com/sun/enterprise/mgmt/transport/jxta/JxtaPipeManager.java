@@ -53,6 +53,10 @@ import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * This class manages Jxta's InputPipe and OutputPipe and sends Jxta's message through JxtaUtility
+ *
+ * This stores and caches Jxta's OutputPipe according to Jxta's PeerID
+ *
  * @author Bongjae Chang
  */
 public class JxtaPipeManager {

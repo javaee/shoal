@@ -45,6 +45,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * This class contains health states of members
+ *
+ * {@link com.sun.enterprise.mgmt.HealthMonitor} uses this messages to check the member's health. 
+ */
 public class HealthMessage implements Serializable {
 
     static final long serialVersionUID = -5452866103975155397L;

@@ -37,6 +37,10 @@
 package com.sun.enterprise.mgmt.transport.grizzly;
 
 /**
+ * Specifies constants that are allowed to be used as keys for configuration
+ * elements that are sought to be set or retrieved for/from Grizzly platform
+ * configuration
+ *
  * @author Bongjae Chang
  */
 public enum GrizzlyConfigConstants {

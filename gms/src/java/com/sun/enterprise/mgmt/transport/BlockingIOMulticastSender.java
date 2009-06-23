@@ -54,6 +54,10 @@ import java.util.logging.Level;
 import java.util.List;
 
 /**
+ * This class is a default {@link MulticastMessageSender}'s implementation and extends {@link AbstractMulticastMessageSender}
+ *
+ * This uses <code>MulticastSocket</code> which is based on Blocking I/O
+ *
  * @author Bongjae Chang
  */
 public class BlockingIOMulticastSender extends AbstractMulticastMessageSender implements Runnable {
@@ -117,6 +121,9 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         this.networkManager = networkManager;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void start() throws IOException {
         if( running )
@@ -130,7 +137,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
 
         running = true;
 
-        // todo carryel, need to use a thread factory?
+        // todo need to use a thread factory?
         multicastThread = new Thread( this, "IP Multicast Listener for " + multicastSocketAddress );
         multicastThread.setDaemon( true );
         multicastThread.start();
@@ -141,6 +148,9 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
             multicastSocket.joinGroup( multicastAddress );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void stop() throws IOException {
         if( !running )
@@ -200,6 +210,9 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     protected boolean doBroadcast( final Message message ) throws IOException {
         if( !running || multicastSocket == null )
             throw new IOException( "multicast server is not running" );

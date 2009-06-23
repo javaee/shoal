@@ -42,6 +42,10 @@ import java.util.Map;
 import java.net.URI;
 
 /**
+ * This interface provides system characteristics
+ *
+ * i.g. HW/SW configuration, CPU load, etc...
+ * 
  * @author Bongjae Chang
  */
 public interface SystemAdvertisement extends Comparable<SystemAdvertisement>, Cloneable, Serializable {

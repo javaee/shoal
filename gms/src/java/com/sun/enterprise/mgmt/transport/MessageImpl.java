@@ -54,12 +54,19 @@ import java.util.logging.Level;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
+ * This is a default {@link Message}'s implementation
+ *
+ * The byte array or ByteBuffer which represent this message's low level data will be cached if this message is not modified
+ * Here are this message's structure
+ * ----
+ * [packet]
+ * magic(4) + version(4) + type(4) + messages_length(4) + messages(message_length)
+ * [messages]
+ * message_count(4) + message_key1 + message_value1 + message_key2 + message_value2 + ...(message_count)
+ * ----
+ *
  * @author Bongjae Chang
  */
-// [packet]
-// magic(4) + version(4) + type(4) + messages_length(4) + messages(message_length)
-// [messages]
-// message_count(4) + message_key1 + message_value1 + message_key2 + message_value2 + ...(message_count)
 public class MessageImpl implements Message {
 
     static final long serialVersionUID = -3617083350698668655L;
@@ -97,8 +104,12 @@ public class MessageImpl implements Message {
         initialize( type, messages );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void initialize( final int type, final Map<String, Serializable> messages ) throws IllegalArgumentException {
         this.version = VERSION;
+        // Let's allow unknown message types
         /*
         switch( type ) {
             case TYPE_CLUSTER_MANAGER_MESSAGE:
@@ -122,6 +133,9 @@ public class MessageImpl implements Message {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int parseHeader( final byte[] bytes, final int offset ) throws IllegalArgumentException {
         if( bytes == null )
             throw new IllegalArgumentException( "bytes must be initialized" );
@@ -132,6 +146,9 @@ public class MessageImpl implements Message {
         return parseHeader( ByteBuffer.wrap( bytes, offset, HEADER_LENGTH ), offset );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int parseHeader( final ByteBuffer byteBuffer, final int offset ) throws IllegalArgumentException {
         if( byteBuffer == null )
             throw new IllegalArgumentException( "byte buffer must be initialized" );
@@ -155,6 +172,9 @@ public class MessageImpl implements Message {
         return messageLen;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void parseMessage( final byte[] bytes, final int offset, final int length ) throws IllegalArgumentException, MessageIOException {
         if( bytes == null )
             throw new IllegalArgumentException( "bytes must be initialized" );
@@ -167,6 +187,9 @@ public class MessageImpl implements Message {
         parseMessage( ByteBuffer.wrap( bytes, offset, length ), offset, length );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void parseMessage( final ByteBuffer byteBuffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException {
         if( byteBuffer == null )
             throw new IllegalArgumentException( "byte buffer must be initialized" );
@@ -223,14 +246,23 @@ public class MessageImpl implements Message {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getVersion() {
         return version;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getType() {
         return type;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Object addMessageElement( final String key, final Serializable value ) {
         messageLock.lock();
         try {
@@ -241,10 +273,16 @@ public class MessageImpl implements Message {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Object getMessageElement( final String key ) {
         return messages.get( key );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Object removeMessageElement( final String key ) {
         messageLock.lock();
         Serializable removed = null;
@@ -258,10 +296,16 @@ public class MessageImpl implements Message {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Set<Map.Entry<String, Serializable>> getMessageElements() {
         return Collections.unmodifiableSet( messages.entrySet() );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public ByteBuffer getPlainByteBuffer() throws MessageIOException {
         messageLock.lock();
         try {
@@ -310,6 +354,9 @@ public class MessageImpl implements Message {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public byte[] getPlainBytes() throws MessageIOException {
         messageLock.lock();
         try {

@@ -39,6 +39,8 @@ package com.sun.enterprise.mgmt.transport;
 import java.io.IOException;
 
 /**
+ * IOException which related to parsing {@link Message}
+ *
  * @author Bongjae Chang
  */
 public class MessageIOException extends IOException {

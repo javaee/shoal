@@ -59,6 +59,8 @@ import java.io.OutputStream;
 import java.lang.reflect.Field;
 
 /**
+ * Utility class that can be used by any calling code to do common routines about Network I/O
+ *
  * @author Bongjae Chang
  */
 public class NetworkUtility {
@@ -132,6 +134,12 @@ public class NetworkUtility {
             throw new IllegalStateException( "failure initializing statics. Neither IPV4 nor IPV6 seem to work" );
     }
 
+    /**
+     * Returns all local addresses except for lookback and any local address
+     * But, if any addresses were not found locally, the lookback is added to the list.
+     *
+     * @return List which contains available addresses locally
+     */
     public static List<InetAddress> getAllLocalAddresses() {
         if( allLocalAddresses != null )
             return allLocalAddresses;
@@ -175,6 +183,13 @@ public class NetworkUtility {
         return allLocalAddresses;
     }
 
+    /**
+     * Return a first network interface except for the lookback
+     * But, if any network interfaces were not found locally, the lookback interface is returned.
+     *
+     * @return a first network interface
+     * @throws IOException if an I/O error occurs or a network interface was not found
+     */
     public static NetworkInterface getFirstNetworkInterface() throws IOException {
         if( firstNetworkInterface != null )
             return firstNetworkInterface;
@@ -195,7 +210,7 @@ public class NetworkUtility {
         if( firstInterface == null )
             firstInterface = loopback;
         if( firstInterface == null ) {
-            throw new IOException( "failed to find an network interface" );
+            throw new IOException( "failed to find a network interface" );
         } else {
             firstNetworkInterface = firstInterface;
             return firstNetworkInterface;
@@ -291,6 +306,14 @@ public class NetworkUtility {
         }
     }
 
+    /**
+     * Returns an available tcp port between <code>tcpStartPort</code> and <code>tcpEndPort</code>
+     *
+     * @param host specific host name
+     * @param tcpStartPort start port
+     * @param tcpEndPort end port
+     * @return an available tcp port which is not bound yet
+     */
     public static int getAvailableTCPPort( String host, int tcpStartPort, int tcpEndPort ) {
         if( tcpStartPort > tcpEndPort )
             tcpEndPort = tcpStartPort + 30;
@@ -324,6 +347,9 @@ public class NetworkUtility {
         }
     }
 
+    /**
+     * This class extends <code>ObjectOutputStream</code> for providing any debugging informations when an object is written
+     */
     private static class DebuggingObjectOutputStream extends ObjectOutputStream {
 
         final List<Object> stack = new ArrayList<Object>();

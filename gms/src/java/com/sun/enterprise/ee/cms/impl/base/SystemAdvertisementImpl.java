@@ -49,6 +49,8 @@ import java.util.ArrayList;
 import java.net.URI;
 
 /**
+ * This class is a default system advertisement and implements {@link com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement}
+ * 
  * @author Bongjae Chang
  */
 public class SystemAdvertisementImpl implements SystemAdvertisement {

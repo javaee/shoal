@@ -125,7 +125,6 @@
 
 
 ---++ TODO
-   * Should write java doc about new classes and interfaces
    * Various tests are needed on complicated environments
    * Packages and class names should be reviewed
    * Should consider that cluster members are located beyond one subnet or multicast traffic is disabled
