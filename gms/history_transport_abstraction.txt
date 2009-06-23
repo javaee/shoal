@@ -28,3 +28,12 @@ Modified:
     com.sun.enterprise.mgmt.transport.NetworkUtility.java
     com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager.java
     com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.java
+
+2009-06-23
+Description:
+    Remove dependent codes which are related to Shoal issue #61
+Modified:
+    com.sun.enterprise.ee.cms.impl.base.ViewWindowImpl.java
+    com.sun.enterprise.mgmt.ClusterViewManager.java
+    com.sun.enterprise.mgmt.HealthMonitor.java
+    com.sun.enterprise.mgmt.MasterNode.java

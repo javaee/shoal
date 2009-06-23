@@ -36,6 +36,17 @@
 
 package com.sun.enterprise.mgmt;
 
+import com.sun.enterprise.ee.cms.core.GMSMember;
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.mgmt.transport.Message;
+import com.sun.enterprise.mgmt.transport.MessageEvent;
+import com.sun.enterprise.mgmt.transport.MessageImpl;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
+import com.sun.enterprise.mgmt.transport.MessageListener;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.Serializable;
@@ -57,16 +68,6 @@ import java.net.URI;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.sun.enterprise.ee.cms.core.GMSMember;
-import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
-import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
-import com.sun.enterprise.ee.cms.impl.base.PeerID;
-import com.sun.enterprise.ee.cms.impl.base.Utility;
-import com.sun.enterprise.mgmt.transport.MessageListener;
-import com.sun.enterprise.mgmt.transport.MessageImpl;
-import com.sun.enterprise.mgmt.transport.MessageEvent;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.mgmt.transport.MessageIOException;
 
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes
@@ -597,20 +598,9 @@ public class HealthMonitor implements MessageListener, Runnable {
         if (entry.adv.getID().equals(masterNode.getMasterNodeID())) {
             //if masternode is resigning, remove master node from view and start discovery
             LOG.log(Level.FINER, MessageFormat.format("Removing master node {0} from view as it has stopped.", entry.adv.getName()));
-            manager.getClusterViewManager().remove(entry.adv); // todo carryel, don't notify
+            removeMasterAdv(entry, stateByte);
             masterNode.resetMaster();
             masterNode.appointMasterNode();
-            // todo carryel, If I become to be new master, notify events.
-            if( masterNode.isMaster() && masterNode.isMasterAssigned() ) {
-                LOG.log( Level.FINE, MessageFormat.format( "Announcing Failure Event of {0} for name {1}...", entry.id, entry.adv.getName() ) );
-                final ClusterViewEvent cvEvent;
-                if( stateByte == CLUSTERSTOPPING ) {
-                    cvEvent = new ClusterViewEvent( ClusterViewEvents.CLUSTER_STOP_EVENT, entry.adv );
-                } else {
-                    cvEvent = new ClusterViewEvent( ClusterViewEvents.PEER_STOP_EVENT, entry.adv );
-                }
-                masterNode.viewChanged( cvEvent );
-            }
         } else if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
             manager.getClusterViewManager().remove(entry.adv);
             LOG.log(Level.FINE, "Announcing Peer Stop Event of " + entry.adv.getName() + " to group ...");

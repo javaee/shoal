@@ -35,6 +35,10 @@
  */
 package com.sun.enterprise.mgmt;
 
+import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,10 +47,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
-import com.sun.enterprise.ee.cms.impl.base.PeerID;
-import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 /**
  * Manages Cluster Views and notifies cluster view listeners when cluster view
@@ -81,8 +81,7 @@ public class ClusterViewManager {
 
     public void start() {
         //Self appointed as master and then discover so that we resolve to the right one
-        // avoid notifying listener
-        setMaster(advertisement, false);
+        setMaster(advertisement, true);
     }
 
     public void addClusterViewEventListener(
@@ -373,21 +372,28 @@ public class ClusterViewManager {
     /**
      * Adds a list of advertisements to the view
      *
-     * @param newView           list of advertisements
-     * @param cvEvent           the cluster event
-     * @param notifyForcefully  if true, notifies registered listeners forcefully. if false, notifies listeners when view changed.
+     * @param newView       list of advertisements
+     * @param cvEvent       the cluster event
+     * @param authoritative whether the view is authoritative or not
      */
-    void addToView( final List<SystemAdvertisement> newView,
-                    final boolean notifyForcefully,
-                    final ClusterViewEvent cvEvent ) {
-        if( cvEvent == null )
+    void addToView(final List<SystemAdvertisement> newView,
+                   final boolean authoritative,
+                   final ClusterViewEvent cvEvent) {
+        //TODO: need to review the use cases of the callers of method
+        if (cvEvent == null) {
             return;
-        boolean changed = addToView( newView );
-        if( notifyForcefully || changed )
-            notifyListeners( cvEvent );
+        }
+
+        if (authoritative) {
+            boolean changed = addToView( newView );
+            if (changed) {
+                //only if there are changes that we notify
+                notifyListeners(cvEvent);
+            }
+        }
     }
 
-    /**
+/**
      * Adds a list of advertisements to the view
      *
      * @param newView       list of advertisements
@@ -395,22 +401,10 @@ public class ClusterViewManager {
      */
     private boolean addToView( final List<SystemAdvertisement> newView ) {
         boolean changed = false;
-        // We need old view's snapshot for becoming aware of changes before reset()
-        // Though reset() also uses viewLock for view.clear(),
-        // if reset() is called before addToView() acquires the viewLock, view can be changed in a short time
-        // If view was changed in a short time, unexpected result occurred in becoming aware of changes
-        // So for safety, if we need to become aware of real changes, snapshooting and view.clear() should be called in addToView()'s viewLock
-        //reset();
-        lockLog( "addToView()" );
+        lockLog( "addToView() - reset and add newView" );
         viewLock.lock();
-        // old view's snapshot
-        TreeMap oldView = (TreeMap)view.clone();
-        LOG.log( Level.FINER, "Resetting View" );
-        // we should clear view after old view's snapshot
-        view.clear();
-        view.put(advertisement.getID(), advertisement);
+        reset();
         try {
-            // we don't need put manager.getSystemAdvertisement(). this operation is maybe duplicated.
             if( !newView.contains( manager.getSystemAdvertisement() ) ) {
                 view.put( manager.getSystemAdvertisement().getID(),
                           manager.getSystemAdvertisement() );
@@ -420,7 +414,7 @@ public class ClusterViewManager {
                          new StringBuffer().append( "Adding " )
                                  .append( elem.getID() ).append( " to view" )
                                  .toString() );
-                if( !changed && !oldView.containsKey( elem.getID() ) ) {
+                if( !changed && !view.containsKey( elem.getID() ) ) {
                     changed = true;
                 }
                 // Always add the wire version of the adv
@@ -436,10 +430,7 @@ public class ClusterViewManager {
         LOG.log(Level.FINER, MessageFormat.format("Notifying the {0} to listeners, peer in event is {1}",
                     event.getEvent().toString(), event.getAdvertisement().getName()));
         for (ClusterViewEventListener elem : cvListeners) {
-            // carryel, this method should be thread-safe
-            synchronized( elem ) {
-                elem.clusterViewEvent(event, getLocalView());
-            }
+            elem.clusterViewEvent(event, getLocalView());
         }
     }
 

@@ -38,10 +38,19 @@ package com.sun.enterprise.ee.cms.impl.base;
 
 import static com.sun.enterprise.ee.cms.core.GMSConstants.startupType.*;
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.common.FailureNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.FailureRecoverySignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.core.GMSMember;
-import com.sun.enterprise.ee.cms.impl.common.*;
+import com.sun.enterprise.ee.cms.impl.common.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.JoinedAndReadyNotificationSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
+import com.sun.enterprise.ee.cms.impl.common.RecoveryTargetSelector;
+import com.sun.enterprise.ee.cms.impl.common.Router;
+import com.sun.enterprise.ee.cms.impl.common.SignalPacket;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
-import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.ClusterView;
 import com.sun.enterprise.mgmt.ClusterViewEvents;
 
@@ -50,7 +59,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-import java.util.HashSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,7 +73,7 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final int MAX_VIEWS = 100;  // 100 is some default.
     private static final List<GMSMember> EMPTY_GMS_MEMBER_LIST = new ArrayList<GMSMember>();
-    private final List<ArrayList<com.sun.enterprise.ee.cms.core.GMSMember>> views = new Vector<ArrayList<com.sun.enterprise.ee.cms.core.GMSMember>>();
+    private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
     private List<Signal> signals = new Vector<Signal>();
     private final List<String> currentCoreMembers = new ArrayList<String>();
     private final List<String> allCurrentMembers = new ArrayList<String>();
@@ -77,8 +85,6 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     private static final String REC_APPOINTED_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_SERVER_APPOINTED.toString();
     private final ArrayBlockingQueue<EventPacket> viewQueue;
     private final String groupName;
-    // [JoinedAndReady] temporary field for notifying joined and ready event
-    private final HashSet<String> joinedAndReadyMembers = new HashSet<String>();
 
     ViewWindowImpl(final String groupName, final ArrayBlockingQueue<EventPacket> viewQueue) {
         this.groupName = groupName;
@@ -116,7 +122,7 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     }
 
     private void newViewObserved(final EventPacket packet) {
-        final com.sun.enterprise.ee.cms.core.GMSMember member = Utility.getGMSMember(packet.getSystemAdvertisement());
+        final GMSMember member = Utility.getGMSMember(packet.getSystemAdvertisement());
         synchronized (views) {
             views.add(getMemberTokens(packet));
             if (views.size() > MAX_VIEWS) {
@@ -131,8 +137,8 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
         }
     }
 
-    private ArrayList<com.sun.enterprise.ee.cms.core.GMSMember> getMemberTokens(final EventPacket packet) {
-        final List<com.sun.enterprise.ee.cms.core.GMSMember> tokens = new ArrayList<com.sun.enterprise.ee.cms.core.GMSMember>(); // contain list of GMSMember objects.
+    private ArrayList<GMSMember> getMemberTokens(final EventPacket packet) {
+        final List<GMSMember> tokens = new ArrayList<GMSMember>(); // contain list of GMSMember objects.
         final StringBuffer sb =
                         new StringBuffer("GMS View Change Received for group ").append(groupName).append(" : Members in view for ").append("(before change analysis) are :\n");
 
@@ -142,7 +148,7 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
                 currentCoreMembers.clear();
                 allCurrentMembers.clear();
                 ClusterView view = packet.getClusterView();
-                com.sun.enterprise.ee.cms.core.GMSMember member;
+                GMSMember member;
                 SystemAdvertisement advert;
                 int count = 0;
                 for (SystemAdvertisement systemAdvertisement : view.getView()) {
@@ -171,7 +177,7 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
             }
         }
         logger.log(Level.INFO, sb.toString());
-        return (ArrayList<com.sun.enterprise.ee.cms.core.GMSMember>) tokens;
+        return (ArrayList<GMSMember>) tokens;
     }
 
     private Signal[] analyzeViewChange(final EventPacket packet) {
@@ -209,78 +215,49 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     }
 
     private void analyzeMasterChangeView(final EventPacket packet) {
-        /*
-        final SystemAdvertisement advert = packet.getSystemAdvertisement();
-        final GMSMember member = Utility.getGMSMember( advert );
-        final String token = member.getMemberToken();
-        if( !getGMSContext().isWatchdog() )
-            addGroupLeadershipNotificationSignal( token, member.getGroupName(), member.getStartTime() );
-        */
-        determineAndAddNewMemberJoins();
+        if (views.size() == 1) { //views list only contains 1 view which is assumed to be the 1st view.
+            addNewMemberJoins(packet);
+        }
+        if (views.size() > 1 &&
+            packet.getClusterView().getSize() != getPreviousView().size()) {
+            determineAndAddNewMemberJoins();
+        }
     }
 
     private void determineAndAddNewMemberJoins() {
-        final List<com.sun.enterprise.ee.cms.core.GMSMember> newMembership = getCurrentView();
+        final List<GMSMember> newMembership = getCurrentView();
         String token;
-        if( views.size() == 1 ) {
-            for( com.sun.enterprise.ee.cms.core.GMSMember member : newMembership ) {
-                token = member.getMemberToken();
-                if( newMembership.size() > 1 && !token.equals( getGMSContext().getServerIdentityToken() ) )
-                    syncDSC( token );
-                if( member.getMemberType().equalsIgnoreCase( CORETYPE ) ) {
-                    addJoinNotificationSignal( token, member.getGroupName(), member.getStartTime() );
-                    // [JoinedAndReady] temporary method calling for notifying joined and ready event
-                    determineAndAddReadyMember( token, member.getGroupName(), member.getStartTime() );
+        if (views.size() == 1) {
+            if (newMembership.size() > 1) {
+                for (GMSMember member : newMembership) {
+                    token = member.getMemberToken();
+                    if (!token.equals(getGMSContext().getServerIdentityToken())) {
+                        syncDSC(token);
+                    }
+                    if (member.getMemberType().equalsIgnoreCase(CORETYPE)) {
+                        addJoinNotificationSignal(token, member.getGroupName(),
+                                member.getStartTime());
+                    }
                 }
             }
-        } else if( views.size() > 1 ) {
+        } else if (views.size() > 1) {
             final List<String> oldMembers = getTokens(getPreviousView());
-            for ( com.sun.enterprise.ee.cms.core.GMSMember member : newMembership) {
+            for (GMSMember member : newMembership) {
                 token = member.getMemberToken();
                 if (!oldMembers.contains(token)) {
                     syncDSC(token);
                     if (member.getMemberType().equalsIgnoreCase(CORETYPE)) {
-                        addJoinNotificationSignal(token, member.getGroupName(), member.getStartTime());
-                        // [JoinedAndReady] temporary method calling for notifying joined and ready event
-                        determineAndAddReadyMember( token, member.getGroupName(), member.getStartTime() );
+                        addJoinNotificationSignal(token, member.getGroupName(),
+                                member.getStartTime());
                     }
                 }
             }
         }
     }
 
-    // [JoinedAndReady] temporary method for notifying joined and ready event
-    private void determineAndAddReadyMember( String token, String groupName, long startTime ) {
-        if( joinedAndReadyMembers.contains( token ) )
-            return; // JoinedAndReadyEvent is already notified
-        final Router router = getGMSContext().getRouter();
-        if ( !router.isJoinedAndReadyNotificationAFRegistered() )
-            return;
-        MemberStates states = null;
-        try {
-            states = getGMSContext().getGroupCommunicationProvider().getMemberState( token );
-        } catch( Throwable t ) {
-            t.printStackTrace();
-        }
-        // this case can be occurred if param's token is equal to own token and if HealthMonitor's thread is not started yet.
-        // so we will wait for a while and retry it
-        // see HealthMonitor.java's "String getStateFromCache(final ID peerID)" method in detail
-        if ( states == MemberStates.STARTING ) {
-            try {
-                Thread.sleep( 3000 );
-            } catch( InterruptedException e ) {
-            }
-            states = getGMSContext().getGroupCommunicationProvider().getMemberState( token );
-        }
-        if( states == MemberStates.READY || states == MemberStates.ALIVEANDREADY ) {
-            addJoinedAndReadyNotificationSignal( token, groupName, startTime );
-            joinedAndReadyMembers.add( token );
-        }
-    }
-
-    private List<String> getTokens(final List<com.sun.enterprise.ee.cms.core.GMSMember> oldMembers) {
+    private List<String> getTokens(final List<GMSMember> oldMembers) {
         final List<String> tokens = new ArrayList<String>();
-        for ( com.sun.enterprise.ee.cms.core.GMSMember member : oldMembers) {
+        for ( GMSMember member : oldMembers) {
             tokens.add(member.getMemberToken());
         }
         return tokens;
@@ -290,7 +267,6 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
-        final com.sun.enterprise.ee.cms.core.GMSMember member = Utility.getGMSMember(advert);
         try {
             final GMSConstants.shutdownType shutdownType;
             if (packet.getClusterViewEvent().equals(ClusterViewEvents.CLUSTER_STOP_EVENT)) {
@@ -301,10 +277,6 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
                     dsc.removeAllForMember(token);
                 }
             }
-            // [JoinedAndReady] temporary logic for notifying joined and ready event
-            if ( member.isCore() )
-                joinedAndReadyMembers.remove( token );
-            //logger.log(Level.INFO, "gms.plannedShutdownEventReceived", token);
             logger.log(Level.INFO, "plannedshutdownevent.announcement", new Object[]{token, shutdownType, groupName});
             signals.add(new PlannedShutdownSignalImpl(token,
                     advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
@@ -326,12 +298,9 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     private void addFailureSignals(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
-        final com.sun.enterprise.ee.cms.core.GMSMember member = Utility.getGMSMember(advert);
+        final GMSMember member = Utility.getGMSMember(advert);
         try {
             if ( member.isCore() ) {
-                // [JoinedAndReady] temporary logic for notifying joined and ready event
-                joinedAndReadyMembers.remove( token );
-
                 logger.log(Level.INFO, "member.failed", new Object[]{token, groupName});
                 generateFailureRecoverySignals(getPreviousView(),
                         token,
@@ -352,7 +321,7 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
         }
     }
 
-    private void generateFailureRecoverySignals(final List<com.sun.enterprise.ee.cms.core.GMSMember> oldMembership,
+    private void generateFailureRecoverySignals(final List<GMSMember> oldMembership,
                                                 final String token,
                                                 final String groupName,
                                                 final Long startTime) {
@@ -452,31 +421,43 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     }
 
     private void addNewMemberJoins(final EventPacket packet) {
-        // we only notify join events when view is changed
-        determineAndAddNewMemberJoins();
+        final SystemAdvertisement advert = packet.getSystemAdvertisement();
+        final String token = advert.getName();
+        final GMSMember member = Utility.getGMSMember(advert);
+        if (packet.getClusterView().getSize() > 1) {
+            // TODO: Figure out a better way to sync
+            syncDSC(token);
+        }
+        try {
+            if (member.isCore()) {
+                addJoinNotificationSignal(token,
+                        advert.getCustomTagValue(
+                                CustomTagNames.GROUP_NAME.toString()),
+                        Long.valueOf(advert.getCustomTagValue(
+                                CustomTagNames.START_TIME.toString())));
+            }
+        } catch (NoSuchFieldException e) {
+            logger.log(Level.WARNING,
+                    new StringBuffer("The SystemAdvertisement did ")
+                            .append("not contain the ").append(
+                            e.getLocalizedMessage())
+                            .append(" custom tag value:").toString());
+        }
     }
 
     private void addReadyMembers(final EventPacket packet) {
-        determineAndAddNewMemberJoins();
-
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
-        final com.sun.enterprise.ee.cms.core.GMSMember member = Utility.getGMSMember(advert);
+        final GMSMember member = Utility.getGMSMember(advert);
         try {
             if (member.isCore()) {
                 final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
                 logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " StartupState:" + startupState.toString());
-                /*
                 addJoinedAndReadyNotificationSignal(token,
                         advert.getCustomTagValue(
                                 CustomTagNames.GROUP_NAME.toString()),
                         Long.valueOf(advert.getCustomTagValue(
                                 CustomTagNames.START_TIME.toString())));
-                */
-                // [JoinedAndReady] temporary logic for notifying joined and ready event. Replace above addJoinedAndReadyNotificationSignal() with the following
-                determineAndAddReadyMember( token,
-                                       advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                                       Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())));
             }
         } catch (NoSuchFieldException e) {
             logger.log(Level.WARNING,
@@ -501,6 +482,7 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
     private void addJoinNotificationSignal(final String token,
                                            final String groupName,
                                            final long startTime) {
+
         final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
         logger.log( Level.INFO, "Adding Join member: " + token + " group: " + groupName + " StartupState:" + startupState.toString() );
         signals.add( new JoinNotificationSignalImpl( token,
@@ -509,21 +491,6 @@ class ViewWindowImpl implements com.sun.enterprise.ee.cms.impl.common.ViewWindow
                                                      groupName,
                                                      startTime ) );
     }
-
-    /*
-    private void addGroupLeadershipNotificationSignal( final String token,
-                                                       final String groupName,
-                                                       final long startTime ) {
-        logger.log( Level.INFO, "adding GroupLeadershipNotification signal leaderMember: " + token + " of group: " + groupName );
-        signals.add( new GroupLeadershipNotificationSignalImpl( token,
-                                                                getPreviousView(),
-                                                                getCurrentView(),
-                                                                getCurrentCoreMembers(),
-                                                                getAllCurrentMembers(),
-                                                                groupName,
-                                                                startTime ) );
-    }
-    */
 
     private void syncDSC(final String token) {
         final DistributedStateCacheImpl dsc;
