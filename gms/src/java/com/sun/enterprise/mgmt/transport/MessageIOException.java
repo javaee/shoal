@@ -50,10 +50,12 @@ public class MessageIOException extends IOException {
     }
 
     public MessageIOException( Throwable t ) {
-        super( t );
+        //super( t ); // JDK 1.6
+        super( t == null ? "": t.getMessage() );
     }
 
     public MessageIOException( String msg, Throwable t ) {
-        super( msg, t );
+        //super( msg, t ); // JDK 1.6
+        super( msg );
     }
 }

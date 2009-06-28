@@ -51,3 +51,13 @@ Added:
 Removed:
     lib/grizzly-framework-1.9.16.jar
     lib/grizzly-utils-1.9.16.jar
+
+2009-06-28
+Description:
+    Fix the compilation errors on JDK5 or some JDK6s
+Modified:
+    com.sun.enterprise.mgmt.transport.BlockingIOMulticastSender.java
+    com.sun.enterprise.mgmt.transport.MessageIOException.java
+    com.sun.enterprise.mgmt.transport.NetworkUtility.java
+    com.sun.enterprise.mgmt.transport.grizzly.MulticastSelectorHandler.java
+    com.sun.enterprise.mgmt.transport.jxta.JxtaNetworkManager.java

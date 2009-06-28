@@ -198,11 +198,11 @@ public class NetworkUtility {
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while( interfaces != null && interfaces.hasMoreElements() ) {
             NetworkInterface anInterface = interfaces.nextElement();
-            if( anInterface.isLoopback() ) {
+            if( isLoopbackNetworkInterface( anInterface ) ) {
                 loopback = anInterface;
                 continue;
             }
-            if( anInterface.isUp() && anInterface.supportsMulticast() ) {
+            if( supportsMulticast( anInterface ) ) {
                 firstInterface = anInterface;
                 break;
             }
@@ -215,6 +215,29 @@ public class NetworkUtility {
             firstNetworkInterface = firstInterface;
             return firstNetworkInterface;
         }
+    }
+
+    public static boolean isLoopbackNetworkInterface( NetworkInterface anInterface ) {
+        if( anInterface == null )
+            return false;
+        //return anInterface.isLoopback(); // JDK 1.6
+        boolean hasLoopback = false;
+        Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
+        while( allIntfAddr.hasMoreElements() ) {
+            InetAddress anAddr = allIntfAddr.nextElement();
+            if( anAddr.isLoopbackAddress() ) {
+                hasLoopback = true;
+                break;
+            }
+        }
+        return hasLoopback;
+    }
+
+    public static boolean supportsMulticast( NetworkInterface anInterface ) {
+        if( anInterface == null )
+            return false;
+        //return anInterface.isUp() && anInterface.supportsMulticast(); // JDK 1.6
+        return true;
     }
 
     public static void writeIntToByteArray( final byte[] bytes, final int offset, final int value ) throws IllegalArgumentException {
@@ -395,7 +418,8 @@ public class NetworkUtility {
         }
     }
 
-    public static void main( String[] args ) {
+    public static void main( String[] args ) throws IOException {
         System.out.println( getAllLocalAddresses() );
+        System.out.println( getFirstNetworkInterface() );
     }
 }

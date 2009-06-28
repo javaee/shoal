@@ -103,7 +103,7 @@
          * Most of original algorithms are also preserved.
 
 ---++ How to compile
-   * Required JDK6 or JDK7
+   * Required JDK5 or JDK6 or JDK7
    * Use the ant script and shoal/gms/build.xml which has been modified simply
       
 ---++ How to run

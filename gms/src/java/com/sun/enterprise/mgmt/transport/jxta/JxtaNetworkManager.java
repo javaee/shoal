@@ -460,7 +460,8 @@ public class JxtaNetworkManager extends AbstractNetworkManager implements Rendez
         try {
             startDomain();
         } catch( PeerGroupException e ) {
-            throw new IOException( e );
+            //throw new IOException( e ); // JDK 1.6
+            throw new IOException( e.getMessage() );
         }
     }
 

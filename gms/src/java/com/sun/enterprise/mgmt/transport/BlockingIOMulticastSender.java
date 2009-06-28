@@ -107,7 +107,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         this.multicastSocketAddress = new InetSocketAddress( multicastAddress, multicastPort );
         if( networkInterfaceName != null ) {
             NetworkInterface anInterface = NetworkInterface.getByName( networkInterfaceName );
-            if( anInterface != null && anInterface.isUp() && anInterface.supportsMulticast() )
+            if( NetworkUtility.supportsMulticast( anInterface ) )
                 this.anInterface = anInterface;
         }
         if( this.anInterface == null )

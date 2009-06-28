@@ -79,6 +79,7 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
         }
         Method method = null;
         try {
+            // JDK 1.7
             method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
         } catch( Throwable t ) {
             method = null;
@@ -166,7 +167,7 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
     public void setNetworkInterface( String networkInterfaceName ) throws SocketException {
         if( networkInterfaceName != null ) {
             NetworkInterface anInterface = NetworkInterface.getByName( networkInterfaceName );
-            if( anInterface != null && anInterface.isUp() && anInterface.supportsMulticast() )
+            if( NetworkUtility.supportsMulticast( anInterface ) )
                 this.anInterface = anInterface;
         }
     }
