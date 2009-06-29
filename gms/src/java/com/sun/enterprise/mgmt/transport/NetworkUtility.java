@@ -57,6 +57,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 /**
  * Utility class that can be used by any calling code to do common routines about Network I/O
@@ -132,6 +133,29 @@ public class NetworkUtility {
 
         if( LOOPBACK == null || ANYADDRESS == null )
             throw new IllegalStateException( "failure initializing statics. Neither IPV4 nor IPV6 seem to work" );
+    }
+
+    private static Method isLoopbackMethod = null;
+    private static Method isUpMethod = null;
+    private static Method supportsMulticastMethod = null;
+
+    static {
+        // JDK 1.6
+        try {
+            isLoopbackMethod = NetworkInterface.class.getMethod( "isLoopback" );
+        } catch( Throwable t ) {
+            isLoopbackMethod = null;
+        }
+        try {
+            isUpMethod = NetworkInterface.class.getMethod( "isUp" );
+        } catch( Throwable t ) {
+            isUpMethod = null;
+        }
+        try {
+            supportsMulticastMethod = NetworkInterface.class.getMethod( "supportsMulticast" );
+        } catch( Throwable t ) {
+            supportsMulticastMethod = null;
+        }
     }
 
     /**
@@ -220,7 +244,12 @@ public class NetworkUtility {
     public static boolean isLoopbackNetworkInterface( NetworkInterface anInterface ) {
         if( anInterface == null )
             return false;
-        //return anInterface.isLoopback(); // JDK 1.6
+        if( isLoopbackMethod != null ) {
+            try {
+                return (Boolean)isLoopbackMethod.invoke( anInterface );
+            } catch( Throwable t ) {
+            }
+        }
         boolean hasLoopback = false;
         Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
         while( allIntfAddr.hasMoreElements() ) {
@@ -236,7 +265,12 @@ public class NetworkUtility {
     public static boolean supportsMulticast( NetworkInterface anInterface ) {
         if( anInterface == null )
             return false;
-        //return anInterface.isUp() && anInterface.supportsMulticast(); // JDK 1.6
+        if( isUpMethod != null && supportsMulticastMethod != null ) {
+            try {
+                return (Boolean)isUpMethod.invoke( anInterface ) && (Boolean)supportsMulticastMethod.invoke( anInterface );
+            } catch( Throwable t ) {
+            }
+        }
         return true;
     }
 
