@@ -44,6 +44,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.MulticastSocket;
 import java.net.DatagramPacket;
+import java.net.Inet6Address;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.CountDownLatch;
@@ -94,9 +95,16 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         if( host != null ) {
             this.localSocketAddress = new InetSocketAddress( host, multicastPort );
         } else {
-            List<InetAddress> allLocalAddress = NetworkUtility.getAllLocalAddresses();
-            if( !allLocalAddress.isEmpty() )
-                this.localSocketAddress = new InetSocketAddress( allLocalAddress.get( 0 ), multicastPort );
+            InetAddress firstInetAddress = null;
+            InetAddress multicastInetAddress = InetAddress.getByName( multicastAddress );
+            // select appropriate IP version type
+            if( multicastInetAddress instanceof Inet6Address ) {
+                firstInetAddress = NetworkUtility.getFirstInetAddress( true );
+            } else {
+                firstInetAddress = NetworkUtility.getFirstInetAddress( false );
+            }
+            if( firstInetAddress != null )
+                this.localSocketAddress = new InetSocketAddress( firstInetAddress, multicastPort );
             else
                 this.localSocketAddress = null;
         }

@@ -61,6 +61,7 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.net.InetAddress;
+import java.net.Inet6Address;
 
 /**
  * The ClusterManager is the entry point for using the cluster management module
@@ -587,13 +588,18 @@ public class ClusterManager implements MessageListener {
         final String TCP_SCHEME = "tcp://";
         final String PORT = ":4000";  // necessary to add a port but its value is ignored.
         if (bindInterfaceAddress != null && !bindInterfaceAddress.equals("")) {
-            String bindInterfaceAddressURI = TCP_SCHEME + bindInterfaceAddress + PORT;
+            InetAddress inetAddress = null;
             try {
-                bindInterfaceEndpointAddress = bindInterfaceAddressURI;
-            } catch (Exception e) {
-                LOG.log(Level.WARNING, "invalid bindInterfaceEndpointAddress URI=" + bindInterfaceAddressURI + " computed from property " +
-                                       ConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
-                                       " value=" + bindInterfaceAddress, e);
+                inetAddress = InetAddress.getByName( bindInterfaceAddress );
+                if( inetAddress instanceof Inet6Address ) {
+                    bindInterfaceEndpointAddress = TCP_SCHEME + "[" + bindInterfaceAddress + "]" + PORT;
+                } else {
+                    bindInterfaceEndpointAddress = TCP_SCHEME + bindInterfaceAddress + PORT;
+                }
+            } catch( Exception e ) {
+                LOG.log( Level.WARNING, "invalid bindInterfaceEndpointAddress computed from property " +
+                                        ConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
+                                        " value=" + bindInterfaceAddress, e );
             }
         }
         if (bindInterfaceEndpointAddress != null) {
@@ -607,7 +613,11 @@ public class ClusterManager implements MessageListener {
             // lookup all public addresses
             List<InetAddress> localAddressList = NetworkUtility.getAllLocalAddresses();
             for( InetAddress inetAddress: localAddressList ) {
-                bindInterfaceEndpointAddress = TCP_SCHEME + inetAddress.getHostAddress() + PORT;
+                if( inetAddress instanceof Inet6Address ) {
+                    bindInterfaceEndpointAddress = TCP_SCHEME + "[" + inetAddress.getHostAddress() + "]" + PORT;
+                } else {
+                    bindInterfaceEndpointAddress = TCP_SCHEME + inetAddress.getHostAddress() + PORT;
+                }
                 sysAdv.addEndpointAddress( bindInterfaceEndpointAddress );
             }
         }

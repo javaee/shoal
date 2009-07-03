@@ -155,7 +155,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
     /**
      * Sets the network interface's address in the form of a URI
      *
-     * @param value new uri (tcp://host:port)
+     * @param value new uri (tcp://host:port) in IPv4 or (tcp://[host]:port) in IPv6
      */
     public void addEndpointAddress( final String value ) {
         if( endpointAddresses == null ) {

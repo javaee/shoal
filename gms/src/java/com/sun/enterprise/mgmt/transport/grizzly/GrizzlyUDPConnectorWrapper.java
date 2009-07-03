@@ -75,9 +75,19 @@ public class GrizzlyUDPConnectorWrapper extends AbstractMultiMessageSender {
         if( host != null ) {
             this.localSocketAddress = new InetSocketAddress( host, port );
         } else {
-            List<InetAddress> allLocalAddress = NetworkUtility.getAllLocalAddresses();
-            if( !allLocalAddress.isEmpty() )
-                this.localSocketAddress = new InetSocketAddress( allLocalAddress.get( 0 ), port );
+            InetAddress firstInetAddress = null;
+            // prefer IPv4
+            try {
+                firstInetAddress = NetworkUtility.getFirstInetAddress( false );
+            } catch( IOException e ) {
+            }
+            if( firstInetAddress == null )
+                try {
+                    firstInetAddress = NetworkUtility.getFirstInetAddress( true );
+                } catch( IOException e ) {
+                }
+            if( firstInetAddress != null )
+                this.localSocketAddress = new InetSocketAddress( firstInetAddress, port );
             else
                 this.localSocketAddress = null;
         }

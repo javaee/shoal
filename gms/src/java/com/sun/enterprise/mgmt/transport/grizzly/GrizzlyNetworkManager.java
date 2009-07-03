@@ -135,10 +135,13 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( localPeerID == null ) {
             String uniqueHost = host;
             if( uniqueHost == null ) {
-                for( InetAddress anInetAddress : NetworkUtility.getAllLocalAddresses() ) {
-                    uniqueHost = anInetAddress.getHostAddress();
-                    break;
-                }
+                // prefer IPv4
+                InetAddress firstInetAddress = NetworkUtility.getFirstInetAddress( false );
+                if( firstInetAddress == null )
+                    firstInetAddress = NetworkUtility.getFirstInetAddress( true );
+                if( firstInetAddress == null )
+                    throw new IOException( "can not find a first InetAddress" );
+                uniqueHost = firstInetAddress.getHostAddress();
             }
             if( uniqueHost == null )
                 throw new IOException( "can not find an unique host" );

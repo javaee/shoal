@@ -42,6 +42,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.ServerSocket;
+import java.net.Inet6Address;
+import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Collections;
@@ -89,6 +91,8 @@ public class NetworkUtility {
 
     public volatile static List<InetAddress> allLocalAddresses;
     public volatile static NetworkInterface firstNetworkInterface;
+    public volatile static InetAddress firstInetAddressV4;
+    public volatile static InetAddress firstInetAddressV6;
 
     static {
         InetAddress GET_ADDRESS = null;
@@ -239,6 +243,38 @@ public class NetworkUtility {
             firstNetworkInterface = firstInterface;
             return firstNetworkInterface;
         }
+    }
+
+    /**
+     * Return a first <code>InetAddress</code> of the first network interface
+     * But, if any network interfaces were not found locally, <code>null</code> could be returned.
+     *
+     * @param preferIPv6 if true, prefer IPv6 InetAddress. otherwise prefer IPv4 InetAddress
+     * @return a first found <code>InetAddress</code>.
+     * @throws IOException if an I/O error occurs or a network interface was not found
+     */
+    public static InetAddress getFirstInetAddress( boolean preferIPv6 ) throws IOException {
+        if( preferIPv6 && firstInetAddressV6 != null )
+            return firstInetAddressV6;
+        else if( !preferIPv6 && firstInetAddressV4 != null )
+            return firstInetAddressV4;
+        NetworkInterface anInterface = getFirstNetworkInterface();
+        Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
+        while( allIntfAddr.hasMoreElements() ) {
+            InetAddress anAddr = allIntfAddr.nextElement();
+            if( anAddr.isLoopbackAddress() || anAddr.isAnyLocalAddress() )
+                continue;
+            if( firstInetAddressV6 == null && anAddr instanceof Inet6Address )
+                firstInetAddressV6 = anAddr;
+            else if( firstInetAddressV4 == null && anAddr instanceof Inet4Address )
+                firstInetAddressV4 = anAddr;
+            if( firstInetAddressV6 != null && firstInetAddressV4 != null )
+                break;
+        }
+        if( preferIPv6 )
+            return firstInetAddressV6;
+        else
+            return firstInetAddressV4;
     }
 
     public static boolean isLoopbackNetworkInterface( NetworkInterface anInterface ) {
@@ -453,7 +489,9 @@ public class NetworkUtility {
     }
 
     public static void main( String[] args ) throws IOException {
-        System.out.println( getAllLocalAddresses() );
-        System.out.println( getFirstNetworkInterface() );
+        System.out.println( "AllLocalAddresses() = " + getAllLocalAddresses() );
+        System.out.println( "getFirstNetworkInterface() = " +getFirstNetworkInterface() );
+        System.out.println( "getFirstInetAddress( true ) = " + getFirstInetAddress( true ) );
+        System.out.println( "getFirstInetAddress( false ) = " + getFirstInetAddress( false ) );
     }
 }
