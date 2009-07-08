@@ -81,6 +81,9 @@ public class Router {
     private final Vector<FailureSuspectedActionFactory> failureSuspectedAF =
             new Vector<FailureSuspectedActionFactory>();
 
+    private final Vector<GroupLeadershipNotificationActionFactory> groupLeadershipNotificationAFs =
+            new Vector<GroupLeadershipNotificationActionFactory>();
+
     private final BlockingQueue<SignalPacket> queue;
     private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final ExecutorService actionPool;
@@ -172,6 +175,16 @@ public class Router {
     }
 
     /**
+     * adds a GroupLeadershipNotificationActionFactory as a destination.
+     * Collects this actionfactory in a Collection of same type.
+     *
+     * @param groupLeadershipNotificationActionFactory the GroupLeadershipNotificationActionFactory
+     */
+    void addDestination(final GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory ) {
+        groupLeadershipNotificationAFs.add( groupLeadershipNotificationActionFactory );
+    }
+
+    /**
      * removes a FailureNotificationActionFactory destination.
      *
      * @param failureNotificationActionFactory the FailureNotificationActionFactory
@@ -237,6 +250,15 @@ public class Router {
     }
 
     /**
+     * removes a GroupLeadershipNotificationActionFactory destination.
+     *
+     * @param groupLeadershipNotificationActionFactory the GroupLeadershipNotificationActionFactory
+     */
+    void removeDestination(final GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory ) {
+        groupLeadershipNotificationAFs.remove( groupLeadershipNotificationActionFactory );
+    }
+
+    /**
      * Queues signals.  Expects an array of signals which are handed off
      * to working threads that will determine their corresponding actions
      * to call their consumeSignal method.
@@ -284,6 +306,9 @@ public class Router {
         }
         synchronized (failureSuspectedAF) {
             failureSuspectedAF.removeAllElements();
+        }
+        synchronized ( groupLeadershipNotificationAFs ) {
+            groupLeadershipNotificationAFs.removeAllElements();
         }
     }
 
@@ -410,6 +435,23 @@ public class Router {
         }
     }
 
+    void notifyGroupLeadershipNotificationAction(final GroupLeadershipNotificationSignal signal) {
+        GroupLeadershipNotificationAction a;
+        GroupLeadershipNotificationSignal glsns;
+        if (isGroupLeadershipNotificationAFRegistered()) {
+            logger.log(Level.FINE,
+                    MessageFormat.format("Sending GroupLeadershipNotificationSignals to " +
+                            "registered Actions, Member {0}...", signal.getMemberToken()));
+            synchronized ( groupLeadershipNotificationAFs ) {
+                for ( GroupLeadershipNotificationActionFactory glsnaf : groupLeadershipNotificationAFs ) {
+                    a = (GroupLeadershipNotificationAction) glsnaf.produceAction();
+                    glsns = new GroupLeadershipNotificationSignalImpl(signal);
+                    callAction(a, glsns);
+                }
+            }
+        }
+    }
+
     private void callAction(final Action a, final Signal signal) {
         try {
             final CallableAction task = new CallableAction(a, signal);
@@ -477,6 +519,16 @@ public class Router {
         boolean retval = true;
         synchronized (failureSuspectedAF) {
             if (failureSuspectedAF.isEmpty()) {
+                retval = false;
+            }
+        }
+        return retval;
+    }
+
+    public boolean isGroupLeadershipNotificationAFRegistered() {
+        boolean retval = true;
+        synchronized ( groupLeadershipNotificationAFs ) {
+            if ( groupLeadershipNotificationAFs.isEmpty()) {
                 retval = false;
             }
         }

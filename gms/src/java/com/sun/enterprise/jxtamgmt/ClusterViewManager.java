@@ -148,9 +148,9 @@ public class ClusterViewManager {
                         advertisement));
             }
             if (advertisement.getID().equals(this.advertisement.getID())) {
-                LOG.log(Level.FINER, "Setting MasterNode Role");
+                LOG.log(Level.FINE, "Setting MasterNode Role");
             } else {
-                LOG.log(Level.FINER,
+                LOG.log(Level.FINE,
                         new StringBuffer().append("Setting Master Node :")
                                 .append(advertisement.getName()).append(' ')
                                 .append(advertisement.getID()).toString());

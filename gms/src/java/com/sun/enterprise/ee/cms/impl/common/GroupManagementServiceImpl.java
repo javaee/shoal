@@ -46,6 +46,7 @@ package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.FailureNotificationActionFactory;
 import com.sun.enterprise.ee.cms.core.FailureRecoveryActionFactory;
 import com.sun.enterprise.ee.cms.core.FailureSuspectedActionFactory;
+import com.sun.enterprise.ee.cms.core.GroupLeadershipNotificationActionFactory;
 import com.sun.enterprise.ee.cms.core.GMSCacheable;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSException;
@@ -174,6 +175,10 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         router.addDestination(failureSuspectedActionFactory);
     }
 
+    public void addActionFactory( GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory ) {
+        router.addDestination( groupLeadershipNotificationActionFactory );
+    }
+
     /**
      * Removes a FailureNotificationActionFactory instance
      * To remove a MessageActionFactory for a specific component,
@@ -249,6 +254,10 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      */
     public void removeMessageActionFactory(final String componentName) {
         router.removeMessageAFDestination(componentName);
+    }
+
+    public void removeActionFactory( GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory ) {
+        router.removeDestination( groupLeadershipNotificationActionFactory );
     }
 
     /**
@@ -385,9 +394,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                                       final GMSConstants.shutdownState shutdownState) {
 
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
-        logger.log(Level.FINE, "GMS:Announcing GroupShutdown to group with State = " + shutdownState);
+        logger.log(Level.INFO, "GMS:Announcing GroupShutdown to group " + groupName + " with State = " + shutdownState);
         gctx.announceGroupShutdown(groupName, shutdownState);
-        gctx.assumeGroupLeadership();
 
     }
 

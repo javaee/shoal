@@ -163,10 +163,9 @@ public class GroupCommunicationProviderImpl implements
     public void announceClusterShutdown(final GMSMessage gmsMessage) {
         try {
             boolean sent = clusterManager.send(null, gmsMessage);
-             if (!sent && logger.isLoggable(Level.FINE)) {
-                logger.fine("failed to send announceClusterShutdown to group.  gmsMessage=" + gmsMessage);
+             if (!sent) {
+                logger.warning("failed to send announceClusterShutdown to group.  gmsMessage=" + gmsMessage);
              }
-                            
         } catch (IOException e) {
             logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[]{e});
         } catch (MemberNotInViewException e) {

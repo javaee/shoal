@@ -43,6 +43,7 @@ import com.sun.enterprise.ee.cms.impl.common.FailureRecoverySignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.FailureSuspectedSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.core.GMSMember;
+import com.sun.enterprise.ee.cms.impl.common.GroupLeadershipNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.JoinedAndReadyNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.PlannedShutdownSignalImpl;
@@ -128,7 +129,10 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             if (views.size() > MAX_VIEWS) {
                 views.remove(0);
             }
-            logger.log(Level.INFO, "membership.snapshot.analysis", new Object[]{packet.getClusterViewEvent().toString(), member.getMemberToken(), member.getGroupName()});
+            logger.log(Level.INFO, "membership.snapshot.analysis",
+                                   new Object[]{packet.getClusterViewEvent().toString(),
+                                                member.getMemberToken(),
+                                                member.getGroupName()});
             Signal[] activeSignals = analyzeViewChange(packet);
 
             if (activeSignals.length != 0) {
@@ -140,7 +144,9 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     private ArrayList<GMSMember> getMemberTokens(final EventPacket packet) {
         final List<GMSMember> tokens = new ArrayList<GMSMember>(); // contain list of GMSMember objects.
         final StringBuffer sb =
-                        new StringBuffer("GMS View Change Received for group ").append(groupName).append(" : Members in view for ").append("(before change analysis) are :\n");
+                        new StringBuffer("GMS View Change Received for group ").append(groupName).append(" : Members in view for ").
+                                append(packet.getClusterViewEvent().toString()).
+                                append("(before change analysis) are :\n");
 
         // NOTE:  always synchronize currentCoreMembers and allCurrentMembers in this order when getting both locks at same time.
         synchronized (currentCoreMembers) {
@@ -215,6 +221,12 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
     }
 
     private void analyzeMasterChangeView(final EventPacket packet) {
+        final SystemAdvertisement advert = packet.getSystemAdvertisement();
+        final GMSMember member = JxtaUtil.getGMSMember( advert );
+        final String token = member.getMemberToken();
+        if (! this.getGMSContext().isWatchdog()) {
+            addGroupLeadershipNotificationSignal(token, member.getGroupName(), member.getStartTime());
+        }
         if (views.size() == 1) { //views list only contains 1 view which is assumed to be the 1st view.
             addNewMemberJoins(packet);
         }
@@ -297,28 +309,55 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
 
     private void addFailureSignals(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
-        final String token = advert.getName();
-        try {
-            final String type = advert.getCustomTagValue(CustomTagNames.MEMBER_TYPE.toString());
-            if (type.equalsIgnoreCase(CORETYPE)) {
-                logger.log(Level.INFO, "member.failed", new Object[]{token, groupName});
-                generateFailureRecoverySignals(getPreviousView(),
-                        token,
-                        advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                        Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())));
+        final GMSMember member = JxtaUtil.getGMSMember(advert);
+        final String failedMember = member.getMemberToken();
 
-                if (getGMSContext().getRouter().isFailureNotificationAFRegistered()) {
-                    signals.add(new FailureNotificationSignalImpl(token,
-                            advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                            Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString()))));
-                }
-
-                logger.fine("removing newly added node from the suspected list..." + token);
-                getGMSContext().removeFromSuspectList(token);
+        if (member.getMemberType().equalsIgnoreCase(CORETYPE)) {
+            List<GMSMember> previousView = getPreviousViewContaining(failedMember);
+            logger.log(Level.INFO, "member.failed", new Object[]{failedMember, member.getGroupName()});
+            generateFailureRecoverySignals(previousView, failedMember,
+                                           member.getGroupName(), member.getStartTime());
+            if (getGMSContext().getRouter().isFailureNotificationAFRegistered()) {
+                signals.add(new FailureNotificationSignalImpl(failedMember,
+                                                              member.getGroupName(), member.getStartTime()));
             }
-        } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
+            logger.fine("removing newly added node from the suspected list..." + failedMember);
+            getGMSContext().removeFromSuspectList(failedMember);
         }
+    }
+
+    /**
+     * Best effort to find a view in past that contains <code>member</code>.
+     *
+     * Returns previous view if none of <code>MAX_VIEWS_IN_PAST</code> views contain member.
+     * MASTER_CHANGE_EVENTS can cause a recently failed instance to not be in a view.
+     * This is a partial fix for shoal issue 83.
+     *
+     * @param member return a past view that contains member
+     * @return a view containing member or just return previous view if non of MAX_VIEWS_IN_PAST contain member.
+     */
+    private List<GMSMember> getPreviousViewContaining(String member) {
+        final int MAX_VIEWS_IN_PAST = 10;
+        List <GMSMember> found = getPreviousView();  // may not contain member but better than returning null.
+        for (int i = 2; ((i < (2 + MAX_VIEWS_IN_PAST)) && ((views.size() - i) >= 0)); i++) {
+            List<GMSMember> current = views.get(views.size() - i);
+            if (viewContains(current, member)) {
+                found = current;
+                break;
+            }
+        }
+        return found;
+    }
+
+    static private boolean viewContains(List<GMSMember> view, String member) {
+        boolean found = false;
+        for (GMSMember current : view) {
+            if (current.getMemberToken().compareTo(member) == 0) {
+                found = true;
+                break;
+            }
+        }
+        return found;
     }
 
     private void generateFailureRecoverySignals(final List<GMSMember> oldMembership,
@@ -490,6 +529,19 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
                 getAllCurrentMembers(),
                 groupName,
                 startTime));
+    }
+
+    private void addGroupLeadershipNotificationSignal( final String token,
+                                                       final String groupName,
+                                                       final long startTime ) {
+        logger.log( Level.INFO, "adding GroupLeadershipNotification signal leaderMember: " + token + " of group: " + groupName );
+        signals.add( new GroupLeadershipNotificationSignalImpl( token,
+                                                                getPreviousView(),
+                                                                getCurrentView(),
+                                                                getCurrentCoreMembers(),
+                                                                getAllCurrentMembers(),
+                                                                groupName,
+                                                                startTime ) );
     }
 
     private void syncDSC(final String token) {
