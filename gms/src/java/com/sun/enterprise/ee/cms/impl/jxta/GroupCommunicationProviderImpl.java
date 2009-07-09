@@ -163,10 +163,9 @@ public class GroupCommunicationProviderImpl implements
     public void announceClusterShutdown(final GMSMessage gmsMessage) {
         try {
             boolean sent = clusterManager.send(null, gmsMessage);
-             if (!sent && logger.isLoggable(Level.FINE)) {
-                logger.fine("failed to send announceClusterShutdown to group.  gmsMessage=" + gmsMessage);
+             if (!sent) {
+                logger.warning("failed to send announceClusterShutdown to group.  gmsMessage=" + gmsMessage);
              }
-                            
         } catch (IOException e) {
             logger.log(Level.WARNING, "ioexception.occurred.cluster.shutdown", new Object[]{e});
         } catch (MemberNotInViewException e) {
@@ -259,19 +258,19 @@ public class GroupCommunicationProviderImpl implements
                             // don't allow an exception sending to one instance of the cluster to prevent ptp multicast to all other instances of
                             // of the cluster.  Catch this exception, record it and continue sending to rest of instances in the cluster.
                             if (logger.isLoggable(Level.FINE)) {
-                                logger.log(Level.FINE, 
-                                        "IOException in reliable synchronous ptp multicast sending to instance " + currentMemberAdv.getName() + 
+                                logger.log(Level.FINE,
+                                        "IOException in reliable synchronous ptp multicast sending to instance " + currentMemberAdv.getName() +
                                         ". Perhaps this instance has failed but that has not been detected yet. Peer id=" +
-                                        id.toString(), 
+                                        id.toString(),
                                         ioe);
                             }
                         } catch (Throwable t) {
                            // don't allow an exception sending to one instance of the cluster prevent ptp broadcast to all other instances of
                            // of the cluster.  Catch this exception, record it and continue sending to rest of instances in the cluster.
                            if (logger.isLoggable(Level.FINE)) {
-                                logger.log(Level.FINE, 
-                                        "Exception in reliable synchronous ptp multicast sending to instance " + currentMemberAdv.getName() + 
-                                        ", peer id=" + id.toString(), 
+                                logger.log(Level.FINE,
+                                        "Exception in reliable synchronous ptp multicast sending to instance " + currentMemberAdv.getName() +
+                                        ", peer id=" + id.toString(),
                                         t);
                             }
                         }
@@ -414,7 +413,7 @@ public class GroupCommunicationProviderImpl implements
             return null;
         }
     }
-    
+
     public void announceWatchdogObservedFailure(String serverToken) throws GMSException {
         if (clusterManager == null) {
             logger.severe("cluster manager unexpectedly null");

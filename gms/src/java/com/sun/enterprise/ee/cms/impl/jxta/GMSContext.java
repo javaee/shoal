@@ -166,6 +166,11 @@ public class GMSContext extends GMSContextBase {
 
     public void announceGroupShutdown(final String groupName,
                                       final GMSConstants.shutdownState shutdownState) {
+        // if not groupleader, seize it before shutting down all other members of the group.
+        if (!this.getGroupCommunicationProvider().isGroupLeader()) {
+            logger.log(Level.INFO, "Assuming group leadership to shutdown group: " + groupName);
+            assumeGroupLeadership();
+        }
         groupCommunicationProvider.
                 announceClusterShutdown(
                         new GMSMessage(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString(), null,

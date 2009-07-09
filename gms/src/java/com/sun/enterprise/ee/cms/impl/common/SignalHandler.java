@@ -39,6 +39,7 @@ package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.FailureNotificationSignal;
 import com.sun.enterprise.ee.cms.core.FailureRecoverySignal;
 import com.sun.enterprise.ee.cms.core.FailureSuspectedSignal;
+import com.sun.enterprise.ee.cms.core.GroupLeadershipNotificationSignal;
 import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
 import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationSignal;
 import com.sun.enterprise.ee.cms.core.MessageSignal;
@@ -133,6 +134,8 @@ public class SignalHandler implements Runnable {
             router.notifyFailureSuspectedAction((FailureSuspectedSignal) signal);
         } else if (signal instanceof JoinedAndReadyNotificationSignal) {
             router.notifyJoinedAndReadyNotificationAction((JoinedAndReadyNotificationSignal) signal);
+        } else if (signal instanceof GroupLeadershipNotificationSignal ) {
+            router.notifyGroupLeadershipNotificationAction((GroupLeadershipNotificationSignal) signal);
         }
     }
 }

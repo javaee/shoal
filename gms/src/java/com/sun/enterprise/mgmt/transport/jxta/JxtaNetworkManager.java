@@ -89,6 +89,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * NetworkManager wraps the JXTA plaform lifecycle into a single object. Using the
@@ -208,11 +210,12 @@ public class JxtaNetworkManager extends AbstractNetworkManager implements Rendez
                     //this object has only one address in it, so add it to the list
                     rendezvousSeedURIs.add( ( (String)virtualMulticastURIList ) );
                 }
+                LOG.config("VIRTUAL_MULTICAST_URI_LIST=" + virtualMulticastURIList + " rendezvousSeedURIs.get(0)=" + rendezvousSeedURIs.get(1));
             }
             Object isVirtualMulticastNode = properties.get( IS_BOOTSTRAPPING_NODE.toString() );
             if( isVirtualMulticastNode != null ) {
                 isRendezvousSeed = Boolean.parseBoolean( (String)isVirtualMulticastNode );
-                LOG.fine( "isRendezvousSeed is set to " + isRendezvousSeed );
+                LOG.config("IS_BOOTSTRAPPING_NODE (isRendezvousSeed) is set to " + isRendezvousSeed);
             }
 
             tcpAddress = (String)properties.get( BIND_INTERFACE_ADDRESS.toString() );
@@ -717,8 +720,16 @@ public class JxtaNetworkManager extends AbstractNetworkManager implements Rendez
                 worldGroupConfig.setPeerID( getJxtaPeerID( instanceName ) );
                 // Disable multicast because we will be using a separate multicast in each group.
                 worldGroupConfig.setUseMulticast( false );
-                if( tcpAddress != null && !tcpAddress.equals( "" ) ) {
-                    worldGroupConfig.setTcpInterfaceAddress( tcpAddress );
+                if (tcpAddress != null && !tcpAddress.equals("")) {
+                    try {
+                        InetAddress usingInterface = InetAddress.getByName(tcpAddress);
+                    } catch (UnknownHostException failed) {
+                        // Following log message is workaround that jxta warning log messages are being suppressed by default.
+                        LOG.warning("GMS bind-interface-address property set to unknown host " + tcpAddress + ", using default of AnyAddress");
+                        // Just set the invalid tcp address into jxta layer.  Jxta layer will perform same check as above and ultimately default the value.
+                        worldGroupConfig.setTcpInterfaceAddress(tcpAddress);
+                    }
+                    worldGroupConfig.setTcpInterfaceAddress(tcpAddress);
                 }
                 ConfigParams config = worldGroupConfig.getPlatformConfig();
                 // Instantiate the world peer group factory.

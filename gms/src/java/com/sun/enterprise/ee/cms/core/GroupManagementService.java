@@ -153,6 +153,14 @@ public interface GroupManagementService {
      */
     void addActionFactory(FailureSuspectedActionFactory failureSuspectedActionFactory);
 
+    /**
+     * Registers a GroupLeadershipNotificationActionFactory instance.
+     *
+     * @param groupLeadershipNotificationActionFactory  Implementation of this interface produces
+     * a GroupLeadershipNotificationAction instance which consumes the GroupLeadershipNotificationSignal
+     */
+    void addActionFactory(
+            GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory );
 
     /**
      * Removes a FailureNotificationActionFactory instance
@@ -205,6 +213,14 @@ public interface GroupManagementService {
      * @param componentName the component name
      */
     void removeMessageActionFactory(String componentName);
+
+    /**
+     * Removes a GroupLeadershipNotificationActionFactory instance
+     *
+     * @param groupLeadershipNotificationActionFactory
+     */
+    void removeActionFactory(
+            GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory );
 
     /**
      * Returns an implementation of GroupHandle

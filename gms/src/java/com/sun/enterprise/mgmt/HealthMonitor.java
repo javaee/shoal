@@ -358,29 +358,34 @@ public class HealthMonitor implements MessageListener, Runnable {
         }
     }
 
-    private void processWatchDogNotification(Message msg) {
-         // TBD: future possible optimization would be to retain watchdog notification of failure when no master is assigned.
-         //      Given that this is an optimization to detect failure quicker, skipping handling this case in initial implementation.
-         if (masterNode.isMaster() && masterNode.isMasterAssigned()) {
-             SystemAdvertisement fromAdv = getNodeAdvertisement(msg);
-             final GMSMember watchdogMember = Utility.getGMSMember(fromAdv);
-             if (fromAdv == null) {
-                 LOG.warning("ignoring WATCHDOG_NOTIFICATION with a null sender advertisement");
-                 return;
-             }
-             if (!watchdogMember.isWatchDog()) {
-                 LOG.warning("ignoring WATCHDOG_NOTIFICATION from member:" + watchdogMember.getMemberToken() + " of group " +
+    // Master node processes watchdog notification of all other instances in gms group.
+
+    // All other instances in the gms group watch for watch dog notification of Master failure.
+    // Only newly elected master reports failure of failed master (implemented by assignAndReportFailure)
+     private void processWatchDogNotification(Message msg) {
+         final SystemAdvertisement fromAdv = getNodeAdvertisement(msg);
+         if (fromAdv == null) {
+            LOG.warning("ignoring WATCHDOG_NOTIFICATION with a null sender advertisement");
+            return;
+         }
+         final GMSMember watchdogMember = Utility.getGMSMember(fromAdv);
+         if (!watchdogMember.isWatchDog()) {
+            LOG.warning("ignoring WATCHDOG_NOTIFICATION from member:" + watchdogMember.getMemberToken() + " of group " +
                          watchdogMember.getGroupName() + " received one without a WATCHDOG member sender advertisement");
-                 return;
-             }
-             Object value = msg.getMessageElement(WATCHDOG_NOTIFICATION);
+            return;
+         }
+         Object value = msg.getMessageElement(WATCHDOG_NOTIFICATION);
              if( !(value instanceof String ) ) {
                  LOG.log(Level.WARNING, "Received an unknown message");
                  return;
              }
-             String failedTokenName = (String)value;
-             final PeerID failedMemberId = manager.getID(failedTokenName);
-             LOG.info("WATCHDOG notification for member name:" + failedTokenName + " id: " + failedMemberId + " from watchdog:" + watchdogMember.getMemberToken());
+         String failedTokenName = (String)value;
+         final PeerID failedMemberId = manager.getID(failedTokenName);
+         boolean masterFailed = (failedMemberId == null ? false : failedMemberId.equals(masterNode.getMasterNodeID()));
+         if (masterNode.isMaster() && masterNode.isMasterAssigned() || masterFailed) {
+             LOG.info("WATCHDOG notification for member name:" + failedTokenName + " id: " + failedMemberId +
+                     " from watchdog:" + watchdogMember.getMemberToken() +
+                     " wasMaster: " + masterFailed);
 
              HealthMessage.Entry failedEntry;
              synchronized (cache) {
@@ -714,6 +719,14 @@ public class HealthMonitor implements MessageListener, Runnable {
         // would be one of starting or ready or alive (other than peerstopping, etc).
         reportMyState(STARTING, null);
         //System.out.println("Running HealthMonitor Thread at interval :"+actualto);
+        if (LOG.isLoggable(Level.CONFIG)) {
+            SystemAdvertisement myAdv = manager.getSystemAdvertisement();
+            GMSMember member = Utility.getGMSMember(myAdv);
+            LOG.config("MySystemAdvertisement(summary): " + member.toString()
+                    + " ID:" + myAdv.getID().toString()
+                    + " TCP uri(s):" + myAdv.getURIs());
+            LOG.config("MySystemAdvertisement(dump)=" + myAdv.toString());
+        }
         while (!stop) {
             try {
                 synchronized (threadLock) {
@@ -1183,10 +1196,16 @@ public class HealthMonitor implements MessageListener, Runnable {
             //for each peer id
             for (HealthMessage.Entry entry : cacheCopy.values()) {
                 //don't check for isConnected with your own self
+                //don't check when state is not a running state.
                 if (!entry.id.equals(manager.getSystemAdvertisement().getID())) {
-                    LOG.fine("processCacheUpdate : " + entry.adv.getName() + " 's state is " + entry.state);
-                    if (entry.state.equals(states[ALIVE]) ||
-                            (entry.state.equals(states[ALIVEANDREADY]))) {
+                    if (entry.state.equals(states[STARTING]) ||
+                        entry.state.equals(states[ALIVE]) ||
+                        entry.state.equals(states[READY]) ||
+                        entry.state.equals(states[ALIVEANDREADY])) {
+                        //
+                        if (LOG.isLoggable(Level.FINE)) {
+                            LOG.fine("processCacheUpdate : " + entry.adv.getName() + " 's state is " + entry.state);
+                        }
                         //if there is a record, then get the number of
                         //retries performed in an earlier iteration
                         try {
