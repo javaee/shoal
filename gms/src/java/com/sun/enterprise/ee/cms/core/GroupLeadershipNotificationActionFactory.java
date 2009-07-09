@@ -43,7 +43,6 @@ package com.sun.enterprise.ee.cms.core;
  * implementation
  *
  * @author Bongjae Chang
- * @Date: June 25, 2008
  */
 public interface GroupLeadershipNotificationActionFactory extends ActionFactory {
 }

@@ -43,7 +43,6 @@ package com.sun.enterprise.ee.cms.core;
  * that are produced by registered instances of GroupLeadershipNotificationActionFactory.
  *
  * @author Bongjae Chang
- * @Date: June 25, 2008
  */
 public interface GroupLeadershipNotificationAction extends Action {
 }

@@ -45,7 +45,6 @@ import java.util.List;
  * is delivered to registered GMS Clients on all members of the group.
  *
  * @author Bongjae Chang
- * @Date: June 25, 2008
  */
 public interface GroupLeadershipNotificationSignal extends Signal {
     /**
