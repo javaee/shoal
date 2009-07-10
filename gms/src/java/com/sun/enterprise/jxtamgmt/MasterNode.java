@@ -681,25 +681,17 @@ class MasterNode implements PipeMsgListener, Runnable {
             if (msgElement != null && cvEvent != null) {
                 if (cvEvent.getEvent()  == ClusterViewEvents.JOINED_AND_READY_EVENT &&
                     cvEvent.getAdvertisement().getID().equals(localNodeID)){
+
+                    // after receiving JOINED_AND_READY_EVENT from Master, stop sending READY heartbeat.
                     manager.getHealthMonitor().setJoinedAndReadyReceived();
                 }
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
                     LOG.log(Level.WARNING, MessageFormat.format("Received a stale clusterview, older clusterview sequence {0}." +
-                            " Current sequence :{1} discarding out of sequence view.  ChangeEvent={2} from {3}",
+                            " Current sequence :{1} discarding out of sequence view.  Notified listeners of ChangeEvent={2} from {3} for group: {4}",
                             seqID, clusterViewManager.getMasterViewID(), cvEvent.getEvent().toString(),
-                             cvEvent.getAdvertisement().getName()));
-                    if (cvEvent.getEvent()  == ClusterViewEvents.JOINED_AND_READY_EVENT) {
-                        // fix for sailfin 1427
-                        clusterViewManager.notifyListeners(cvEvent);
-                        LOG.log(Level.INFO, "Received a stale clusterview. Notified JOINED_AND_READY_EVENT listeners for instance " +
-                                cvEvent.getAdvertisement().getName()); 
-                    } else {
-                        // too close to freeze to change this.  Consider other changeevents that
-                        // should still occur even when a stale one arrives.
-                        LOG.warning("Received a stale clusterview. ClusterViewListeners not notified of Change Event " + cvEvent.getEvent().toString() +
-                                    " from " + cvEvent.getAdvertisement().getName());
-                    }
+                             cvEvent.getAdvertisement().getName(), manager.getGroupName()));
+                    clusterViewManager.notifyListeners(cvEvent);
                     return true;
                 }
                 final ArrayList<SystemAdvertisement> newLocalView = getObjectFromByteArray(msgElement);
