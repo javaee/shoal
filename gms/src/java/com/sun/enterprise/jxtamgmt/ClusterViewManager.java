@@ -46,6 +46,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
+import com.sun.enterprise.ee.cms.core.GMSMember;
+
 /**
  * Manages Cluster Views and notifies cluster view listeners when cluster view
  * changes
@@ -388,6 +391,11 @@ public class ClusterViewManager {
             if (changed) {
                 //only if there are changes that we notify
                 notifyListeners(cvEvent);
+            } else {
+                GMSMember member = JxtaUtil.getGMSMember(cvEvent.getAdvertisement());
+                LOG.warning("no changes from previous view, skipping notification of listeners for cluster view event " +
+                         cvEvent.getEvent() + " from member: " + member.getMemberToken() +
+                         " group: " + member.getGroupName());
             }
         }
     }

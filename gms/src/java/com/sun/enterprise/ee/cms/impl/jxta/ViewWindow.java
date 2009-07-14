@@ -101,13 +101,22 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
 
     public void run() {
         try {
+            boolean alreadyLogged = false;
             while (!getGMSContext().isShuttingDown()) {
                 EventPacket packet = null;
                 try {
                     packet = viewQueue.take();
+                    logger.fine("viewQueue size before take " + viewQueue.size() + " for group: " + groupName);
                     if (packet != null) {
-                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
+                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent() + " for group:"
+                                   + groupName);
                         newViewObserved(packet);
+                        alreadyLogged = false;
+                    } else {
+                        if (!alreadyLogged && logger.isLoggable(Level.FINER)) {
+                            logger.finer("viewQueue poll timeout after 30 seconds for group: " + groupName);
+                            alreadyLogged = true;
+                        }
                     }
                 } catch (InterruptedException e) {
                     logger.log(Level.FINEST, e.getLocalizedMessage());

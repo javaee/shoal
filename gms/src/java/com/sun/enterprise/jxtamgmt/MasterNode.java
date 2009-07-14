@@ -674,7 +674,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                                final SystemAdvertisement source) throws IOException {
 
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
-        LOG.log(Level.FINER,"Inside processChangeEvent..." );
+        LOG.log(Level.FINER,"Inside processChangeEvent for group: " + manager.getGroupName());
         if (msgElement != null) {
             final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);

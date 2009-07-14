@@ -107,10 +107,17 @@ public class GroupCommunicationProviderImpl implements
                     clusterView);
             final ArrayBlockingQueue<EventPacket> viewQueue = getGMSContext().getViewQueue();
             try {
-                viewQueue.put(ePacket);
+                final int remainingCapacity = viewQueue.remainingCapacity();
                 if (logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, "Adding " + clusterViewEvent.getEvent() + " to viewQueue");
+                    logger.log(Level.FINER, "Adding " + clusterViewEvent.getEvent() + " to viewQueue[size:" + viewQueue.size() + " remaining:" + viewQueue.remainingCapacity() + " ]" +
+                            "  for group:" + groupName);
                 }
+                if (remainingCapacity < 2) {
+                    logger.warning("viewQueue for group: " + groupName + " near capacity, remaining capacity is" + remainingCapacity);
+                }
+                viewQueue.put(ePacket);
+                logger.log(Level.FINER,  "Added " + clusterViewEvent.getEvent() + " to viewQueue for group: " + groupName);
+
             } catch (InterruptedException e) {
                 //TODO: Examine all InterruptedException and thread.interrupt cases for better logging.
                 logger.log(Level.WARNING, "interruptedexception.occurred",
