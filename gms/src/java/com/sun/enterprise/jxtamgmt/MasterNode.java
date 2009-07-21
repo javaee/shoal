@@ -615,7 +615,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         } else {
             LOG.log(Level.FINE,
                     MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}  localSeqId : {3}",
-                            source.getName(), seqID, newLocalView.size()), clusterViewManager.getMasterViewID());
+                            source.getName(), seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
         }
         final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
         if (!newLocalView.contains(manager.getSystemAdvertisement())) {
