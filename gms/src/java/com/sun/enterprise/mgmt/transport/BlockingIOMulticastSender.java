@@ -137,10 +137,12 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         if( running )
             return;
         super.start();
-        if( localSocketAddress != null )
-            multicastSocket = new MulticastSocket( localSocketAddress );
-        else
+        if( localSocketAddress != null ) {
+            multicastSocket = new MulticastSocket( localSocketAddress.getPort() );
+            multicastSocket.setInterface( localSocketAddress.getAddress() );
+        } else {
             multicastSocket = new MulticastSocket( multicastPort );
+        }
         multicastSocket.setLoopbackMode( false );
 
         running = true;
