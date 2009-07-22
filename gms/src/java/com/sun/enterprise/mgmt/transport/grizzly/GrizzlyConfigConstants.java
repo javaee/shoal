@@ -62,5 +62,9 @@ public enum GrizzlyConfigConstants {
     START_TIMEOUT, // ms
     WRITE_TIMEOUT, // ms
 
-    MAX_WRITE_SELECTOR_POOL_SIZE
+    MAX_WRITE_SELECTOR_POOL_SIZE,
+
+    // comma separated list of tcp uri endpoints
+    // ex) tcp://192.168.0.3:9090,tcp://61.77.153.2:9090
+    VIRTUAL_MULTICAST_URI_LIST
 }

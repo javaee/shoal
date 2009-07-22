@@ -46,6 +46,7 @@ import com.sun.enterprise.mgmt.transport.MessageImpl;
 import com.sun.enterprise.mgmt.transport.MessageSender;
 import com.sun.enterprise.mgmt.transport.MulticastMessageSender;
 import com.sun.enterprise.mgmt.transport.NetworkUtility;
+import com.sun.enterprise.mgmt.transport.VirtualMulticastSender;
 
 import com.sun.grizzly.*;
 import com.sun.grizzly.util.DefaultThreadPool;
@@ -55,6 +56,9 @@ import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.CountDownLatch;
@@ -64,6 +68,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.SelectionKey;
 
 /**
@@ -99,6 +105,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private long writeTimeout; // ms
     private int multicastPacketSize;
     private int writeSelectorPoolSize;
+    private String virtualUriList;
 
     private final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
@@ -127,6 +134,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         writeTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
+        virtualUriList = Utility.getStringProperty( VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -240,20 +248,31 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                                                                                          multicastPort,
                                                                                          multicastAddress,
                                                                                          localPeerID );
-        if( GrizzlyUtil.isSupportNIOMulticast() ) {
-            udpSender = udpConnectorWrapper;
-            multicastSender = udpConnectorWrapper;
+        udpSender = udpConnectorWrapper;
+        List<PeerID> virtualPeerIdList = getVirtualPeerIDList( virtualUriList );
+        if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() ) {
+            multicastSender = new VirtualMulticastSender( host,
+                                                          multicastAddress,
+                                                          multicastPort,
+                                                          networkInterfaceName,
+                                                          multicastPacketSize,
+                                                          localPeerID,
+                                                          new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) ),
+                                                          this,
+                                                          virtualPeerIdList );
         } else {
-            udpSender = udpConnectorWrapper;
-            // todo using parent executor
-            multicastSender = new BlockingIOMulticastSender( host,
-                                                             multicastAddress,
-                                                             multicastPort,
-                                                             networkInterfaceName,
-                                                             multicastPacketSize,
-                                                             localPeerID,
-                                                             new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) ),
-                                                             this );
+            if( GrizzlyUtil.isSupportNIOMulticast() ) {
+                multicastSender = udpConnectorWrapper;
+            } else {
+                multicastSender = new BlockingIOMulticastSender( host,
+                                                                 multicastAddress,
+                                                                 multicastPort,
+                                                                 networkInterfaceName,
+                                                                 multicastPacketSize,
+                                                                 localPeerID,
+                                                                 new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) ),
+                                                                 this );
+            }
         }
         if( tcpSender != null )
             tcpSender.start();
@@ -264,6 +283,57 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         addMessageListener( new PingMessageListener() );
         addMessageListener( new PongMessageListener() );
         running = true;
+    }
+
+    private List<PeerID> getVirtualPeerIDList( String virtualUriList ) {
+        if( virtualUriList == null )
+            return null;
+        LOG.config( "VIRTUAL_MULTICAST_URI_LIST = " + virtualUriList );
+        List<PeerID> virtualPeerIdList = new ArrayList<PeerID>();
+        //if this object has multiple addresses that are comma separated
+        if( virtualUriList.indexOf( "," ) > 0 ) {
+            String addresses[] = virtualUriList.split( "," );
+            if( addresses.length > 0 ) {
+                List<String> virtualUriStringList = Arrays.asList( addresses );
+                for( String uriString : virtualUriStringList ) {
+                    try {
+                        PeerID peerID = getPeerIDFromURI( uriString );
+                        if( peerID != null ) {
+                            virtualPeerIdList.add( peerID );
+                            LOG.config( "VIRTUAL_MULTICAST_URI = " + uriString + ", Converted PeerID = " + peerID );
+                        }
+                    } catch( URISyntaxException use ) {
+                        if( LOG.isLoggable( Level.CONFIG ) )
+                            LOG.log( Level.CONFIG, "failed to parse the virtual multicast uri(" + uriString + ")", use );
+                    }
+                }
+            }
+        } else {
+            //this object has only one address in it, so add it to the list
+            try {
+                PeerID peerID = getPeerIDFromURI( virtualUriList );
+                if( peerID != null ) {
+                    virtualPeerIdList.add( peerID );
+                    LOG.config( "VIRTUAL_MULTICAST_URI = " + virtualUriList + ", Converted PeerID = " + peerID );
+                }
+            } catch( URISyntaxException use ) {
+                if( LOG.isLoggable( Level.CONFIG ) )
+                    LOG.log( Level.CONFIG, "failed to parse the virtual multicast uri(" + virtualUriList + ")", use );
+            }
+        }
+        return virtualPeerIdList;
+    }
+
+    private PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
+        if( uri == null )
+            return null;
+        URI virtualUri = new URI( uri );
+        return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( virtualUri.getHost(),
+                                                             virtualUri.getPort(),
+                                                             multicastPort ),
+                                          localPeerID.getGroupName(),
+                                          // the instance name is not meaningless in this case
+                                          "Unknown" );
     }
 
     @Override

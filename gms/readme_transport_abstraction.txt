@@ -127,6 +127,7 @@
 ---++ TODO
    * Various tests are needed on complicated environments
    * Packages and class names should be reviewed
-   * Should consider that cluster members are located beyond one subnet or multicast traffic is disabled
+   * Should consider that cluster members are located beyond one subnet or multicast traffic is disabled [DONE]
+      * VirtualMulticastSender class supports this, but I think that more intelligent logic is needed. i.g. JXTA's Rendezvous function.
    * etc...
    
