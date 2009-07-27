@@ -38,28 +38,28 @@ package com.sun.enterprise.mgmt.transport;
 
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.ServerSocket;
-import java.net.Inet6Address;
-import java.net.Inet4Address;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-import java.io.ByteArrayOutputStream;
-import java.io.Serializable;
-import java.io.ObjectOutputStream;
-import java.io.IOException;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.ServerSocket;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utility class that can be used by any calling code to do common routines about Network I/O
@@ -230,7 +230,9 @@ public class NetworkUtility {
                 loopback = anInterface;
                 continue;
             }
-            if( supportsMulticast( anInterface ) ) {
+            if( supportsMulticast( anInterface ) &&
+                ( getFirstInetAddress( anInterface, false ) != null ||
+                  getFirstInetAddress( anInterface, true ) != null ) ) {
                 firstInterface = anInterface;
                 break;
             }
@@ -259,6 +261,37 @@ public class NetworkUtility {
         else if( !preferIPv6 && firstInetAddressV4 != null )
             return firstInetAddressV4;
         NetworkInterface anInterface = getFirstNetworkInterface();
+        Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
+        while( allIntfAddr.hasMoreElements() ) {
+            InetAddress anAddr = allIntfAddr.nextElement();
+            if( anAddr.isLoopbackAddress() || anAddr.isAnyLocalAddress() )
+                continue;
+            if( firstInetAddressV6 == null && anAddr instanceof Inet6Address )
+                firstInetAddressV6 = anAddr;
+            else if( firstInetAddressV4 == null && anAddr instanceof Inet4Address )
+                firstInetAddressV4 = anAddr;
+            if( firstInetAddressV6 != null && firstInetAddressV4 != null )
+                break;
+        }
+        if( preferIPv6 )
+            return firstInetAddressV6;
+        else
+            return firstInetAddressV4;
+    }
+
+    /**
+     * Return a first <code>InetAddress</code> of the given network interface
+     *
+     * @param anInterface <code>NeteworkInterface</code>
+     * @param preferIPv6 if true, prefer IPv6 InetAddress. otherwise prefer IPv4 InetAddress
+     * @return a first found <code>InetAddress</code>. returns <code>null</code> if not found.
+     * @throws IOException if an I/O error occurs or a network interface was not found
+     */
+    public static InetAddress getFirstInetAddress( NetworkInterface anInterface, boolean preferIPv6 ) throws IOException {
+        if( anInterface == null )
+            return null;
+        InetAddress firstInetAddressV4 = null;
+        InetAddress firstInetAddressV6 = null;
         Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
         while( allIntfAddr.hasMoreElements() ) {
             InetAddress anAddr = allIntfAddr.nextElement();
