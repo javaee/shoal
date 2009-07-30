@@ -105,8 +105,11 @@ class ViewWindow implements com.sun.enterprise.ee.cms.impl.common.ViewWindow, Ru
             while (!getGMSContext().isShuttingDown()) {
                 EventPacket packet = null;
                 try {
+                    int vqSize = viewQueue.size();
+                    if (vqSize > 0) {
+                        logger.info("viewQueue size before take " + vqSize + " for group: " + groupName);
+                    }
                     packet = viewQueue.take();
-                    logger.fine("viewQueue size before take " + viewQueue.size() + " for group: " + groupName);
                     if (packet != null) {
                         logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent() + " for group:"
                                    + groupName);

@@ -99,7 +99,8 @@ public class ClusterViewManager {
      *
      * @param advertisement system adverisement to add
      */
-    void add(final SystemAdvertisement advertisement) {
+    boolean add(final SystemAdvertisement advertisement) {
+        boolean result = false;
         lockLog("add()");
         viewLock.lock();
         try {
@@ -111,6 +112,7 @@ public class ClusterViewManager {
                         .toString());
 
                 view.put(advertisement.getID().toString(), advertisement);
+                result = true;
                 LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
             } else {
                 //if view does contain the same sys adv but the start time is different from what
@@ -122,11 +124,13 @@ public class ClusterViewManager {
                         LOG.fine("ClusterViewManager .add() : Instance "+ advertisement.getName() + " has restarted. Adding it to the view.");
                     }
                     view.put(advertisement.getID().toString(), advertisement);
+                    result = true;
                 }
             }
         } finally {
             viewLock.unlock();
         }
+        return result;
     }
 
     /**
