@@ -1019,6 +1019,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                     if (isMaster() && masterAssigned) {
                         result = clusterViewManager.add(adv);
                     } else if (discoveryInProgress) {
+                        result = false;  // never report Join event during discovery mode.
                         discoveryView.add(adv);
                     }
                 }

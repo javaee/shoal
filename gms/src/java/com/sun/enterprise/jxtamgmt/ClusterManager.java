@@ -791,5 +791,9 @@ public class ClusterManager implements PipeMsgListener {
         return groupName;
     }
 
+    public boolean isDiscoveryInProgress() {
+        return masterNode.isDiscoveryInProgress();
+    }
+
 }
 

@@ -240,4 +240,6 @@ public interface GroupCommunicationProvider {
     void announceGroupStartup(String groupName,
                               GMSConstants.groupStartupState startupState,
                               List<String> memberTokens);
+
+    boolean isDiscoveryInProgress(); 
 }

@@ -434,5 +434,9 @@ public class GroupCommunicationProviderImpl implements
         hm.announceWatchdogObservedFailure(serverToken);
     }
 
+    public boolean isDiscoveryInProgress() {
+        return clusterManager.isDiscoveryInProgress();
+    }
+
 }
 
