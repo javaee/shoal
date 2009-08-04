@@ -511,7 +511,7 @@ class MasterNode implements MessageListener, Runnable {
         } else {
             LOG.log(Level.FINE,
                     MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}  localSeqId : {3}",
-                            source.getName(), seqID, newLocalView.size()), clusterViewManager.getMasterViewID());
+                            source.getName(), seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
         }
         final ClusterViewEvent cvEvent = (ClusterViewEvent)msgElement;
         if (!newLocalView.contains(manager.getSystemAdvertisement())) {
@@ -570,7 +570,7 @@ class MasterNode implements MessageListener, Runnable {
                                final SystemAdvertisement source) throws IOException {
 
         Object msgElement = msg.getMessageElement(VIEW_CHANGE_EVENT);
-        LOG.log(Level.FINER,"Inside processChangeEvent..." );
+        LOG.log(Level.FINER,"Inside processChangeEvent for group: " + manager.getGroupName());
         if (msgElement != null && msgElement instanceof ClusterViewEvent) {
             final ClusterViewEvent cvEvent = (ClusterViewEvent)msgElement;
             msgElement = msg.getMessageElement(AMASTERVIEW);
@@ -618,7 +618,7 @@ class MasterNode implements MessageListener, Runnable {
      * @return true if the message is a query message
      * @throws IOException if an io error occurs
      */
-    boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
 
         final Object msgElement = msg.getMessageElement(MASTERQUERY);
 
@@ -627,14 +627,16 @@ class MasterNode implements MessageListener, Runnable {
         }
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINE, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            Message masterResponseMsg = createMasterResponse(false, localNodeID);
-            synchronized(masterViewID) {
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                addAuthoritativeView(masterResponseMsg);
-            }
-            clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, masterResponseMsg, false);
+            if (isAdvAddedToView) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                Message masterResponseMsg = createMasterResponse(false, localNodeID);
+                synchronized(masterViewID) {
+                    clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                    addAuthoritativeView(masterResponseMsg);
+                }
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, masterResponseMsg, false);
+            } else  LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
         }
         //for issue 484
         //when the master is killed and restarted very quickly
@@ -746,7 +748,7 @@ class MasterNode implements MessageListener, Runnable {
      * @return true if the message is a query message
      * @throws IOException if an io error occurs
      */
-    boolean processNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processNodeQuery(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
         final Object msgElement = msg.getMessageElement(NODEQUERY);
 
         if (msgElement == null || adv == null) {
@@ -756,14 +758,16 @@ class MasterNode implements MessageListener, Runnable {
 
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINE, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            Message responseMsg = createMasterResponse(false, localNodeID);
-            synchronized(masterViewID) {
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                addAuthoritativeView(responseMsg);
-            }
-            clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, responseMsg, false);
+            if(isAdvAddedToView) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                Message responseMsg = createMasterResponse(false, localNodeID);
+                synchronized(masterViewID) {
+                    clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                    addAuthoritativeView(responseMsg);
+                }
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, responseMsg, false);
+            } else LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
         } else {
             final Message response = createSelfNodeAdvertisement();
             response.addMessageElement(NODERESPONSE, "noderesponse");
@@ -781,7 +785,7 @@ class MasterNode implements MessageListener, Runnable {
      * @return true if the message is a response message
      * @throws IOException if an io error occurs
      */
-    boolean processNodeResponse(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processNodeResponse(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
         final Object msgElement = msg.getMessageElement(NODERESPONSE);
 
         if (msgElement == null || adv == null) {
@@ -789,14 +793,16 @@ class MasterNode implements MessageListener, Runnable {
         }
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINE, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            Message responseMsg = createMasterResponse(false, localNodeID);
-            synchronized(masterViewID) {
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                addAuthoritativeView(responseMsg);
-            }
-            clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, responseMsg, false);
+            if(isAdvAddedToView) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                Message responseMsg = createMasterResponse(false, localNodeID);
+                synchronized(masterViewID) {
+                    clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                    addAuthoritativeView(responseMsg);
+                }
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, responseMsg, false);
+            } else LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
         }
         return true;
     }
@@ -854,6 +860,7 @@ class MasterNode implements MessageListener, Runnable {
      * {@inheritDoc}
      */
     public void receiveMessageEvent(final MessageEvent event) throws MessageIOException {
+        boolean result = false;
         LOG.log(Level.FINEST, "Received a message inside  pipeMsgEvent");
 
         if (manager.isStopping()) {
@@ -878,12 +885,13 @@ class MasterNode implements MessageListener, Runnable {
                 // add the advertisement to the list
                 if (adv != null) {
                     if (isMaster() && masterAssigned) {
-                        clusterViewManager.add(adv);
+                        result = clusterViewManager.add(adv);
                     } else if (discoveryInProgress) {
+                        result = false;  // never report Join event during discovery mode.
                         discoveryView.add(adv);
                     }
                 }
-                if (processMasterNodeQuery(msg, adv)) {
+                if (processMasterNodeQuery(msg, adv, result)) {
                     return;
                 }
                 if (processMasterNodeResponse(msg, adv)) {
@@ -898,10 +906,10 @@ class MasterNode implements MessageListener, Runnable {
                 if (processChangeEvent(msg, adv)) {
                     return;
                 }
-                if (processNodeQuery(msg, adv)) {
+                if (processNodeQuery(msg, adv, result)) {
                     return;
                 }
-                if (processNodeResponse(msg, adv)) {
+                if (processNodeResponse(msg, adv, result)) {
                     return;
                 }
                 if (processGroupStartupComplete(msg, adv)) {

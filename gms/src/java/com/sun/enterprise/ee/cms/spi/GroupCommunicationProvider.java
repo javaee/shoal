@@ -51,7 +51,7 @@ package com.sun.enterprise.ee.cms.spi;
  * GCP through commonly executed calls. GCPs should have a notion of grouping
  * members and allow for messaging. GCPs should be capable of notifying group
  * events. GCP should provide interfaces for programmatic configuration of their
- * group communication and membership protocols. 
+ * group communication and membership protocols.
  *
  * @author Shreedhar Ganapathy
  *         Date: Jun 26, 2006
@@ -86,7 +86,7 @@ public interface GroupCommunicationProvider {
     /**
      * Sends an announcement to the group that a cluster wide shutdown is
      * impending
-     * @param gmsMessage an object that encapsulates the application's Message  
+     * @param gmsMessage an object that encapsulates the application's Message
      */
     void announceClusterShutdown(GMSMessage gmsMessage);
 
@@ -100,7 +100,7 @@ public interface GroupCommunicationProvider {
     /**
      * Sends a message using the underlying group communication
      * providers'(GCP's) APIs. Requires the users' message to be wrapped into a
-     * GMSMessage object. 
+     * GMSMessage object.
      *
      * @param targetMemberIdentityToken The member token string that identifies
      *                      the target member to which this message is addressed.
@@ -113,7 +113,7 @@ public interface GroupCommunicationProvider {
      * @param synchronous   setting true here will call the underlying GCP's api
      *                      that corresponds to a synchronous message, if
      *                      available.
-     * @throws com.sun.enterprise.ee.cms.core.GMSException wraps the underlying exception 
+     * @throws com.sun.enterprise.ee.cms.core.GMSException wraps the underlying exception
      */
     void sendMessage (String targetMemberIdentityToken, Serializable message,
                       boolean synchronous )
@@ -167,7 +167,7 @@ public interface GroupCommunicationProvider {
      * Returns UNKNOWN when the local state for the member is considered stale (determined by threshold value)
      * and the network invocation to get the member state times out before getting a reply from the member of what its state is.
      */
- 
+
     MemberStates getMemberState(String member, long threshold, long timeout);
 
     /**
@@ -179,7 +179,7 @@ public interface GroupCommunicationProvider {
 
     /**
      * Returns the Group Leader as defined by the underlying Group Communication
-     * Provider. 
+     * Provider.
      * @return   String
      */
     String getGroupLeader();
@@ -192,7 +192,7 @@ public interface GroupCommunicationProvider {
      * <p>For underlying Group Communication Providers who don't support the feature
      * of a explicit leader role assumption, the implementation of this method
      * would be a no-op.</p>
-     *     
+     *
      **/
     void assumeGroupLeadership();
 
@@ -240,4 +240,6 @@ public interface GroupCommunicationProvider {
     void announceGroupStartup(String groupName,
                               GMSConstants.groupStartupState startupState,
                               List<String> memberTokens);
+
+    boolean isDiscoveryInProgress(); 
 }

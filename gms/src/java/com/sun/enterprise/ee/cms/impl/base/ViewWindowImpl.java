@@ -107,13 +107,25 @@ class ViewWindowImpl implements ViewWindow, Runnable {
 
     public void run() {
         try {
+            boolean alreadyLogged = false;
             while (!getGMSContext().isShuttingDown()) {
                 EventPacket packet = null;
                 try {
+                    int vqSize = viewQueue.size();
+                    if (vqSize > 0) {
+                        logger.info("viewQueue size before take " + vqSize + " for group: " + groupName);
+                    }
                     packet = viewQueue.take();
                     if (packet != null) {
-                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent());
+                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent() + " for group:"
+                                   + groupName);
                         newViewObserved(packet);
+                        alreadyLogged = false;
+                    } else {
+                        if (!alreadyLogged && logger.isLoggable(Level.FINER)) {
+                            logger.finer("viewQueue poll timeout after 30 seconds for group: " + groupName);
+                            alreadyLogged = true;
+                        }
                     }
                 } catch (InterruptedException e) {
                     logger.log(Level.FINEST, e.getLocalizedMessage());
@@ -230,7 +242,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         if ( !this.getGMSContext().isWatchdog() ) {
             addGroupLeadershipNotificationSignal( token, member.getGroupName(), member.getStartTime() );
         }
-        if (views.size() == 1) { //views list only contains 1 view which is assumed to be the 1st view.
+        if (views.size() == 1 && ! getGMSContext().getGroupCommunicationProvider().isDiscoveryInProgress()) { //views list only contains 1 view which is assumed to be the 1st view.
             addNewMemberJoins(packet);
         }
         if (views.size() > 1 &&
@@ -493,7 +505,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         try {
             if (member.isCore()) {
                 final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-                logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " StartupState:" + startupState.toString());
+                logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " Group: :" + member.getGroupName() +
+                                       " StartupState:" + startupState.toString());
                 addJoinedAndReadyNotificationSignal(token,
                         advert.getCustomTagValue(
                                 CustomTagNames.GROUP_NAME.toString()),

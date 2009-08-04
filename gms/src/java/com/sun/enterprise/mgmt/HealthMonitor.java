@@ -1202,7 +1202,6 @@ public class HealthMonitor implements MessageListener, Runnable {
                         entry.state.equals(states[ALIVE]) ||
                         entry.state.equals(states[READY]) ||
                         entry.state.equals(states[ALIVEANDREADY])) {
-                        //
                         if (LOG.isLoggable(Level.FINE)) {
                             LOG.fine("processCacheUpdate : " + entry.adv.getName() + " 's state is " + entry.state);
                         }

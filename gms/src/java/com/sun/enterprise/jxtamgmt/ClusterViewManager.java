@@ -46,6 +46,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.sun.enterprise.ee.cms.impl.jxta.CustomTagNames;
+import com.sun.enterprise.ee.cms.core.GMSMember;
+
 /**
  * Manages Cluster Views and notifies cluster view listeners when cluster view
  * changes
@@ -96,7 +99,8 @@ public class ClusterViewManager {
      *
      * @param advertisement system adverisement to add
      */
-    void add(final SystemAdvertisement advertisement) {
+    boolean add(final SystemAdvertisement advertisement) {
+        boolean result = false;
         lockLog("add()");
         viewLock.lock();
         try {
@@ -108,6 +112,7 @@ public class ClusterViewManager {
                         .toString());
 
                 view.put(advertisement.getID().toString(), advertisement);
+                result = true;
                 LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
             } else {
                 //if view does contain the same sys adv but the start time is different from what
@@ -119,11 +124,13 @@ public class ClusterViewManager {
                         LOG.fine("ClusterViewManager .add() : Instance "+ advertisement.getName() + " has restarted. Adding it to the view.");
                     }
                     view.put(advertisement.getID().toString(), advertisement);
+                    result = true;
                 }
             }
         } finally {
             viewLock.unlock();
         }
+        return result;
     }
 
     /**
@@ -172,7 +179,7 @@ public class ClusterViewManager {
         }
         lockLog("setMaster()");
         viewLock.lock();
-        try { 
+        try {
             if ( newView != null ) {
                 addToView( newView );
             }
@@ -259,7 +266,7 @@ public class ClusterViewManager {
             viewLock.unlock();
         }
     }
-    
+
     /**
      * Returns a sorted localView
      *
@@ -388,6 +395,11 @@ public class ClusterViewManager {
             if (changed) {
                 //only if there are changes that we notify
                 notifyListeners(cvEvent);
+            } else {
+                GMSMember member = JxtaUtil.getGMSMember(cvEvent.getAdvertisement());
+                LOG.warning("no changes from previous view, skipping notification of listeners for cluster view event " +
+                         cvEvent.getEvent() + " from member: " + member.getMemberToken() +
+                         " group: " + member.getGroupName());
             }
         }
     }

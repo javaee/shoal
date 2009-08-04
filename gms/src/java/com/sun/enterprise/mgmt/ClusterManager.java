@@ -684,5 +684,9 @@ public class ClusterManager implements MessageListener {
     public String getGroupName() {
         return groupName;
     }
+
+    public boolean isDiscoveryInProgress() {
+        return masterNode.isDiscoveryInProgress();
+    }
 }
 

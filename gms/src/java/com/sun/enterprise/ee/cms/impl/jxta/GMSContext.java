@@ -127,10 +127,10 @@ public class GMSContext extends GMSContextBase {
     }
 
     public void join() throws GMSException {
-        viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "ViewWindowThread");
+        viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "ViewWindowThread:" + groupName);
         MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
 
-        messageWindowThread = new Thread(messageWindow, "MessageWindowThread");
+        messageWindowThread = new Thread(messageWindow, "MessageWindowThread:" + groupName);
         messageWindowThread.start();
 
         if (viewWindowThread != null) {

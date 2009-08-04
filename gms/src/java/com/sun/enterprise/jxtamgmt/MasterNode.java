@@ -615,7 +615,7 @@ class MasterNode implements PipeMsgListener, Runnable {
         } else {
             LOG.log(Level.FINE,
                     MessageFormat.format("Received a VIEW_CHANGE_EVENT from : {0}, seqID of :{1}, size :{2}  localSeqId : {3}",
-                            source.getName(), seqID, newLocalView.size()), clusterViewManager.getMasterViewID());
+                            source.getName(), seqID, newLocalView.size(), clusterViewManager.getMasterViewID()));
         }
         final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
         if (!newLocalView.contains(manager.getSystemAdvertisement())) {
@@ -674,7 +674,7 @@ class MasterNode implements PipeMsgListener, Runnable {
                                final SystemAdvertisement source) throws IOException {
 
         MessageElement msgElement = msg.getMessageElement(NAMESPACE, VIEW_CHANGE_EVENT);
-        LOG.log(Level.FINER,"Inside processChangeEvent..." );
+        LOG.log(Level.FINER,"Inside processChangeEvent for group: " + manager.getGroupName());
         if (msgElement != null) {
             final ClusterViewEvent cvEvent = getObjectFromByteArray(msgElement);
             msgElement = msg.getMessageElement(NAMESPACE, AMASTERVIEW);
@@ -722,7 +722,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message is a query message
      * @throws IOException if an io error occurs
      */
-    boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processMasterNodeQuery(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
 
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, MASTERQUERY);
 
@@ -732,14 +732,16 @@ class MasterNode implements PipeMsgListener, Runnable {
         processRoute(msg);
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINE, MessageFormat.format("Received a MasterNode Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            Message masterResponseMsg = createMasterResponse(false, localNodeID);
-            synchronized(masterViewID) {
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                addAuthoritativeView(masterResponseMsg);
-            }
-            clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, masterResponseMsg, false);
+            if (isAdvAddedToView) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                Message masterResponseMsg = createMasterResponse(false, localNodeID);
+                synchronized(masterViewID) {
+                    clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                    addAuthoritativeView(masterResponseMsg);
+                }
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, masterResponseMsg, false);
+            } else  LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
         }
         //for issue 484
         //when the master is killed and restarted very quickly
@@ -851,7 +853,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message is a query message
      * @throws IOException if an io error occurs
      */
-    boolean processNodeQuery(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processNodeQuery(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODEQUERY);
 
         if (msgElement == null || adv == null) {
@@ -862,14 +864,16 @@ class MasterNode implements PipeMsgListener, Runnable {
 
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINE, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            Message responseMsg = createMasterResponse(false, localNodeID);
-            synchronized(masterViewID) {
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                addAuthoritativeView(responseMsg);
-            }
-            clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, responseMsg, false);
+            if(isAdvAddedToView) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                Message responseMsg = createMasterResponse(false, localNodeID);
+                synchronized(masterViewID) {
+                    clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                    addAuthoritativeView(responseMsg);
+                }
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, responseMsg, false);
+            } else LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
         } else {
             final Message response = createSelfNodeAdvertisement();
             final MessageElement el = new StringMessageElement(NODERESPONSE, "noderesponse", null);
@@ -888,7 +892,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * @return true if the message is a response message
      * @throws IOException if an io error occurs
      */
-    boolean processNodeResponse(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processNodeResponse(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
         final MessageElement msgElement = msg.getMessageElement(NAMESPACE, NODERESPONSE);
 
         if (msgElement == null || adv == null) {
@@ -897,14 +901,16 @@ class MasterNode implements PipeMsgListener, Runnable {
         processRoute(msg);
         if (isMaster() && masterAssigned) {
             LOG.log(Level.FINE, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-            final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
-            Message responseMsg = createMasterResponse(false, localNodeID);
-            synchronized(masterViewID) {
-                clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-                addAuthoritativeView(responseMsg);
-            }
-            clusterViewManager.notifyListeners(cvEvent);
-            sendNewView(null, cvEvent, responseMsg, false);
+            if(isAdvAddedToView) {
+                final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                Message responseMsg = createMasterResponse(false, localNodeID);
+                synchronized(masterViewID) {
+                    clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                    addAuthoritativeView(responseMsg);
+                }
+                clusterViewManager.notifyListeners(cvEvent);
+                sendNewView(null, cvEvent, responseMsg, false);
+            } else LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
         }
         return true;
     }
@@ -986,6 +992,7 @@ class MasterNode implements PipeMsgListener, Runnable {
      * {@inheritDoc}
      */
     public void pipeMsgEvent(final PipeMsgEvent event) {
+        boolean result = false;
         LOG.log(Level.FINEST, "Received a message inside  pipeMsgEvent");
 
         if (manager.isStopping()) {
@@ -1010,12 +1017,13 @@ class MasterNode implements PipeMsgListener, Runnable {
                 // add the advertisement to the list
                 if (adv != null) {
                     if (isMaster() && masterAssigned) {
-                        clusterViewManager.add(adv);
+                        result = clusterViewManager.add(adv);
                     } else if (discoveryInProgress) {
+                        result = false;  // never report Join event during discovery mode.
                         discoveryView.add(adv);
                     }
                 }
-                if (processMasterNodeQuery(msg, adv)) {
+                if (processMasterNodeQuery(msg, adv, result)) {
                     return;
                 }
                 if (processMasterNodeResponse(msg, adv)) {
@@ -1030,10 +1038,10 @@ class MasterNode implements PipeMsgListener, Runnable {
                 if (processChangeEvent(msg, adv)) {
                     return;
                 }
-                if (processNodeQuery(msg, adv)) {
+                if (processNodeQuery(msg, adv, result)) {
                     return;
                 }
-                if (processNodeResponse(msg, adv)) {
+                if (processNodeResponse(msg, adv, result)) {
                     return;
                 }
                 if (processGroupStartupComplete(msg, adv)) {
