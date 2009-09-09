@@ -64,4 +64,17 @@ public class SignalPacket {
     Signal getSignal(){
         return signal;
     }
+
+    public String toString() {
+        String result = "SignalPacket contains: ";
+        if (signal != null) {
+            result += signal.toString();
+        } else if (signals != null) {
+            for (Signal s : signals) {
+                result += s.toString() + " ";
+            }
+
+        }
+        return result;
+    }
 }

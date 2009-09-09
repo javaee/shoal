@@ -43,6 +43,7 @@ import java.text.MessageFormat;
 import java.util.Hashtable;
 import java.util.Set;
 import java.util.Vector;
+import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -545,6 +546,32 @@ public class Router {
         logger.log(Level.FINEST, MessageFormat.format("Router Returning failure " +
                 "recovery components={0}", failureRecoveryAF.keySet()));
         return failureRecoveryAF.keySet();
+    }
+
+    public void shutdown() {
+        undocketAllDestinations();
+        if( signalHandlerThread != null ) {
+            signalHandlerThread.interrupt();
+        }
+        if( queue != null ) {
+            int unprocessedEventSize = queue.size();
+            if (unprocessedEventSize > 0) {
+                logger.warning("shutdown: cleared queue with " + queue.size() + " unprocessed events");
+                // TBD.  If shutdown has unprocessed events outstanding.
+                try {
+                    LinkedList<SignalPacket> unprocessedEvents = new LinkedList<SignalPacket>();
+                    queue.drainTo(unprocessedEvents);
+                    for (SignalPacket sp :  unprocessedEvents) {
+                        logger.info("shutdown: unprocessed signals:" + sp.toString());
+                    }
+                } catch (Throwable t) {}
+            }
+
+            queue.clear();
+        }
+        if( actionPool != null ) {
+            actionPool.shutdownNow();
+        }
     }
 
     /**
