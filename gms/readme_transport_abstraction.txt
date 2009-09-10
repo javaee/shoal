@@ -91,14 +91,14 @@
          * You can use system property or property map
          * See the GrizzlyConfigConstants
          * If you set "-DTCPSTARTPORT=9090 -DTCPENDPORT=9120" with system property, an available TCP port between TCPSTARTPORT and TCPENDPORT will be used for listening, sending and receiving
-         * Set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="grizzly" with system property
+         * Set "-DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly" with system property
          * If you would like to default configurations, See GrizzlyNetworkManager#configure()
 
    * Using JXTA
       * Most of packages and classes are not changed as well as not removed, so if you run Shoal by default, the behavior is same to old version.
-         * Run by default or set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="jxta" with system property
+         * Run by default or set "-DSHOAL_GROUP_COMMUNICATION_PROVIDER=jxta" with system property
       * I created new packages for supporting JXTA on this Shoal version to which abstraction is applied  
-         * Set -DSHOAL_GROUP_COMMUNICATINO_PROVIDER="jxtanew" with system property
+         * Set "-DSHOAL_GROUP_COMMUNICATION_PROVIDER=jxtanew" with system property
          * com.sun.enterprise.mgmt.transport.jxta.*
          * Most of original algorithms are also preserved.
 
@@ -108,16 +108,16 @@
       
 ---++ How to run
    * Required additional grizzly-framework.jar and grizzly-utils.jar libraries
-   * You can test this simply with SimpleJoinTest.java
+   * You can test this simply with SimpleJoinTest.java. (If you run on windows, replace ':' with ';')
       * For using grizzly transport
-         * java -cp grizzly-framework.jar;grizzly-utils.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER="grizzly" SimpleJoinTest server1
+         * java -cp build:lib/grizzly-framework.jar:lib/grizzly-utils.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.jointest.SimpleJoinTest server1
          * If you run this on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
       * For using original jxta transport
-         * java -cp jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER="jxta" SimpleJoinTest server1
-         * java -cp jxta.jar SimpleJoinTest server1
+         * java -cp build:lib/jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER=jxta com.sun.enterprise.shoal.jointest.SimpleJoinTest server1
+         * java -cp build:lib/jxta.jar com.sun.enterprise.shoal.jointest.SimpleJoinTest server1
          * Same to original Shoal
       * For using new jxta transport
-         * java -cp jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER="jxtanew" SimpleJoinTest server1
+         * java -cp build:lib/jxta.jar -DSHOAL_GROUP_COMMUNICATION_PROVIDER=jxtanew com.sun.enterprise.shoal.jointest.SimpleJoinTest server1
 
 
 ---++ Tests

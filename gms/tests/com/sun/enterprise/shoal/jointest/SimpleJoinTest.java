@@ -2,7 +2,6 @@ package com.sun.enterprise.shoal.jointest;
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
-import com.sun.enterprise.jxtamgmt.JxtaUtil;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.util.logging.Logger;
@@ -17,20 +16,24 @@ public class SimpleJoinTest {
     private final String group = "TestGroup";
 
     public static void main( String[] args ) {
-        JxtaUtil.setLogger(logger);
-        JxtaUtil.setupLogHandler();
+        String serverName = null;
+        if( args != null && args.length == 1 ) {
+            serverName = args[0];
+        }
+
         SimpleJoinTest check = new SimpleJoinTest();
         try {
-            check.runSimpleSample();
+            check.runSimpleSample( serverName );
         } catch( GMSException e ) {
             logger.log( Level.SEVERE, "Exception occured while joining group:" + e );
         }
     }
 
-    private void runSimpleSample() throws GMSException {
+    private void runSimpleSample( String serverName ) throws GMSException {
         logger.log( Level.INFO, "Starting SimpleJoinTest...." );
 
-        String serverName = UUID.randomUUID().toString();;
+        if( serverName == null || serverName.length() <= 0 )
+            serverName = UUID.randomUUID().toString();;
 
         //initialize Group Management Service
         GroupManagementService gms = initializeGMS( serverName, group );
