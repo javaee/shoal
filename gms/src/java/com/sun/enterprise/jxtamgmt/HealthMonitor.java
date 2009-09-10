@@ -270,6 +270,33 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         return msg;
     }
 
+    // Fix for glassfish issue 9055
+    // This method is used by master to send a healthmessage reporting another peers state.
+    // use entry and its entry.seqID that is already in cache.
+    // NOTE: the entry.seqID is NEVER incremented for IN_DOUBT state.  The IN_DOUBT state is reported by Master.
+    // If an INDOUBT peer ever comes back, its HM entry.seqID will be same as last hm it sent.
+    // An INDOUBT peer that starts sending HM again either was slowed by high load. To simulate
+    // high load, testing has SUSPENDED a gms client for a minute and then CONTINUED it. The peer's hm seqID
+    // will be same before and after the master has reported INDOUBT to the gms grou.
+    //
+    // Master hmseqid was incorrectly getting used when reporting another peers state using #createMessage.
+    // Also this method does not update the cache as createMessage does, the entry has already been updated in the cache when
+    // Master is reporting another peers state for INDOUBT or DEAD.
+    private Message createHealthMessageForOtherPeer(final HealthMessage.Entry entry) {
+        final Message msg = new Message();
+        final HealthMessage hm = new HealthMessage();
+        hm.setSrcID(localPeerID);
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, "create health message state: " + entry.state + " for member: " + entry.adv.getName() + " Master member reporting for peer is " +
+                manager.getInstanceName() + " for group: " + manager.getGroupName());
+        }
+        hm.add(entry);
+        msg.addMessageElement(NAMESPACE, new TextDocumentMessageElement(HEALTHM,
+                (XMLDocument) hm.getDocument(MimeMediaType.XMLUTF8), null));
+        // do not update cache, it already has correct state in it.
+        return msg;
+    }
+
     private Message getAliveMessage() {
         if (aliveMsg == null) {
             aliveMsg = createHealthMessage(ALIVE);
@@ -768,12 +795,12 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
     }
 
-    private void reportOtherPeerState(final short state, final SystemAdvertisement adv) {
-        final Message msg = createMessage(state, HEALTHM, adv);
-        LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} health state as {1}", adv.getName(), states[state]));
+    private void reportOtherPeerState(final HealthMessage.Entry entry) {
+        final Message msg = createHealthMessageForOtherPeer(entry);
+        LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} health state as {1}", entry.adv.getName(), entry.state));
         boolean sent = send(null, msg);
         if (!sent) {
-            LOG.warning("send returned false. failed to report member " + adv.getName() + " state=" + states[state] + " to group");
+            LOG.warning("send returned false. failed to report member " + entry.adv.getName() + " state=" + entry.state + " to group: " + manager.getGroupName());
         }
     }
 
@@ -815,7 +842,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 LOG.log(Level.FINEST, "Shoal Health Monitor Thread Stopping as the thread is now interrupted...:" + e.getLocalizedMessage());
                 break;
             } catch (Throwable all) {
-                LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all);
+                LOG.log(Level.WARNING, "Uncaught Throwable in healthMonitorThread " + Thread.currentThread().getName() + ":" + all, all);
             }
         }
     }
@@ -1281,7 +1308,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                     break;
                 }
                 catch (Throwable all) {
-                    LOG.log(Level.FINE, "Uncaught Throwable in failureDetectorThread " + Thread.currentThread().getName() + ":" + all);
+                    LOG.log(Level.FINE, "Uncaught Throwable in failureDetectorThread " + Thread.currentThread().getName() + ":" + all, all);
                 }
             }
 
@@ -1371,9 +1398,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         }
 
         private void designateInDoubtState(final HealthMessage.Entry entry) {
+            HealthMessage.Entry reportEntry = null;
             fine(" in designateInDoubtState, going to set the state of " + entry.adv.getName() + " to indoubt");
             synchronized (cacheLock) {
                 entry.state = states[INDOUBT];
+
+                // make a copy before placing back in cache.
+                reportEntry = new HealthMessage.Entry(entry);
                 cache.put(entry.id, entry);
             }
             //fine(" after putting into cache " + cache + " , contents are :-");
@@ -1383,11 +1414,13 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                 // When masternode is suspect, all members update their states
                 // anyways so no need to report
                 //Send group message announcing InDoubt State
-                fine("Sending INDOUBT state message about node ID: " + entry.id + " to the cluster...");
-                reportOtherPeerState(INDOUBT, entry.adv);
+                fine("Sending INDOUBT state message about member: " + entry.adv.getName() + " to the group: " + manager.getGroupName());
+                // fix glassfish issue 9055.  entry sent in health message should not have use Master's health message sequence id.
+                // health message sequence id's should only be used from instance that the health message is reporting about.
+                reportOtherPeerState(reportEntry);
             }
             LOG.log(Level.FINEST, "Notifying Local Listeners of designated indoubt state for " + entry.adv.getName());
-            notifyLocalListeners(entry.state, entry.adv);
+            notifyLocalListeners(reportEntry.state, reportEntry.adv);
         }
     }
 
@@ -1434,6 +1467,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
     }
 
     private void assignAndReportFailure(final HealthMessage.Entry entry) {
+        HealthMessage.Entry deadEntry = null;
         if (entry != null) {
             synchronized (cacheLock) {
                 // before updating cache that entry is dead, make sure that no other thread has concurrently done this.
@@ -1449,7 +1483,8 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
                                         " ignoring this invocation since member already declared DEAD" + deadTime);
                     return;
                 }
-                cache.put(lastCheck.id, new HealthMessage.Entry(lastCheck, states[DEAD]));
+                deadEntry = new HealthMessage.Entry(lastCheck, states[DEAD]);
+                cache.put(lastCheck.id, deadEntry);
             }
             if (LOG.isLoggable(Level.FINE)){
                 fine(" assignAndReportFailure => going to put into cache " + entry.adv.getName() +
@@ -1459,7 +1494,7 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
             //print(cache);
             if (masterNode.isMaster()) {
                 LOG.log(Level.FINE, MessageFormat.format("Reporting Failed Node {0}", entry.id.toString()));
-                reportOtherPeerState(DEAD, entry.adv);
+                reportOtherPeerState(deadEntry);
             }
             final boolean masterFailed = (masterNode.getMasterNodeID()).equals(entry.id);
             if (masterNode.isMaster() && masterNode.isMasterAssigned()) {

@@ -62,16 +62,21 @@ public class ShoalMessagingTest implements Runnable, CallBack {
     private final Object sendMessagesSignal = new Object();
     private int nbOfMembers = 2;
     int total_msgs_received = 0;
+    final String groupName;
+    final int num_msgs = 10000;
 
     public ShoalMessagingTest() {
         Properties props = new Properties();
         props.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
-        gms = (GroupManagementService) GMSFactory.startGMSModule(System.getProperty("INSTANCEID"), "group", MemberType.CORE, props);
+        String instanceId = System.getProperty("INSTANCEID");
+        groupName = "ShoalMessagingTestGroup";
+        gms = (GroupManagementService) GMSFactory.startGMSModule(instanceId, groupName, MemberType.CORE, props);
 
         try {
             gms.addActionFactory(new MessageActionFactoryImpl(this), serviceName);
             gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
             gms.join();
+            System.err.println("Shoal member:" + instanceId + " joined group:" + groupName);
         } catch (GMSException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -80,7 +85,8 @@ public class ShoalMessagingTest implements Runnable, CallBack {
 
     public void run() {
         if (gms.getGroupHandle().getAllCurrentMembers().size() < nbOfMembers) {
-            System.out.println("Waiting for all members to join...");
+            System.err.println("GroupHandle.getAllCurrentMembers()=" + gms.getGroupHandle().getAllCurrentMembers());
+            System.err.println("Waiting for all members to join...");
             synchronized (sendMessagesSignal) {
                 try {
                     sendMessagesSignal.wait();
@@ -90,7 +96,6 @@ public class ShoalMessagingTest implements Runnable, CallBack {
             }
         }
 
-        int num_msgs = 10000;
         byte[] payload = generatePayload();
         long log_interval = 1000;
         int total_msgs = 0;
@@ -129,7 +134,11 @@ public class ShoalMessagingTest implements Runnable, CallBack {
 
     public void processNotification(Signal signal) {
         if (signal instanceof JoinNotificationSignal) {
-            if (gms.getGroupHandle().getAllCurrentMembers().size() == nbOfMembers) {
+            JoinNotificationSignal joinSig = (JoinNotificationSignal)signal;
+            int size = gms.getGroupHandle().getAllCurrentMembers().size();
+            System.err.println("Join Notification: member:" + joinSig.getMemberToken() + " Join current members:" + joinSig.getAllCurrentMembers() +
+                               "GroupHandle members:" + size);
+            if ( size == nbOfMembers) {
                 synchronized (sendMessagesSignal) {
                     sendMessagesSignal.notify();
                 }
@@ -139,9 +148,15 @@ public class ShoalMessagingTest implements Runnable, CallBack {
             if (total_msgs_received % 1000 == 0) {
                 System.out.println("-- received " + total_msgs_received);
             }
-	    if (total_msgs_received == 2001) {
-		throw new NullPointerException("simulated unchecked exception test");
-	    }
+            if (total_msgs_received == 2001) {
+		        throw new NullPointerException("simulated unchecked exception test");
+	        }
+            if (total_msgs_received == num_msgs * nbOfMembers) {
+                // signal that completed receiving all expected messages so app can continue and shutdown.
+                synchronized(sendMessagesSignal) {
+                    sendMessagesSignal.notify();
+                }
+            }
         } else {
             System.err.println(new StringBuffer().append(serviceName)
                     .append(": Notification Received from:")

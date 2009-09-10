@@ -158,6 +158,16 @@ public class GMSContext extends GMSContextBase {
             logger.log(Level.INFO, "shutdown.instanceshutdown", new Object[] {groupName});
             groupCommunicationProvider.leave(false);
         }
+        shuttingDown = true;
+        if( viewWindowThread != null ) {
+            viewWindowThread.interrupt();
+        }
+        if( messageWindowThread != null ) {
+            messageWindowThread.interrupt();
+        }
+        if( router != null ) {
+            router.shutdown();
+        }
     }
 
     public long getStartTime() {

@@ -340,6 +340,11 @@ public class HealthMessage {
             this(previousEntry.adv,  newState, previousEntry.seqID + 1);
         }
 
+        // copy ctor
+        public Entry(final Entry entry) {
+            this(entry.adv, entry.state, entry.seqID);
+        }
+
         public long getSeqID() {
             return seqID;
         }

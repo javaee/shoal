@@ -48,7 +48,7 @@ import java.util.logging.Logger;
 /**
  * This class contains health states of members
  *
- * {@link com.sun.enterprise.mgmt.HealthMonitor} uses this messages to check the member's health. 
+ * {@link com.sun.enterprise.mgmt.HealthMonitor} uses this messages to check the member's health.
  */
 public class HealthMessage implements Serializable {
 
@@ -160,6 +160,11 @@ public class HealthMessage implements Serializable {
 
         public Entry(final Entry previousEntry, final String newState) {
             this(previousEntry.adv,  newState, previousEntry.seqID + 1);
+        }
+
+        // copy ctor
+        public Entry(final Entry entry) {
+            this(entry.adv, entry.state, entry.seqID);
         }
 
         public long getSeqID() {

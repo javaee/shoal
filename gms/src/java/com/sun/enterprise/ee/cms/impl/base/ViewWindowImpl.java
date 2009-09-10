@@ -134,9 +134,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                     logger.log(Level.FINE, "handled exception processing event packet " + packetInfo, t);
                 }
             }
-            logger.info("normal termination of ViewWindow thread");
+            logger.info("normal termination of ViewWindow thread for group " + groupName);
         } catch  (Throwable tOuter ) {
-            logger.log(Level.WARNING, "unexpected exception terminated ViewWindow thread", tOuter);
+            logger.log(Level.WARNING, "unexpected exception terminated ViewWindow thread for group" + groupName, tOuter);
         }
     }
 
