@@ -114,3 +114,7 @@ Description:
     If the found interface doesn't have any appropriate inet address, skips it and tries to find another again.  
 Modified:
     com.sun.enterprise.mgmt.transport.NetworkUtility.java
+
+2009-09-10
+Description:
+    Current CVS code base is merged
