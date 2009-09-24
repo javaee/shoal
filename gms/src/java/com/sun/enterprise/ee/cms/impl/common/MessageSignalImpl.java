@@ -103,9 +103,7 @@ public class MessageSignalImpl implements MessageSignal {
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
      */
     public void release() throws SignalReleaseException {
-        message=null;
-        targetComponent=null;
-        sender=null;
+     
     }
 
     public String getMemberToken() {
