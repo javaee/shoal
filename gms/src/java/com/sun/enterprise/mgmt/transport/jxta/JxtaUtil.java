@@ -58,6 +58,8 @@ import java.io.ObjectOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 
+import com.sun.enterprise.ee.cms.logging.NiceLogFormatter;
+
 /**
  * Utility class that can be used by any calling code to do common routines
  *

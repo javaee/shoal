@@ -16,9 +16,7 @@ import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.jxta.GMSContext;
-import com.sun.enterprise.ee.cms.impl.jxta.MessagePacket;
-import com.sun.enterprise.jxtamgmt.JxtaUtil;
-import com.sun.enterprise.jxtamgmt.SystemAdvertisement;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 import java.text.MessageFormat;
 import java.util.logging.Level;
@@ -32,8 +30,8 @@ public class P2PMessageSendAndReceive implements CallBack {
 
 
     public static void main(String[] args){
-      //JxtaUtil.setLogger(logger);
-      //JxtaUtil.setupLogHandler();
+        Utility.setLogger(logger);
+        Utility.setupLogHandler();
         P2PMessageSendAndReceive p2pMsgSendReceive = new P2PMessageSendAndReceive();
         try {
             if (System.getProperty("TYPE").equals("sender")) {

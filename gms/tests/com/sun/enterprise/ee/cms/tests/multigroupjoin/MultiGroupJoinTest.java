@@ -12,7 +12,7 @@ package com.sun.enterprise.ee.cms.tests.multigroupjoin;
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
-import com.sun.enterprise.jxtamgmt.JxtaUtil;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 import java.text.MessageFormat;
 import java.util.logging.Level;
@@ -27,8 +27,8 @@ public class MultiGroupJoinTest implements CallBack {
     }
 
     public static void main(String[] args){
-       // JxtaUtil.setLogger(logger);
-       // JxtaUtil.setupLogHandler();
+        Utility.setLogger(logger);
+        Utility.setupLogHandler();
         MultiGroupJoinTest multiGroupJoin = new MultiGroupJoinTest(System.getProperty("INSTANCEID"));
         try {
             multiGroupJoin.runSimpleSample();

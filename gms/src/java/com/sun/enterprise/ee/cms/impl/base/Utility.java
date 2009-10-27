@@ -39,9 +39,9 @@ package com.sun.enterprise.ee.cms.impl.base;
 import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.logging.NiceLogFormatter;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import java.util.Map;
 
 /**
@@ -52,6 +52,11 @@ import java.util.Map;
 public class Utility {
 
     private static Logger logger = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
+
+    public static void setLogger(Logger theLogger) {
+        logger = theLogger;
+    }
+
 
     public static GMSMember getGMSMember( final SystemAdvertisement systemAdvertisement ) {
         GMSMember member;
@@ -162,4 +167,28 @@ public class Utility {
             return defaultValue;
         }
     }
+
+    public static void setupLogHandler() {
+        final ConsoleHandler consoleHandler = new ConsoleHandler();
+        try {
+            consoleHandler.setLevel(Level.ALL);
+            consoleHandler.setFormatter(new NiceLogFormatter());
+            //SelectiveLogFilter filter = new SelectiveLogFilter();
+            //filter.add(HealthMonitor.class.getName());
+            //filter.add(MasterNode.class.getName());
+            //filter.add(ClusterView.class.getName());
+            //filter.add(NetworkManager.class.getName());
+            //filter.add(net.jxta.impl.rendezvous.RendezVousServiceImpl.class.getName());
+            //consoleHandler.setFilter(filter);
+        } catch (SecurityException e) {
+            new ErrorManager().error(
+                    "Exception caught in setting up ConsoleHandler ",
+                    e, ErrorManager.GENERIC_FAILURE);
+        }
+        logger.addHandler(consoleHandler);
+        logger.setUseParentHandlers(false);
+        final String level = System.getProperty("LOG_LEVEL", "FINEST");
+        logger.setLevel(Level.parse(level));
+    }
+
 }

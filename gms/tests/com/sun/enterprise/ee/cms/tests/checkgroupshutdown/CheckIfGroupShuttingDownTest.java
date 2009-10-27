@@ -3,19 +3,12 @@ package com.sun.enterprise.ee.cms.tests.checkgroupshutdown;
 import com.sun.enterprise.ee.cms.core.CallBack;
 import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.jxtamgmt.JxtaUtil;
-
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import com.sun.enterprise.ee.cms.core.*;
- import com.sun.enterprise.ee.cms.impl.client.*;
- import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
- import com.sun.enterprise.jxtamgmt.JxtaUtil;
-
- import java.text.MessageFormat;
- import java.util.logging.Level;
- import java.util.logging.Logger;
-
+import com.sun.enterprise.ee.cms.impl.client.*;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 /**
  * Created by IntelliJ IDEA.
@@ -38,8 +31,8 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
     final String group = "Group";
 
     public static void main(String[] args) {
-        //JxtaUtil.setLogger(logger);
-        //JxtaUtil.setupLogHandler();
+        Utility.setLogger(logger);
+        Utility.setupLogHandler();
         CheckIfGroupShuttingDownTest check = new CheckIfGroupShuttingDownTest();
         String serverName = System.getProperty("TYPE");
         try {

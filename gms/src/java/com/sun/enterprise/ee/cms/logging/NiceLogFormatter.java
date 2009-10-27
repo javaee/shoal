@@ -34,7 +34,7 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.jxta;
+package com.sun.enterprise.ee.cms.logging;
 
 import java.util.logging.Formatter;
 import java.util.logging.LogManager;

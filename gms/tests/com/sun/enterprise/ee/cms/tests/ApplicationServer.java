@@ -48,10 +48,9 @@ import com.sun.enterprise.ee.cms.core.Signal;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
-//import com.sun.enterprise.jxtamgmt.JxtaUtil;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -257,8 +256,8 @@ public class ApplicationServer implements Runnable, CallBack {
                     .append(" -DKILLINSTANCE=<anotherinstanceid>")
                     .toString());
         }
-        //JxtaUtil.setLogger(logger);
-        //JxtaUtil.setupLogHandler();
+        Utility.setLogger(logger);
+        Utility.setupLogHandler();
         final ApplicationServer applicationServer;
         final String MEMBERTYPE_STRING = System.getProperty("MEMBERTYPE", "CORE").toUpperCase();
         final GroupManagementService.MemberType memberType = GroupManagementService.MemberType.valueOf(MEMBERTYPE_STRING);
