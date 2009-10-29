@@ -33,8 +33,9 @@ usage () {
     cat << USAGE 
 Usage: $0 <parameters...> 
 The required parameters are :
- <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,netjxta,jxta}
+ <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxtanew,jxta} <tcpstartport> <tcpendport>
 Life in milliseconds should be at least 60000 to demo failure fencing.
+<tcpstartport> and <tcpendport> are optional.  Grizzly and jxta transports have different defaults.
 USAGE
    exit 0
 }
@@ -43,13 +44,13 @@ if [ $# -lt 3 ]; then
     usage;
 fi
 
-if [ -n $6 ]; then 
+if [ $# -gt 5 ]; then 
     if [ $5 = "-debug" ]; then
 	java -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005 -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=INFO -cp ${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DjxtaMulticastPoolsize=25 com.sun.enterprise.ee.cms.tests.ApplicationServer;    
     elif [ $6 = "grizzly" ]; then
         echo Running using Shoal with transport grizzly
 #  If you run shoal over grizzly on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
-       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms.jar:${lib_home}/bcprov-jdk14.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.ee.cms.tests.ApplicationServer;
+       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms.jar:${lib_home}/bcprov-jdk14.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=$7 -DTCPENDPORT=$8 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.ee.cms.tests.ApplicationServer;
     else
        echo Running using Shoal with transport $6
        java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms.jar:${lib_home}/bcprov-jdk14.jar:${lib_home}/jxta.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=$6 com.sun.enterprise.ee.cms.tests.ApplicationServer;
