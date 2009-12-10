@@ -12,7 +12,7 @@ grep "Received PlannedShutdownEvent" server.log | wc -l
 echo
 echo "*****************************************"
 echo
-echo -n "Check for Join members over all logs.  Expect 110. Found: "
+echo -n "Check for Join members over all logs.  Expect less than 110. (not all instances start up at once on one machine)  Found: "
 grep "Adding Join member:" *.log | wc -l
 echo -n "Join in server    : " ; grep "Adding Join member:" server.log | wc -l
 echo -n "Join in instance01: " ; grep "Adding Join member:" instance01.log | wc -l
