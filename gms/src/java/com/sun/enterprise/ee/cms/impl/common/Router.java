@@ -91,11 +91,12 @@ public class Router {
     private long startupTime;
     private static final int GROUP_WARMUP_TIME = 30000;
     private static final int BUFSIZE = 100;
-    private Thread signalHandlerThread;
+    final private Thread signalHandlerThread;
+    private SignalHandler signalHandler;
 
     public Router() {
         queue = new ArrayBlockingQueue<SignalPacket>(BUFSIZE);
-        final SignalHandler signalHandler = new SignalHandler(queue, this);
+        signalHandler = new SignalHandler(queue, this);
         //todo: there's no lifecycle handling here.  it would be good to add it deal with a graceful shutdown
         signalHandlerThread = new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread");
         signalHandlerThread.start();
@@ -270,8 +271,6 @@ public class Router {
         try {
             queue.put(signalPacket);
         } catch (InterruptedException e) {
-            logger.log(Level.WARNING, e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -284,8 +283,6 @@ public class Router {
         try {
             queue.put(signalPacket);
         } catch (InterruptedException e) {
-            logger.log(Level.WARNING, e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -397,8 +394,6 @@ public class Router {
             try {
                 queue.put(new SignalPacket(signal));
             } catch (InterruptedException e) {
-                logger.log(Level.WARNING, e.getMessage());
-                e.printStackTrace();
             }
         }
     }
@@ -551,7 +546,7 @@ public class Router {
     public void shutdown() {
         undocketAllDestinations();
         if( signalHandlerThread != null ) {
-            signalHandlerThread.interrupt();
+            signalHandler.stop(signalHandlerThread);
         }
         if( queue != null ) {
             int unprocessedEventSize = queue.size();

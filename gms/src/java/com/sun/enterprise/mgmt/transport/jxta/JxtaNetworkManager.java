@@ -971,5 +971,9 @@ public class JxtaNetworkManager extends AbstractNetworkManager implements Rendez
         else
             return null;
     }
+
+    public void addRemotePeer(PeerID id) {
+        // noop.  not needed for this transport.
+    }
 }
 

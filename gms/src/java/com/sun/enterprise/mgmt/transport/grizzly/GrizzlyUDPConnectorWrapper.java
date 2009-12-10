@@ -144,9 +144,7 @@ public class GrizzlyUDPConnectorWrapper extends AbstractMultiMessageSender {
             if( connectorHandler != null ) {
                 try {
                     connectorHandler.close();
-                } catch( IOException e ) {
-                    e.printStackTrace();
-                }
+                } catch( IOException e ) {}
                 controller.releaseConnectorHandler( connectorHandler );
             }
         }

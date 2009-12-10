@@ -123,14 +123,21 @@ public abstract class AbstractNetworkManager implements NetworkManager {
             if( LOG.isLoggable( Level.WARNING ) )
                 LOG.log( Level.WARNING, "failed to execute beforeDispatchingMessage()", t );
         }
+        boolean messageEventNotProcessed = true;
         for( MessageListener listener : messageListeners ) {
             if( message.getType() == listener.getType() ) {
                 try {
+                    messageEventNotProcessed = false;
                     listener.receiveMessageEvent( messageEvent );
                 } catch( Throwable t ) {
                     if( LOG.isLoggable( Level.WARNING ) )
                         LOG.log( Level.WARNING, "failed to receive a message: type = " + message.getType(), t );
                 }
+            }
+        }
+        if (messageEventNotProcessed) {
+            if (LOG.isLoggable(Level.FINER)) {
+                LOG.finer("No message listener for messageEvent: " + messageEvent.toString() + " Message :" + message + " MessageFrom: " + sourcePeerID + " MessageTo:" + targetPeerID);
             }
         }
         try {

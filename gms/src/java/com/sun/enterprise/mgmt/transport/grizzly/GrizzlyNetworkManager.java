@@ -80,7 +80,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private static final Logger LOG = GrizzlyUtil.getLogger();
 
     private final Controller controller = new Controller();
-    private final Map<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
+    private final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
     private final Map<SelectionKey, String> selectionKeyMap = new ConcurrentHashMap<SelectionKey, String>();
 
     private volatile boolean running;
@@ -106,6 +106,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private int multicastPacketSize;
     private int writeSelectorPoolSize;
     private String virtualUriList;
+    private DefaultThreadPool threadPool;
 
     private final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
@@ -119,6 +120,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         int tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
         int tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
         tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
+        if (LOG.isLoggable(Level.CONFIG)) {
+            LOG.config("GrizzlyNetworkManager: TCPSTARTPORT=" + tcpStartPort + " TCPENDPORT=" + tcpEndPort + " tcpport=" + tcpPort);
+        }
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), "230.30.1.1", properties );
         networkInterfaceName = Utility.getStringProperty( BIND_INTERFACE_NAME.toString(), null, properties );
@@ -162,7 +166,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( host != null )
             localInetAddress = InetAddress.getByName( host );
 
-        DefaultThreadPool threadPool = new DefaultThreadPool( "",
+        threadPool = new DefaultThreadPool( "",
                                                               corePoolSize,
                                                               maxPoolSize,
                                                               keepAliveTime,
@@ -188,9 +192,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( GrizzlyUtil.isSupportNIOMulticast() ) {
             multicastSelectorHandler.setMulticastAddress( multicastAddress );
             multicastSelectorHandler.setNetworkInterface( networkInterfaceName );
+            multicastSelectorHandler.setInet( localInetAddress );
+            controller.addSelectorHandler( multicastSelectorHandler );                      
         }
-        multicastSelectorHandler.setInet( localInetAddress );
-        controller.addSelectorHandler( multicastSelectorHandler );
 
         ProtocolChainInstanceHandler pciHandler = new DefaultProtocolChainInstanceHandler() {
             @Override
@@ -352,6 +356,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         selectionKeyMap.clear();
         pingMessageLockMap.clear();
         controller.stop();
+        threadPool.stop();
     }
 
     protected void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
@@ -377,9 +382,31 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             return; // lookback
         String instanceName = peerID.getInstanceName();
         if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
-            peerIDMap.put( instanceName, peerID );
+            PeerID previous = peerIDMap.putIfAbsent( instanceName, peerID );
+            if (previous == null) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("addRemotePeer: " + instanceName + " peerId:" + peerID);
+                }
+            }
             if( selectionKey != null )
                 selectionKeyMap.put( selectionKey, instanceName );
+        }
+    }
+
+    @SuppressWarnings( "unchecked" )
+    public void addRemotePeer( PeerID peerID ) {
+        if( peerID == null )
+            return;
+        if( peerID.equals( localPeerID ) )
+            return; // lookback
+        String instanceName = peerID.getInstanceName();
+        if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
+            PeerID previous = peerIDMap.putIfAbsent( instanceName, peerID );
+            if (previous == null) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("addRemotePeer: " + instanceName + " peerId:" + peerID);
+                }
+            }
         }
     }
 

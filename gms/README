@@ -14,3 +14,17 @@ to only compile sources and place built classes in the build directory
 ant assemble
 to only build jar from already built sources. The built jar "shoal-gms.jar" is placed in dist directory.
 
+**********
+
+Developer level test
+
+Run following command:
+% runsimulatecluster.sh <transport>
+
+<transport> can be grizzly, jxtanew or jxta.   grizzly is the default for this script.
+
+After the run has completed, run following command. 
+% analyzelogs.sh
+
+The output shows all JOINED, JOINED_AND_READY and PLANNED_SHUTDOWN events recevied by Master server and then each member of 10 instance cluster.
+

@@ -75,7 +75,10 @@ public class PeerID<T extends Serializable> implements Serializable, Comparable<
     }
 
     public boolean equals( Object other ) {
-        if( other instanceof PeerID ) {
+        if (this == other) {
+            // check if this and other are both same Peerid.  Works if both are NULL_PEER_ID.
+            return true;
+        } else if( other instanceof PeerID ) {
             boolean equal = true;
             PeerID otherPeerID = (PeerID)other;
             if( uniqueID != null && uniqueID.equals( otherPeerID.getUniqueID() ) ) {

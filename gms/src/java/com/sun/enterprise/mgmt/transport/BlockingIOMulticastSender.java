@@ -50,6 +50,7 @@ import java.io.InterruptedIOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.List;
@@ -175,16 +176,18 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                     multicastSocket.leaveGroup( multicastAddress );
             } catch( IOException e ) {
             }
-            multicastSocket.close();
-            multicastSocket = null;
         }
         boolean finished = false;
         try {
             finished = endGate.await( shutdownTimeout, TimeUnit.MILLISECONDS );
         } catch( InterruptedException e ) {
         }
-        if( !finished && multicastThread != null )
+        if( !finished && multicastThread != null ){
             multicastThread.interrupt();
+        }
+        multicastSocket.close();
+        multicastSocket = null;
+        ((ThreadPoolExecutor)executor).shutdown();
     }
 
     public void run() {

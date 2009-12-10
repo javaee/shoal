@@ -48,6 +48,7 @@ import com.sun.enterprise.ee.cms.core.Signal;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,7 +64,7 @@ public class SignalHandler implements Runnable {
     private final BlockingQueue<SignalPacket> signalQueue;
     private final Router router;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private volatile boolean interrupted = false;
+    private AtomicBoolean stopped = new AtomicBoolean(false);
 
     /**
      * Creates a SignalHandler
@@ -79,8 +80,8 @@ public class SignalHandler implements Runnable {
     public void run() {
         try {
         Signal[] signals;
-        while (!interrupted) {
-            SignalPacket signalPacket;
+        while (!stopped.get()) {
+            SignalPacket signalPacket = null;
             try {
                 signalPacket = signalQueue.take();
                 if (signalPacket != null) {
@@ -91,12 +92,11 @@ public class SignalHandler implements Runnable {
                     }
                 }
             } catch (InterruptedException e) {
-                logger.log(Level.FINEST, e.getLocalizedMessage());
-                interrupted = true;
+                stopped.set(true);
             }
         }
         } catch (Throwable e) {
-            logger.log(Level.SEVERE,"unhandled exception in thread " + Thread.currentThread().getName(), e);
+            logger.log(Level.SEVERE,"exiting due unhandled exception in thread " + Thread.currentThread().getName(), e);
         } finally {
             logger.log(Level.INFO, "SignalHandler task named " + Thread.currentThread().getName() + " exiting");
         }
@@ -137,5 +137,10 @@ public class SignalHandler implements Runnable {
         } else if (signal instanceof GroupLeadershipNotificationSignal ) {
             router.notifyGroupLeadershipNotificationAction((GroupLeadershipNotificationSignal) signal);
         }
+    }
+
+    public void stop(Thread t) {
+        stopped.set(true);
+        t.interrupt();
     }
 }

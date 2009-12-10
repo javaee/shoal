@@ -59,6 +59,7 @@ public class ClusterView {
 
     private final TreeMap<PeerID, SystemAdvertisement> view;
     private final long viewId;
+    public final long masterViewId;
     private ReentrantLock viewLock = new ReentrantLock(true);
 
     /**
@@ -68,10 +69,12 @@ public class ClusterView {
      *
      * @param advertisements the Map of advertisements ordered by Peer ID sort
      * @param viewId         View ID
+     * @param masterViewId   MasterView ID
      */
-    ClusterView(final TreeMap<PeerID, SystemAdvertisement> advertisements, final long viewId) {
+    ClusterView(final TreeMap<PeerID, SystemAdvertisement> advertisements, final long viewId, final long masterViewId) {
         view = new TreeMap<PeerID, SystemAdvertisement>(advertisements);
         this.viewId = viewId;
+        this.masterViewId = masterViewId;
     }
 
     /**
@@ -91,6 +94,7 @@ public class ClusterView {
             viewLock.unlock();
         }
         this.viewId = 0;
+        this.masterViewId = 0;
     }
 
     /**

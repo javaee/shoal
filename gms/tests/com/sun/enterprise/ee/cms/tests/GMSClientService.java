@@ -177,16 +177,19 @@ public class GMSClientService implements Runnable, CallBack{
             extractMemberDetails( notification, serverToken );
 
         }
-        else if(notification instanceof JoinedAndReadyNotificationSignal ||
-                notification instanceof FailureNotificationSignal ||
-                notification instanceof PlannedShutdownSignal ||
-                notification instanceof FailureSuspectedSignal)
+        else if(notification instanceof JoinedAndReadyNotificationSignal)
         {
             serverToken =
                     notification.getMemberToken();
             logger.info("Received "+ notification.toString() +" for member "+serverToken);
             extractMemberDetails( notification, serverToken );
 
+        }
+        else if ( notification instanceof FailureNotificationSignal ||
+                    notification instanceof PlannedShutdownSignal ||
+                    notification instanceof FailureSuspectedSignal) {
+            serverToken = notification.getMemberToken();
+            logger.info("Received "+ notification.toString() +" for member "+serverToken);
         }
     }
 

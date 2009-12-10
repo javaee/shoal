@@ -162,7 +162,7 @@ public class GroupCommunicationProviderImpl implements
      * Joins the group using semantics specified by the underlying GCP system
      */
     public void join() {
-        logger.log(Level.FINE, "starting.cluster");
+        logger.log(Level.INFO, "starting cluster " + clusterManager.getGroupName() + " for member:" + clusterManager.getInstanceName());
         clusterManager.start();
     }
 
@@ -241,6 +241,19 @@ public class GroupCommunicationProviderImpl implements
 
                     for (SystemAdvertisement currentMemberAdv : currentMemberAdvs) {
                         final PeerID id = currentMemberAdv.getID();
+                        final String member = currentMemberAdv.getName();
+                        final long INDOUBT_INTERVAL_MS = clusterManager.getHealthMonitor().getIndoubtDuration();
+                        MemberStates memberState = getMemberState(member, INDOUBT_INTERVAL_MS, 0);
+                        if (memberState == MemberStates.PEERSTOPPING ||
+//                          TBD  - should we send message to INDOUBT member? error on side that member is not failed but just busy for now.
+//                          memberState == MemberStates.INDOUBT ||
+                            memberState == MemberStates.STOPPED || memberState == MemberStates.CLUSTERSTOPPING) {
+                            // don't broadcast to departing members
+                            if (logger.isLoggable(Level.FINE)) {
+                                logger.fine("skipping broadcast message " + message + " to member:" + member + " with state" + memberState);
+                            }
+                            continue;
+                        }
 
                         //TODO : make this multi-threaded via Callable
                         /* final CallableMessageSend task = getInstanceOfCallableMessageSend(id);

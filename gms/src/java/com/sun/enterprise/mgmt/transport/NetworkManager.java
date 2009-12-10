@@ -120,6 +120,12 @@ public interface NetworkManager extends MulticastMessageSender, MessageSender {
     public PeerID getPeerID( final String instanceName );
 
     /**
+     * Add the <code>peerID</code> to this network manager
+     * @param peerID
+     */
+    public void addRemotePeer( final PeerID peerID );
+
+    /**
      * Removes the <code>peerID</code> from this network manager
      * @param peerID
      */

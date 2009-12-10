@@ -67,7 +67,7 @@ import java.util.logging.Logger;
  * in response to a recover call from the GMS layer.
  *
  * @author Shreedhar Ganapathy"
- * @version $Revision$
+ * @version $Revision$  Ä
  */
 public class ApplicationServer implements Runnable, CallBack {
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
@@ -116,6 +116,11 @@ public class ApplicationServer implements Runnable, CallBack {
         startGMS();
         addMemberDetails();
         startClientServices();
+        try {
+            // simulate other start up overhead before sending joined and ready.
+            // without this sleep, not all instances will see each others joined and ready.
+            Thread.sleep(3000);
+        } catch (InterruptedException ie) {}
         logger.log(Level.FINE,"reporting joined and ready state...");
         gms.reportJoinedAndReadyState(groupName);
         try {
@@ -190,17 +195,63 @@ public class ApplicationServer implements Runnable, CallBack {
     }
 
     public void processNotification(Signal notification) {
+        MemberStates[] states;
         logger.fine("received a notification " + notification.getClass().getName());
 
         logger.info("processing notification " + notification.getClass().getName() + " for group " +
                 notification.getGroupName() + " memberName=" + notification.getMemberToken());
         if (notification instanceof JoinedAndReadyNotificationSignal) {
+            // getMemberState constraint check for member being added.
             MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());
-            if (state != MemberStates.READY && state != MemberStates.ALIVEANDREADY) {
+            if (state != MemberStates.STARTING &&
+                state != MemberStates.READY && 
+                state != MemberStates.ALIVEANDREADY &&
+                state != MemberStates.ALIVE) {
                 logger.warning("incorrect memberstate inside of JoinedAndReadyNotification signal processing " +
-                        " expected: READY or ALIVEANDREADY, actual value: " + state);
+                            " expected: STARTING, READY or ALIVEANDREADY, actual value: " + state);
             } else {
                 logger.info("getMemberState(" + notification.getMemberToken() + ")=" + state);
+            }
+
+            // getMemberState constraint check for all core members.
+            JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal)notification;
+            List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
+            states = new MemberStates[currentCoreMembers.size()];
+            int i = 0;
+            for (String instanceName : currentCoreMembers ) {
+                states[i] = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
+                switch (states[i]) {
+                    case STARTING:
+                    case ALIVE:
+                    case READY:
+                    case ALIVEANDREADY:
+                        logger.fine("JoinedAndReadyNotificationSignal for member: " + notification.getMemberToken() + " group:" +
+                        notification.getGroupName() + " expected member state for core member: " + instanceName + " memberState:" + states[i]);
+                        break;
+                    case UNKNOWN:
+                        states[i] = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
+                        if (states[i] != MemberStates.UNKNOWN) {
+                            break;
+                        }
+
+                    case INDOUBT:
+                    case PEERSTOPPING:
+                    case CLUSTERSTOPPING:
+                    case DEAD:
+                    default:
+                      logger.warning("JoinedAndReadyNotificationSignal for member: " + notification.getMemberToken() + " group:" +
+                        notification.getGroupName() + " unexpected member state for core member: " + instanceName + " memberState:" + states[i]);
+                }
+            }
+            if (logger.isLoggable(Level.FINE)) {
+                StringBuffer sb = new StringBuffer(110);
+                sb.append("JoinedAndReadyNotificationSignal for member: " + notification.getMemberToken() + " CurrentCoreMembersSize: " +
+                          currentCoreMembers.size() + " CurrentCoreMembers:");
+                int ii = 0;
+                for (String member : currentCoreMembers) {
+                    sb.append(member + ":" + states[ii].toString() + ",");
+                }
+                logger.fine(sb.substring(0, sb.length() - 1));
             }
         }
 
@@ -249,6 +300,8 @@ public class ApplicationServer implements Runnable, CallBack {
                     .append(" -DINSTANCEID=<instanceid>")
                     .append(" -DCLUSTERNAME=<clustername")
                     .append(" -DLIFEINMILLIS= <length of time for this demo")
+                    .append(" -DMAX_MISSED_HEARTBEATS=<indoubt-after-missing-this-many>")
+                    .append(" -DHEARTBEAT_FREQUENCY=<in-milliseconds>")
                     .append(" -DMESSAGING_MODE=[true|false] ApplicationServer")
                     .append(" -DGETMEMBERSTATE=[true]")
                     .append(" -DGETMEMBERSTATE_THRESHOLD=[xxxx] ms")
@@ -273,7 +326,10 @@ public class ApplicationServer implements Runnable, CallBack {
             configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
                 System.getProperty("INITIAL_HOST_LIST"));
         }
-        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), "2");
+        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(),
+                        System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
+        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(),
+                        System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
         //Uncomment this to receive loop back messages
         //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
         final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");

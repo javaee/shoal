@@ -123,6 +123,17 @@
 ---++ Tests
    * Simple gms functions of Shoal are tested like join, shutdown, failure, DSC, application message's sending and receiving
 
+   * New automated 10 member cluster Developer level test
+     Run following command:
+     % runsimulatecluster.sh <transport>
+
+    <transport> can be grizzly, jxtanew or jxta.   grizzly is the default for this script.
+    This run produces 11 server log files, server.log and instance[01-10].log.
+
+    After the run has completed, run following command to analyze the results in the log files. 
+    % analyzelogs.sh
+
+    The output shows all JOINED, JOINED_AND_READY and PLANNED_SHUTDOWN events recevied by Master server and then each member of 10 instance cluster.
 
 ---++ TODO
    * Various tests are needed on complicated environments

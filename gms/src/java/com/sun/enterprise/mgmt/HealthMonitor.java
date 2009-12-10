@@ -195,6 +195,13 @@ public class HealthMonitor implements MessageListener, Runnable {
         //Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 
+    /**
+     * A member is considered INDOUBT when a heartbeat has not been received in this amout of time.  (in milliseconds.)
+     */
+    public long getIndoubtDuration() {
+        return timeout * maxMissedBeats;
+    }
+
     void fine(String msg, Object[] obj) {
         if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE, msg, obj);

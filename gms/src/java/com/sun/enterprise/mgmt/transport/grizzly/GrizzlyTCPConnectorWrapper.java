@@ -47,12 +47,15 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.SocketAddress;
 import java.net.InetSocketAddress;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * @author Bongjae Chang
  */
 public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
 
+    private static final Logger LOG = GrizzlyUtil.getLogger();
     private final Controller controller;
     private final long writeTimeout; // ms
     private final InetSocketAddress localSocketAddress; // todo not used
@@ -104,7 +107,7 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
                 try {
                     connectorHandler.close();
                 } catch( IOException e ) {
-                    e.printStackTrace();
+                    LOG.log(Level.FINE, "send: exception closing connectorHandler", e);
                 }
                 controller.releaseConnectorHandler( connectorHandler );
             }
