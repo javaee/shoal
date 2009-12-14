@@ -181,7 +181,7 @@ public class NetworkManager implements RendezvousListener {
                     //this object has only one address in it, so add it to the list
                     rendezvousSeedURIs.add(((String) virtualMulticastURIList));
                 }
-                LOG.config("VIRTUAL_MULTICAST_URI_LIST=" + virtualMulticastURIList + " rendezvousSeedURIs.get(0)=" + rendezvousSeedURIs.get(1));
+                LOG.config("VIRTUAL_MULTICAST_URI_LIST=" + virtualMulticastURIList + " rendezvousSeedURIs.get(0)=" + rendezvousSeedURIs.get(0));
             }
             Object isVirtualMulticastNode = properties.get(IS_BOOTSTRAPPING_NODE.toString());
             if (isVirtualMulticastNode != null) {
