@@ -143,6 +143,37 @@
               <include name="**/*.dtd"/>
               <include name="**/*.xml"/>
             </fileset>
+            <fileset dir="etc">
+               <include name="**/services/*"/>
+            </fileset>
+        </jar>
+    </target>
+
+    <target name="assembleGrizzly" depends="clean, init, compile"
+        description="Create ${component.name} jar files">
+
+        <delete  dir="${dist.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <copy todir="${component.classes.dir}">
+            <fileset dir="${src.dir}"
+                     includes="**/*.properties"/>
+	    <fileset dir="${tests.dir}"/>
+        </copy>
+
+        <jar jarfile="${dist.dir}/${shoal-gms.jar}" update="yes">
+            <fileset dir="${component.classes.dir}">
+                <include name="**/*.class"/>
+                <include name="**/*.properties"/>
+                <exclude name="**/jxta/*.class"/>
+                <exclude name="**/jxtamgmt/*.class"/>
+            </fileset>
+            <fileset dir="${src.dir}">
+              <include name="**/*.dtd"/>
+              <include name="**/*.xml"/>
+            </fileset>
+            <fileset dir="etc">
+               <include name="**/services/*"/>
+            </fileset>
         </jar>
     </target>
 
