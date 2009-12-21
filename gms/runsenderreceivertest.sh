@@ -106,16 +106,16 @@ $ECHO "Starting DAS"
 # give time for the DAS to start
 sleep 5
 $ECHO "Starting instances"
-/tmp/script1 instance101 10 100 400 9130 9160 >& instance101.log &
-/tmp/script1 instance102 10 100 400 9160 9190 >& instance102.log &
-/tmp/script1 instance103 10 100 400 9230 9260 >& instance103.log &
-/tmp/script1 instance104 10 100 400 9261 9290 >& instance104.log &
-/tmp/script1 instance105 10 100 400 9330 9360 >& instance105.log &
-/tmp/script1 instance106 10 100 400 9361 9390 >& instance106.log &
-/tmp/script1 instance107 10 100 400 9430 9460 >& instance107.log &
-/tmp/script1 instance108 10 100 400 9461 9490 >& instance108.log &
-/tmp/script1 instance109 10 100 400 9530 9560 >& instance109.log &
-/tmp/script1 instance110 10 100 400 9561 9590 >& instance110.log &
+/tmp/script1 instance101 10 1024 7000 9130 9160 >& instance101.log &
+/tmp/script1 instance102 10 1024 7000 9160 9190 >& instance102.log &
+/tmp/script1 instance103 10 1024 7000 9230 9260 >& instance103.log &
+/tmp/script1 instance104 10 1024 7000 9261 9290 >& instance104.log &
+/tmp/script1 instance105 10 1024 7000 9330 9360 >& instance105.log &
+/tmp/script1 instance106 10 1024 7000 9361 9390 >& instance106.log &
+/tmp/script1 instance107 10 1024 7000 9430 9460 >& instance107.log &
+/tmp/script1 instance108 10 1024 7000 9461 9490 >& instance108.log &
+/tmp/script1 instance109 10 1024 7000 9530 9560 >& instance109.log &
+/tmp/script1 instance110 10 1024 7000 9561 9590 >& instance110.log &
 
 
 # give time for the instances to start
