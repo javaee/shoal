@@ -165,10 +165,9 @@ fi
 
 # this value must match the number of /tmp/script1 calls below
 numInstances="10"
-#msgSize=1024
-#numOfMsgs=7000
-msgSize=100
-numOfMsgs=100
+msgSize=1024
+numOfMsgs=7000
+
 
 $ECHO "Message size=${msgSize}"
 $ECHO "Number of messages=${numOfMsgs}"
