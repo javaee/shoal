@@ -59,14 +59,19 @@ cat << ENDSCRIPT > /tmp/script2
 #!/bin/sh +x
 
 ECHO=\`which echo\`
-num=\`ls -al *log | wc -l | sed -e 's/ //g' \`
-count=\`grep "Testing Complete" *log | wc -l | sed -e 's/ //g' \`
+num=\$1
+num=\`expr $num + 1\`
+
+#num=\`ls -al instance*log | wc -l | sed -e 's/ //g' \`
+count=\`grep "Testing Complete" instance*log | wc -l | sed -e 's/ //g' \`
+count=\`expr $count + 1\`
 \$ECHO "Waiting for the DAS and instances (\$num) to complete testing"
 \$ECHO -n "\$count"
 while [ \$count -ne \$num ]
 do
 \$ECHO -n ",\$count"
-count=\`grep "Testing Complete" *log | wc -l | sed -e 's/ //g' \`
+count=\`grep "Testing Complete" instance*log | wc -l | sed -e 's/ //g' \`
+count=\`expr $count + 1\`
 sleep 5
 done
 \$ECHO  ", \$count"
@@ -82,11 +87,13 @@ grep "Receiving Messages Time data" instance*log
 \$ECHO  "==============="
 \$ECHO  "The following are exceptions found in the logs:"
 \$ECHO  "==============="
-grep "Exception" *log
+grep "Exception" instance*log
+grep "Exception" server.log
 \$ECHO  "==============="
 \$ECHO  "The following are SEVERE messages found in the logs:"
 \$ECHO  "==============="
-grep "SEVERE" *log
+grep "SEVERE" instance*log
+grep "SEVERE" server.log
 \$ECHO  "==============="
 
 exit 0
@@ -101,15 +108,17 @@ rm -rf /tmp/script3
 cat << ENDSCRIPT > /tmp/script3
 #!/bin/sh +x
 
+
 ECHO=\`which echo\`
-num=\`ls -al *log |grep -v server.log | wc -l | sed -e 's/ //g' \`
-count=\`grep "All members have joined the group" *log | wc -l | sed -e 's/ //g' \`
+num=\$1
+#num=\`ls -al instance*log | wc -l | sed -e 's/ //g' \`
+count=\`grep "All members have joined the group" instance*log | wc -l | sed -e 's/ //g' \`
 \$ECHO "Waiting for the all (\$num) instances to join group"
 \$ECHO -n "\$count"
 while [ \$count -ne \$num ]
 do
 \$ECHO -n ",\$count"
-count=\`grep "All members have joined the group" *log | wc -l | sed -e 's/ //g' \`
+count=\`grep "All members have joined the group" instance*log | wc -l | sed -e 's/ //g' \`
 sleep 5
 done
 \$ECHO  ", \$count"
@@ -173,6 +182,6 @@ $ECHO "Starting ${numInstances} instances"
 # give time for the instances to start
 sleep 3
 # monitor for the testing to begin
-/tmp/script3
+/tmp/script3 ${numInstances}
 # monitor when the testing is complete
-/tmp/script2
+/tmp/script2 ${numInstances}
