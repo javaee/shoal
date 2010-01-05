@@ -60,20 +60,29 @@ cat << ENDSCRIPT > /tmp/script2
 
 ECHO=\`which echo\`
 num=\$1
-num=\`expr $num + 1\`
 
 #num=\`ls -al instance*log | wc -l | sed -e 's/ //g' \`
 count=\`grep "Testing Complete" instance*log | wc -l | sed -e 's/ //g' \`
-count=\`expr $count + 1\`
-\$ECHO "Waiting for the DAS and instances (\$num) to complete testing"
+\$ECHO "Waiting for the (\$num) instances to complete testing"
 \$ECHO -n "\$count"
 while [ \$count -ne \$num ]
 do
 \$ECHO -n ",\$count"
 count=\`grep "Testing Complete" instance*log | wc -l | sed -e 's/ //g' \`
-count=\`expr $count + 1\`
 sleep 5
 done
+\$ECHO ", \$count"
+
+count=\`grep "Testing Complete" server.log | wc -l | sed -e 's/ //g' \`
+\$ECHO "Waiting for the DAS to complete testing"
+\$ECHO -n "\$count"
+while [ \$count -ne 1 ]
+do
+\$ECHO -n ",\$count"
+count=\`grep "Testing Complete" server.log | wc -l | sed -e 's/ //g' \`
+sleep 5
+done
+
 \$ECHO  ", \$count"
 \$ECHO  "The following logs contain failures:"
 \$ECHO  "==============="
@@ -113,7 +122,7 @@ ECHO=\`which echo\`
 num=\$1
 #num=\`ls -al instance*log | wc -l | sed -e 's/ //g' \`
 count=\`grep "All members have joined the group" instance*log | wc -l | sed -e 's/ //g' \`
-\$ECHO "Waiting for the all (\$num) instances to join group"
+\$ECHO "Waiting for the (\$num) instances to join group"
 \$ECHO -n "\$count"
 while [ \$count -ne \$num ]
 do
@@ -156,8 +165,10 @@ fi
 
 # this value must match the number of /tmp/script1 calls below
 numInstances="10"
-msgSize=1024
-numOfMsgs=7000
+#msgSize=1024
+#numOfMsgs=7000
+msgSize=100
+numOfMsgs=100
 
 $ECHO "Message size=${msgSize}"
 $ECHO "Number of messages=${numOfMsgs}"
