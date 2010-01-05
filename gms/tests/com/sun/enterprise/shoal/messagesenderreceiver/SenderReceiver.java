@@ -33,7 +33,6 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-
 package com.sun.enterprise.shoal.messagesenderreceiver;
 
 import com.sun.enterprise.ee.cms.core.*;
@@ -41,8 +40,15 @@ import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFac
 import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.shoal.*;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Enumeration;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import java.util.logging.Logger;
@@ -61,12 +67,17 @@ public class SenderReceiver {
     static boolean msgIdReceived[];
     static String memberID = null;
     static int numberOfInstances = 0;
-    static int messageSize = 0;
+    static int payloadSize = 0;
     static int numberOfMessages = 0;
     static int numOfStopMsgReceived = 0;
     static int numberOfPlannedShutdown = 0;
     static int numberOfJoinAndReady = 0;
     static List<String> waitingToReceiveStopFrom;
+    static Calendar sendStartTime = null;
+    static Calendar sendEndTime = null;
+    static Calendar receiveStartTime = null;
+    static Calendar receiveEndTime = null;
+    static AtomicBoolean firstMsgReceived = new AtomicBoolean(false);
 
     public static void main(String[] args) {
 
@@ -92,8 +103,8 @@ public class SenderReceiver {
                 System.out.println("memberID=" + memberID);
                 numberOfInstances = Integer.parseInt(args[1]);
                 System.out.println("numberOfInstances=" + numberOfInstances);
-                messageSize = Integer.parseInt(args[2]);
-                System.out.println("messageSize=" + messageSize);
+                payloadSize = Integer.parseInt(args[2]);
+                System.out.println("payloadSize=" + payloadSize);
                 numberOfMessages = Integer.parseInt(args[3]);
                 System.out.println("numberOfMessages=" + numberOfMessages);
             } else {
@@ -105,7 +116,6 @@ public class SenderReceiver {
 
         SenderReceiver sender = new SenderReceiver();
         try {
-            //sender.test(memberID, numberOfInstances, messageSize, numberOfMessages);
             sender.test();
         } catch (GMSException e) {
             logger.log(Level.SEVERE, "Exception occured while joining group:" + e);
@@ -125,10 +135,10 @@ public class SenderReceiver {
                 String key = (String) e.nextElement();
                 ConcurrentHashMap instance_chm = chm.get(key);
 
-                for (int i = 0; i < numberOfMessages; i++) {
+                for (int i = 1; i <= numberOfMessages; i++) {
                     if (instance_chm.get(i) == null) {
                         droppedMessages++;
-                        System.out.println("Never received msg id " + i);
+                        System.out.println("Never received msgId:" + i + ", from:" + key);
                     }
                 }
                 System.out.println("================================================================");
@@ -140,7 +150,24 @@ public class SenderReceiver {
                 }
 
             }
+            long TimeDelta = 0;
+            long remainder = 0;
+            long msgPerSec = 0;
+            if (sendEndTime != null && sendStartTime != null) {
+                TimeDelta = (sendEndTime.getTimeInMillis() - sendStartTime.getTimeInMillis()) / 1000;
+                remainder = (sendEndTime.getTimeInMillis() - sendStartTime.getTimeInMillis()) % 1000;
+                msgPerSec = (numberOfMessages * numberOfInstances) / TimeDelta;
+                System.out.println("Sending Messages Time data: Start[" + sendStartTime.getTime() + "], End[" + sendEndTime.getTime() + "], Delta[" + TimeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "]");
+            }
+            if (receiveEndTime != null && receiveStartTime != null) {
+                TimeDelta = (receiveEndTime.getTimeInMillis() - receiveStartTime.getTimeInMillis()) / 1000;
+                remainder = (receiveEndTime.getTimeInMillis() - receiveStartTime.getTimeInMillis()) % 1000;
+                msgPerSec = (numberOfMessages * numberOfInstances) / TimeDelta;
+                System.out.println("Receiving Messages Time data: Start[" + receiveStartTime.getTime() + "], End[" + receiveEndTime.getTime() + "], Delta[" + TimeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "]");
+            }
         }
+
+
         System.out.println("================================================================");
         logger.log(Level.INFO, "Testing Complete");
 
@@ -151,10 +178,9 @@ public class SenderReceiver {
         System.out.println(" For server:");
         System.out.println("    <memberid(server)> <number_of_instances>");
         System.out.println(" For instances:");
-        System.out.println("    <memberid(instancexxx)> <number_of_instances> <messagesize> <number_of_messages>");
+        System.out.println("    <memberid(instancexxx)> <number_of_instances> <payloadsize> <number_of_messages>");
         System.exit(0);
     }
-    //private void test(String memberID, int numberOfInstances, int messageSize, int numberOfMessages) throws GMSException {
 
     private void test() throws GMSException {
 
@@ -177,7 +203,6 @@ public class SenderReceiver {
         }
 
 
-        //join group
         logger.log(Level.INFO, "Joining Group " + group);
         gms.join();
 
@@ -214,18 +239,17 @@ public class SenderReceiver {
             while (true) {
 
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(2000);
                 } catch (InterruptedException e) {
                 }
 
                 System.out.println("numberOfJoinAndReady=" + numberOfJoinAndReady);
-                System.out.println("numberOfInstances=" + (numberOfInstances));
+                System.out.println("numberOfInstances=" + numberOfInstances);
 
-                if (numberOfJoinAndReady == (numberOfInstances)) {
+                if (numberOfJoinAndReady == numberOfInstances) {
                     logger.log(Level.INFO, ("==================================================="));
                     logger.log(Level.INFO, ("All members have joined the group:" + group));
                     logger.log(Level.INFO, ("==================================================="));
-                    //System.out.println(".");
                     members = gms.getGroupHandle().getCurrentCoreMembers();
                     members.remove(memberID);
                     waitingToReceiveStopFrom = new ArrayList<String>();
@@ -240,34 +264,41 @@ public class SenderReceiver {
 
             logger.log(Level.INFO, ("Sending Messages to the following members [" + members.toString() + "]"));
 
-            logger.log(Level.INFO, ("Sending messages"));
-            for (int i = 0; i < numberOfMessages; i++) {
+            sendStartTime = new GregorianCalendar();
+            for (int i = 1; i <= numberOfMessages; i++) {
                 for (int j = 0; j < members.size(); j++) {
                     if (!members.get(j).equalsIgnoreCase(memberID)) {
-                        //String msg = "TO:" + members.get(j) + ", FROM:" + memberID + ", MSGID:" + i;
-                        //logger.log(Level.INFO, ("Sending Message:" + msg + ", to " + members.get(j)));
 
-                        StringBuffer sb = new StringBuffer(messageSize);
-                        sb.append("TO:").append(members.get(j)).append(", FROM:").append(memberID).append(", MSGID:").append(Integer.toString(i)).append(" ");
-                        int startIndex = sb.toString().length();
-                        for (int k = startIndex; k < messageSize; k++) {
+                        StringBuffer sb = new StringBuffer(payloadSize);
+                        for (int k = 0; k < payloadSize; k++) {
                             sb.append("X");
                         }
-                        String msg = sb.toString();
-                        logger.log(Level.INFO, ("Sending Message:" + msg.substring(0, 30) + "... msg.length()=" + msg.length() + " , to " + members.get(j)));
-
-                        gms.getGroupHandle().sendMessage(members.get(j), "TestComponent", msg.getBytes());
-
+                        TestMessage msg = new TestMessage(members.get(j), memberID, i, sb.toString());
+                        logger.log(Level.INFO, ("Sending Message:" + msg.toString()));
+                        try {
+                            gms.getGroupHandle().sendMessage(msg.getTo(), "TestComponent", ShoalMessageHelper.serializeObject(msg));
+                        } catch (java.io.NotSerializableException nse) {
+                            logger.log(Level.SEVERE, "Exception occurred during sending of message:" + nse);
+                        } catch (java.io.IOException ioe) {
+                            logger.log(Level.SEVERE, "Exception occurred during sending of message:" + ioe);
+                        }
                     }
                 }
             }
             for (int j = 0; j < members.size(); j++) {
                 if (!members.get(j).equalsIgnoreCase(memberID)) {
-                    String stopMsg = "TO:" + members.get(j) + ", FROM:" + memberID + ", STOP";
-                    System.out.println("Sending STOP message to " + members.get(j) + "!!!!!!!!!!!!!!!");
-                    gms.getGroupHandle().sendMessage(members.get(j), "TestComponent", stopMsg.getBytes());
+                    TestMessage msg = new TestMessage(members.get(j), memberID, 0, "STOP");
+                    System.out.println("Sending STOP message to " + msg.getTo() + "!!!!!!!!!!!!!!!");
+                    try {
+                        gms.getGroupHandle().sendMessage(msg.getTo(), "TestComponent", ShoalMessageHelper.serializeObject(msg));
+                    } catch (java.io.NotSerializableException nse) {
+                        logger.log(Level.SEVERE, "Exception occurred during sending of message:" + nse);
+                    } catch (java.io.IOException ioe) {
+                        logger.log(Level.SEVERE, "Exception occurred during sending of message:" + ioe);
+                    }
                 }
             }
+            sendEndTime = new GregorianCalendar();
         }
 
     }
@@ -296,6 +327,7 @@ public class SenderReceiver {
             }
         } else {
             // instance
+            long waitForStartTime = System.currentTimeMillis();
             while (!completedCheck.get() && (gms.getGroupHandle().getCurrentCoreMembers().size() > 1)) {
                 int waitTime = 10000; // 10 seconds
 
@@ -309,6 +341,13 @@ public class SenderReceiver {
                     } catch (InterruptedException ie) {
                     }
                 }
+                long currentTime = System.currentTimeMillis();
+                long exceedTimeout = ((currentTime - waitForStartTime) / 60000);
+                System.out.println("exceeding timeout=" + exceedTimeout);
+                if (exceedTimeout > 4) {
+                    logger.log(Level.SEVERE, "EXCEEDED 5 minute timeout waiting to receive STOP message");
+                    break;
+                }
 
             }
             System.out.println("Completed processing of incoming messages");
@@ -317,23 +356,21 @@ public class SenderReceiver {
             } catch (Throwable t) {
             }
         }
-        gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
-
+        leaveGroupAndShutdown(memberID, gms);
     }
 
     private GroupManagementService initializeGMS(String memberID, String groupName, GroupManagementService.MemberType mType) {
         logger.log(Level.INFO, "Initializing Shoal for member: " + memberID + " group:" + groupName);
-        return (GroupManagementService) GMSFactory.startGMSModule(memberID,
+        return (GroupManagementService) GMSFactory.startGMSModule(
+                memberID,
                 groupName,
                 mType,
-                //GroupManagementService.MemberType.CORE,
-                //null ); // Now if properties is null, NPE occurred.
                 new Properties());
 
     }
 
     private void leaveGroupAndShutdown(String memberID, GroupManagementService gms) {
-        logger.log(Level.INFO, "Shutting down gms " + gms + "for server " + memberID);
+        logger.log(Level.INFO, "Shutting down gms " + gms + "for member: " + memberID);
         gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
     }
 
@@ -346,16 +383,15 @@ public class SenderReceiver {
         }
 
         public void processNotification(Signal notification) {
+            logger.log(Level.INFO, "***JoinAndReadyNotification received from: " + notification.getMemberToken());
             if (!(notification instanceof JoinedAndReadyNotificationSignal)) {
-                logger.log(Level.SEVERE, "received unknown notification type:" + notification);
+                logger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
             } else {
                 if (!notification.getMemberToken().equals("server")) {
                     numberOfJoinAndReady++;
-                    logger.log(Level.INFO, "numberOfJoinAndReady received so far is" + numberOfJoinAndReady);
-
+                    logger.log(Level.INFO, "numberOfJoinAndReady received so far is: " + numberOfJoinAndReady);
                 }
             }
-            logger.log(Level.INFO, "***JoinNotification received: ServerName = " + memberID + ", Signal.getMemberToken() = " + notification.getMemberToken());
         }
     }
 
@@ -368,17 +404,16 @@ public class SenderReceiver {
         }
 
         public void processNotification(Signal notification) {
+            logger.log(Level.INFO, "***PlannedShutdownNotification received from: " + notification.getMemberToken());
             if (!(notification instanceof PlannedShutdownSignal)) {
-                logger.log(Level.SEVERE, "received unknown notification type:" + notification);
+                logger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
             } else {
                 if (!notification.getMemberToken().equals("server")) {
                     numberOfPlannedShutdown++;
                     logger.log(Level.INFO, "numberOfPlannedShutdown received so far is" + numberOfPlannedShutdown);
-
                 }
             }
 
-            logger.log(Level.INFO, "***PlannedShutdownNotification received: ServerName = " + memberID + ", Signal.getMemberToken() = " + notification.getMemberToken());
         }
     }
 
@@ -393,82 +428,151 @@ public class SenderReceiver {
         }
 
         public void processNotification(Signal notification) {
-
-
+            // logger.log(Level.INFO, "***Message received from: " + notification.getMemberToken());
             if (!(notification instanceof MessageSignal)) {
-                logger.log(Level.SEVERE, memberID + " received unknown notification type:" + notification);
-            }
-            //logger.log(Level.INFO, "***Message received: ServerName = " + memberID + ", Signal.getMemberToken() = " + notification.getMemberToken());
-            try {
-                notification.acquire();
-                MessageSignal messageSignal = (MessageSignal) notification;
-                final String msgString = new String(messageSignal.getMessage());
-                //System.out.println(memberID + " Received msg: " + msgString);
-
-                String shortMsg = msgString;
-                if (msgString.length() > 56) {
-                    shortMsg = shortMsg.substring(0, 55) + "...";
+                logger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
+            } else {
+                if (!firstMsgReceived.get()) {
+                    firstMsgReceived.set(true);
+                    receiveStartTime = new GregorianCalendar();
                 }
-                System.out.println(memberID + " Received msg: " + shortMsg);
+                try {
+                    notification.acquire();
+                    MessageSignal messageSignal = (MessageSignal) notification;
 
+                    final byte[] serializedObj = messageSignal.getMessage();
+                    TestMessage msg = (TestMessage) ShoalMessageHelper.deserializeObject(serializedObj);
 
-                int msgIdIdx = msgString.indexOf(" MSGID:");
-                int msgFromIdx = msgString.indexOf("FROM:");
-                int msgNextCommaIdx = msgString.indexOf(", ", msgFromIdx + 5);
-                String msgFrom = msgString.substring(msgFromIdx + 5, msgNextCommaIdx);
-                //System.out.println("msgIdIdx=" + msgIdIdx + ", msgFromIdx" + msgFromIdx);
-
-                if (msgIdIdx != -1 && msgFromIdx != -1) {
-                    //String msgId = msgString.substring(msgIdIdx + 7);
-                    String msgId = msgString.substring(msgIdIdx + 7, msgString.indexOf("XX") - 1);
-
-                    int msgIdInt = Integer.valueOf(msgId);
-
-
-                    // if the INSTANCE does not exist in the map, create it.
-                    ConcurrentHashMap instance_chm = chm.get(msgFrom);
-                    if (instance_chm == null) {
-                        instance_chm = new ConcurrentHashMap();
+                    String payload = msg.getPayLoad();
+                    String shortPayLoad = msg.getPayLoad();
+                    if (shortPayLoad.length() > 10) {
+                        shortPayLoad = shortPayLoad.substring(0, 10) + "...";
                     }
+                    System.out.println(memberID + " Received msg: " + msg.toString());
 
-                    instance_chm.put(msgIdInt, "");
+                    String msgFrom = msg.getFrom();
+                    int msgIdInt = msg.getMsgId();
+                    if (msgIdInt > 0) {
 
-                    //System.out.println(msgFrom + ":instance_chm.size()=" + instance_chm.size());
-
-                    chm.put(msgFrom, instance_chm);
-                    //System.out.println("chm.size()=" + chm.size());
-
-                } else {
-                    System.out.println("comparing message |" + msgString + "| to see if it is a stop command");
-                    if (msgString.contains("STOP")) {
-                        System.out.println("Received STOP message from " + msgFrom + " !!!!!!!!");
-                        numOfStopMsgReceived++;
-                        waitingToReceiveStopFrom.remove(msgFrom);
-                        System.out.println("Total number of STOP messages received so far is: " + numOfStopMsgReceived);
-                        if (waitingToReceiveStopFrom.size() > 1) {
-                            System.out.println("Waiting to receive STOP from: " + waitingToReceiveStopFrom.toString());
+                        // if the INSTANCE does not exist in the map, create it.
+                        ConcurrentHashMap instance_chm = chm.get(msgFrom);
+                        if (instance_chm == null) {
+                            instance_chm = new ConcurrentHashMap();
                         }
 
-                    }
-                }
-                if ((numOfStopMsgReceived == numberOfInstances - 1)) {
-                    completedCheck.set(true);
-                    synchronized (completedCheck) {
-                        completedCheck.notify();
-                    }
-                }
-            } catch (SignalAcquireException e) {
-                e.printStackTrace();
-            } catch (Throwable t) {
-                t.printStackTrace();
-            } finally {
-                try {
-                    notification.release();
-                } catch (Exception e) {
-                }
+                        instance_chm.put(msgIdInt, "");
 
+                        //System.out.println(msgFrom + ":instance_chm.size()=" + instance_chm.size());
+
+                        chm.put(msgFrom, instance_chm);
+                        //System.out.println("chm.size()=" + chm.size());
+
+                    } else {
+                        System.out.println("Comparing message |" + shortPayLoad + "| to see if it is a stop command");
+                        if (shortPayLoad.contains("STOP")) {
+                            System.out.println("Received STOP message from " + msgFrom + " !!!!!!!!");
+                            numOfStopMsgReceived++;
+                            waitingToReceiveStopFrom.remove(msgFrom);
+                            System.out.println("Total number of STOP messages received so far is: " + numOfStopMsgReceived);
+                            if (waitingToReceiveStopFrom.size() > 1) {
+                                System.out.println("Waiting to receive STOP from: " + waitingToReceiveStopFrom.toString());
+                            }
+
+                        }
+                    }
+                    if ((numOfStopMsgReceived == numberOfInstances - 1)) {
+                        receiveEndTime = new GregorianCalendar();
+                        completedCheck.set(true);
+                        synchronized (completedCheck) {
+                            completedCheck.notify();
+                        }
+                    }
+                } catch (SignalAcquireException e) {
+                    e.printStackTrace();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                } finally {
+                    try {
+                        notification.release();
+                    } catch (Exception e) {
+                    }
+
+                }
             }
+        }
+    }
 
+    public static class TestMessage implements Externalizable {
+
+        public final static long serialVersionUID = 1L;
+        public String to = "none";
+        public String from = "none";
+        public int msgId = -1;   // -1 - initialized, 0 - STOP msg , 1...n msgids
+        public String payload = "none";
+
+        public String toString() {
+            StringBuffer sb = new StringBuffer(60);
+            sb.append("[");
+            sb.append(" to:").append(to);
+            sb.append(" from:").append(from);
+            sb.append(" msgId:").append(Integer.toString(msgId));
+            String thePayload = payload;
+            if (payload.length() > 25) {
+                sb.append(" payload.substring(0,25):").append(payload.substring(0, 25));
+                //sb.append(" payload:").append(payload);
+                sb.append(" payload length:").append(Integer.toString(payload.length()));
+            } else {
+                sb.append(" payload:").append(payload);
+            }
+            sb.append("]");
+
+            return sb.toString();
+        }
+
+        // required for serializable.
+        public TestMessage() {
+        }
+
+        public String getTo() {
+            return to;
+        }
+
+        public String getFrom() {
+            return from;
+        }
+
+        public int getMsgId() {
+            return msgId;
+        }
+
+        public String getPayLoad() {
+            return payload;
+        }
+
+        public TestMessage(String to, String from, int msgId, String payload) {
+            this.to = to;
+            this.from = from;
+            this.msgId = msgId;
+            this.payload = payload;
+        }
+
+        public void writeExternal(ObjectOutput oos) {
+            try {
+
+                oos.writeUTF(to);
+                oos.writeUTF(from);
+                oos.writeInt(msgId);
+                oos.writeUTF(payload);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void readExternal(ObjectInput ois) throws IOException {
+            to = ois.readUTF();
+            from = ois.readUTF();
+            msgId = ois.readInt();
+            payload = ois.readUTF();
         }
     }
 }
