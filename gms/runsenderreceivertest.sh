@@ -103,7 +103,7 @@ grep "Sending Messages Time data" \${logdir}/instance*log
 \$ECHO  "The following are the time results for receiving messages:"
 grep "Receiving Messages Time data" \${logdir}/instance*log
 \$ECHO  "==============="
-\$ECHO  "The following are exceptions found in the logs:"
+\$ECHO  "The following are EXCEPTIONS found in the logs:"
 \$ECHO  "==============="
 grep "Exception" \${logdir}/instance*log
 grep "Exception" \${logdir}/server.log
