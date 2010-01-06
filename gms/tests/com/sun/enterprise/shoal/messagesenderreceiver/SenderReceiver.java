@@ -40,6 +40,7 @@ import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFac
 import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.shoal.*;
 import java.io.Externalizable;
 import java.io.IOException;
@@ -56,13 +57,14 @@ import java.util.logging.Level;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SenderReceiver {
 
     private GroupManagementService gms = null;
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final String group = "TestGroup";
-    static ConcurrentHashMap<String, ConcurrentHashMap> chm = new ConcurrentHashMap<String, ConcurrentHashMap>();
+    static ConcurrentHashMap<String, ConcurrentHashMap<Integer,String>> chm = new ConcurrentHashMap<String, ConcurrentHashMap<Integer,String>>();
     static AtomicBoolean completedCheck = new AtomicBoolean(false);
     static boolean msgIdReceived[];
     static String memberID = null;
@@ -71,7 +73,7 @@ public class SenderReceiver {
     static int numberOfMessages = 0;
     static int numOfStopMsgReceived = 0;
     static int numberOfPlannedShutdown = 0;
-    static int numberOfJoinAndReady = 0;
+    static AtomicInteger numberOfJoinAndReady = new AtomicInteger(0);
     static List<String> waitingToReceiveStopFrom;
     static Calendar sendStartTime = null;
     static Calendar sendEndTime = null;
@@ -224,7 +226,7 @@ public class SenderReceiver {
                 }
                 logger.log(Level.INFO, ("==================================================="));
                 logger.log(Level.INFO, ("Number of JOINEDANDREADY received from all CORE members is " + numberOfJoinAndReady));
-                if (numberOfJoinAndReady == numberOfInstances) {
+                if (numberOfJoinAndReady.get() == numberOfInstances) {
                     logger.log(Level.INFO, ("==================================================="));
                     logger.log(Level.INFO, ("All CORE members have sent JOINEDANDREADY (" + numberOfJoinAndReady + "," + numberOfInstances + ")"));
                     logger.log(Level.INFO, ("==================================================="));
@@ -243,37 +245,39 @@ public class SenderReceiver {
                 } catch (InterruptedException e) {
                 }
 
-                System.out.println("numberOfJoinAndReady=" + numberOfJoinAndReady);
+                System.out.println("numberOfJoinAndReady=" + numberOfJoinAndReady.get());
                 System.out.println("numberOfInstances=" + numberOfInstances);
 
-                if (numberOfJoinAndReady == numberOfInstances) {
+                if (numberOfJoinAndReady.get() == numberOfInstances) {
+                    members = gms.getGroupHandle().getCurrentCoreMembers();
                     logger.log(Level.INFO, ("==================================================="));
                     logger.log(Level.INFO, ("All members have joined the group:" + group));
+                    logger.log(Level.INFO, ("Members are:" + members.toString()));
                     logger.log(Level.INFO, ("==================================================="));
-                    members = gms.getGroupHandle().getCurrentCoreMembers();
+
                     members.remove(memberID);
                     waitingToReceiveStopFrom = new ArrayList<String>();
-                    for (int i = 0; i < members.size(); i++) {
-                        waitingToReceiveStopFrom.add(members.get(i));
+                    for (String instanceName : members) {
+                        waitingToReceiveStopFrom.add(instanceName);
                     }
-                    logger.log(Level.INFO, ("waitingToReceiveStopFrom=[" + waitingToReceiveStopFrom.toString() + "]"));
+                    logger.log(Level.INFO, ("waitingToReceiveStopFrom=" + waitingToReceiveStopFrom.toString()));
                     break;
                 }
 
             }
 
-            logger.log(Level.INFO, ("Sending Messages to the following members [" + members.toString() + "]"));
+            logger.log(Level.INFO, ("Sending Messages to the following members=" + members.toString()));
 
             sendStartTime = new GregorianCalendar();
             for (int i = 1; i <= numberOfMessages; i++) {
-                for (int j = 0; j < members.size(); j++) {
-                    if (!members.get(j).equalsIgnoreCase(memberID)) {
+                for (String instanceName : members) {
+                    if (!instanceName.equalsIgnoreCase(memberID)) {
 
                         StringBuffer sb = new StringBuffer(payloadSize);
                         for (int k = 0; k < payloadSize; k++) {
                             sb.append("X");
                         }
-                        TestMessage msg = new TestMessage(members.get(j), memberID, i, sb.toString());
+                        TestMessage msg = new TestMessage(instanceName, memberID, i, sb.toString());
                         logger.log(Level.INFO, ("Sending Message:" + msg.toString()));
                         try {
                             gms.getGroupHandle().sendMessage(msg.getTo(), "TestComponent", ShoalMessageHelper.serializeObject(msg));
@@ -285,9 +289,9 @@ public class SenderReceiver {
                     }
                 }
             }
-            for (int j = 0; j < members.size(); j++) {
-                if (!members.get(j).equalsIgnoreCase(memberID)) {
-                    TestMessage msg = new TestMessage(members.get(j), memberID, 0, "STOP");
+            for (String instanceName : members) {
+                if (!instanceName.equalsIgnoreCase(memberID)) {
+                    TestMessage msg = new TestMessage(instanceName, memberID, 0, "STOP");
                     System.out.println("Sending STOP message to " + msg.getTo() + "!!!!!!!!!!!!!!!");
                     try {
                         gms.getGroupHandle().sendMessage(msg.getTo(), "TestComponent", ShoalMessageHelper.serializeObject(msg));
@@ -304,7 +308,6 @@ public class SenderReceiver {
     }
 
     public void waitTillDone() {
-        List<String> members;
         if (memberID.equalsIgnoreCase("server")) {
             logger.log(Level.INFO, ("==================================================="));
             logger.log(Level.INFO, ("Waiting for all CORE members to send PLANNEDSHUTDOWN"));
@@ -388,8 +391,22 @@ public class SenderReceiver {
                 logger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
             } else {
                 if (!notification.getMemberToken().equals("server")) {
-                    numberOfJoinAndReady++;
-                    logger.log(Level.INFO, "numberOfJoinAndReady received so far is: " + numberOfJoinAndReady);
+
+                    // determine how many core members are ready to begin testing
+                    JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
+                    List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
+                    numberOfJoinAndReady.set(0);
+                    for (String instanceName : currentCoreMembers) {
+                        MemberStates state = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
+                        switch (state) {
+                            case READY:
+                            case ALIVEANDREADY:
+                                numberOfJoinAndReady.getAndIncrement();
+                            default:
+                        }
+                    }
+
+                    logger.log(Level.INFO, "numberOfJoinAndReady received so far is: " + numberOfJoinAndReady.get());
                 }
             }
         }
@@ -455,11 +472,11 @@ public class SenderReceiver {
                     if (msgIdInt > 0) {
 
                         // if the INSTANCE does not exist in the map, create it.
-                        ConcurrentHashMap instance_chm = chm.get(msgFrom);
-                        if (instance_chm == null) {
-                            instance_chm = new ConcurrentHashMap();
-                        }
+                        ConcurrentHashMap<Integer, String> instance_chm = chm.get(msgFrom);
 
+                        if (instance_chm == null) {
+                            instance_chm = new ConcurrentHashMap<Integer, String>();
+                        }
                         instance_chm.put(msgIdInt, "");
 
                         //System.out.println(msgFrom + ":instance_chm.size()=" + instance_chm.size());
@@ -513,7 +530,7 @@ public class SenderReceiver {
         public String toString() {
             StringBuffer sb = new StringBuffer(60);
             sb.append("[");
-            sb.append(" to:").append(to);
+            sb.append("to:").append(to);
             sb.append(" from:").append(from);
             sb.append(" msgId:").append(Integer.toString(msgId));
             String thePayload = payload;
