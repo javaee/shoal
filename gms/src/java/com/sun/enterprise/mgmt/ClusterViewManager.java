@@ -130,6 +130,14 @@ public class ClusterViewManager {
         } finally {
             viewLock.unlock();
         }
+        if (result) {
+            boolean added = manager.getHealthMonitor().addHealthEntryIfMissing(advertisement);
+            if (added) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "ensured ClusterViewManager and HealthMonitor both aware of member: " + advertisement.getName());
+                }
+            }
+        }
         return result;
     }
 
@@ -437,6 +445,12 @@ public class ClusterViewManager {
                                  .toString() );
                 if( !changed && !view.containsKey( elem.getID() ) ) {
                     changed = true;
+                    boolean added = manager.getHealthMonitor().addHealthEntryIfMissing(advertisement);
+                    if (added) {
+                        if (LOG.isLoggable(Level.FINE)) {
+                            LOG.log(Level.FINE, "ensured ClusterViewManager and HealthMonitor both aware of member: " + advertisement.getName());
+                        }
+                    }
                 }
                 // Always add the wire version of the adv
                 manager.getNetworkManager().addRemotePeer(elem.getID());

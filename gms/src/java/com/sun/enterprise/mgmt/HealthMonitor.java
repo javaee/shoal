@@ -68,7 +68,6 @@ import java.net.URI;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * HealthMonitor utilizes MasterNode to determine self designation. All nodes
  * cache other node's states, and can act as a master node at any given
@@ -1109,6 +1108,21 @@ public class HealthMonitor implements MessageListener, Runnable {
             }
         }
         return state;
+    }
+
+     public boolean addHealthEntryIfMissing(final SystemAdvertisement adv) {
+        final PeerID id = adv.getID();
+        synchronized(cacheLock) {
+            HealthMessage.Entry entry = cache.get(id);
+            if (entry == null) {
+                final long BEFORE_FIRST_HEALTHMESSAGE_SEQ_ID = 0;
+                entry = new HealthMessage.Entry(adv, states[STARTING], BEFORE_FIRST_HEALTHMESSAGE_SEQ_ID);
+                cache.put(id, entry);
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
     public void reportJoinedAndReadyState() {

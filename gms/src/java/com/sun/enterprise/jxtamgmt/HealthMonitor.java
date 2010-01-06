@@ -297,6 +297,20 @@ public class HealthMonitor implements PipeMsgListener, Runnable {
         return msg;
     }
 
+    public boolean addHealthEntryIfMissing(final SystemAdvertisement adv) {
+        final ID id = adv.getID();
+        synchronized(cacheLock) {
+            HealthMessage.Entry entry = cache.get(id);
+            if (entry == null) {
+                final long BEFORE_FIRST_HEALTHMESSAGE_SEQ_ID = 0;
+                entry = new HealthMessage.Entry(adv, states[STARTING], BEFORE_FIRST_HEALTHMESSAGE_SEQ_ID);
+                cache.put((PeerID)id, entry);
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
     private Message getAliveMessage() {
         if (aliveMsg == null) {
             aliveMsg = createHealthMessage(ALIVE);
