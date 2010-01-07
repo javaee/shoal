@@ -71,8 +71,8 @@ public class SenderReceiver {
     static int numberOfInstances = 0;
     static int payloadSize = 0;
     static int numberOfMessages = 0;
-    static int numOfStopMsgReceived = 0;
-    static int numberOfPlannedShutdown = 0;
+    static AtomicInteger numOfStopMsgReceived = new AtomicInteger(0);
+    static AtomicInteger numberOfPlannedShutdown = new AtomicInteger(0);
     static AtomicInteger numberOfJoinAndReady = new AtomicInteger(0);
     static List<String> waitingToReceiveStopFrom;
     static Calendar sendStartTime = null;
@@ -314,15 +314,20 @@ public class SenderReceiver {
             while (true) {
 
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException e) {
                 }
 
                 logger.log(Level.INFO, ("==================================================="));
-                logger.log(Level.INFO, ("Number of PLANNEDSHUTDOWN received from all CORE members is " + numberOfPlannedShutdown));
-                if (numberOfPlannedShutdown == numberOfInstances) {
+                logger.log(Level.INFO, ("Number of PLANNEDSHUTDOWN received from all CORE members is " + numberOfPlannedShutdown.get()));
+                if (numberOfPlannedShutdown.get() == numberOfInstances) {
                     logger.log(Level.INFO, ("==================================================="));
-                    logger.log(Level.INFO, ("Have received PLANNEDSHUTDOWN from all CORE members (" + numberOfPlannedShutdown + ")"));
+                    logger.log(Level.INFO, ("Have received PLANNEDSHUTDOWN from all CORE members (" + numberOfPlannedShutdown.get() + ")"));
+                    logger.log(Level.INFO, ("==================================================="));
+                    break;
+                } else if (gms.getGroupHandle().getCurrentCoreMembers().size() == 0) {
+                    logger.log(Level.INFO, ("==================================================="));
+                    logger.log(Level.INFO, ("Missed a PLANNEDSHUTDOWN. All core members have stopped. Only received PLANNEDSHUTDOWN from CORE members (" + numberOfPlannedShutdown.get() + ")"));
                     logger.log(Level.INFO, ("==================================================="));
                     break;
                 }
@@ -426,8 +431,8 @@ public class SenderReceiver {
                 logger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
             } else {
                 if (!notification.getMemberToken().equals("server")) {
-                    numberOfPlannedShutdown++;
-                    logger.log(Level.INFO, "numberOfPlannedShutdown received so far is" + numberOfPlannedShutdown);
+                    numberOfPlannedShutdown.incrementAndGet();
+                    logger.log(Level.INFO, "numberOfPlannedShutdown received so far is" + numberOfPlannedShutdown.get());
                 }
             }
 
@@ -488,16 +493,16 @@ public class SenderReceiver {
                         System.out.println("Comparing message |" + shortPayLoad + "| to see if it is a stop command");
                         if (shortPayLoad.contains("STOP")) {
                             System.out.println("Received STOP message from " + msgFrom + " !!!!!!!!");
-                            numOfStopMsgReceived++;
+                            numOfStopMsgReceived.incrementAndGet();
                             waitingToReceiveStopFrom.remove(msgFrom);
-                            System.out.println("Total number of STOP messages received so far is: " + numOfStopMsgReceived);
+                            System.out.println("Total number of STOP messages received so far is: " + numOfStopMsgReceived.get());
                             if (waitingToReceiveStopFrom.size() > 1) {
                                 System.out.println("Waiting to receive STOP from: " + waitingToReceiveStopFrom.toString());
                             }
 
                         }
                     }
-                    if ((numOfStopMsgReceived == numberOfInstances - 1)) {
+                    if ((numOfStopMsgReceived.get() == numberOfInstances - 1)) {
                         receiveEndTime = new GregorianCalendar();
                         completedCheck.set(true);
                         synchronized (completedCheck) {
