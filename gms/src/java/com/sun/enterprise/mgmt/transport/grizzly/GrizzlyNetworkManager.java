@@ -66,6 +66,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -107,6 +108,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private int writeSelectorPoolSize;
     private String virtualUriList;
     private DefaultThreadPool threadPool;
+    private ExecutorService multicastSenderThreadPool = null;
 
     private final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
@@ -255,26 +257,28 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         udpSender = udpConnectorWrapper;
         List<PeerID> virtualPeerIdList = getVirtualPeerIDList( virtualUriList );
         if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() ) {
+            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) );
             multicastSender = new VirtualMulticastSender( host,
                                                           multicastAddress,
                                                           multicastPort,
                                                           networkInterfaceName,
                                                           multicastPacketSize,
                                                           localPeerID,
-                                                          new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) ),
+                                                          multicastSenderThreadPool,
                                                           this,
                                                           virtualPeerIdList );
         } else {
             if( GrizzlyUtil.isSupportNIOMulticast() ) {
                 multicastSender = udpConnectorWrapper;
             } else {
+                multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) );
                 multicastSender = new BlockingIOMulticastSender( host,
                                                                  multicastAddress,
                                                                  multicastPort,
                                                                  networkInterfaceName,
                                                                  multicastPacketSize,
                                                                  localPeerID,
-                                                                 new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) ),
+                                                                 multicastSenderThreadPool,
                                                                  this );
             }
         }
@@ -352,6 +356,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             udpSender.stop();
         if( multicastSender != null )
             multicastSender.stop();
+        if( multicastSenderThreadPool != null ) {
+            multicastSenderThreadPool.shutdown();
+        }
         peerIDMap.clear();
         selectionKeyMap.clear();
         pingMessageLockMap.clear();

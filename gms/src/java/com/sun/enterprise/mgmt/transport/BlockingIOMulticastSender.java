@@ -187,7 +187,6 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         }
         multicastSocket.close();
         multicastSocket = null;
-        ((ThreadPoolExecutor)executor).shutdown();
     }
 
     public void run() {

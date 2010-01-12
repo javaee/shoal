@@ -248,7 +248,7 @@ public class Router {
      * @param componentName the component name
      */
     public void removeFailureRecoveryAFDestination(final String componentName) {
-        messageAF.remove(componentName);
+        failureRecoveryAF.remove(componentName);
     }
 
     /**
