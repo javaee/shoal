@@ -142,7 +142,7 @@ public class MessageImpl implements Message {
         if( offset < 0 )
             throw new IllegalArgumentException( "offset is too small" );
         if( bytes.length < offset + HEADER_LENGTH )
-            new IllegalArgumentException( "bytes' length is too small" );
+            throw new IllegalArgumentException( "bytes' length is too small" );
         return parseHeader( ByteBuffer.wrap( bytes, offset, HEADER_LENGTH ), offset );
     }
 
@@ -183,7 +183,7 @@ public class MessageImpl implements Message {
         if( length < 0 )
             throw new IllegalArgumentException( "length is too small" );
         if( bytes.length < offset + length )
-            new IllegalArgumentException( "bytes' length is too small" );
+            throw new IllegalArgumentException( "bytes' length is too small" );
         parseMessage( ByteBuffer.wrap( bytes, offset, length ), offset, length );
     }
 
@@ -221,7 +221,7 @@ public class MessageImpl implements Message {
         if( bytes == null )
             return;
         if( bytes.length < offset + length )
-            new IllegalArgumentException( "bytes' length is too small" );
+            throw new IllegalArgumentException( "bytes' length is too small" );
         ByteArrayInputStream bais = new ByteArrayInputStream( bytes, offset, length );
         DataInputStream dis = null;
         try {
