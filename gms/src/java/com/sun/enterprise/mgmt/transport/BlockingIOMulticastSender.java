@@ -176,6 +176,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                     multicastSocket.leaveGroup( multicastAddress );
             } catch( IOException e ) {
             }
+            multicastSocket.close();
         }
         boolean finished = false;
         try {
@@ -185,8 +186,6 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         if( !finished && multicastThread != null ){
             multicastThread.interrupt();
         }
-        multicastSocket.close();
-        multicastSocket = null;
     }
 
     public void run() {
