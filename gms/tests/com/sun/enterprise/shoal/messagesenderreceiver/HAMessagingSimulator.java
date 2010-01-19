@@ -325,17 +325,19 @@ public class HAMessagingSimulator {
             byte[] msg = new byte[1];
 
             sendStartTime = new GregorianCalendar();
-            int summaryCount = 0;
-            for (long msgNum = 1; msgNum <= numberOfMsgsPerObject; msgNum++) {
-                for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
-                    for (Integer instanceNum : memberIDs) {
+            long summaryCount = numberOfMsgsPerObject;
+            boolean displaySummary = true;
+
+            for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
+                displaySummary = true;
+                for (Integer instanceNum : memberIDs) {
+                    for (long msgNum = 1; msgNum <= numberOfMsgsPerObject; msgNum++) {
                         if (!instanceNum.equals(memberID)) {
                             // create the message to be sent
                             msg = createMsg(objectNum, msgNum, instanceNum, memberIDNum, payloadSize);
 
                             gmsLogger.log(Level.FINE, "Sending Message:" + displayMsg(msg));
                             //System.out.println("Sending Message:" + displayMsg(msg));
-
 
                             try {
                                 gms.getGroupHandle().sendMessage("instance" + instanceNum, "TestComponent", msg);
@@ -358,10 +360,9 @@ public class HAMessagingSimulator {
                             }
                         }
                     }
-                    summaryCount++;
-                    if ((summaryCount % 1000) == 0) {
+                    if (displaySummary) {
                         gmsLogger.log(Level.INFO, "Message Sent Summary:" + summaryCount + " messages have been sent.");
-
+                        displaySummary = false;
                     }
                     // think time
                     try {
@@ -369,6 +370,7 @@ public class HAMessagingSimulator {
                     } catch (InterruptedException iex) {
                     }
                 }
+                summaryCount += numberOfMsgsPerObject;
             }
             gmsLogger.log(Level.INFO, "Finished Sending Messages, Now sending STOP");
 
