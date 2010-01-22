@@ -434,6 +434,8 @@ public class ClusterViewManager {
         viewLock.lock();
 //      //reset();
         try {
+            // detect when instances have been added OR removed from view.
+            changed = newView.size() == view.size();
             if( !newView.contains( manager.getSystemAdvertisement() ) ) {
                 view.put( manager.getSystemAdvertisement().getID(),
                           manager.getSystemAdvertisement() );
@@ -443,7 +445,8 @@ public class ClusterViewManager {
                          new StringBuffer().append( "Adding " )
                                  .append( elem.getID() ).append( " to view" )
                                  .toString() );
-                if( !changed && !view.containsKey( elem.getID() ) ) {
+                // verify that each member in new view was in old view; otherwise, set change to TRUE.
+                if(!view.containsKey( elem.getID() ) ) {
                     changed = true;
                     boolean added = manager.getHealthMonitor().addHealthEntryIfMissing(advertisement);
                     if (added) {
