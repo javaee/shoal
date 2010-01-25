@@ -198,10 +198,11 @@ public class MessageImpl implements Message {
         if( length < 0 )
             throw new IllegalArgumentException( "length is too small" );
         if( length > 0 ) {
-            if( HEADER_LENGTH + length > MAX_TOTAL_MESSAGE_LENGTH ) {
+            int msgSize = HEADER_LENGTH + length;
+            if( msgSize > MAX_TOTAL_MESSAGE_LENGTH ) {
                 if( LOG.isLoggable( Level.WARNING ) )
                     LOG.log( Level.WARNING,
-                             "total message size is too big: size = " + HEADER_LENGTH + length + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+                             "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
             }
             int restorePosition = byteBuffer.position();
             try {
@@ -335,10 +336,14 @@ public class MessageImpl implements Message {
                 messageLen = Math.min( messageBytes.length, mbaos.size() );
             else
                 messageLen = 0;
-            if( HEADER_LENGTH + messageLen > MAX_TOTAL_MESSAGE_LENGTH ) {
-                if( LOG.isLoggable( Level.WARNING ) )
+            int msgSize = HEADER_LENGTH + messageLen;
+            if( msgSize > MAX_TOTAL_MESSAGE_LENGTH ) {
+                if( LOG.isLoggable( Level.WARNING ) ) { 
                     LOG.log( Level.WARNING,
-                             "total message size is too big: size = " + HEADER_LENGTH + messageLen + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+                             "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+                }
+                throw new MessageIOException("total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH +
+                toString());
             }
             byteBuffer = ByteBuffer.allocate( HEADER_LENGTH + messageLen );
             byteBuffer.putInt( MAGIC_NUMBER );
@@ -386,7 +391,21 @@ public class MessageImpl implements Message {
     }
 
     public String toString() {
-        return MessageImpl.class.getSimpleName() + "[v" + version + ":" + getStringType( type ) + ":" + messages + "]";
+        StringBuffer sb = new StringBuffer(50);
+        sb.append(MessageImpl.class.getSimpleName());
+        sb.append("[v" + version + ":");
+        sb.append(getStringType( type ) + ":");
+
+        for (String elementName : messages.keySet()) {
+            if (SOURCE_PEER_ID_TAG.compareTo(elementName) == 0) {
+                sb.append(" Source: " + messages.get(SOURCE_PEER_ID_TAG) + ", ");
+            } else if (TARGET_PEER_ID_TAG.compareTo(elementName) == 0) {
+                sb.append(" Target: " + messages.get(TARGET_PEER_ID_TAG) + " , ");
+            } else {
+                sb.append(elementName + ", ");
+            }
+        }
+        return sb.toString();
     }
 
     private class MessageByteArrayOutputStream extends ByteArrayOutputStream {
@@ -414,6 +433,9 @@ public class MessageImpl implements Message {
             String value2 = new String( "test message2" );
             message.addMessageElement( key1, value1 );
             message.addMessageElement( key2, value2 );
+            message.addMessageElement( SOURCE_PEER_ID_TAG, "fromMember");
+            message.addMessageElement( TARGET_PEER_ID_TAG, "targetMember");
+
             System.out.println( "message = " + message );
 
             Message message2 = new MessageImpl();
@@ -435,13 +457,21 @@ public class MessageImpl implements Message {
             messageLen = message4.parseHeader( plainByteBuffer, 0 );
             message4.parseMessage( plainByteBuffer, HEADER_LENGTH, messageLen );
             System.out.println( "message from byte buffer = " + message4 );
-            message.removeMessageElement( key1 );
 
+            message.removeMessageElement( key1 );
             plainByteBuffer = message.getPlainByteBuffer();
             Message message5 = new MessageImpl();
             messageLen = message5.parseHeader( plainByteBuffer, 0 );
             message5.parseMessage( plainByteBuffer, HEADER_LENGTH, messageLen );
             System.out.println( "removed message from byte buffer = " + message5 );
+
+            message.addMessageElement("APPMESSAGE", new byte[8192]);
+            plainByteBuffer = message.getPlainByteBuffer();
+            Message message6 = new MessageImpl();
+            messageLen = message6.parseHeader( plainByteBuffer, 0 );
+            message5.parseMessage( plainByteBuffer, HEADER_LENGTH, messageLen );
+            System.out.println( "added large APPMESSAGE message to byte buffer = " + message6 );
+
         } catch( Exception e ) {
             e.printStackTrace();
         }
