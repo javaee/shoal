@@ -429,12 +429,10 @@ public class ClusterViewManager {
      */
     private boolean addToView( final List<SystemAdvertisement> newView ) {
         boolean changed = false;
-//      JMF:  reset did not look like it belonged in an add method.  commenting out for now to verify okay to remove.
-//        lockLog( "addToView() - reset and add newView" );
+        lockLog( "addToView() - reset and add newView" );
         viewLock.lock();
-//      //reset();
+        reset();
         try {
-            // detect when instances have been added OR removed from view.
             changed = newView.size() == view.size();
             if( !newView.contains( manager.getSystemAdvertisement() ) ) {
                 view.put( manager.getSystemAdvertisement().getID(),
