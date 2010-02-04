@@ -103,9 +103,12 @@ public class MessageSignalImpl implements MessageSignal {
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
      */
     public void release() throws SignalReleaseException {
-        message=null;
-        targetComponent=null;
-        sender=null;
+        // JMF:  do not release message resources.
+        //       was a bug when sending a message to null TargetComponent and more than one target component was registered.
+         
+        //message=null;
+        //targetComponent=null;
+        //sender=null;
     }
 
     public String getMemberToken() {

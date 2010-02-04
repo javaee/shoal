@@ -118,24 +118,27 @@ public class SignalHandler implements Runnable {
         }
 
         logger.log(Level.FINEST, "SignalHandler : processing a received signal " + signal.getClass().getName()) ;
-
-        if (signal instanceof FailureRecoverySignal) {
-            router.notifyFailureRecoveryAction((FailureRecoverySignal) signal);
-        } else if (signal instanceof FailureNotificationSignal) {
-            router.notifyFailureNotificationAction(
-                    (FailureNotificationSignal) signal);
-        } else if (signal instanceof MessageSignal) {
-            router.notifyMessageAction((MessageSignal) signal);
-        } else if (signal instanceof JoinNotificationSignal) {
-            router.notifyJoinNotificationAction((JoinNotificationSignal) signal);
-        } else if (signal instanceof PlannedShutdownSignal) {
-            router.notifyPlannedShutdownAction((PlannedShutdownSignal) signal);
-        } else if (signal instanceof FailureSuspectedSignal) {
-            router.notifyFailureSuspectedAction((FailureSuspectedSignal) signal);
-        } else if (signal instanceof JoinedAndReadyNotificationSignal) {
-            router.notifyJoinedAndReadyNotificationAction((JoinedAndReadyNotificationSignal) signal);
-        } else if (signal instanceof GroupLeadershipNotificationSignal ) {
-            router.notifyGroupLeadershipNotificationAction((GroupLeadershipNotificationSignal) signal);
+        try {
+            if (signal instanceof FailureRecoverySignal) {
+                router.notifyFailureRecoveryAction((FailureRecoverySignal) signal);
+            } else if (signal instanceof FailureNotificationSignal) {
+                router.notifyFailureNotificationAction(
+                        (FailureNotificationSignal) signal);
+            } else if (signal instanceof MessageSignal) {
+                router.notifyMessageAction((MessageSignal) signal);
+            } else if (signal instanceof JoinNotificationSignal) {
+                router.notifyJoinNotificationAction((JoinNotificationSignal) signal);
+            } else if (signal instanceof PlannedShutdownSignal) {
+                router.notifyPlannedShutdownAction((PlannedShutdownSignal) signal);
+            } else if (signal instanceof FailureSuspectedSignal) {
+                router.notifyFailureSuspectedAction((FailureSuspectedSignal) signal);
+            } else if (signal instanceof JoinedAndReadyNotificationSignal) {
+                router.notifyJoinedAndReadyNotificationAction((JoinedAndReadyNotificationSignal) signal);
+            } else if (signal instanceof GroupLeadershipNotificationSignal) {
+                router.notifyGroupLeadershipNotificationAction((GroupLeadershipNotificationSignal) signal);
+            }
+        } catch (Throwable t) {
+            logger.log(Level.WARNING, "Ignoring exception while running action handler. Handler should have handled following unchecked exception", t);
         }
     }
 

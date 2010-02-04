@@ -45,6 +45,7 @@ import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.*;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -271,8 +272,11 @@ public class GroupCommunicationProviderImpl implements
                             }
                         } catch (MemberNotInViewException e) {
                             if (logger.isLoggable(Level.FINE)) {
-                                logger.fine("MemberNotInViewException : " + e.toString());
+                                logger.fine("MemberNotInViewException during synchronous broadcast: " + e.toString());
                             }
+                        } catch (MessageIOException mioe) {
+                            // this exception is thrown when message size is too big,  discontinue trying to send message and throw this exception to provide feedback to sender.
+                            throw new GMSException("message not sent", mioe);
                         } catch (IOException ioe) {
                             // don't allow an exception sending to one instance of the cluster to prevent ptp multicast to all other instances of
                             // of the cluster.  Catch this exception, record it and continue sending to rest of instances in the cluster.

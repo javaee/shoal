@@ -56,12 +56,19 @@ public class GMSCacheable implements Serializable, Comparator {
     private int hashCode = 0;
 
     public GMSCacheable(final String componentName, final String memberTokenId, final Serializable key) {
-        this.componentName = componentName;
-        this.memberTokenId = memberTokenId;
-        this.key = key;
+        this(componentName, memberTokenId, (Object)key);
     }
 
     public GMSCacheable(final String componentName, final String memberTokenId, final Object key) {
+        if (componentName == null) {
+            throw new IllegalArgumentException("GMSCacheable componentName must be non-null");
+        }
+        if (memberTokenId == null) {
+            throw new IllegalArgumentException("GMSCacheable memberTokenId must be non-null");
+        }
+        if (key == null) {
+            throw new IllegalArgumentException("GMSCacheable key must be non-null");
+        }
         this.componentName = componentName;
         this.memberTokenId = memberTokenId;
         this.key = key;

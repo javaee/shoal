@@ -36,6 +36,7 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.enterprise.mgmt.transport.MessageIOException;
 import com.sun.grizzly.ConnectorHandler;
 import com.sun.grizzly.Controller;
 import com.sun.grizzly.util.OutputWriter;
@@ -83,6 +84,8 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
         }
         try {
             return send( remoteSocketAddress, null, message );
+        } catch (MessageIOException mioe) {
+            throw mioe;
         } catch( IOException ie ) {
             // once retry
             return send( remoteSocketAddress, null, message );

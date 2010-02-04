@@ -8,7 +8,7 @@ package com.sun.enterprise.ee.cms.core;
  * This Exception class has been created to report that the particular
  * member is not in the View
  */
-public class MemberNotInViewException extends Exception {
+public class MemberNotInViewException extends GMSException {
 
     public MemberNotInViewException(){
         super();

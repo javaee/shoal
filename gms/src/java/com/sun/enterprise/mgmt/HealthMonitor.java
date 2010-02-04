@@ -951,7 +951,9 @@ public class HealthMonitor implements MessageListener, Runnable {
      * @return
      */
     public String getMemberState(PeerID peerID, long threshold, long timeout) {
-
+        if (peerID == null) {
+            throw new IllegalArgumentException("getMemberState parameter PeerID must be non-null");
+        }
         if (peerID.equals(localPeerID)){
             // handle getting your own member state
             return getStateFromCache(peerID);

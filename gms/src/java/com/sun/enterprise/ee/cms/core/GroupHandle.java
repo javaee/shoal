@@ -56,9 +56,7 @@ public interface GroupHandle {
     /**
      * Sends a message to all members of the Group.
      * Expects a target component name and a byte array as parameter
-     * carrying the payload. Specifying a null component name would
-     * result in the message being delivered to all registered
-     * components in the target member instance.
+     * carrying the payload.
      * <p/>
      * Note: when utilizing multicast, message size should not exceed the underlying communication
      * provider message limits (64K).  When sending messages larger than the limit, consider sending
@@ -74,10 +72,7 @@ public interface GroupHandle {
      * Sends a message to a single member of the group
      * Expects a targetServerToken representing the recipient member's
      * id, the target component name in the target recipient member,
-     * and a byte array as parameter carrying the payload. Specifying
-     * a null component name would result in the message being
-     * delivered to all registered components in the target member
-     * instance.
+     * and a byte array as parameter carrying the payload.
      *
      * @param targetServerToken   targetServerToken representing the recipient member's id
      * @param targetComponentName target name

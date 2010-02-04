@@ -56,6 +56,18 @@ public class GMSMessage implements Serializable {
                       final byte[] message,
                       final String groupName, 
                       final Long startTime){
+        if (componentName == null) {
+            throw new IllegalArgumentException("parameter componentName must be non-null");    
+        }
+        if (message == null) {
+            throw new IllegalArgumentException("parameter message must be non-null");
+        }
+        if (groupName == null) {
+            throw new IllegalArgumentException("parameter groupName must be non-null");
+        }
+
+        // a componentName of null acts as a wildcard and the message is delivered to all
+        // target components. see GroupHandle.sendMessage javadoc for details.
         this.componentName=componentName;
         this.message=message;
         this.groupName = groupName;

@@ -43,6 +43,8 @@ import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -162,7 +164,7 @@ public class GroupHandleTest {
     private void runTest() {
 
         //******************************
-        // NEXT TEST ID = TEST72
+        // NEXT TEST ID = TEST74
         //******************************
 
 
@@ -201,7 +203,7 @@ public class GroupHandleTest {
         sList.add("core101");
         sList.add("core102");
         sList.add("core103");
-        if (!members.contains(sList)) {
+        if (!members.equals(sList)) {
             gmsLogger.log(Level.SEVERE, "TEST1: getCurrentAliveOrReadyMembers() [before gms.reportJoinedAndReadyState()]: expected result:" + sList.toString() + ", actual result:" + members.toString());
         }
 
@@ -217,7 +219,7 @@ public class GroupHandleTest {
         sList.add("core101");
         sList.add("core102");
         sList.add("core103");
-        if (!members.contains(sList)) {
+        if (!members.equals(sList)) {
             gmsLogger.log(Level.SEVERE, "TEST2: getCurrentAliveOrReadyMembers() [after gms.reportJoinedAndReadyState()]: expected result:" + sList.toString() + ", actual result:" + members.toString());
         }
 
@@ -232,7 +234,7 @@ public class GroupHandleTest {
         sList.add("core101");
         sList.add("core102");
         sList.add("core103");
-        if (!members.contains(sList)) {
+        if (!members.equals(sList)) {
             gmsLogger.log(Level.SEVERE, "TEST3: getAllCurrentMembers(): expected result:" + sList.toString() + ", actual result:" + members.toString());
         }
 
@@ -262,7 +264,7 @@ public class GroupHandleTest {
                 gmsLogger.log(Level.SEVERE, "TEST6: getAllCurrentMembersWithStartTimes() [for: " + member.toString() + "]: Time value was not within 30 seconds [" + lExpected + "] of the current time [" + lTime + "] or it was greater than the current time");
             }
         }
-        if (!tList.contains(sList)) {
+        if (!tList.equals(sList)) {
             gmsLogger.log(Level.SEVERE, "TEST6: getAllCurrentMembersWithStartTimes(): expected result:" + sList.toString() + ", actual result:" + tList.toString());
         }
 
@@ -306,7 +308,7 @@ public class GroupHandleTest {
 
             }
         }
-        if (!tList.contains(sList)) {
+        if (!tList.equals(sList)) {
             gmsLogger.log(Level.SEVERE, "TEST8: getCurrentCoreMembersWithStartTimes(): expected result:" + sList.toString() + ", actual result:" + tList.toString());
         }
 
@@ -423,6 +425,17 @@ public class GroupHandleTest {
             gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
         }
         removeFile(doneFileName);
+
+        fileName = logDir + File.separator + GROUPHANDLE + "_core103_TestComponent_TEST29";
+        doneFileName = fileName + ".done";
+        waitForDoneFile(doneFileName);
+        outFileName = fileName + ".out";
+        sActual = readDataFromFile(outFileName);
+        if (!sActual.equals(sExpected)) {
+            gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        }
+        removeFile(doneFileName);
+
         fileName = logDir + File.separator + GROUPHANDLE + "_master_TestComponent_TEST29";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
@@ -498,36 +511,10 @@ public class GroupHandleTest {
         sExpected = "TEST32:";
         try {
             gh.sendMessage(null, sExpected.getBytes());
-        } catch (GMSException ge) {
-            gmsLogger.log(Level.SEVERE, "TEST32: sendMessage(null,TEST32:.getBytes()): resulted in a GMSException:" + ge);
+            gmsLogger.log(Level.SEVERE, "TEST32: sendMessage(null,TEST32:.getBytes()): did not result in expected exception IllegalArgumentException");
+        } catch (IllegalArgumentException iae) {
+        } catch (GMSException he) {
         }
-        fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_TEST32";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST32: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
-        fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent2_TEST32";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST32: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
-        fileName = logDir + File.separator + GROUPHANDLE + "_master_TestComponent_TEST32";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST32: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
 
         /*
         int size = 8200;
@@ -601,6 +588,7 @@ public class GroupHandleTest {
             bArray[k] = 'X';
         }
         bArray[k] = 'z';
+
         numOfTests++;
         gmsLogger.log(Level.INFO, "Executing TEST38");
         sExpected = new String(bArray);
@@ -619,6 +607,17 @@ public class GroupHandleTest {
             gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
         }
         removeFile(doneFileName);
+
+        fileName = logDir + File.separator + GROUPHANDLE + "_core103_TestComponent_TEST38";
+        doneFileName = fileName + ".done";
+        waitForDoneFile(doneFileName);
+        outFileName = fileName + ".out";
+        sActual = readDataFromFile(outFileName);
+        if (!sActual.equals(sExpected)) {
+            gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        }
+        removeFile(doneFileName);
+
         fileName = logDir + File.separator + GROUPHANDLE + "_master_TestComponent_TEST38";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
@@ -629,15 +628,69 @@ public class GroupHandleTest {
         }
         removeFile(doneFileName);
 
-        // send a large message to all components of all members
-        size = 5000;
+        // send a message to the TestComponent component of all members
+        size = 20;
         bArray = new byte[size];
         bArray[0] = 'T';
         bArray[1] = 'E';
         bArray[2] = 'S';
         bArray[3] = 'T';
         bArray[4] = '3';
-        bArray[5] = '3';
+        bArray[5] = '9';
+        bArray[6] = ':';
+        bArray[7] = 'a';
+        k = 8;
+        for (; k < size - 1; k++) {
+            bArray[k] = 'X';
+        }
+        bArray[k] = 'z';
+
+        numOfTests++;
+        gmsLogger.log(Level.INFO, "Executing TEST39");
+        try {
+            gmsLogger.log(Level.INFO, "TEST39: send message to doesnotexist member");
+            gh.sendMessage("doesnotexist", "TestComponent", bArray);
+            gmsLogger.log(Level.SEVERE, "TEST39: sendMessage to doesnotexist member did not result in a MemberNotInViewException");
+        } catch (MemberNotInViewException mnive) {
+        } catch (GMSException ge) {
+            
+        }
+
+            // send a message to the TestComponent component of all members
+        size = 20;
+        bArray = new byte[size];
+        bArray[0] = 'T';
+        bArray[1] = 'E';
+        bArray[2] = 'S';
+        bArray[3] = 'T';
+        bArray[4] = '3';
+        bArray[5] = '9';
+        bArray[6] = ':';
+        bArray[7] = 'a';
+        k = 8;
+        for (; k < size - 1; k++) {
+            bArray[k] = 'X';
+        }
+        bArray[k] = 'z';
+
+        numOfTests++;
+        gmsLogger.log(Level.INFO, "Executing TEST73");
+        try {
+            gmsLogger.log(Level.INFO, "TEST73: send message to doesnotexist target component");
+            gh.sendMessage("DoesNotExistTestComponent", bArray);
+        } catch (GMSException ge) {
+
+        }
+
+        // send a message that exceeds MAX length
+        size = 1500000;
+        bArray = new byte[size];
+        bArray[0] = 'T';
+        bArray[1] = 'E';
+        bArray[2] = 'S';
+        bArray[3] = 'T';
+        bArray[4] = '7';
+        bArray[5] = '2';
         bArray[6] = ':';
         bArray[7] = 'a';
         k = 7;
@@ -646,41 +699,18 @@ public class GroupHandleTest {
         }
         bArray[k] = 'z';
         numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST33");
-        sExpected = new String(bArray);
+        gmsLogger.log(Level.INFO, "Executing TEST69");
         try {
-            gmsLogger.log(Level.INFO, "TEST33:aXX...XXz[" + bArray.length + "]");
-            gh.sendMessage(null, bArray);
+            gmsLogger.log(Level.INFO, "TEST69: asynchronous UDP broadcast of too large message aXX...XXz[" + bArray.length + "]");
+            gh.sendMessage((String)null, "TestComponent", bArray);
+            gmsLogger.log(Level.SEVERE, "TEST69: sendMessage(null, TestComponent, TEST69:aXX...XXz[" + bArray.length + "]): did not result in a GMS Exception");
         } catch (GMSException ge) {
-            gmsLogger.log(Level.SEVERE, "TEST33: sendMessage(null, TEST33:aXX...XXz[" + bArray.length + "]): resulted in a GMSException:" + ge);
+            gmsLogger.log(Level.INFO, "TEST69: handled expected exception " + ge.getMessage());
         }
-        fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_TEST33";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST33: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
-        fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent2_TEST33";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST33: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
-        fileName = logDir + File.separator + GROUPHANDLE + "_master_TestComponent_TEST33";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST33: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
+
+
+
+
 
         // send a message that exceeds MAX length
         size = 1500000;
@@ -701,11 +731,40 @@ public class GroupHandleTest {
         numOfTests++;
         gmsLogger.log(Level.INFO, "Executing TEST71");
         try {
-            gmsLogger.log(Level.INFO, "TEST71:aXX...XXz[" + bArray.length + "]");
-            gh.sendMessage(null, bArray);
-            gmsLogger.log(Level.SEVERE, "TEST71: sendMessage(null, TEST71:aXX...XXz[" + bArray.length + "]): did not result in a GMS Exception");
+            gmsLogger.log(Level.INFO, "TEST71:synchronous broadcast (TCP to each member)aXX...XXz[" + bArray.length + "]");
+            gh.sendMessage("TestComponent", bArray);
+            gmsLogger.log(Level.SEVERE, "TEST71: sendMessage(TestComponent, TEST71:aXX...XXz[" + bArray.length + "]): did not result in a GMS Exception");
+        } catch (GMSException ge) {
+            gmsLogger.log(Level.INFO, "TEST71: handled expected GMSException when sending a message that is too large", ge);
+        }
+
+        // send a message that exceeds MAX length
+        size = 1500000;
+        bArray = new byte[size];
+        bArray[0] = 'T';
+        bArray[1] = 'E';
+        bArray[2] = 'S';
+        bArray[3] = 'T';
+        bArray[4] = '7';
+        bArray[5] = '2';
+        bArray[6] = ':';
+        bArray[7] = 'a';
+        k = 7;
+        for (; k < size - 1; k++) {
+            bArray[k] = 'X';
+        }
+        bArray[k] = 'z';
+        numOfTests++;
+        gmsLogger.log(Level.INFO, "Executing TEST72");
+        try {
+            gmsLogger.log(Level.INFO, "TEST72: send to core102 aXX...XXz[" + bArray.length + "]");
+            gh.sendMessage("core102", "TestComponent", bArray);
+            gmsLogger.log(Level.SEVERE, "TEST72: sendMessage(core102, TestComponent, TEST72:aXX...XXz[" + bArray.length + "]): did not result in a GMS Exception");
         } catch (GMSException ge) {
         }
+
+
+
 
 
         // send a message to the all components of core102
@@ -714,28 +773,12 @@ public class GroupHandleTest {
         sExpected = "TEST34:";
         try {
             gh.sendMessage("core102", null, sExpected.getBytes());
+        } catch (IllegalArgumentException iae)  {
+            // expect this for null target component.
         } catch (GMSException ge) {
             gmsLogger.log(Level.SEVERE, "TEST34: sendMessage(core102, null,TEST34:.getBytes()): resulted in a GMSException:" + ge);
         }
-        fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_TEST34";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST34: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
-        fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent2_TEST34";
-        doneFileName = fileName + ".done";
-        waitForDoneFile(doneFileName);
-        outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST34: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
-        }
-        removeFile(doneFileName);
-
+        
         // send a message to the TestComponent component of all members
         numOfTests++;
         gmsLogger.log(Level.INFO, "Executing TEST35");
@@ -746,6 +789,15 @@ public class GroupHandleTest {
             gmsLogger.log(Level.SEVERE, "TEST35: sendMessage(new ArrayList<String>(),TestComponent,TEST35:.getBytes()): resulted in a GMSException:" + ge);
         }
         fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_TEST35";
+        doneFileName = fileName + ".done";
+        waitForDoneFile(doneFileName);
+        outFileName = fileName + ".out";
+        sActual = readDataFromFile(outFileName);
+        if (!sActual.equals(sExpected)) {
+            gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        }
+        removeFile(doneFileName);
+        fileName = logDir + File.separator + GROUPHANDLE + "_core103_TestComponent_TEST35";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
@@ -822,12 +874,12 @@ public class GroupHandleTest {
         gmsLogger.log(Level.INFO, "Executing TEST64");
         sExpected = "TEST64:";
         sList = new ArrayList<String>();
-        sList.add("doesnotexist");
+        sList.add("doesnotexistmember");
         sList.add("core102");
         try {
             gh.sendMessage(sList, "TestComponent", sExpected.getBytes());
         } catch (GMSException ge) {
-            gmsLogger.log(Level.SEVERE, "TEST64: sendMessage(ArrayList<String>(doesnotexist,core102),TestComponent,TEST64:.getBytes()): resulted in a GMSException:" + ge);
+            gmsLogger.log(Level.SEVERE, "TEST64: sendMessage(ArrayList<String>(doesnotexistMember,core102),TestComponent,TEST64:.getBytes()): resulted in a GMSException:" + ge);
         }
         fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_TEST64";
         doneFileName = fileName + ".done";
@@ -845,7 +897,7 @@ public class GroupHandleTest {
         gmsLogger.log(Level.INFO, "Executing TEST65");
         sExpected = "TEST65:";
         try {
-            gh.sendMessage("core102", "doesnotexist", sExpected.getBytes());
+            gh.sendMessage("core102", "doesnotexistTestComponent", sExpected.getBytes());
 
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST65: sendMessage(core102,doesnotexist,TEST65:.getBytes()): resulted in an Exception:" + ex);
@@ -858,7 +910,7 @@ public class GroupHandleTest {
         gmsLogger.log(Level.INFO, "Executing TEST66");
         sExpected = "TEST66:";
         try {
-            gh.sendMessage("doesnotexist", sExpected.getBytes());
+            gh.sendMessage("doesnotexistTargetComponent", sExpected.getBytes());
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST65: sendMessage(doesnotexist,TEST65:.getBytes()): resulted in an Exception:" + ex);
         }
@@ -914,15 +966,15 @@ public class GroupHandleTest {
 
 
 
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST67");
-        try {
-            gh.announceWatchdogObservedFailure("core102");
-            gmsLogger.log(Level.SEVERE, "TEST67: announceWatchdogObservedFailure(core102): did not resulted in a GMSException:");
-        } catch (GMSException ge) {
-        } catch (Exception ex) {
-            gmsLogger.log(Level.SEVERE, "TEST67: announceWatchdogObservedFailure(core102): resulted in a non GMSException:" + ex);
-        }
+//        numOfTests++;
+//        gmsLogger.log(Level.INFO, "Executing TEST67");
+//        try {
+//            gh.announceWatchdogObservedFailure("core102");
+//            gmsLogger.log(Level.SEVERE, "TEST67: announceWatchdogObservedFailure(core102): did not resulted in a GMSException:");
+//        } catch (GMSException ge) {
+//        } catch (Exception ex) {
+//            gmsLogger.log(Level.SEVERE, "TEST67: announceWatchdogObservedFailure(core102): resulted in a non GMSException:" + ex);
+//        }
 
 
         //====================================================================================
@@ -1041,6 +1093,24 @@ public class GroupHandleTest {
             }
         }
 
+        // core102 is shutdown
+
+        // JMF: COMMENT OUT all getMemberState test for STOPPED for now.
+        // getMemberState works of hb cache. however, test sends message and then
+        // sleeps for 10 seconds to ensure instance is shutdown.  hb cache is stale by then.  no way to ask an instance
+        // if it is stopped when it is stopped. Relying on GMS Shutdown/Failure notification is proper way to figure
+        // out an instance is down.  getMemberState is more an API for discovering other instance state when an instance first
+        // joins gms group.
+
+//        numOfTests++;
+//        gmsLogger.log(Level.INFO, "Executing TEST41");
+//        msActual = gh.getMemberState("core102", 120000, 0);
+//        msExpected = MemberStates.STOPPED;
+//        if (!msActual.equals(msExpected)) {
+//            gmsLogger.log(Level.SEVERE, "TEST41: getMemberState(core102, 0, 0): expected result: " + msExpected + ", actual result:" + msActual);
+//        }
+
+
         // master is still alive and should still be leader not us.
         numOfTests++;
         gmsLogger.log(Level.INFO, "Executing TEST21");
@@ -1078,33 +1148,15 @@ public class GroupHandleTest {
             gmsLogger.log(Level.SEVERE, "TEST11: getGroupLeader(): expected result: " + sExpected + ", actual result:" + sActual);
         }
 
-        // core102 is shutdown
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST41");
-        msActual = gh.getMemberState("core102", 0, 0);
-        msExpected = MemberStates.STOPPED;
-        if (!msActual.equals(msExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST41: getMemberState(core102, 0, 0): expected result: " + msExpected + ", actual result:" + msActual);
-        }
+
 
         // master is shutdown
         numOfTests++;
         gmsLogger.log(Level.INFO, "Executing TEST61");
-        msActual = gh.getMemberState("master", 0, 0);
+        msActual = gh.getMemberState("master", 1200000, 0);
         msExpected = MemberStates.STOPPED;
-        if (!msActual.equals(msExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST61: getMemberState(master, 0, 0): expected result: " + msExpected + ", actual result:" + msActual);
-        }
-
-        // try to lower fence for a member that does not exist
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST43");
-        try {
-            gh.lowerFence("TestComponent", "doesnotexist");
-            gmsLogger.log(Level.SEVERE, "TEST43: lowerFence(TestComponent,doesnotexist): did not resulted in a GMSException:");
-        } catch (GMSException ge) {
-        } catch (Exception ex) {
-            gmsLogger.log(Level.SEVERE, "TEST43: lowerFence(TestComponent,doesnotexist): resulted in a non GMSException:" + ex);
+        if (!msActual.equals(msExpected) && !msActual.equals(MemberStates.UNKNOWN)) {
+            gmsLogger.log(Level.SEVERE, "TEST61: getMemberState(master, 1200000, 0): expected result: " + msExpected + ", actual result:" + msActual);
         }
 
         // try to lower fence for a member that is null
@@ -1113,9 +1165,10 @@ public class GroupHandleTest {
         try {
             gh.lowerFence("TestComponent", null);
             gmsLogger.log(Level.SEVERE, "TEST44: lowerFence(TestComponent, null): did not resulted in a GMSException:");
+        } catch (IllegalArgumentException iae) {
         } catch (GMSException ge) {
         } catch (Exception ex) {
-            gmsLogger.log(Level.SEVERE, "TEST43: lowerFence(TestComponent,doesnotexist): resulted in a non GMSException:" + ex);
+            gmsLogger.log(Level.SEVERE, "TEST43: lowerFence(TestComponent,null): resulted in a non GMSException:" + ex);
         }
 
         // try to lower fence for a null component of a member that does exist
@@ -1124,6 +1177,7 @@ public class GroupHandleTest {
         try {
             gh.lowerFence(null, "core102");
             gmsLogger.log(Level.SEVERE, "TEST45: lowerFence(null,core102): did not resulted in a GMSException:");
+        } catch (IllegalArgumentException iae) {
         } catch (GMSException ge) {
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST45: lowerFence(null,core102): resulted in a non GMSException:" + ex);
@@ -1135,37 +1189,40 @@ public class GroupHandleTest {
         try {
             gh.lowerFence(null, null);
             gmsLogger.log(Level.SEVERE, "TEST46: lowerFence(null, null): did not resulted in a GMSException:");
+        } catch (IllegalArgumentException iae) {
         } catch (GMSException ge) {
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST46: lowerFence(null, null): resulted in a non GMSException:" + ex);
         }
 
+        // JMF: COMMENT OUT all getMemberState test for STOPPED for now.  
+
         // try to get member state of core102 using negative threshold value
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST47");
-        msActual = gh.getMemberState("core102", -1, 0);
-        msExpected = MemberStates.STOPPED;
-        if (!msActual.equals(msExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST47: getMemberState(core102, -1, 0): expected result: " + msExpected + ", actual result:" + msActual);
-        }
+//        numOfTests++;
+//        gmsLogger.log(Level.INFO, "Executing TEST47");
+//        msActual = gh.getMemberState("core102", 12000000, 0);
+//        msExpected = MemberStates.STOPPED;
+//        if (!msActual.equals(msExpected)) {
+//            gmsLogger.log(Level.SEVERE, "TEST47: getMemberState(core102, 1200000, 0): expected result: " + msExpected + ", actual result:" + msActual);
+//        }
 
         // try to get member state of core102 using negative timeout value
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST49");
-        msActual = gh.getMemberState("core102", 0, -1);
-        msExpected = MemberStates.STOPPED;
-        if (!msActual.equals(msExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST49: getMemberState(core102, 0, -1): expected result: " + msExpected + ", actual result:" + msActual);
-        }
+//        numOfTests++;
+//        gmsLogger.log(Level.INFO, "Executing TEST49");
+//        msActual = gh.getMemberState("core102", 0, -1);
+//        msExpected = MemberStates.STOPPED;
+//        if (!msActual.equals(msExpected)) {
+//            gmsLogger.log(Level.SEVERE, "TEST49: getMemberState(core102, 0, -1): expected result: " + msExpected + ", actual result:" + msActual);
+//        }
 
         // try to get member state of core102 using negative threshold and timeout value
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST50");
-        msActual = gh.getMemberState("core102", -1, -1);
-        msExpected = MemberStates.STOPPED;
-        if (!msActual.equals(msExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST50: getMemberState(core102, -1, -1): expected result: " + msExpected + ", actual result:" + msActual);
-        }
+//        numOfTests++;
+//        gmsLogger.log(Level.INFO, "Executing TEST50");
+//        msActual = gh.getMemberState("core102", -1, -1);
+//        msExpected = MemberStates.STOPPED;
+//        if (!msActual.equals(msExpected)) {
+//            gmsLogger.log(Level.SEVERE, "TEST50: getMemberState(core102, -1, -1): expected result: " + msExpected + ", actual result:" + msActual);
+//        }
 
         // try to get member state of a member that does not exist
         numOfTests++;
@@ -1190,16 +1247,6 @@ public class GroupHandleTest {
 
         }
 
-        // try to raise fence of a member that does not exist
-        numOfTests++;
-        gmsLogger.log(Level.INFO, "Executing TEST52");
-        try {
-            gh.raiseFence("TestComponent", "doesnotexist");
-            gmsLogger.log(Level.SEVERE, "TEST52: raiseFence(TestComponent,doesnotexist): did not resulted in a GMSException:");
-        } catch (GMSException ge) {
-        } catch (Exception ex) {
-            gmsLogger.log(Level.SEVERE, "TEST52: raiseFence(TestComponent,doesnotexist): resulted in a non GMSException:" + ex);
-        }
 
         // try to raise fence of a null member
 
@@ -1208,6 +1255,7 @@ public class GroupHandleTest {
         try {
             gh.raiseFence("TestComponent", null);
             gmsLogger.log(Level.SEVERE, "TEST53: raiseFence(TestComponent, null): did not resulted in a GMSException:");
+        } catch (IllegalArgumentException iae) {
         } catch (GMSException ge) {
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST53: raiseFence(TestComponent, null): resulted in a non GMSException:" + ex);
@@ -1219,6 +1267,7 @@ public class GroupHandleTest {
         try {
             gh.raiseFence(null, "core102");
             gmsLogger.log(Level.SEVERE, "TEST54: raiseFence(null,core102): did not resulted in a GMSException:");
+        } catch (IllegalArgumentException iae) {
         } catch (GMSException ge) {
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST54: raiseFence(null,core102): resulted in a non GMSException:" + ex);
@@ -1229,8 +1278,9 @@ public class GroupHandleTest {
         gmsLogger.log(Level.INFO, "Executing TEST55");
         try {
             gh.raiseFence(null, null);
-            gmsLogger.log(Level.SEVERE, "TEST55: raiseFence(null, null): did not resulted in a GMSException:");
-        } catch (GMSException ge) {
+            gmsLogger.log(Level.SEVERE, "TEST55: raiseFence(null, null): did not resulted in a IllegalArgumentException:");
+        } catch (IllegalArgumentException iae) {
+
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST55: raiseFence(null, null): resulted in a non GMSException:" + ex);
         }
@@ -1267,6 +1317,7 @@ public class GroupHandleTest {
             if (b) {
                 gmsLogger.log(Level.SEVERE, "TEST59: isMemberAlive(null): expected result: false, actual result: " + b);
             }
+        } catch (IllegalArgumentException iae) {
         } catch (Exception ex) {
             gmsLogger.log(Level.SEVERE, "TEST59: isMemberAlive(null): resulted in an Exception:" + ex);
         }
@@ -1278,12 +1329,12 @@ public class GroupHandleTest {
         if (string == null) {
             gmsLogger.log(Level.SEVERE, "TEST60: toString(): returned a null value");
         } else {
-            numOfTests++;
-            gmsLogger.log(Level.INFO, "Executing TEST61");
-            string = gh.toString();
-            if (string.equals("")) {
-                gmsLogger.log(Level.SEVERE, "TEST61: toString(): returned an empty string value");
-            }
+//            numOfTests++;
+//            gmsLogger.log(Level.INFO, "Executing TEST61");
+//            string = gh.toString();
+//            if (string.equals("")) {
+//                gmsLogger.log(Level.SEVERE, "TEST61: toString(): returned an empty string value");
+//            }
         }
 
 

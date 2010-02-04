@@ -40,16 +40,9 @@ import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.text.MessageFormat;
-import java.util.Hashtable;
-import java.util.Set;
-import java.util.Vector;
-import java.util.LinkedList;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -350,25 +343,66 @@ public class Router {
         }
     }
 
-    void notifyMessageAction(final MessageSignal signal) {
+    private ConcurrentHashMap<String, AtomicInteger> undeliveredMessages = new ConcurrentHashMap<String, AtomicInteger>();
 
+    private void notifyMessageAction(final MessageSignal signal, String targetComponent) {
+        MessageActionFactory maf = null;
         synchronized (messageAF) {
-            MessageActionFactory maf = messageAF.get(signal.getTargetComponent());
-            if (maf != null) {
-                MessageAction a = (MessageAction) maf.produceAction();
-                try {
-                    //due to message ordering requirements,
-                    //this call is not delegated to a the thread pool
-                    a.consumeSignal(signal);
-                } catch (ActionException e) {
-                    logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
-                } catch (Throwable t) {
-                    // just in case application provides own ActionImpl.
-                    logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
-                }
+            maf = messageAF.get(targetComponent);
+        }
+        if (maf == null) {
+            // Introduce a mechanism in future to
+            // register a MessageActionFactory for messages to non-existent targetComponent.
+            // (.i.e  register a MessageActionFactory for "null" targetComponent.)
+            // this action factory could do something like the following to register that message was not handled.
+
+            // following commented out code did report messages that were not delivered to any target component.
+//            int missedMessagesInt = 0;
+//            AtomicInteger missedMessages = undeliveredMessages.get(targetComponent);
+//            if (missedMessages == null) {
+//                missedMessages = new AtomicInteger(1);
+//                missedMessagesInt = 1;
+//                undeliveredMessages.put(targetComponent, missedMessages);
+//            } else {
+//                missedMessagesInt = missedMessages.incrementAndGet();
+//            }
+//            if ((missedMessagesInt % 100) == 1) {
+//                logger.info("unable to deliver message to non-existent target component " + targetComponent + ". " + missedMessagesInt + " missed messages to target component");
+//            }
+        } else {
+            MessageAction a = (MessageAction) maf.produceAction();
+            try {
+                //due to message ordering requirements,
+                //this call is not delegated to a the thread pool
+                a.consumeSignal(signal);
+            } catch (ActionException e) {
+                logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
+            } catch (Throwable t) {
+                // just in case application provides own ActionImpl.
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
             }
         }
     }
+
+    void notifyMessageAction(final MessageSignal signal) {
+        String targetComponent = signal.getTargetComponent();
+        if (targetComponent == null) {
+            // disallow this complicated functionality.
+//            Set<String> keySet;
+//            synchronized (messageAF) {
+//                keySet = new TreeSet<String>(messageAF.keySet());
+//            }
+//
+//            // if targetComponent was null,  treat as a wildcard and send messsage to ALL registered message action factories as
+//            // described by  GroupHandle.sendMessage javadoc.
+//            for (String targetComponentI : keySet) {
+//                notifyMessageAction(signal, targetComponentI);
+//            }
+        } else {
+            notifyMessageAction(signal, targetComponent);
+        }
+    }
+
 
     void notifyJoinNotificationAction(final JoinNotificationSignal signal) {
         JoinNotificationAction a;
