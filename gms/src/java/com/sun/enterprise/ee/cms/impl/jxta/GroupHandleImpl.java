@@ -102,6 +102,9 @@ public final class GroupHandleImpl implements GroupHandle {
      * @param message       Payload in byte array to be delivered to the destination.
      */
     public void sendMessage(final String componentName, final byte[] message) throws GMSException {
+        if (componentName == null) {
+            throw new IllegalArgumentException("sendMessage method: parameter targetComponentName must be non-null");
+        }
         final GMSMessage gMsg = new GMSMessage(componentName, message, groupName, getGMSContext().getStartTime());
         try {
             getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, true);
@@ -126,6 +129,9 @@ public final class GroupHandleImpl implements GroupHandle {
     public void sendMessage(final String targetServerToken,
                             final String targetComponentName,
                             final byte[] message) throws GMSException {
+        if (targetComponentName == null) {
+            throw new IllegalArgumentException("sendMessage method: parameter targetComponentName must be non-null");
+        }
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message,
                 groupName,
                 getGMSContext().getStartTime());
@@ -139,6 +145,9 @@ public final class GroupHandleImpl implements GroupHandle {
     }
 
     public void sendMessage(List<String> targetServerTokens, String targetComponentName, byte[] message) throws GMSException {
+        if (targetComponentName == null) {
+            throw new IllegalArgumentException("sendMessage method: parameter targetComponentName must be non-null");
+        }
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message, groupName, getGMSContext().getStartTime());
         if(targetServerTokens.isEmpty()){
             try {
