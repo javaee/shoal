@@ -144,7 +144,7 @@ public class ClusterViewManager {
     /**
      * Set the master instance
      *
-     * @param advertisement Master system adverisement                                                          Ä
+     * @param advertisement Master system adverisement                                                          
      * @param notify        if true, notifies registered listeners
      */
     boolean setMaster(final SystemAdvertisement advertisement, boolean notify) {

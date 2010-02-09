@@ -45,15 +45,7 @@ import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisementImpl;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
-import com.sun.enterprise.mgmt.transport.NetworkUtility;
-import com.sun.enterprise.mgmt.transport.NetworkManager;
-import com.sun.enterprise.mgmt.transport.MessageListener;
-import com.sun.enterprise.mgmt.transport.MessageImpl;
-import com.sun.enterprise.mgmt.transport.MessageEvent;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.mgmt.transport.MessageIOException;
-import com.sun.enterprise.mgmt.transport.jxta.JxtaNetworkManager;
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager;
+import com.sun.enterprise.mgmt.transport.*;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -131,7 +123,7 @@ public class ClusterManager implements MessageListener {
         //TODO: revisit and document auto composition of transports
 
         // todo carryel, let's use the factory
-        final String gmsContextProvider = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
+        /*final String gmsContextProvider = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
                                                                      GMSConstants.GROUP_COMMUNICATION_PROVIDER,
                                                                      props );
         if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ) {
@@ -140,7 +132,10 @@ public class ClusterManager implements MessageListener {
             this.netManager = new JxtaNetworkManager();
         } else {
             this.netManager = new GrizzlyNetworkManager();
-        }
+        }*/
+        this.netManager = getNetworkManager();
+        LOG.info("instantiated following NetworkManager implementation:" + netManager.getClass().getName());
+        
         this.identityMap = identityMap;
         try {
             netManager.initialize( groupName, instanceName, props);
@@ -365,6 +360,9 @@ public class ClusterManager implements MessageListener {
      * @return The networkManager value
      */
     public NetworkManager getNetworkManager() {
+        if (netManager == null) {
+            netManager = AbstractNetworkManager.getInstance();
+        }
         return netManager;
     }
 

@@ -39,10 +39,14 @@ package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Logger;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * Produces and retains the GMSContext for the lifetime of the GMS instance
@@ -53,6 +57,7 @@ import java.util.Properties;
 public class GMSContextFactory {
     private static final Map<String, GMSContext> ctxCache =
                                 new HashMap<String, GMSContext>();
+    private static Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
     private GMSContextFactory () { }
 
@@ -66,14 +71,30 @@ public class GMSContextFactory {
                                                                      GMSConstants.GROUP_COMMUNICATION_PROVIDER,
                                                                      properties );
         if((ctx = ctxCache.get( groupName )) ==  null){
-            if( gmsContextProvider.equalsIgnoreCase( GMSConstants.DEFAULT_GROUP_COMMUNICATION_PROVIDER ) ) {
-                ctx = new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );
-            } else if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ||
+            if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ||
                        gmsContextProvider.equalsIgnoreCase( GMSConstants.JXTA_NEW_GROUP_COMMUNICATION_PROVIDER ) ) {
                 ctx = new com.sun.enterprise.ee.cms.impl.base.GMSContextImpl( serverToken, groupName, memberType, properties );
             } else {
-                ctx = new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );
+                //if it is  GMSConstants.DEFAULT_GROUP_COMMUNICATION_PROVIDER or any other case,
+                //use the old JXTA provider
+                try {
+                    Class clz = Class.forName("com.sun.enterprise.ee.cms.impl.jxta.GMSContext") ;
+                    Constructor construct = clz.getConstructor(new Class[]{String.class, String.class, GroupManagementService.MemberType.class, Properties.class});
+                    ctx = (GMSContext)construct.newInstance(new Object[] {serverToken, groupName, memberType, properties});
+                    //new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );
+                } catch (ClassNotFoundException ce) {
+                    logger.severe("Could not load class com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + ce.getMessage());
+                } catch (IllegalAccessException ie) {
+                    logger.severe("Could not load class com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + ie.getMessage());
+                } catch (InstantiationException le) {
+                    logger.severe("Could not load class com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + le.getMessage());
+                } catch (NoSuchMethodException e) {
+                    logger.severe("Issue with creating new object of com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + e.getMessage());
+                } catch (InvocationTargetException ite) {
+                    logger.severe("Issue with creating new object of com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + ite.getMessage());
+                }
             }
+
             ctxCache.put(groupName, ctx);
         }
         return ctx;

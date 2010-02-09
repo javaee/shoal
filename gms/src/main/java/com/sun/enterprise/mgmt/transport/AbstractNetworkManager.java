@@ -42,6 +42,8 @@ import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
@@ -153,6 +155,49 @@ public abstract class AbstractNetworkManager implements NetworkManager {
      */
     public PeerID getLocalPeerID() {
         return localPeerID;
+    }
+
+    private static NetworkManager networkManager = null;
+
+
+    private static NetworkManager findByServiceLoader() {
+        ServiceLoader<NetworkManager> loader = ServiceLoader.load(NetworkManager.class);
+        Iterator<NetworkManager> iter = loader.iterator();
+        try {
+            if (iter.hasNext()) {
+                networkManager = iter.next().getClass().newInstance();
+            } else {
+                LOG.log(Level.SEVERE, "fatal error, no NetworkManger implementations found");
+            }
+        } catch (Throwable t) {
+            LOG.log(Level.SEVERE, "fatal error instantiating NetworkManager service", t);
+        }
+        return networkManager;
+    }
+
+    private static NetworkManager findByClassLoader(String classname) {
+        // for jdk 5.  just use class loader.
+        try{
+            Class networkManagerClass = Class.forName(classname);
+            networkManager = (NetworkManager)networkManagerClass.newInstance();
+        } catch (Throwable x) {
+            LOG.log(Level.SEVERE, "fatal error instantiating NetworkManager service", x);
+        }
+        return networkManager;
+    }
+
+    public static NetworkManager getInstance() {
+        if (networkManager == null) {
+            try {
+                networkManager = findByServiceLoader();
+            } catch (Throwable t) {
+                // jdk 5 will end up here.    
+            }
+            if (networkManager == null) {
+                networkManager = findByClassLoader("com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager");
+            }
+        }
+        return networkManager;
     }
 
     /**

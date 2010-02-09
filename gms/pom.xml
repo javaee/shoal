@@ -1,0 +1,92 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <!-- needs maven 2.0.9 -->
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.sun.enterprise</groupId>
+    <artifactId>shoal</artifactId>
+    <packaging>bundle</packaging>
+    <name>shoal</name>
+    <version>1.1</version>
+    <url>http://maven.apache.org</url>
+    <properties>
+        <shoal.home>${basedir}</shoal.home>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.grizzly</groupId>
+            <version>1.9.18-k</version>
+            <artifactId>grizzly-utils</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.grizzly</groupId>
+            <version>1.9.18-k</version>
+            <artifactId>grizzly-framework</artifactId>
+        </dependency>       
+        <dependency>
+             <!--Needed to have a bundle activator-->
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi_R4_core</artifactId>
+            <version>1.0</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    <distributionManagement>
+        <repository>       <!-- internal repository to publish to -->
+            <uniqueVersion>false</uniqueVersion>
+            <id>rator.sfbay</id>
+            <url>dav:http://rator.sfbay/maven/repositories/glassfish/</url>
+        </repository>
+    </distributionManagement>
+    <build>
+        <!-- needed to build with JDK 1.5 or higher -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <!--exclude the Shoal classes that internally call JXTA specific classes-->
+                    <excludes>
+                    <exclude>**/com/sun/enterprise/ee/cms/impl/jxta/*.java</exclude>
+                    <exclude>**/com/sun/enterprise/jxtamgmt/**/*.java</exclude>
+                    <exclude>**/com/sun/enterprise/mgmt/transport/jxta/*.java</exclude>
+                </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <!--<Bundle-Activator>com.sun.enterprise.osgi.ShoalActivator</Bundle-Activator>-->
+                        <Export-Package>com.sun.enterprise.*</Export-Package>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <extensions>
+            <extension>  <!--needed to publish the jar to the internal repository -->
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav</artifactId>
+                <version>1.0-beta-2</version>
+            </extension>
+        </extensions>
+    </build>
+</project>
