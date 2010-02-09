@@ -62,6 +62,7 @@ public class GMSContextFactory {
     private GMSContextFactory () { }
 
     //TODO: Shreedhar's comment: The invocation of appropriate provider's context has got to get better
+    @SuppressWarnings("unchecked")
     static GMSContext produceGMSContext(final String serverToken,
                             final String groupName,
                             final GroupManagementService.MemberType memberType,
