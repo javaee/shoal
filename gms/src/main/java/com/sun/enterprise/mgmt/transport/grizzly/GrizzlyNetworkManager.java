@@ -78,7 +78,7 @@ import java.nio.channels.SelectionKey;
  */
 public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
-    private static final Logger LOG = GrizzlyUtil.getLogger();
+    private static final Logger LOG = AbstractNetworkManager.getLogger();  // GrizzlyUtil.getLogger();
 
     private final Controller controller = new Controller();
     private final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
@@ -118,6 +118,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     private void configure( final Map properties ) {
+        GrizzlyUtil.setLogger(LOG);
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
         int tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
         int tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );

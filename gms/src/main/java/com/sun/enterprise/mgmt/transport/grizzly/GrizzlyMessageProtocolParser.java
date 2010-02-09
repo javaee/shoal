@@ -141,8 +141,8 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
             }
             expectingMoreData = false;
         } catch( Throwable t ) {
-            if( LOG.isLoggable( Level.INFO ) )
-                LOG.log( Level.INFO, logState( "hasNextMessage()" ), t );
+            if( LOG.isLoggable( Level.WARNING ) )
+                LOG.log( Level.WARNING, logState( "hasNextMessage()" ), t );
             expectingMoreData = false;
             error = true;
         }
