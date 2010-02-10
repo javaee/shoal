@@ -215,4 +215,8 @@ public abstract class AbstractNetworkManager implements NetworkManager {
      * @param piggyback piggyback
      */
     protected abstract void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback );
+
+    static protected Logger getLogger() {
+        return LOG;
+    }
 }
