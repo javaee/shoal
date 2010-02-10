@@ -101,6 +101,7 @@
             <classpath>
                 <path refid="compile.classpath"/>              
             </classpath>
+            <exclude  name="com/sun/enterprise/osgi/ShoalActivator.java"/>
             <include name="**/*.java"/>
         </javac>
 
