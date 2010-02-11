@@ -2,7 +2,7 @@
 set TRANSPORT=$1
 if (${TRANSPORT} == "") set TRANSPORT="grizzly"
 echo Running with transport ${TRANSPORT}
-./rungmsdemo.sh server cluster SPECTATOR 300000 INFO ${TRANSPORT} >&! server.log &
+./rungmsdemo.sh server cluster SPECTATOR 180000 INFO ${TRANSPORT} >&! server.log &
 sleep 5
 ./rungmsdemo.sh instance01 cluster CORE 120000 INFO ${TRANSPORT} 9130 9160 >&! instance01.log &
 ./rungmsdemo.sh instance02 cluster CORE 120000 INFO ${TRANSPORT} 9160 9190 >&! instance02.log &

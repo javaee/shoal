@@ -160,6 +160,7 @@ public class ClusterViewManager {
                 viewLock.unlock();
             }
             if (notify) {
+                LOG.log(Level.FINE, "setMaster master:" + advertisement.getName(), new Exception("stack trace"));
                 notifyListeners(new ClusterViewEvent(
                         ClusterViewEvents.MASTER_CHANGE_EVENT,
                         advertisement));
@@ -407,7 +408,7 @@ public class ClusterViewManager {
         if (authoritative) {
             ClusterViewEvents event = cvEvent.getEvent();
             boolean changed = addToView( newView );
-            if (changed || event == ClusterViewEvents.JOINED_AND_READY_EVENT) {
+            if (changed || event == ClusterViewEvents.JOINED_AND_READY_EVENT || event == ClusterViewEvents.MASTER_CHANGE_EVENT) {
                 //only if there are changes that we notify
                 notifyListeners(cvEvent);
             } else {

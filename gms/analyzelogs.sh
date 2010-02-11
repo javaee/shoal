@@ -10,6 +10,11 @@ echo
 echo -n "PlannedShutdownEvent in DAS log. Expect 10. Found:" 
 grep "Received PlannedShutdownEvent" server.log | wc -l
 echo
+echo -n "Check for GroupLeadershipNotifications in DAS log. Expect 2 from server. Found:"
+grep "adding GroupLeadershipNotification" server.log | wc -l
+echo "Check for issues in any members sending a GroupLeadershipNotification to server for this scenario"
+grep "adding GroupLeadershipNotification" server.log | grep -v server
+echo
 echo "*****************************************"
 echo
 echo -n "Check for Join members over all logs.  Expect less than 110. (not all instances start up at once on one machine)  Found: "

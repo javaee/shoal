@@ -179,16 +179,18 @@ class MasterNode implements MessageListener, Runnable {
      */
     boolean checkMaster(final SystemAdvertisement systemAdv) {
         if (masterAssigned && isMaster()) {
-              LOG.log(Level.FINER,"checkMaster : clusterStopping() = " + clusterStopping);
+              LOG.log(Level.FINE,"checkMaster : clusterStopping() = " + clusterStopping);
             if (clusterStopping) {
                 //accept the DAS as the new Master
-                LOG.log(Level.FINER, "Resigning Master Node role in anticipation of a master node announcement");
-                LOG.log(Level.FINER, "Accepting DAS as new master in the event of cluster stopping...");
-                clusterViewManager.setMaster(systemAdv, false);
-                masterAssigned = true;
+                LOG.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
+                LOG.log(Level.FINE, "Accepting DAS as new master in the event of cluster stopping...");
+                synchronized(this) {
+                    clusterViewManager.setMaster(systemAdv, false);
+                    masterAssigned = true;
+                }
                 return false;
             }
-            LOG.log(Level.FINER,
+            LOG.log(Level.FINE,
                     "Master node role collision with " + systemAdv.getName() +
                             " .... attempting to resolve");
             send(systemAdv.getID(), systemAdv.getName(),
@@ -196,16 +198,18 @@ class MasterNode implements MessageListener, Runnable {
 
             //TODO add code to ensure whether this node should remain as master or resign (basically noop)
             if (manager.getPeerID().compareTo(systemAdv.getID()) >= 0) {
-                LOG.log(Level.FINER, "Affirming Master Node role");
+                LOG.log(Level.FINE, "Affirming Master Node role");
             } else {
-                LOG.log(Level.FINER, "Resigning Master Node role in anticipation of a master node announcement");
+                LOG.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
                 clusterViewManager.setMaster(systemAdv, false);
             }
 
             return false;
         } else {
-            clusterViewManager.setMaster(systemAdv, true);
-            masterAssigned = true;
+            synchronized(this) {
+                clusterViewManager.setMaster(systemAdv, true);
+                masterAssigned = true;
+            }
             synchronized (MASTERLOCK) {
                 MASTERLOCK.notifyAll();
             }
@@ -497,20 +501,26 @@ class MasterNode implements MessageListener, Runnable {
         }
         msgElement = msg.getMessageElement(AMASTERVIEW);
         if ( msgElement == null || !(msgElement instanceof List) ) {
-            clusterViewManager.setMaster( source, true );
-            masterAssigned = true;
+            synchronized(this) {
+                clusterViewManager.setMaster( source, true );
+                masterAssigned = true;
+            }
             return true;
         }
         final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>) msgElement;
         msgElement = msg.getMessageElement(VIEW_CHANGE_EVENT);
         if ( msgElement == null || !(msgElement instanceof ClusterViewEvent)) {
-            clusterViewManager.setMaster( source, true );
-            masterAssigned = true;
+            synchronized(this) {
+                clusterViewManager.setMaster( source, true );
+                masterAssigned = true;
+            }
             return true;
         }
         if (!isDiscoveryInProgress() && seqID <= clusterViewManager.getMasterViewID()) {
-            clusterViewManager.setMaster(source, true);
-            masterAssigned = true;
+            synchronized(this) {
+                clusterViewManager.setMaster(source, true);
+                masterAssigned = true;
+            }
             LOG.log(Level.WARNING,
                     MessageFormat.format("Received an older clusterView sequence {0} of size :{1}" +
                            " Current sequence :{2} discarding out of sequence view",
@@ -518,23 +528,13 @@ class MasterNode implements MessageListener, Runnable {
             return true;
         }
         final ClusterViewEvent cvEvent = (ClusterViewEvent)msgElement;
-        if (!newLocalView.contains(manager.getSystemAdvertisement())) {
-            clusterViewManager.setMaster( source, true );
+        boolean masterChanged;
+        synchronized(this) {
+            clusterViewManager.setMasterViewID(seqID);
+            masterViewID.set(seqID);
+            masterChanged = clusterViewManager.setMaster( newLocalView, source );
             masterAssigned = true;
-
-            // During start cluster,  each starting instance sends out a MasterNodeQuery.
-            // Quite likely that one receives a MNR due to other instances MNQ.
-            // If one does not contain this instance,  another one surely will.
-            // No need to send out the self advertisement.
-            //LOG.log(Level.FINE, "Received view does not contain self. Publishing self");
-            //sendSelfNodeAdvertisement(source.getID(), null);
-            //update the view once the the master node includes this node
-            return true;
         }
-        clusterViewManager.setMasterViewID(seqID);
-        masterViewID.set(seqID);
-        boolean masterChanged = clusterViewManager.setMaster( newLocalView, source );
-        masterAssigned = true;
         if ( masterChanged )
             clusterViewManager.notifyListeners( cvEvent );
         else
@@ -838,9 +838,9 @@ class MasterNode implements MessageListener, Runnable {
             return false;
         }
         final SystemAdvertisement madv = manager.getSystemAdvertisement();
-        LOG.log(Level.FINER, MessageFormat.format("Candidate Master: " + madv.getName() + "received a MasterNode Collision from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+        LOG.log(Level.FINE, MessageFormat.format("Candidate Master: " + madv.getName() + "received a MasterNode Collision from Name :{0} ID :{1}", adv.getName(), adv.getID()));
         if (madv.getID().compareTo(adv.getID()) >= 0) {
-            LOG.log(Level.FINER, "Member " + madv.getName() + " affirming Master Node role over member:" + adv.getName());
+            LOG.log(Level.FINE, "Member " + madv.getName() + " affirming Master Node role over member:" + adv.getName());
             synchronized (MASTERLOCK) {
                 //Ensure the view SeqID is incremented by 2
                 clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
@@ -848,7 +848,7 @@ class MasterNode implements MessageListener, Runnable {
                 MASTERLOCK.notifyAll();
             }
         } else {
-            LOG.log(Level.FINER, "Resigning Master Node role");
+            LOG.log(Level.FINE, "Resigning Master Node role");
             clusterViewManager.setMaster(adv, true);
         }
         return true;
@@ -995,7 +995,14 @@ class MasterNode implements MessageListener, Runnable {
         int count = 0;
         //assumes self as master node
         synchronized (this) {
-            clusterViewManager.start();
+            if (!masterAssigned) {
+
+                // if masterAssigned, no longer in discovery mode, so skip making this member the MASTER during discoverymode.
+                // there was a race condition, that a MemberQueryResponse was processed BEFORE discovery.
+                // thus masterAssigned was set to true, master was assigned to true master and then the next line promoted this
+                // instance to be the master of entire cluster. (bug)
+                clusterViewManager.start();
+            }
         }
         if (masterAssigned) {
             discoveryInProgress = false;
@@ -1044,8 +1051,10 @@ class MasterNode implements MessageListener, Runnable {
         }
         LOG.log(Level.FINER, "MasterNode: Master Candidate="+madv.getName());
         //avoid notifying listeners
-        clusterViewManager.setMaster(madv, false);
-        masterAssigned = true;
+        synchronized(this) {
+            clusterViewManager.setMaster(madv, false);
+            masterAssigned = true;
+        }
         if (madv.getID().equals(localNodeID)) {
             LOG.log(Level.FINER, "MasterNode: Setting myself as MasterNode ");
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
@@ -1240,8 +1249,10 @@ class MasterNode implements MessageListener, Runnable {
             final SystemAdvertisement madv = clusterViewManager.get(localNodeID);
             LOG.log(Level.FINER, "MasterNode: Forcefully becoming the Master..." + madv.getName());
             //avoid notifying listeners
-            clusterViewManager.setMaster(madv, false);
-            masterAssigned = true;
+            synchronized(this) {
+                clusterViewManager.setMaster(madv, false);
+                masterAssigned = true;
+            }
 
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             LOG.log(Level.FINER, "MasterNode: becomeMaster () : masterViewId ="+masterViewID );
