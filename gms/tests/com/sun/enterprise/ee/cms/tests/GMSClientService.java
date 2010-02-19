@@ -153,18 +153,9 @@ public class GMSClientService implements Runnable, CallBack{
         if( notification instanceof FailureRecoverySignal)
         {
             try {
-                notification.acquire();
                 extractMemberDetails( notification, notification.getMemberToken() );
                 sleep(MILLIS);
-                notification.release();
-            }
-            catch ( SignalAcquireException e ) {
-                logger.log(Level.WARNING, e.getLocalizedMessage());
-            }
-            catch ( SignalReleaseException e ) {
-                logger.log(Level.INFO, e.getLocalizedMessage());
-            }
-            catch ( InterruptedException e ) {
+            } catch ( InterruptedException e ) {
                 logger.log(Level.INFO, e.getLocalizedMessage());
             }
         }
