@@ -59,9 +59,6 @@ public class GMSMessage implements Serializable {
         if (componentName == null) {
             throw new IllegalArgumentException("parameter componentName must be non-null");    
         }
-        if (message == null) {
-            throw new IllegalArgumentException("parameter message must be non-null");
-        }
         if (groupName == null) {
             throw new IllegalArgumentException("parameter groupName must be non-null");
         }
