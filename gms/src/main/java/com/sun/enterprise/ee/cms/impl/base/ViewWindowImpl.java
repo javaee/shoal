@@ -475,26 +475,25 @@ class ViewWindowImpl implements ViewWindow, Runnable {
 
     private void addNewMemberJoins(final EventPacket packet) {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
-        final String token = advert.getName();
         final GMSMember member = Utility.getGMSMember(advert);
-        if (packet.getClusterView().getSize() > 1) {
-            // TODO: Figure out a better way to sync
-            syncDSC(token);
-        }
-        try {
-            if (member.isCore()) {
-                addJoinNotificationSignal(token,
-                        advert.getCustomTagValue(
-                                CustomTagNames.GROUP_NAME.toString()),
-                        Long.valueOf(advert.getCustomTagValue(
-                                CustomTagNames.START_TIME.toString())));
+        final String token = member.getMemberToken();
+        final List<String> oldMembers = getTokens(getPreviousView());
+
+        // Series of checks needed to avoid duplicate ADD messages.
+        // This conditional was added to avoid duplicate ADD events caused
+        // by GroupLeaderShip change notifications.
+        // The coordinator handles ADD event differently than all other members.
+        // Lastly,  this instance is always added to view so let ADD event through w/o check for this instance.
+        if (isCoordinator() ||
+            ! oldMembers.contains(token)  ||
+            token.compareTo(getGMSContext().getServerIdentityToken()) == 0) {
+            if (packet.getClusterView().getSize() > 1) {
+                // TODO: Figure out a better way to sync
+                syncDSC(token);
             }
-        } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,
-                    new StringBuffer("The SystemAdvertisement did ")
-                            .append("not contain the ").append(
-                            e.getLocalizedMessage())
-                            .append(" custom tag value:").toString());
+            if (member.isCore()) {
+                addJoinNotificationSignal(token, member.getGroupName(), member.getStartTime());
+            }
         }
     }
 
@@ -502,23 +501,12 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
         final GMSMember member = Utility.getGMSMember(advert);
-        try {
-            if (member.isCore()) {
-                final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-                logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " Group: :" + member.getGroupName() +
-                                       " StartupState:" + startupState.toString());
-                addJoinedAndReadyNotificationSignal(token,
-                        advert.getCustomTagValue(
-                                CustomTagNames.GROUP_NAME.toString()),
-                        Long.valueOf(advert.getCustomTagValue(
-                                CustomTagNames.START_TIME.toString())));
-            }
-        } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING,
-                    new StringBuffer("The SystemAdvertisement did ")
-                            .append("not contain the ").append(
-                            e.getLocalizedMessage())
-                            .append(" custom tag value:").toString());
+
+        if (member.isCore()) {
+            final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+            logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " Group: :" + member.getGroupName() +
+                    " StartupState:" + startupState.toString());
+            addJoinedAndReadyNotificationSignal(token, member.getGroupName(), member.getStartTime());
         }
     }
 
