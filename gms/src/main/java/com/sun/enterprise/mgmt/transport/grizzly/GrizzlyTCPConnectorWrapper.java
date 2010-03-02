@@ -84,8 +84,6 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
         }
         try {
             return send( remoteSocketAddress, null, message );
-        } catch (MessageIOException mioe) {
-            throw mioe;
         } catch( IOException ie ) {
             // once retry
             return send( remoteSocketAddress, null, message );

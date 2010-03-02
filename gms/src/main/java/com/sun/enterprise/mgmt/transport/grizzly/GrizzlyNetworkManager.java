@@ -78,7 +78,9 @@ import java.nio.channels.SelectionKey;
  */
 public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
-    private static final Logger LOG = AbstractNetworkManager.getLogger();  // GrizzlyUtil.getLogger();
+    // too many protocol warnings/severe when trying to communicate to a stopped/killed member of cluster.
+    // only logger to shoal logger when necessary to debug grizzly transport within shoal.  don't leave this way.
+    private static final Logger LOG = GrizzlyUtil.getLogger();
 
     private final Controller controller = new Controller();
     private final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
