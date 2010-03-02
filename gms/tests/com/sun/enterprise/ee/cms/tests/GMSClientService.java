@@ -85,9 +85,11 @@ public class GMSClientService implements Runnable, CallBack{
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
-        gms.addActionFactory(serviceName,
-                             new FailureRecoveryActionFactoryImpl(this));
-        gms.addActionFactory(new MessageActionFactoryImpl(this), serviceName);
+        if (memberToken != null && memberToken.compareTo("server") != 0) {
+            gms.addActionFactory(serviceName,
+                                 new FailureRecoveryActionFactoryImpl(this));
+            gms.addActionFactory(new MessageActionFactoryImpl(this), serviceName);
+        }
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
     }
 
