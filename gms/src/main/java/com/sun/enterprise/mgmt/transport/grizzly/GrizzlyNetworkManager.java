@@ -413,8 +413,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
             PeerID previous = peerIDMap.putIfAbsent( instanceName, peerID );
             if (previous == null) {
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.fine("addRemotePeer: " + instanceName + " peerId:" + peerID);
+                Level debugLevel = Level.FINEST;
+                if (LOG.isLoggable(debugLevel)) {
+                    LOG.log(debugLevel, "addRemotePeer: " + instanceName + " peerId:" + peerID, new Exception("stack trace"));
                 }
             }
         }
@@ -424,8 +425,19 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( selectionKey == null )
             return;
         String instanceName = selectionKeyMap.remove( selectionKey );
-        if( instanceName != null )
-            peerIDMap.remove( instanceName );
+
+        // Bug Fix. DO NOT REMOVE member name to peerid mapping when selection key is being removed.
+        // THIS HAPPENS TOO FREQUENTLY.  Only remove this mapping when member fails or planned shutdown.\
+        // This method was getting called by GrizzlyCacheableSelectionKeyHandler.cancel(SelectionKey).
+
+//      if( instanceName != null ) {
+//          Level level = Level.FINEST;
+//          if (LOG.isLoggable(level)) {
+//              LOG.log(level, "removeRemotePeer selectionKey=" + selectionKey + " instanceName=" + instanceName,
+//                      new Exception("stack trace"));
+//          }
+//          peerIDMap.remove( instanceName );
+//      }
     }
 
     public boolean send( final PeerID peerID, final Message message ) throws IOException {
@@ -450,8 +462,12 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         PeerID peerID = null;
         if( instanceName != null )
             peerID = peerIDMap.get( instanceName );
-        if( peerID == null )
+        if( peerID == null ) {
             peerID = PeerID.NULL_PEER_ID;
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.FINE, "getPeerID(" + instanceName + ")" + " returning null peerIDMap=" + peerIDMap);
+            }
+        }
         return peerID;
     }
 
@@ -461,6 +477,10 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         String instanceName = peerID.getInstanceName();
         if( instanceName == null )
             return;
+        Level debugLevel = Level.FINEST;
+        if (LOG.isLoggable(debugLevel)) {
+            LOG.log(debugLevel, "removePeerID peerid=" + peerID, new Exception("stack trace"));
+        }
         peerIDMap.remove( instanceName );
         // todo should we remove selection key?
         // selectionKeyMap.remove( key );
