@@ -448,14 +448,15 @@ public class ClusterManager implements MessageListener {
 
             if (peerid != null) {
                 //check if the peerid is part of the cluster view
-                if (getClusterViewManager().containsKey(peerid)) {
+                if (getClusterViewManager().containsKey(peerid, true)) {
                     LOG.fine("ClusterManager.send : Cluster View contains " + peerid.toString());
                     sent = netManager.send( peerid, message );
                     if( !sent ) {
                         LOG.warning("ClusterManager.send: message " + message + " not sent to " + peerid);
                     }
                 } else {
-                    LOG.fine("ClusterManager.send : Cluster View does not contain " + peerid.toString() + " hence will not send message.");
+
+                    LOG.log(Level.INFO, "ClusterManager.send : Cluster View does not contain " + peerid.toString() + " hence will not send message.", new Exception("stack trace"));
                     throw new MemberNotInViewException("Member " + peerid +
                             " is not in the View anymore. Hence not performing sendMessage operation");
                 }

@@ -421,6 +421,9 @@ public class NetworkUtility {
                     messages.put( name, (Serializable)obj );
             }
         } catch( Throwable t ) {
+            LOG.log(Level.WARNING,
+                    "NetworkUtility.deserialized current objects: messages=" + messages.toString() +
+                     "failed while deserializing name=" + name , t);
             throw new MessageIOException( "failed to deserialize a message : name = " + name, t );
         } finally {
             if( ois != null ) {

@@ -306,6 +306,11 @@ public class GroupCommunicationProviderImpl implements
                 }
             } else {
                 final PeerID id = clusterManager.getID(targetMemberIdentityToken);
+                if (id.equals(PeerID.NULL_PEER_ID)) {
+                    // TBD:  re-evaluate after testing if this should be a warning or not.
+                    logger.log(Level.WARNING, "GroupCommunicationProvider.sendMessage(target=" + targetMemberIdentityToken + "): unable to send message: missing mapping from member identifier to network peerid");
+                    throw new MemberNotInViewException("No mapping from member identifier:" + targetMemberIdentityToken + " to a network peerid.");
+                }
                 if (clusterManager.getClusterViewManager().containsKey(id)) {
                     logger.log(Level.FINE, "sending message to PeerID: " + id);
                     sent = clusterManager.send(id, message);
@@ -315,7 +320,7 @@ public class GroupCommunicationProviderImpl implements
                 } else {
                     logger.log(Level.FINE, "message not sent to  " + targetMemberIdentityToken +
                             " since it is not in the View");
-                    throw new MemberNotInViewException("Member " + targetMemberIdentityToken +
+                    throw new MemberNotInViewException("Member " + targetMemberIdentityToken + " with network peerid:" + id + 
                             " is not in the View anymore. Hence not performing sendMessage operation");
                 }
             }

@@ -318,7 +318,9 @@ public class ApplicationServer implements Runnable, CallBack {
         Properties configProps = new Properties();
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
                                     System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
-        configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
+        configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(),
+                                    Integer.parseInt(System.getProperty("MULTICASTPORT", "2299")));
+        logger.info("multicastaddress:" + configProps.get("MULTICASTADDRESS")  + " multicastport:" + configProps.get("MULTICASTPORT"));
         logger.fine("Is initial host="+System.getProperty("IS_INITIAL_HOST"));
         configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
                 System.getProperty("IS_INITIAL_HOST", "false"));

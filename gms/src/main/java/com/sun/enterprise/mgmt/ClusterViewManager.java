@@ -110,6 +110,9 @@ public class ClusterViewManager {
                         .append(advertisement.getID().toString())
                         .toString());
                 manager.getNetworkManager().addRemotePeer(advertisement.getID());
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "add " + advertisement.getName() + " newViewSize=" + view.size(), new Exception("stack trace"));
+                }
                 view.put(advertisement.getID(), advertisement);
                 result = true;
                 LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
@@ -246,21 +249,33 @@ public class ClusterViewManager {
             viewLock.unlock();
         }
         if (removed != null ) {
-            if (LOG.isLoggable(Level.FINER)) {
-                LOG.log(Level.FINER, "Removed " + removed.getName() + "   " + id);
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.FINE, "Removed " + removed.getName() + "   " + id, new Exception("stack trace"));
             }
             manager.getNetworkManager().removePeerID(id);
         } else {
-            LOG.log(Level.FINEST, "Skipping removal of " + id + " Not in view");
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.FINE, "Skipping removal of " + id + " Not in view");
+            }
         }
         return removed;
     }
 
     public boolean containsKey(final PeerID id) {
+        return containsKey(id, false);
+    }
+
+
+    public boolean containsKey(final PeerID id, boolean debug) {
         final boolean contains;
         viewLock.lock();
         try {
             contains = view.containsKey(id);
+            if (debug && ! contains) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "ClusterViewManager.containsKey(peerid=" + id + ") is false.\ngroup: " + manager.getGroupName() + " view=" +  dumpView());
+                }
+            }
         } finally {
             viewLock.unlock();
         }
@@ -431,6 +446,9 @@ public class ClusterViewManager {
     private boolean addToView( final List<SystemAdvertisement> newView ) {
         boolean changed = false;
         lockLog( "addToView() - reset and add newView" );
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, "addToView newViewSize=" + newView.size(), new Exception("stack trace"));
+        }
         viewLock.lock();
         reset();
         try {
@@ -517,6 +535,28 @@ public class ClusterViewManager {
         }
         notifyListeners(new ClusterViewEvent(ClusterViewEvents.JOINED_AND_READY_EVENT, adv));
 
+    }
+
+    String dumpView() {
+        StringBuffer sb = new StringBuffer();
+        viewLock.lock();
+        try {
+            sb.append("clusterviewmanager snapshot: group:" +  manager.getGroupName() + " current view id=" + this.viewId + " \n");
+            int counter = 0;
+            for (Map.Entry<PeerID,SystemAdvertisement> current : view.entrySet()) {
+                PeerID peerid = current.getKey();
+                SystemAdvertisement sa = current.getValue();
+                sb.append(++counter).append(". ");
+                sb.append(peerid.getInstanceName());
+                sb.append(" ");
+                sb.append(peerid.getUniqueID().toString());
+                sb.append('\n');
+
+            }
+        } finally {
+            viewLock.unlock();
+        }
+        return sb.toString();
     }
 }
 
