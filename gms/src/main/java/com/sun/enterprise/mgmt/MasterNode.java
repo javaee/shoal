@@ -1005,6 +1005,8 @@ class MasterNode implements MessageListener, Runnable {
             }
         }
         if (masterAssigned) {
+            discoverMaster();  // ensure all instances send out MasterQuery whether or not they already know the master.
+                               // keep discovery of new members by Master consistent.
             discoveryInProgress = false;
             LOG.log(Level.FINE, "startMasterNodeDiscovery: discovery completed. masterSequenceId:" + this.masterViewID.get() +
                     " clusterViewManager.masterViewID:" + clusterViewManager.getMasterViewID());
