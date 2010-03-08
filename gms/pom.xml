@@ -39,13 +39,13 @@
         </dependency>
     </dependencies>
 
-
     <distributionManagement>
-        <repository>
-            <id>java.net-m2-repository</id>
-            <url>java-net:/maven2-repository/trunk/repository/</url>
-        </repository>
-    </distributionManagement>
+      <repository>
+        <id>koori.sfbay</id>
+        <name> Testing of nexus for repos </name>
+          <url>scp://koori.sfbay.sun.com/net/koori.sfbay.sun.com/re/maven/repositories/glassfish</url>
+      </repository>
+    </distributionManagement> 
 
     <build>
         <!-- needed to build with JDK 1.5 or higher -->
