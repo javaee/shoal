@@ -91,7 +91,7 @@ fi
 # Create the script that actually runs the test
 #===============================================
 cat << ENDSCRIPT > ${TMPDIR}/script1
-#!/bin/sh -x
+#!/bin/sh +x
 
 ECHO=\`which echo\`
 
