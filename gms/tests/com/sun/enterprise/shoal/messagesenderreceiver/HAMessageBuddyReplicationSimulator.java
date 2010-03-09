@@ -98,6 +98,10 @@ public class HAMessageBuddyReplicationSimulator {
     static AtomicBoolean groupShutdown = new AtomicBoolean(false);
     static int replica = 0;
     static int minInstanceNum = 101;
+    // Setting this value to true will result in the Sending and Receiving messages
+    // to be displayed without having to turn FINE logging on and potentially changing
+    // the timing of the test to a large degree.
+    private static final boolean VERBOSE = false;
 
     public static void main(String[] args) {
 
@@ -160,7 +164,7 @@ public class HAMessageBuddyReplicationSimulator {
         }
 
          */
-        replica = memberIDNum+1;
+        replica = memberIDNum + 1;
         if (replica > ((minInstanceNum + numberOfInstances) - 1)) {
             replica = minInstanceNum;
         }
@@ -282,7 +286,7 @@ public class HAMessageBuddyReplicationSimulator {
 
 
         System.out.println("================================================================");
-        System.out.println("Testing Complete");
+        gmsLogger.log(Level.INFO, "Testing Complete");
 
     }
 
@@ -297,7 +301,7 @@ public class HAMessageBuddyReplicationSimulator {
 
     private void test() {
 
-        System.out.println("Testing Started");
+        gmsLogger.log(Level.INFO, "Testing Started");
 
 
 
@@ -343,8 +347,8 @@ public class HAMessageBuddyReplicationSimulator {
                 if (numberOfJoinAndReady.get() == numberOfInstances) {
                     members = gms.getGroupHandle().getCurrentCoreMembers();
                     System.out.println("===================================================");
-                    System.out.println("All members are joined and ready in the group:" + groupName);
-                    System.out.println("Members are:" + members.toString());
+                    gmsLogger.log(Level.INFO, "All members are joined and ready in the group:" + groupName);
+                    gmsLogger.log(Level.INFO, "Members are:" + members.toString());
                     System.out.println("===================================================");
                     members.remove(memberID);
                     memberIDs = new ArrayList<Integer>();
@@ -380,7 +384,9 @@ public class HAMessageBuddyReplicationSimulator {
                     msg = createMsg(objectNum, msgNum, replica, memberIDNum, payloadSize);
 
                     gmsLogger.log(Level.FINE, "Sending Message:" + displayMsg(msg));
-                    //System.out.println("Sending Message:" + displayMsg(msg));
+                    if (VERBOSE) {
+                        System.out.println("Sending Message:" + displayMsg(msg));
+                    }
 
                     try {
                         gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
@@ -392,7 +398,7 @@ public class HAMessageBuddyReplicationSimulator {
                             for (int i = 1; i <= 3; i++) {
                                 try {
                                     sleep(10);
-                                    gmsLogger.log(Level.WARNING, "Retry ["+i+"] time(s) to send message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + ")");
+                                    gmsLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + ")");
                                     gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
                                     break; // if successful
                                 } catch (GMSException ge1) {
@@ -425,7 +431,7 @@ public class HAMessageBuddyReplicationSimulator {
                 for (int i = 1; i <= 3; i++) {
                     try {
                         sleep(10);
-                        gmsLogger.log(Level.WARNING, "Retry ["+i+"] time(s) to send message ("+doneMsg+")");
+                        gmsLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (" + doneMsg + ")");
                         gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", doneMsg.getBytes());
                         break; // if successful
                     } catch (GMSException ge1) {
@@ -489,26 +495,26 @@ public class HAMessageBuddyReplicationSimulator {
         gmsLogger.log(Level.INFO, "Initializing Shoal for member: " + memberID + " group:" + groupName);
         Properties configProps = new Properties();
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
-            System.getProperty("MULTICASTADDRESS", "229.9.1.4"));
+                System.getProperty("MULTICASTADDRESS", "229.9.1.4"));
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
 //        gmsLogger.FINE("Is initial host="+System.getProperty("IS_INITIAL_HOST"));
         configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
                 System.getProperty("IS_INITIAL_HOST", "false"));
-/*
+        /*
         if(System.getProperty("INITIAL_HOST_LIST") != null){
-            configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
-                System.getProperty("INITIAL_HOST_LIST"));
+        configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
+        System.getProperty("INITIAL_HOST_LIST"));
         }
-*/
+         */
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(),
-                        System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
+                System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(),
-                        System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
+                System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
         //Uncomment this to receive loop back messages
         //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
         final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
-        if(bindInterfaceAddress != null){
-            configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(),bindInterfaceAddress );
+        if (bindInterfaceAddress != null) {
+            configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
         }
 
         return (GroupManagementService) GMSFactory.startGMSModule(
@@ -600,7 +606,7 @@ public class HAMessageBuddyReplicationSimulator {
                                     for (int i = 1; i <= 3; i++) {
                                         try {
                                             sleep(10);
-                                            gmsLogger.log(Level.WARNING, "Retry ["+i+"] time(s) to send message ("+msgString+")");
+                                            gmsLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (" + msgString + ")");
                                             gms.getGroupHandle().sendMessage("master", "TestComponent", msgString.getBytes());
                                             break; // if successful
                                         } catch (GMSException ge1) {
@@ -637,7 +643,9 @@ public class HAMessageBuddyReplicationSimulator {
                                     shortPayLoad = shortPayLoad.substring(0, 10) + "..." + shortPayLoad.substring(shortPayLoad.length() - 10, shortPayLoad.length());
                                 }
                                 gmsLogger.log(Level.FINE, memberID + " Received msg:" + displayMsg(msg));
-                                //System.out.println(" Received msg:" + displayMsg(msg));
+                                if (VERBOSE) {
+                                    System.out.println(" Received msg:" + displayMsg(msg));
+                                }
                                 if (msgID > 0) {
 
 
@@ -683,7 +691,7 @@ public class HAMessageBuddyReplicationSimulator {
                             if (msgString.contains("DONE")) {
                                 int index = msgString.indexOf(":");
                                 String from = msgString.substring(index + 1);
-                                System.out.println("Received DONE message:" + msgString + " !!!!!!!!");
+                                gmsLogger.log(Level.INFO, "Received DONE message:" + msgString);
                                 // since we can received multiple DONE messages from the
                                 // same member only count them once
                                 if (!receivedDoneMsgFrom.contains(from)) {
