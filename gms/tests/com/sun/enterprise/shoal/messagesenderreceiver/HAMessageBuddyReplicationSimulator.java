@@ -73,6 +73,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HAMessageBuddyReplicationSimulator {
 
+    static final int EXCEEDTIMEOUTLIMIT = 5;  // in minutes
+
     private GroupManagementService gms = null;
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     // private static final Logger gmsLogger = HASimulatorLogger.getLogger(HASimulatorLogger.HAMSGSimulator_LOGGER);
@@ -93,7 +95,6 @@ public class HAMessageBuddyReplicationSimulator {
     static AtomicBoolean firstMsgReceived = new AtomicBoolean(false);
     static List<String> members;
     static List<Integer> memberIDs;
-    static int exceedTimeoutLimit = 5;
     static String groupName = null;
     static AtomicBoolean groupShutdown = new AtomicBoolean(false);
     static int replica = 0;
@@ -454,7 +455,7 @@ public class HAMessageBuddyReplicationSimulator {
         if (memberID.equalsIgnoreCase("master")) {
             gmsLogger.log(Level.INFO, "===================================================");
             gmsLogger.log(Level.INFO, "Waiting for all CORE members to send DONE messages");
-            gmsLogger.log(Level.INFO, ("exceed timeout limit=" + exceedTimeoutLimit));
+            gmsLogger.log(Level.INFO, ("exceed timeout limit=" + EXCEEDTIMEOUTLIMIT));
 
             while (true) {
                 // wait for all instances to forward the DONE message that they received to us
@@ -469,8 +470,8 @@ public class HAMessageBuddyReplicationSimulator {
                     exceedTimeout = ((currentTime - waitForStartTime) / 60000);
                     gmsLogger.log(Level.INFO, ("current exceed timeout=" + exceedTimeout));
 
-                    if (exceedTimeout >= exceedTimeoutLimit - 1) {
-                        gmsLogger.log(Level.SEVERE, memberID + " EXCEEDED " + exceedTimeoutLimit + " minute timeout waiting to receive all DONE messages");
+                    if (exceedTimeout >= EXCEEDTIMEOUTLIMIT - 1) {
+                        gmsLogger.log(Level.SEVERE, memberID + " EXCEEDED " + EXCEEDTIMEOUTLIMIT + " minute timeout waiting to receive all DONE messages");
                         break;
                     }
                 }
