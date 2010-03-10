@@ -60,21 +60,29 @@ public class Utility {
 
     public static GMSMember getGMSMember( final SystemAdvertisement systemAdvertisement ) {
         GMSMember member;
+        String memberType = getCustomTagValue(systemAdvertisement, CustomTagNames.MEMBER_TYPE.toString());
+        String groupName = getCustomTagValue(systemAdvertisement, CustomTagNames.GROUP_NAME.toString());
+        String startTimeString = getCustomTagValue(systemAdvertisement, CustomTagNames.START_TIME.toString());
+        long startTime = 0L;
         try {
-            member = new GMSMember( systemAdvertisement.getName(),
-                                    systemAdvertisement.getCustomTagValue(
-                                            CustomTagNames.MEMBER_TYPE.toString() ),
-                                    systemAdvertisement.getCustomTagValue(
-                                            CustomTagNames.GROUP_NAME.toString() ),
-                                    Long.valueOf( systemAdvertisement.getCustomTagValue( CustomTagNames.START_TIME.toString() ) ) );
-        } catch( NoSuchFieldException e ) {
-            logger.log( Level.WARNING,
-                        new StringBuffer( "SystemAdvertisement did not contain one of the " )
-                                .append( "specified tag values:" )
-                                .append( e.getLocalizedMessage() ).toString() );
-            member = new GMSMember( systemAdvertisement.getName(), null, null, null );
+            startTime = Long.valueOf(startTimeString);
+        } catch (NumberFormatException nfe) {
+            logger.log(Level.WARNING, "Misformed SystemAdvertisement.  Missing StartingTime for member:" + systemAdvertisement.getName() + " systemAdverisement=" + systemAdvertisement.toString());
         }
+        member = new GMSMember( systemAdvertisement.getName(), memberType, groupName, startTime);
         return member;
+    }
+
+    private static String getCustomTagValue(SystemAdvertisement sa, String tagName) {
+        String result = null;
+        try {
+            result = sa.getCustomTagValue(tagName);
+        } catch (NoSuchFieldException e) {
+            logger.log( Level.WARNING,
+                        new StringBuffer("Missing expected tag name:" + tagName + " in SystemAdvertisement for member:" + sa.getName() + ". Defaulting value to null.\n")
+                                .append( e.getLocalizedMessage() ).toString(), e);
+        }
+        return result;
     }
 
     public static boolean isWatchDog( SystemAdvertisement sysAdv ) {
