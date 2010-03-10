@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -80,7 +81,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
     static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final int MAX_VIEWS = 100;  // 100 is some default.
     private static final List<GMSMember> EMPTY_GMS_MEMBER_LIST = new ArrayList<GMSMember>();
-    private final List<ArrayList<GMSMember>> views = new Vector<ArrayList<GMSMember>>();
+    private final List<List<GMSMember>> views = new Vector<List<GMSMember>>();
     private List<Signal> signals = new Vector<Signal>();
     private final List<String> currentCoreMembers = new ArrayList<String>();
     private final List<String> allCurrentMembers = new ArrayList<String>();
@@ -143,7 +144,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
     private void newViewObserved(final EventPacket packet) {
         final GMSMember member = Utility.getGMSMember(packet.getSystemAdvertisement());
         synchronized (views) {
-            views.add(getMemberTokens(packet));
+            views.add(Collections.unmodifiableList(getMemberTokens(packet)));
             if (views.size() > MAX_VIEWS) {
                 views.remove(0);
             }
