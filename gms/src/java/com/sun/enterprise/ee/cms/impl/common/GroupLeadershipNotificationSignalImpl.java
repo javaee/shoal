@@ -104,14 +104,6 @@ public class GroupLeadershipNotificationSignalImpl implements GroupLeadershipNot
      * {@inheritDoc}
      */
     public void release() throws SignalReleaseException {
-        if( previousView != null )
-            previousView.clear();
-        if( currentView != null )
-            currentView.clear();
-        if( currentCoreMembers != null )
-            currentCoreMembers.clear();
-        if( allCurrentMembers != null )
-            allCurrentMembers.clear();
     }
 
     /**

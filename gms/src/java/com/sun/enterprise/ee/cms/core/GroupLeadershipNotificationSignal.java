@@ -48,14 +48,14 @@ import java.util.List;
  */
 public interface GroupLeadershipNotificationSignal extends Signal {
     /**
-     * provides a list of the previous view's snapshot at time signal arrives.
+     * provides a read-only list of the previous view's snapshot at time signal arrives.
      *
      * @return List containing the list of <code>GMSMember</code>s which are corresponding to the view
      */
     List<GMSMember> getPreviousView();
 
     /**
-     * provides a list of the current view's snapshot at time signal arrives.
+     * provides a read-only list of the current view's snapshot at time signal arrives.
      *
      * @return List containing the list of <code>GMSMember</code>s which are corresponding to the view
      */
