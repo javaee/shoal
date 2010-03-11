@@ -55,7 +55,7 @@ STARTTCPPORT=9130
 LOGLEVEL=INFO
 PUBLISH_HOME=$SHOALWORKSPACE/dist
 LIB_HOME=$SHOALWORKSPACE/lib
-JARS=${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/bcprov-jdk14.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+JARS=${PUBLISH_HOME}/shoal-gms-test.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/bcprov-jdk14.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
 SHOAL_GROUP_COMMUNICATION_PROVIDER="SHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly"
 #
 # if members are distributed across machines, the GROUPNAME
@@ -66,7 +66,7 @@ GROUPNAME="TestGroup_`uname -n`"
 if [ "${GROUPNAME}" == "" ]; then
     GROUPNAME="TestGroup"
 fi
-MAINCLASS="com.sun.enterprise.shoal.messagesenderreceiver.HAMessageBuddyReplicationSimulator"
+MAINCLASS="com.sun.enterprise.shoal.messagesenderreceivertest.HAMessageBuddyReplicationSimulator"
 
 #-----------------------------------------------------
 
