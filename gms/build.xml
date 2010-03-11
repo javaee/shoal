@@ -44,182 +44,194 @@
 
 <project name="Shoal Group Management Service Module" default="all" basedir=".">  
 
-<!-- ========== Initialize Properties =================================== -->
+    <!-- ========== Initialize Properties =================================== -->
 
     <property file="./project.properties"/>
     <property file="./build.properties"/>
 
     <!--
-	See if we have the GroupLayout class to build the test UI
+        See if we have the GroupLayout class to build the test UI
     -->
     <available classname="javax.swing.GroupLayout" property="build.testui"/>
     <condition property="build.excludes" value="" else="**/LWRMulticastTestUI.java">
-	<istrue value="${build.testui}"/>
+        <istrue value="${build.testui}"/>
     </condition>
-  
+
     <!-- all -->
     <target name="all" depends="clean, compile, assemble"
-        description="Build entire ${component.name}">
+            description="Build entire ${component.name}">
     </target>
 
     <!-- build -->
     <target name="build" depends="compile, assemble"
-        description="Build entire ${component.name}">
+            description="Build entire ${component.name}">
     </target>
 
     <!-- init. Initialization involves creating publishing directories and
-         OS specific targets. --> 
+         OS specific targets. -->
     <target name="init" description="${component.name} initialization">
         <tstamp>
             <format property="start.time" pattern="MM/dd/yyyy hh:mm aa"/>
-        </tstamp>    
+        </tstamp>
         <mkdir dir="${component.classes.dir}"/>
-	<mkdir dir="${dist.dir}"/>
+        <mkdir dir="${dist.dir}"/>
     </target>
 
     <path id="compile.classpath">
-         <pathelement location="${jxta.jar}"/>
-         <pathelement location="${grizzly-framework.jar}"/>
-         <pathelement location="${grizzly-utils.jar}"/>
+        <pathelement location="${jxta.jar}"/>
+        <pathelement location="${grizzly-framework.jar}"/>
+        <pathelement location="${grizzly-utils.jar}"/>
     </path>
 
+    <!-- compile: compile the sources -->
+    <target name="compile" depends="init"
+            description="Compile ${component.name} sources">
 
-    <!-- compile: compile the sources --> 
-    <target name="compile" depends="init" 
-        description="Compile ${component.name} sources">  
-     
-        <javac srcdir="${src.dir}" 
+        <javac srcdir="${src.dir}"
                destdir="${component.classes.dir}"
-               debug="${javac.debug}" 
+               debug="${javac.debug}"
                optimize="${javac.optimize}"
-               source="${javac.source}" 
-	       target="${javac.source}"
+               source="${javac.source}"
+               target="${javac.source}"
                deprecation="${javac.deprecation}"
                failonerror="true"
-	       >
-	       <compilerarg value="-Xlint:unchecked"/>
+               includes="**/*.java"
+               excludes="com/sun/enterprise/osgi/ShoalActivator.java,**/${junit.test.dir}"
+               >
+            <compilerarg value="-Xlint:unchecked"/>
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
             </classpath>
-            <exclude  name="com/sun/enterprise/osgi/ShoalActivator.java"/>
-            <include name="**/*.java"/>
         </javac>
 
         <mkdir  dir= "${component.classes.dir}/com/sun/enterprise/ee/cms/logging"/>
         <copy todir="${component.classes.dir}/com/sun/enterprise/ee/cms/logging"
-              file="${resource.dir}/com/sun/enterprise/ee/cms/logging/LogStrings.properties"/>                  
+              file="${resource.dir}/com/sun/enterprise/ee/cms/logging/LogStrings.properties"/>
 
-        <javac srcdir="${tests.dir}" 
+        <javac srcdir="${tests.dir}"
                destdir="${component.classes.dir}"
-               debug="${javac.debug}" 
+               debug="${javac.debug}"
                optimize="${javac.optimize}"
-               source="${javac.source}" 
-	       target="${javac.source}"
+               source="${javac.source}"
+               target="${javac.source}"
                deprecation="${javac.deprecation}"
                failonerror="true"
-	       >
-	       <compilerarg value="-Xlint:unchecked"/>
+               includes="**/*.java"
+               excludes="${build.excludes},${junit.test.dir}/**"
+               >
+            <compilerarg value="-Xlint:unchecked"/>
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
             </classpath>
-            <include name="**/*.java"/>
-            <exclude name="${build.excludes}"/>
         </javac>
 
     </target>
-    
+
     <!-- assemble: create jar files and jar files containing localized
     content -->
     <target name="assemble" depends="init"
-        description="Create ${component.name} jar files">
+            description="Create ${component.name} jar files">
 
         <copy todir="${component.classes.dir}">
             <fileset dir="${src.dir}"
                      includes="**/*.properties"/>
-	    <fileset dir="${tests.dir}"/>
+            <!--<fileset dir="${tests.dir}"/>-->
         </copy>
 
+        <!-- don't include the tests, they will be put in seperate jar file -->
         <jar jarfile="${dist.dir}/${shoal-gms.jar}" update="yes">
-            <fileset dir="${component.classes.dir}">
+            <fileset dir="${component.classes.dir}" excludes="**/*test*/**, **/*Test*/**">
                 <include name="**/*.class"/>
                 <include name="**/*.properties"/>
             </fileset>
             <fileset dir="${src.dir}">
-              <include name="**/*.dtd"/>
-              <include name="**/*.xml"/>
+                <include name="**/*.dtd"/>
+                <include name="**/*.xml"/>
             </fileset>
             <fileset dir="etc">
-               <include name="**/services/*"/>
+                <include name="**/services/*"/>
             </fileset>
         </jar>
+        <antcall target="assembletestjar" />
     </target>
 
     <target name="assembleGrizzly" depends="clean, init, compile"
-        description="Create ${component.name} jar files">
+            description="Create ${component.name} jar files">
 
         <delete  dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}"/>
         <copy todir="${component.classes.dir}">
             <fileset dir="${src.dir}"
                      includes="**/*.properties"/>
-	    <fileset dir="${tests.dir}"/>
+            <fileset dir="${tests.dir}"/>
         </copy>
 
+        <!-- don't include the tests, they will be put in seperate jar file -->
         <jar jarfile="${dist.dir}/${shoal-gms.jar}" update="yes">
-            <fileset dir="${component.classes.dir}">
+            <fileset dir="${component.classes.dir}" excludes="**/*test*/**, **/*Test*/**">
                 <include name="**/*.class"/>
                 <include name="**/*.properties"/>
                 <exclude name="**/jxta/*.class"/>
                 <exclude name="**/jxtamgmt/*.class"/>
             </fileset>
             <fileset dir="${src.dir}">
-              <include name="**/*.dtd"/>
-              <include name="**/*.xml"/>
+                <include name="**/*.dtd"/>
+                <include name="**/*.xml"/>
             </fileset>
             <fileset dir="etc">
-               <include name="**/services/*"/>
+                <include name="**/services/*"/>
             </fileset>
         </jar>
+        <antcall target="assembletestjar" />
     </target>
+
+    <target name="assembletestjar" description="create ${shoal-gms-tests.jar}" >
+        <!-- create test jar -->
+        <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
+            <fileset dir="${component.classes.dir}" includes="**/*test*/**, **/*Test*/**"/>
+        </jar>
+    </target>
+
+
 
     <!-- clean -->
     <target name="clean">
         <delete dir="${component.classes.dir}"/>
-	<delete dir="${dist.dir}"/>
+        <delete dir="${dist.dir}"/>
     </target>
 
     <!-- javadoc -->
     <target name="gms-javadocs">
         <javadoc packagenames="com.sun.enterprise.ee.cms.*"
-            sourcepath="${src.dir}:${tests.dir}"
-            destdir="${javadocs.dir}"
-            version="true"
-            use="true"
-            private="false"
-            windowtitle="Shoal Group Management Service Framework"
-            doctitle="Shoal Group Management Service Framework"
-            bottom="Copyright © 2003   Copyright 2004 Sun Microsystems, Inc. All rights reserved. 
-                    Use is subject to license terms." >
+                 sourcepath="${src.dir}:${tests.dir}"
+                 destdir="${javadocs.dir}"
+                 version="true"
+                 use="true"
+                 private="false"
+                 windowtitle="Shoal Group Management Service Framework"
+                 doctitle="Shoal Group Management Service Framework"
+                 bottom="Copyright © 2003   Copyright 2004 Sun Microsystems, Inc. All rights reserved.
+                 Use is subject to license terms." >
 
             <link href="http://java.sun.com/j2se/1.5/docs/api/" />
 
             <group title="Core Client Interfaces and Implementations"
-                packages="com.sun.enterprise.ee.cms.core:com.sun.enterprise.ee.cms.core.*, 
-                    com.sun.enterprise.ee.cms.impl.client:com.sun.enterprise.ee.cms.impl.client.*"/>
-            
-            <group title="Service Provider Interface" 
-                packages="com.sun.enterprise.ee.cms.spi:com.sun.enterprise.ee.cms.spi.*"/>
-            
-            <group title="Jxta SPI Implementation" 
-                packages="com.sun.enterprise.ee.cms.impl.jxta:com.sun.enterprise.ee.cms.impl.jxta.*"/>
+                   packages="com.sun.enterprise.ee.cms.core:com.sun.enterprise.ee.cms.core.*,
+                   com.sun.enterprise.ee.cms.impl.client:com.sun.enterprise.ee.cms.impl.client.*"/>
+
+            <group title="Service Provider Interface"
+                   packages="com.sun.enterprise.ee.cms.spi:com.sun.enterprise.ee.cms.spi.*"/>
+
+            <group title="Jxta SPI Implementation"
+                   packages="com.sun.enterprise.ee.cms.impl.jxta:com.sun.enterprise.ee.cms.impl.jxta.*"/>
 
             <group title="Demonstration Example"
-                packages="com.sun.enterprise.ee.cms.tests:com.sun.enterprise.ee.cms.tests.*"/>
-                
+                   packages="com.sun.enterprise.ee.cms.tests:com.sun.enterprise.ee.cms.tests.*"/>
+
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
             </classpath>
-        </javadoc>    
+        </javadoc>
     </target>
 
     <target name="bundle-src">
@@ -251,68 +263,111 @@
         </copy>
         <jar jarfile="${dist.dir}/shoal-gms-src.jar" basedir="${bundle.gms}"/>
     </target>
-    
+
     <target name="test-sender" depends="build" description="Run LWRMulticastSenderTest">
         <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastSenderTest" fork="true">
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
                 <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
             </classpath>
-	</java>
+        </java>
     </target>
 
     <target name="test-rec" depends="build" description="Run LWRMulticastRecTest">
         <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastRecTest" fork="true">
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
                 <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
             </classpath>
-	</java>
+        </java>
     </target>
 
     <target name="test-ui" depends="build" description="Run LWRMulticastTestUI">
-	<fail message="LWRMulticastTestUI needs Java 6 or above to run">
-	    <condition>
-		<isfalse value="${build.testui}"/>
-	    </condition>
-	</fail>
+        <fail message="LWRMulticastTestUI needs Java 6 or above to run">
+            <condition>
+                <isfalse value="${build.testui}"/>
+            </condition>
+        </fail>
         <java classname="com.sun.enterprise.jxtamgmt.LWRMulticastTestUI" fork="true">
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
                 <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
             </classpath>
-	</java>
+        </java>
     </target>
     <target name="test-mcastsender" depends="build" description="Run MulticastSender">
         <java classname="net.MulticastSender" fork="true">
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
                 <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
             </classpath>
             <arg value="229.9.1.1"/>
             <arg value="2299"/>
-	</java>
+        </java>
     </target>
 
     <target name="test-mcastsniffer" depends="build" description="Run MulticastSniffer">
         <java classname="net.MulticastSniffer" fork="true">
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
                 <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
             </classpath>
             <arg value="229.9.1.1"/>
             <arg value="2299"/>
-	</java>
+        </java>
     </target>
 
     <target name="simplejointest" depends="build" description="Simple JoinTest">
         <java classname="com.sun.enterprise.shoal.jointest.SimpleJoinTest" fork="true">
             <classpath>
-                <path refid="compile.classpath"/>              
+                <path refid="compile.classpath"/>
                 <pathelement location="${dist.dir}/${shoal-gms.jar}"/>
             </classpath>
             <arg value="-Dcom.sun.management.jmxremote"/>
-	    <arg value="-DLOG_LEVEL=FINE"/>
-	</java>
+            <arg value="-DLOG_LEVEL=FINE"/>
+        </java>
+    </target>
+
+    <target name="check-for-junit-jar">
+        <available file="tmp/junit/${junit.jar}" property="junit.jar.present"/>
+    </target>
+    <target name="download-junit-jar" depends="check-for-junit-jar" unless="junit.jar.present" >
+        <mkdir dir="tmp/junit"/>
+        <get src="${junit.download}" dest="tmp/junit/${junit.jar}" verbose="true"/>
+    </target>
+    <target name="run-junit-tests" depends="download-junit-jar" description="builds and runs the juit tests">
+        <javac srcdir="tests/${junit.test.dir}"
+               destdir="tests/${junit.test.dir}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}"
+               source="${javac.source}"
+               target="${javac.source}"
+               deprecation="${javac.deprecation}"
+               failonerror="true"
+               includes="**/*.java"
+               >
+            <compilerarg value="-Xlint:unchecked"/>
+            <classpath>
+                <pathelement location="dist/${shoal-gms.jar}"/>
+                <pathelement location="tmp/junit/${junit.jar}"/>
+            </classpath>
+        </javac>
+        <mkdir dir="tmp/junit/results"/>
+        <junit printsummary="yes" showoutput="true" haltonfailure="no">
+            <classpath>
+                <pathelement location="dist/${shoal-gms.jar}"/>
+                <pathelement location="tmp/junit/${junit.jar}"/>
+                <pathelement path="tests/${junit.test.dir}"/>
+            </classpath>
+
+            <formatter type="plain"/>
+            <batchtest fork="yes" todir="tmp/junit/results">
+                <fileset dir="tests/${junit.test.dir}">
+                    <include name="**/*Test*.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+
+
     </target>
 </project>
