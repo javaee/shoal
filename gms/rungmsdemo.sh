@@ -46,14 +46,14 @@ fi
 
 if [ $# -gt 5 ]; then 
     if [ $5 = "-debug" ]; then
-	java -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005 -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=INFO -cp ${publish_home}/shoal-gms-test.jar:${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DjxtaMulticastPoolsize=25 com.sun.enterprise.ee.cms.tests.ApplicationServer;
+	java -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005 -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=INFO -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DjxtaMulticastPoolsize=25 com.sun.enterprise.ee.cms.tests.ApplicationServer;
     elif [ $6 = "grizzly" ]; then
         echo Running using Shoal with transport grizzly
 #  If you run shoal over grizzly on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
-       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms-test.jar:${publish_home}/shoal-gms.jar:${lib_home}/bcprov-jdk14.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=$7 -DTCPENDPORT=$8 -DMULTICASTADDRESS="229.9.1.2" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.ee.cms.tests.ApplicationServer;
+       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=$7 -DTCPENDPORT=$8 -DMULTICASTADDRESS="229.9.1.2" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.ee.cms.tests.ApplicationServer;
   else
        echo Running using Shoal with transport $6
-       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms-test.jar:${publish_home}/shoal-gms.jar:${lib_home}/bcprov-jdk14.jar:${lib_home}/jxta.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=$6 -DMULTICASTADDRESS="229.9.1.2"  com.sun.enterprise.ee.cms.tests.ApplicationServer;
+       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar:${lib_home}/jxta.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=$6 -DMULTICASTADDRESS="229.9.1.2"  com.sun.enterprise.ee.cms.tests.ApplicationServer;
     fi 
 fi
 

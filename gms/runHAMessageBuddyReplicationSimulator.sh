@@ -47,25 +47,26 @@ SHOALWORKSPACE=`pwd`
 TMPDIR=$SHOALWORKSPACE/tmp
 LOGDIR=$SHOALWORKSPACE/runhamessagebuddyreplicasimulator_logs
 NUMOFINSTANCES=10
-NUMOFOBJECTS=10
-NUMOFMSGSPEROBJECT=100
-MSGSIZE=1024
+NUMOFOBJECTS=100
+NUMOFMSGSPEROBJECT=500
+MSGSIZE=4096
 STARTINSTANCENUM=101
 STARTTCPPORT=9130
 LOGLEVEL=INFO
 PUBLISH_HOME=$SHOALWORKSPACE/dist
 LIB_HOME=$SHOALWORKSPACE/lib
-JARS=${PUBLISH_HOME}/shoal-gms-test.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/bcprov-jdk14.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
-SHOAL_GROUP_COMMUNICATION_PROVIDER="SHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly"
+JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/jxta.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+SHOAL_GROUP_COMMUNICATION_PROVIDER="SHOAL_GROUP_COMMUNICATION_PROVIDER=jxta"
 #
 # if members are distributed across machines, the GROUPNAME
 # must be set to a unique value so that all members join the
 # same group
 #
-GROUPNAME="TestGroup_`uname -n`"
-if [ "${GROUPNAME}" == "" ]; then
+# COMMENTED OUT technique of generating unique groupname.  Use different MULTICASTADDRESS and/or MULTICASTPORT per group/cluster to avoid collisions.
+#GROUPNAME="TestGroup_`uname -n`"
+#if [ "${GROUPNAME}" == "" ]; then
     GROUPNAME="TestGroup"
-fi
+#fi
 MAINCLASS="com.sun.enterprise.shoal.messagesenderreceivertest.HAMessageBuddyReplicationSimulator"
 
 #-----------------------------------------------------

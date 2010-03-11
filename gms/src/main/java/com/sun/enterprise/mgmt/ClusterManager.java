@@ -82,6 +82,7 @@ public class ClusterManager implements MessageListener {
 
     final Object MASTERBYFORCELOCK = new Object();
     final private String memberType;
+    final String gmsContextProviderTransport;
 
     /**
      * The ClusterManager is created using the instanceName,
@@ -123,17 +124,10 @@ public class ClusterManager implements MessageListener {
         //TODO: revisit and document auto composition of transports
 
         // todo carryel, let's use the factory
-        /*final String gmsContextProvider = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
-                                                                     GMSConstants.GROUP_COMMUNICATION_PROVIDER,
-                                                                     props );
-        if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ) {
-            this.netManager = new GrizzlyNetworkManager();
-        } else if( gmsContextProvider.equalsIgnoreCase( GMSConstants.JXTA_NEW_GROUP_COMMUNICATION_PROVIDER ) ) {
-            this.netManager = new JxtaNetworkManager();
-        } else {
-            this.netManager = new GrizzlyNetworkManager();
-        }*/
-        this.netManager = getNetworkManager();
+        gmsContextProviderTransport = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
+                                                                 GMSConstants.GROUP_COMMUNICATION_PROVIDER,
+                                                                 props );
+        this.netManager = getNetworkManager(gmsContextProviderTransport);
         LOG.info("instantiated following NetworkManager implementation:" + netManager.getClass().getName());
         
         this.identityMap = identityMap;
@@ -270,7 +264,7 @@ public class ClusterManager implements MessageListener {
         final String groupName = System.getProperty("GNAME", "groupName");
         LOG.log(Level.FINER, "Instance Name :" + name);
         final Map props = getPropsForTest();
-        final Map<String, String> idMap = getIdMap();
+        final Map<String, String> idMap = getIdMap(name, groupName);
         final List<ClusterViewEventListener> vListeners =
                 new ArrayList<ClusterViewEventListener>();
         final List<ClusterMessageListener> mListeners =
@@ -301,12 +295,19 @@ public class ClusterManager implements MessageListener {
                 vListeners,
                 mListeners);
         manager.start();
-        manager.waitForClose();
+        //manager.waitForClose();
+        try {
+            Thread.sleep(10000); // long enough to announce being master.
+        } catch (InterruptedException ie) {}
+        manager.stop(false);
     }
 
-    //TODO: NOT YET IMPLEMENTED
-    private static Map<String, String> getIdMap() {
-        return new HashMap<String, String>();
+    private static Map<String, String> getIdMap(String memberType, String groupName) {
+        final Map<String, String> idMap = new HashMap<String, String>();
+        idMap.put(CustomTagNames.MEMBER_TYPE.toString(), memberType);
+        idMap.put(CustomTagNames.GROUP_NAME.toString(), groupName);
+        idMap.put(CustomTagNames.START_TIME.toString(), Long.valueOf(System.currentTimeMillis()).toString());
+        return idMap;
     }
 
     //TODO: NOT YET IMPLEMENTED
@@ -359,11 +360,15 @@ public class ClusterManager implements MessageListener {
      *
      * @return The networkManager value
      */
-    public NetworkManager getNetworkManager() {
+    public NetworkManager getNetworkManager(String transport) {
         if (netManager == null) {
-            netManager = AbstractNetworkManager.getInstance();
+            netManager = AbstractNetworkManager.getInstance(transport);
         }
         return netManager;
+    }
+
+    public NetworkManager getNetworkManager() {
+        return getNetworkManager(gmsContextProviderTransport);
     }
 
     /**

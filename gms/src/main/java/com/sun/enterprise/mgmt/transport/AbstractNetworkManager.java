@@ -36,6 +36,7 @@
 
 package com.sun.enterprise.mgmt.transport;
 
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
@@ -160,17 +161,25 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     private static NetworkManager networkManager = null;
 
 
-    private static NetworkManager findByServiceLoader() {
+    private static NetworkManager findByServiceLoader(String transport) {
         ServiceLoader<NetworkManager> loader = ServiceLoader.load(NetworkManager.class);
         Iterator<NetworkManager> iter = loader.iterator();
-        try {
-            if (iter.hasNext()) {
+
+        while (iter.hasNext())  {
+            try {
                 networkManager = iter.next().getClass().newInstance();
-            } else {
-                LOG.log(Level.SEVERE, "fatal error, no NetworkManger implementations found");
+                if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
+                    if (networkManager.getClass().getName().contains("grizzly")) {
+                        // found service that matches group communication provider.
+                        break;
+                    }
+                }
+            } catch (Throwable t) {
+                LOG.log(Level.WARNING, "error instantiating NetworkManager service", t);
             }
-        } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "fatal error instantiating NetworkManager service", t);
+        }
+        if (networkManager == null) {
+           LOG.log(Level.SEVERE, "fatal error, no NetworkManger implementations found");
         }
         return networkManager;
     }
@@ -186,15 +195,21 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         return networkManager;
     }
 
-    public static NetworkManager getInstance() {
+    public static NetworkManager getInstance(String transport) {
         if (networkManager == null) {
             try {
-                networkManager = findByServiceLoader();
+                networkManager = findByServiceLoader(transport);
             } catch (Throwable t) {
                 // jdk 5 will end up here.    
             }
             if (networkManager == null) {
-                networkManager = findByClassLoader("com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager");
+                String classname = null;
+                if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
+                    classname = "com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager";
+                } else {
+                    classname = "com.sun.enterprise.mgmt.transport.jxta.JxtaNetworkManager";
+                }
+                networkManager = findByClassLoader(classname);
             }
         }
         return networkManager;
