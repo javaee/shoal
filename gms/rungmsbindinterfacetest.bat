@@ -40,7 +40,7 @@ if "%4a"=="a" goto usage
 if "%5a"=="a" goto usage
 if "%6a"=="a" goto usage
 
-"%jdk_home%"\bin\java -Dcom.sun.management.jmxremote -DMEMBERTYPE=%3 -DINSTANCEID=%1 -DCLUSTERNAME=%2 -DMESSAGING_MODE=true -DLIFEINMILLIS=%4 -DLOG_LEVEL=%5 -DBIND_INTERFACE_ADDRESS=%6 -cp %publish_home%/shoal-gms.jar;%lib_home%/jxta.jar com.sun.enterprise.ee.cms.tests.ApplicationServer
+"%jdk_home%"\bin\java -Dcom.sun.management.jmxremote -DMEMBERTYPE=%3 -DINSTANCEID=%1 -DCLUSTERNAME=%2 -DMESSAGING_MODE=true -DLIFEINMILLIS=%4 -DLOG_LEVEL=%5 -DBIND_INTERFACE_ADDRESS=%6 -cp %publish_home%/shoal-gms-test.jar;%publish_home%/shoal-gms.jar;%lib_home%/jxta.jar com.sun.enterprise.ee.cms.tests.ApplicationServer
 
 goto end
 
