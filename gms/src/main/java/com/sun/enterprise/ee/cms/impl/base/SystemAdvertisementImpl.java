@@ -33,7 +33,6 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-
 package com.sun.enterprise.ee.cms.impl.base;
 
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
@@ -47,6 +46,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.ArrayList;
 import java.net.URI;
+import java.text.MessageFormat;
+import java.util.Date;
 
 /**
  * This class is a default system advertisement and implements {@link com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement}
@@ -56,11 +57,8 @@ import java.net.URI;
 public class SystemAdvertisementImpl implements SystemAdvertisement {
 
     static final long serialVersionUID = -6635044542343387957L;
-
     private static final Logger LOG = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-
     private static final List<String> EMPTY_LIST = new ArrayList<String>();
-
     private String hwarch;
     private String hwvendor;
     private PeerID id;
@@ -74,10 +72,11 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
     public SystemAdvertisementImpl() {
     }
 
-    public SystemAdvertisementImpl( final Map<String, Serializable> information ) {
-        if( information == null )
-            throw new IllegalArgumentException( "information map must be initialized" );
-        initialize( information );
+    public SystemAdvertisementImpl(final Map<String, Serializable> information) {
+        if (information == null) {
+            throw new IllegalArgumentException("information map must be initialized");
+        }
+        initialize(information);
     }
 
     /**
@@ -85,34 +84,35 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param information information map to initialize object from
      */
-    private void initialize( final Map<String, Serializable> information ) {
+    private void initialize(final Map<String, Serializable> information) {
         Set<Map.Entry<String, Serializable>> entrySet = information.entrySet();
-        for( Map.Entry<String, Serializable> entry : entrySet ) {
-            handleElement( entry.getKey(), entry.getValue() );
+        for (Map.Entry<String, Serializable> entry : entrySet) {
+            handleElement(entry.getKey(), entry.getValue());
         }
-        if( getID() == null )
-            throw new IllegalArgumentException( "id must be initialized" );
+        if (getID() == null) {
+            throw new IllegalArgumentException("id must be initialized");
+        }
     }
 
-    private void handleElement( final String key, final Serializable value ) {
-        if( idTag.equals( key ) && value instanceof Integer ) {
-            setID( (PeerID)value );
-        } else if( nameTag.equals( key ) && value instanceof String ) {
-            setName( (String)value );
-        } else if( OSNameTag.equals( key ) && value instanceof String ) {
-            setOSName( (String)value );
-        } else if( OSVersionTag.equals( key ) && value instanceof String ) {
-            setOSVersion( (String)value );
-        } else if( OSarchTag.equals( key ) && value instanceof String ) {
-            setOSArch( (String)value );
-        } else if( ipTag.equals( key ) && value instanceof String ) {
-            addEndpointAddress( (String)value );
-        } else if( hwarchTag.equals( key ) && value instanceof String ) {
-            setHWArch( (String)value );
-        } else if( hwvendorTag.equals( key ) && value instanceof String ) {
-            setHWVendor( (String)value );
-        } else if( value instanceof String ) {
-            setCustomTag( key, (String)value );
+    private void handleElement(final String key, final Serializable value) {
+        if (idTag.equals(key) && value instanceof Integer) {
+            setID((PeerID) value);
+        } else if (nameTag.equals(key) && value instanceof String) {
+            setName((String) value);
+        } else if (OSNameTag.equals(key) && value instanceof String) {
+            setOSName((String) value);
+        } else if (OSVersionTag.equals(key) && value instanceof String) {
+            setOSVersion((String) value);
+        } else if (OSarchTag.equals(key) && value instanceof String) {
+            setOSArch((String) value);
+        } else if (ipTag.equals(key) && value instanceof String) {
+            addEndpointAddress((String) value);
+        } else if (hwarchTag.equals(key) && value instanceof String) {
+            setHWArch((String) value);
+        } else if (hwvendorTag.equals(key) && value instanceof String) {
+            setHWVendor((String) value);
+        } else if (value instanceof String) {
+            setCustomTag(key, (String) value);
         }
     }
 
@@ -121,7 +121,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param hwarch The new hWArch value
      */
-    public void setHWArch( final String hwarch ) {
+    public void setHWArch(final String hwarch) {
         this.hwarch = hwarch;
     }
 
@@ -130,7 +130,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param osarch The new hWArch value
      */
-    public void setOSArch( final String osarch ) {
+    public void setOSArch(final String osarch) {
         this.osarch = osarch;
     }
 
@@ -139,7 +139,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param hwvendor The new hWVendor value
      */
-    public void setHWVendor( final String hwvendor ) {
+    public void setHWVendor(final String hwvendor) {
         this.hwvendor = hwvendor;
     }
 
@@ -148,7 +148,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param id The id
      */
-    public void setID( final PeerID id ) {
+    public void setID(final PeerID id) {
         this.id = id;
     }
 
@@ -157,11 +157,11 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param value new uri (tcp://host:port) in IPv4 or (tcp://[host]:port) in IPv6
      */
-    public void addEndpointAddress( final String value ) {
-        if( endpointAddresses == null ) {
+    public void addEndpointAddress(final String value) {
+        if (endpointAddresses == null) {
             endpointAddresses = new ArrayList<String>();
         }
-        endpointAddresses.add( value );
+        endpointAddresses.add(value);
     }
 
     /**
@@ -169,9 +169,10 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param endpoints endpoint addresses
      */
-    public void setEndpointAddresses( final List<String> endpoints ) {
-        for( String endpoint : endpoints )
-            addEndpointAddress( endpoint );
+    public void setEndpointAddresses(final List<String> endpoints) {
+        for (String endpoint : endpoints) {
+            addEndpointAddress(endpoint);
+        }
     }
 
     /**
@@ -179,7 +180,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param name The new name value
      */
-    public void setName( final String name ) {
+    public void setName(final String name) {
         this.name = name;
     }
 
@@ -188,7 +189,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param osname The new oSName value
      */
-    public void setOSName( final String osname ) {
+    public void setOSName(final String osname) {
         this.osname = osname;
     }
 
@@ -197,32 +198,34 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      *
      * @param osversion The new oSVersion value
      */
-    public void setOSVersion( final String osversion ) {
+    public void setOSVersion(final String osversion) {
         this.osversion = osversion;
     }
 
-    public void setCustomTags( final Map<String, String> tags ) {
-        if( tags == null )
+    public void setCustomTags(final Map<String, String> tags) {
+        if (tags == null) {
             return;
-        if( customTags == null ) {
+        }
+        if (customTags == null) {
             customTags = new HashMap<String, String>();
         }
-        customTags.putAll( tags );
+        customTags.putAll(tags);
     }
 
-    @SuppressWarnings( "unchecked" )
+    @SuppressWarnings("unchecked")
     public Map<String, String> getCustomTags() {
-        if( customTags == null )
+        if (customTags == null) {
             return new HashMap<String, String>();
-        else
-            return (HashMap<String, String>)customTags.clone();
+        } else {
+            return (HashMap<String, String>) customTags.clone();
+        }
     }
 
-    public void setCustomTag( final String tag, final String value ) {
-        if( customTags == null ) {
+    public void setCustomTag(final String tag, final String value) {
+        if (customTags == null) {
             customTags = new HashMap<String, String>();
         }
-        customTags.put( tag, value );
+        customTags.put(tag, value);
     }
 
     /**
@@ -267,22 +270,23 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      * @return the list of URIs for all the network interfaces
      */
     public List<String> getEndpointAddresses() {
-        if( endpointAddresses == null )
+        if (endpointAddresses == null) {
             return EMPTY_LIST;
-        else
+        } else {
             return endpointAddresses;
+        }
     }
 
     public List<URI> getURIs() {
         List<String> endpoints = getEndpointAddresses();
-        List<URI> uriList = new ArrayList<URI>( endpoints.size() );
+        List<URI> uriList = new ArrayList<URI>(endpoints.size());
 
-        for( int i = 0; i < endpoints.size(); i++ ) {
+        for (int i = 0; i < endpoints.size(); i++) {
             try {
-                uriList.add( new URI( (String)endpoints.get( i ) ) );
-            } catch( java.net.URISyntaxException e ) {
-                if( LOG.isLoggable( Level.FINE ) ) {
-                    LOG.log( Level.FINE, "Exception occurred : ", e );
+                uriList.add(new URI((String) endpoints.get(i)));
+            } catch (java.net.URISyntaxException e) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "Exception occurred : ", e);
                 }
             }
         }
@@ -316,12 +320,12 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
         return osversion;
     }
 
-    public String getCustomTagValue( final String tagName )
+    public String getCustomTagValue(final String tagName)
             throws NoSuchFieldException {
-        if( customTags != null ) {
-            return customTags.get( tagName );
+        if (customTags != null) {
+            return customTags.get(tagName);
         } else {
-            throw new NoSuchFieldException( tagName );
+            throw new NoSuchFieldException(tagName);
         }
     }
 
@@ -331,24 +335,24 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
     @Override
     public SystemAdvertisement clone() throws CloneNotSupportedException {
         try {
-            SystemAdvertisement likeMe = (SystemAdvertisement)super.clone();
+            SystemAdvertisement likeMe = (SystemAdvertisement) super.clone();
 
-            likeMe.setID( getID() );
-            likeMe.setName( getName() );
-            likeMe.setOSName( getName() );
-            likeMe.setOSVersion( getOSVersion() );
-            likeMe.setOSArch( getOSArch() );
-            if( endpointAddresses != null && !endpointAddresses.isEmpty() ) {
-                likeMe.setEndpointAddresses( getEndpointAddresses() );
+            likeMe.setID(getID());
+            likeMe.setName(getName());
+            likeMe.setOSName(getName());
+            likeMe.setOSVersion(getOSVersion());
+            likeMe.setOSArch(getOSArch());
+            if (endpointAddresses != null && !endpointAddresses.isEmpty()) {
+                likeMe.setEndpointAddresses(getEndpointAddresses());
             }
-            likeMe.setHWArch( getHWArch() );
-            likeMe.setHWVendor( getHWVendor() );
-            if( customTags != null && !customTags.isEmpty() ) {
-                likeMe.setCustomTags( getCustomTags() );
+            likeMe.setHWArch(getHWArch());
+            likeMe.setHWVendor(getHWVendor());
+            if (customTags != null && !customTags.isEmpty()) {
+                likeMe.setCustomTags(getCustomTags());
             }
             return likeMe;
-        } catch( CloneNotSupportedException impossible ) {
-            throw new Error( "Object.clone() threw CloneNotSupportedException", impossible );
+        } catch (CloneNotSupportedException impossible) {
+            throw new Error("Object.clone() threw CloneNotSupportedException", impossible);
         }
     }
 
@@ -356,12 +360,12 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
      * {@inheritDoc}
      */
     @Override
-    public boolean equals( final Object obj ) {
+    public boolean equals(final Object obj) {
         boolean retVal = false;
-        if( this == obj ) {
+        if (this == obj) {
             retVal = true;
-        } else if( obj instanceof SystemAdvertisement ) {
-            final SystemAdvertisement adv = (SystemAdvertisement)obj;
+        } else if (obj instanceof SystemAdvertisement) {
+            final SystemAdvertisement adv = (SystemAdvertisement) obj;
             retVal = getID().equals(adv.getID());
         }
         return retVal;
@@ -375,7 +379,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
         int result = 17;
         result = 37 * result + getID().hashCode();
         String name = getName();
-        if( name != null ) {
+        if (name != null) {
             result = 37 * result + name.hashCode();
         }
         return result;
@@ -384,7 +388,58 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
     /**
      * {@inheritDoc}
      */
-    public int compareTo( final SystemAdvertisement other ) {
-        return getID().compareTo( other.getID() );
+    public int compareTo(final SystemAdvertisement other) {
+        return getID().compareTo(other.getID());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public String toString() {
+        StringBuffer sb = new StringBuffer(120);
+        sb.append("PEERID[");
+        sb.append(id.toString());
+        sb.append("]\n");
+        sb.append("CUSTOMTAGS[");
+        boolean firstTime = true;
+        for (Map.Entry<String, String> entry : customTags.entrySet()) {
+            if (!firstTime) {
+                sb.append(", ");
+            } else {
+                firstTime = false;
+            }
+            String key = entry.getKey();
+            sb.append(key.toUpperCase());
+            if (key.equals(CustomTagNames.START_TIME.toString())) {
+                sb.append("[");
+                MessageFormat.format("{0,time,full} on {0,date}", new Date(Long.parseLong(entry.getValue())));
+                sb.append("]");
+            } else {
+                sb.append(":");
+                sb.append(entry.getValue());
+            }
+        }
+        sb.append("], ");
+        sb.append("ENDPONTADDRESSES[");
+        sb.append(endpointAddresses.toString());
+        sb.append("], ");
+        sb.append("NAME:");
+        sb.append(name);
+        sb.append(", ");
+        sb.append("OSNAME:");
+        sb.append(osname);
+        sb.append(", ");
+        sb.append("OSVERSION:");
+        sb.append(osversion);
+        sb.append(", ");
+        sb.append("OSARCH:");
+        sb.append(osarch);
+        sb.append(", ");
+        sb.append("HWARCH:");
+        sb.append(hwarch);
+        sb.append(", ");
+        sb.append("HWVENDOR:");
+        sb.append(hwvendor);
+        return sb.toString();
     }
 }
