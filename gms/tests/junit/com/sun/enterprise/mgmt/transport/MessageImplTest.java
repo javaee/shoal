@@ -17,6 +17,7 @@ import org.junit.After;
 public class MessageImplTest {
 
     Message message = null;
+    Message emptyMessage = null;
     static final String key1 = "test_key1";
     static final String value1 = new String("test message1");
     static final String key2 = "test_key2";
@@ -27,6 +28,7 @@ public class MessageImplTest {
 
     @Before
     public void setUp() throws Exception {
+        emptyMessage = new MessageImpl();
         message = new MessageImpl(Message.TYPE_CLUSTER_MANAGER_MESSAGE);
         message.addMessageElement(key1, value1);
         message.addMessageElement(key2, value2);
@@ -48,11 +50,43 @@ public class MessageImplTest {
         assertNotNull(message.getMessageElement(key2));
         assertNotNull(message.getMessageElement(message.SOURCE_PEER_ID_TAG));
         assertNotNull(message.getMessageElement(message.TARGET_PEER_ID_TAG));
+        assertEquals(message.getType(), Message.TYPE_CLUSTER_MANAGER_MESSAGE);
         assertEquals((String) message.getMessageElement(key1), value1);
         assertEquals((String) message.getMessageElement(key2), value2);
         assertEquals((String) message.getMessageElement(message.SOURCE_PEER_ID_TAG), "fromMember");
         assertEquals((String) message.getMessageElement(message.TARGET_PEER_ID_TAG), "targetMember");
 
+    }
+
+    @Test
+    public void testGetVersionFromEmptyMessage() {
+        assertEquals(emptyMessage.getVersion(), 0);
+    }
+
+    @Test
+    public void testGetTypeFromEmptyMessage() {
+        assertEquals(emptyMessage.getType(), 0);
+    }
+
+    @Test
+    public void testGetVersion() {
+        assertEquals(message.getVersion(), 1);
+    }
+
+    @Test
+    public void testGetType() {
+        // tested in testInitialMessage() above
+    }
+
+    @Test
+    public void testGetStringType() {
+        assertEquals(MessageImpl.getStringType(Message.TYPE_CLUSTER_MANAGER_MESSAGE), "CLUSTER_MANAGER_MESSAGE");
+        assertEquals(MessageImpl.getStringType(Message.TYPE_HEALTH_MONITOR_MESSAGE), "HEALTH_MONITOR_MESSAGE");
+        assertEquals(MessageImpl.getStringType(Message.TYPE_MASTER_NODE_MESSAGE), "MASTER_NODE_MESSAGE");
+        assertEquals(MessageImpl.getStringType(Message.TYPE_MCAST_MESSAGE), "MCAST_MESSAGE");
+        assertEquals(MessageImpl.getStringType(Message.TYPE_PING_MESSAGE), "PING_MESSAGE");
+        assertEquals(MessageImpl.getStringType(Message.TYPE_PONG_MESSAGE), "PONG_MESSAGE");
+        assertEquals(MessageImpl.getStringType(999), "UNKNOWN_MESSAGE(999)");
     }
 
     /**
