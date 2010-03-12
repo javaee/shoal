@@ -332,8 +332,8 @@
         <available file="tmp/junit/${junit.jar}" property="junit.jar.present"/>
     </target>
     <target name="download-junit-jar" depends="check-for-junit-jar" unless="junit.jar.present" >
-        <mkdir dir="tmp/junit"/>
-        <get src="${junit.download}" dest="tmp/junit/${junit.jar}" verbose="true"/>
+        <mkdir dir="${tmp}/junit"/>
+        <get src="${junit.download}" dest="${tmp}/junit/${junit.jar}" verbose="true"/>
     </target>
     <target name="run-junit-tests" depends="download-junit-jar" description="builds and runs the juit tests">
         <javac srcdir="tests/${junit.test.dir}"
@@ -349,19 +349,19 @@
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
                 <pathelement location="dist/${shoal-gms.jar}"/>
-                <pathelement location="tmp/junit/${junit.jar}"/>
+                <pathelement location="${tmp}/junit/${junit.jar}"/>
             </classpath>
         </javac>
-        <mkdir dir="tmp/junit/results"/>
+        <mkdir dir="${junit.results}"/>
         <junit printsummary="yes" showoutput="true" haltonfailure="no">
             <classpath>
                 <pathelement location="dist/${shoal-gms.jar}"/>
-                <pathelement location="tmp/junit/${junit.jar}"/>
+                <pathelement location="${tmp}/junit/${junit.jar}"/>
                 <pathelement path="tests/${junit.test.dir}"/>
             </classpath>
 
             <formatter type="plain"/>
-            <batchtest fork="yes" todir="tmp/junit/results">
+            <batchtest fork="yes" todir="${junit.results}">
                 <fileset dir="tests/${junit.test.dir}">
                     <include name="**/*Test*.java"/>
                 </fileset>
