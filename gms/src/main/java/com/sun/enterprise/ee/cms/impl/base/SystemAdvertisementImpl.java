@@ -412,7 +412,7 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
             sb.append(key.toUpperCase());
             if (key.equals(CustomTagNames.START_TIME.toString())) {
                 sb.append("[");
-                MessageFormat.format("{0,time,full} on {0,date}", new Date(Long.parseLong(entry.getValue())));
+                sb.append(MessageFormat.format("{0,time,full} on {0,date}", new Date(Long.parseLong(entry.getValue()))));
                 sb.append("]");
             } else {
                 sb.append(":");
