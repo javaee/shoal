@@ -358,6 +358,8 @@
                 <pathelement location="dist/${shoal-gms.jar}"/>
                 <pathelement location="${tmp}/junit/${junit.jar}"/>
                 <pathelement path="tests/${junit.test.dir}"/>
+                <pathelement location="${grizzly-framework.jar}"/>
+                <pathelement location="${grizzly-utils.jar}"/>
             </classpath>
 
             <formatter type="plain"/>
