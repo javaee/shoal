@@ -53,10 +53,14 @@ package com.sun.enterprise.shoal.messagesenderreceivertest;
 
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
 import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
+
+import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -87,6 +91,7 @@ public class HAMessageBuddyReplicationSimulator {
     static int numberOfObjects = 0;
     static int numberOfMsgsPerObject = 0;
     static AtomicInteger numberOfJoinAndReady = new AtomicInteger(0);
+    static AtomicInteger numberOfPlannedShutdown = new AtomicInteger(0);
     static List<String> receivedDoneMsgFrom = new ArrayList<String>();
     static Calendar sendStartTime = null;
     static Calendar sendEndTime = null;
@@ -311,6 +316,8 @@ public class HAMessageBuddyReplicationSimulator {
         gmsLogger.log(Level.INFO, "Registering for group event notifications");
         if (memberID.equalsIgnoreCase("master")) {
             gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.SPECTATOR);
+            gms.addActionFactory(new PlannedShutdownActionFactoryImpl(new PlannedShutdownNotificationCallBack()));
+
         } else {
             gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.CORE);
         }
@@ -481,11 +488,19 @@ public class HAMessageBuddyReplicationSimulator {
 
             }
             gms.announceGroupShutdown(groupName, GMSConstants.shutdownState.INITIATED);
+            synchronized(numberOfPlannedShutdown) {
+                try {
+                    numberOfPlannedShutdown.wait(20000); // wait till all members shutdown OR twenty seconds
+                } catch (InterruptedException ie) {}
+            }
+            gmsLogger.log(Level.INFO, "Notified of " + numberOfPlannedShutdown.get() + " members shutting down out of " + numberOfInstances);
+            gms.announceGroupShutdown(groupName, GMSConstants.shutdownState.COMPLETED);
         } else {
+
             // instance
             while (!gms.isGroupBeingShutdown(groupName)) {
                 gmsLogger.log(Level.INFO, "Waiting for group shutdown...");
-                sleep(10000);
+                sleep(1000);
             }
             gmsLogger.log(Level.INFO, ("Completed processing, Group Shutdown is has begun"));
         }
@@ -565,6 +580,30 @@ public class HAMessageBuddyReplicationSimulator {
         }
     }
 
+       private class PlannedShutdownNotificationCallBack implements CallBack {
+
+        public void processNotification(Signal notification) {
+            gmsLogger.log(Level.INFO, "***PlannedShutdown received from: " + notification.getMemberToken());
+            if (!(notification instanceof PlannedShutdownSignal)) {
+                gmsLogger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
+            } else {
+                if (!notification.getMemberToken().equals("master")) {
+
+                    // determine how many core members are ready to begin testing
+                    PlannedShutdownSignal readySignal = (PlannedShutdownSignal) notification;
+
+                    numberOfPlannedShutdown.getAndIncrement();
+                    gmsLogger.log(Level.INFO, "numberOfPlannedShutdown received so far is: " + numberOfPlannedShutdown.get());
+                    if (numberOfPlannedShutdown.get() == numberOfInstances) {
+                        synchronized(numberOfPlannedShutdown) {
+                            numberOfPlannedShutdown.notify();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private class MessageCallBack implements CallBack {
 
         private String memberID;
@@ -589,7 +628,6 @@ public class HAMessageBuddyReplicationSimulator {
                                 gmsLogger.log(Level.INFO, "Receive start time: " + receiveStartTime);
 
                             }
-
                             String msgString = new String(messageSignal.getMessage());
                             // is this a done message
                             if (msgString.contains("DONE")) {
@@ -600,7 +638,7 @@ public class HAMessageBuddyReplicationSimulator {
                                 // forward this message onto the master
                                 gmsLogger.log(Level.INFO, "Forward DONE message to master:" + msgString);
                                 try {
-                                    gms.getGroupHandle().sendMessage("master", "TestComponent", msgString.getBytes());
+                                    gms.getGroupHandle().sendMessage("master", "TestComponent", messageSignal.getMessage());
                                 } catch (GMSException e) {
                                     gmsLogger.log(Level.WARNING, "Exception occured while forwording DONE message to master" + e, e);
                                     //retry the send up to 3 times
@@ -608,7 +646,7 @@ public class HAMessageBuddyReplicationSimulator {
                                         try {
                                             sleep(10);
                                             gmsLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (" + msgString + ")");
-                                            gms.getGroupHandle().sendMessage("master", "TestComponent", msgString.getBytes());
+                                            gms.getGroupHandle().sendMessage("master", "TestComponent", messageSignal.getMessage());
                                             break; // if successful
                                         } catch (GMSException ge1) {
                                             gmsLogger.log(Level.SEVERE, "Exception occured while forwording DONE message: retry (" + i + ") for (" + msgString + ") to master" + ge1, ge1);
@@ -630,9 +668,7 @@ public class HAMessageBuddyReplicationSimulator {
                                 }
                             } else {
                                 // it is not a done message so process it
-                                final byte[] msg = msgString.getBytes();
-
-                                ByteBuffer buf = ByteBuffer.wrap(msg);
+                                ByteBuffer buf = ByteBuffer.wrap(messageSignal.getMessage());
                                 long objectID = buf.getLong(0);
                                 long msgID = buf.getLong(8);
                                 int to = buf.getInt(16);
