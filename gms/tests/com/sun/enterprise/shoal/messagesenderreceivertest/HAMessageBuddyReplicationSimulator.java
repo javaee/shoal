@@ -580,24 +580,21 @@ public class HAMessageBuddyReplicationSimulator {
         }
     }
 
-       private class PlannedShutdownNotificationCallBack implements CallBack {
+    private class PlannedShutdownNotificationCallBack implements CallBack {
 
         public void processNotification(Signal notification) {
             gmsLogger.log(Level.INFO, "***PlannedShutdown received from: " + notification.getMemberToken());
             if (!(notification instanceof PlannedShutdownSignal)) {
                 gmsLogger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
             } else {
-                if (!notification.getMemberToken().equals("master")) {
+                // determine how many core members are ready to begin testing
+                PlannedShutdownSignal readySignal = (PlannedShutdownSignal) notification;
 
-                    // determine how many core members are ready to begin testing
-                    PlannedShutdownSignal readySignal = (PlannedShutdownSignal) notification;
-
-                    numberOfPlannedShutdown.getAndIncrement();
-                    gmsLogger.log(Level.INFO, "numberOfPlannedShutdown received so far is: " + numberOfPlannedShutdown.get());
-                    if (numberOfPlannedShutdown.get() == numberOfInstances) {
-                        synchronized(numberOfPlannedShutdown) {
-                            numberOfPlannedShutdown.notify();
-                        }
+                numberOfPlannedShutdown.getAndIncrement();
+                gmsLogger.log(Level.INFO, "numberOfPlannedShutdown received so far is: " + numberOfPlannedShutdown.get());
+                if (numberOfPlannedShutdown.get() == numberOfInstances) {
+                    synchronized (numberOfPlannedShutdown) {
+                        numberOfPlannedShutdown.notify();
                     }
                 }
             }
@@ -668,7 +665,8 @@ public class HAMessageBuddyReplicationSimulator {
                                 }
                             } else {
                                 // it is not a done message so process it
-                                ByteBuffer buf = ByteBuffer.wrap(messageSignal.getMessage());
+                                byte[] msg = messageSignal.getMessage();
+                                ByteBuffer buf = ByteBuffer.wrap(msg);
                                 long objectID = buf.getLong(0);
                                 long msgID = buf.getLong(8);
                                 int to = buf.getInt(16);
