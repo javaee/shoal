@@ -171,7 +171,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( host != null )
             localInetAddress = InetAddress.getByName( host );
 
-        threadPool = new DefaultThreadPool( "",
+        threadPool = new DefaultThreadPool( "GMS-GrizzlyNetMgr-Group-" + groupName,
                                                               corePoolSize,
                                                               maxPoolSize,
                                                               keepAliveTime,
