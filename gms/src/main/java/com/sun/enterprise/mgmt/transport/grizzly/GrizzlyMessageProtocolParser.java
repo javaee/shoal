@@ -38,37 +38,57 @@ package com.sun.enterprise.mgmt.transport.grizzly;
 
 import com.sun.grizzly.ProtocolParser;
 import com.sun.grizzly.SSLConfig;
-import com.sun.grizzly.util.WorkerThread;
 import com.sun.grizzly.filter.*;
-import com.sun.enterprise.mgmt.transport.*;
 import com.sun.enterprise.mgmt.transport.Message;
+import com.sun.enterprise.mgmt.transport.MessageImpl;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
 /**
+ * Message protocol format is:
+ *
+ * Message Header is MessageImpl.HEADER_LENGTH and composed of following fields.
+ *      magicNumber    integer     {@link MessageImpl#MAGIC_NUMBER}
+ *      version        integer     {@link MessageImpl#VERSION}
+ *      type           integer     {@link Message#getType} for possible values
+ *      messageLength  integer     {@link MessageImpl#MAX_TOTAL_MESSAGE_LENGTH}
+ *
+ * Message Body is composed of following fields.
+ *      payload        byte[messageLen]
+ *
+ * MessageHeader  {@link Message#parseHeader(ByteBuffer, int)}
+ * MessageBody    {@link Message#parseMessage(ByteBuffer, int, int)}
+ *
  * @author Bongjae Chang
+ * @author Joe FIalli
  */
 public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
 
     private static final Logger LOG = GrizzlyUtil.getLogger();
 
-    private SSLConfig sslConfig;
+    private SSLConfig sslConfig;   // TBD.
 
     private Message message;
-    private ByteBuffer byteBuffer;
-    private boolean expectingMoreData;
-    private boolean hasMoreBytesToParse;
+    private ByteBuffer savedBuffer;
+    private boolean partial;              // is there only a partial message left in the buffer
     private int nextMsgStartPos;
     private boolean error;
     private int messageLength;
+    private int originalLimit;
+
+    static private final Level DEBUG_LEVEL = Level.FINEST;  // set this to Level.INFO to trace parsing.
+    static private boolean DEBUG_ENABLED = false;           // must be set to TRUE to enable debugging.
 
     protected GrizzlyMessageProtocolParser() {
     }
 
     protected GrizzlyMessageProtocolParser( SSLConfig sslConfig ) {
         this.sslConfig = sslConfig;
+        if (sslConfig != null) {
+            throw new UnsupportedOperationException("GrizzlyMesageProtocolParser: sslConfig is not yet supported");
+        }
     }
 
     public static ParserProtocolFilter createParserProtocolFilter( final SSLConfig sslConfig ) {
@@ -79,131 +99,250 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
         };
     }
 
+    /**
+     * Is this ProtocolParser expecting more data ?
+     *
+     * This method is typically called after a call to
+     * {@link ProtocolParser#hasNextMessage()} to determine if the
+     * {@link ByteBuffer} which has been parsed contains a partial message
+     *
+     * @return - <tt>true</tt> if more bytes are needed to construct a
+     *           message;  <tt>false</tt>, if no
+     *           additional bytes remain to be parsed into a protocol data unit.
+     *	 	 Note that if no partial message exists, this method should
+     *		 return false.
+     */
     public boolean isExpectingMoreData() {
-        return expectingMoreData;
-    }
-
-    public boolean hasMoreBytesToParse() {
-        return hasMoreBytesToParse;
-    }
-
-    public Message getNextMessage() {
-        Message tmp = message;
-        if( error ) {
-            hasMoreBytesToParse = false;
-        } else {
-            int totalMessageLength = MessageImpl.HEADER_LENGTH + messageLength;
-            hasMoreBytesToParse = getByteBufferMsgBytes() > totalMessageLength;
-            if( LOG.isLoggable( Level.FINEST ) )
-                LOG.log( Level.FINEST, logState( "getNextMessage()" ) );
-            nextMsgStartPos += totalMessageLength;
-            message = null;
+        if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
+            LOG.log( DEBUG_LEVEL, logState( "isExpectingMoreData() return partial=" + partial));
         }
-        expectingMoreData = false;
-        return tmp;
+        return partial;
     }
 
+    /**
+     * Are there more bytes to be parsed in the {@link ByteBuffer} given
+     * to this ProtocolParser's {@link ProtocolParser#startBuffer(ByteBuffer)} ?
+     *
+     * This method is typically called after processing the protocol message,
+     * to determine if the {@link ByteBuffer} has more bytes which
+     * need to parsed into a next message.
+     *
+     * @return <tt>true</tt> if there are more bytes to be parsed.
+     *         Otherwise <tt>false</tt>.
+     */
+    public boolean hasMoreBytesToParse() {
+        if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
+            LOG.log( DEBUG_LEVEL, logState(
+                    "hasMoreBytesToParse() return nextMsgStartPos[" + nextMsgStartPos +
+                    "] < originalLimit[" + originalLimit));
+        }
+        return nextMsgStartPos < originalLimit;
+    }
+
+    /**
+     * Get the next complete message from the buffer, which can then be
+     * processed by the next filter in the protocol chain. Because not all
+     * filters will understand protocol messages, this method should also
+     * set the position and limit of the buffer at the start and end
+     * boundaries of the message. Filters in the protocol chain can
+     * retrieve this message via context.getAttribute(MESSAGE)
+     *
+     * @return The next message in the buffer. If there isn't such a message,
+     *	return <tt>null</tt>.
+     *
+     */
+    public Message getNextMessage() {
+        if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
+            LOG.log( DEBUG_LEVEL, logState( "getNextMessage() - enter"));
+        }
+
+        Message nextMsg = null;
+        if (error || partial) {
+            nextMsgStartPos = originalLimit;  // after error,  drop entire buffer.
+        } else {
+            nextMsg= message;
+
+            // now that next Message has been read, increment to the nextMsgStartPos.
+            nextMsgStartPos += MessageImpl.HEADER_LENGTH + messageLength;
+        }
+
+        // reset cached values from last hasNextMessage() call.
+        message = null;
+        messageLength = 0;
+
+        if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
+            LOG.log( DEBUG_LEVEL, logState( "getNextMessage() - exit"));
+        }
+        return nextMsg;
+    }
+
+    /**
+     * Indicates whether the buffer has a complete message that can be
+     * returned from {@link ProtocolParser#getNextMessage()}. Smart
+     * implementations of this will set up all the information so that an
+     * actual call to {@link ProtocolParser#getNextMessage()} doesn't need to
+     * re-parse the data.
+     */
     public boolean hasNextMessage() {
-        hasMoreBytesToParse = false;
+        String partialReason = "";
+        partial = false;
+        int savedBufferRemainingBytes = originalLimit - nextMsgStartPos;
+        if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
+            LOG.log(DEBUG_LEVEL,  logState("hasNextMessage() - enter"));
+        }
         try {
             if( message == null ) {
-                if( getByteBufferMsgBytes() < MessageImpl.HEADER_LENGTH ) {
-                    if( !byteBufferHasEnoughSpace( MessageImpl.HEADER_LENGTH - getByteBufferMsgBytes(), byteBuffer ) ) {
-                        byteBuffer.position( nextMsgStartPos );
-                        giveGrizzlyNewByteBuffer( byteBuffer );
-                        nextMsgStartPos = 0;
+                savedBuffer.position(nextMsgStartPos);
+                savedBuffer.limit(originalLimit);
+                if( savedBufferRemainingBytes < MessageImpl.HEADER_LENGTH ) {
+                    partial = true;
+                    message = null;
+                    messageLength = 0;
+                    if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
+                        partialReason = "isPartialMsg:not enough buffer for msg header";
                     }
-                    expectingMoreData = true;
-                    if( LOG.isLoggable( Level.FINER ) )
-                        LOG.log( Level.FINER, logState( "hasNextMessage()" ) );
-                    return false;
+                    nextMsgStartPos = originalLimit;  // so hasNoMoreBytesToParse returns true and releaseBuffer will compact partial data.
+                } else {
+                    Message incomingMessage = new MessageImpl();
+                    messageLength = incomingMessage.parseHeader(savedBuffer, nextMsgStartPos );
+                    message = incomingMessage;
                 }
-                Message incomingMessage = new MessageImpl();
-                messageLength = incomingMessage.parseHeader( byteBuffer, nextMsgStartPos );
-                message = incomingMessage;
             }
-            if( messageLength > 0 ) {
-                if( messageLength + MessageImpl.HEADER_LENGTH > MessageImpl.MAX_TOTAL_MESSAGE_LENGTH )
+            if( !partial && messageLength > 0 ) {
+                if( messageLength + MessageImpl.HEADER_LENGTH > MessageImpl.MAX_TOTAL_MESSAGE_LENGTH ){
                     throw new Exception( "too large message" );
-                if( getByteBufferMsgBytes() < MessageImpl.HEADER_LENGTH + messageLength ) {
-                    if( !byteBufferHasEnoughSpace( MessageImpl.HEADER_LENGTH + messageLength - getByteBufferMsgBytes(), byteBuffer ) ) {
-                        byteBuffer.position( nextMsgStartPos );
-                        giveGrizzlyNewByteBuffer( byteBuffer );
-                        nextMsgStartPos = 0;
-                    }
-                    expectingMoreData = true;
-                    if( LOG.isLoggable( Level.FINER ) )
-                        LOG.log( Level.FINER, logState( "hasNextMessage()" ) );
-                    return false;
                 }
-                message.parseHeader( byteBuffer, nextMsgStartPos );
-                message.parseMessage( byteBuffer, nextMsgStartPos + MessageImpl.HEADER_LENGTH, messageLength );
+                int totalMsgLength = MessageImpl.HEADER_LENGTH + messageLength;
+                savedBuffer.position(nextMsgStartPos);
+                savedBuffer.limit(originalLimit);
+                if( savedBufferRemainingBytes <  totalMsgLength) {
+                    message = null;
+                    partial = true;
+                    if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)){
+                        partialReason = "isPartialMsg:not enough buffer for msg length";
+                    }
+                    nextMsgStartPos = originalLimit;  // so hasMoreBytesToParse() returns true and releaseBuffer will get called and compact partial data.
+                } else {
+                    savedBuffer.limit(nextMsgStartPos + totalMsgLength);
+                    message.parseMessage(savedBuffer, nextMsgStartPos + MessageImpl.HEADER_LENGTH, messageLength );
+
+                    // ensure when getNextMessage() is called, that position is set to start of data corresponding to 'message' and limit is
+                    // to end of data for that message.
+                    savedBuffer.position(nextMsgStartPos + MessageImpl.HEADER_LENGTH);
+                }
             }
-            expectingMoreData = false;
         } catch( Throwable t ) {
-            if( LOG.isLoggable( Level.WARNING ) )
-                LOG.log( Level.WARNING, logState( "hasNextMessage()" ), t );
-            expectingMoreData = false;
+            if( DEBUG_ENABLED && LOG.isLoggable( Level.WARNING ) ) {
+                LOG.log( Level.WARNING, logState( "hasNextMessage() - exit with error" ), t );
+            }
+            partial = false;
             error = true;
+            nextMsgStartPos = originalLimit;   // so no more bytes to parse.
+        } finally {
+            if ( !error && DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
+                LOG.log(DEBUG_LEVEL,  logState("hasNextMessage() - exit" + partialReason));
+            }
         }
-        return !expectingMoreData;
+        return !partial;
     }
 
-    private int getByteBufferMsgBytes() {
-        return byteBuffer.position() - nextMsgStartPos;
-    }
-
+    /**
+     * Set the buffer to be parsed. This method should store the buffer and
+     * its state so that subsequent calls to
+     * {@link ProtocolParser#getNextMessage()} will return distinct messages,
+     * and the buffer can be restored after parsing when the
+     * {@link ProtocolParser#releaseBuffer()} method is called.
+     */
     public void startBuffer( ByteBuffer bb ) {
-        this.byteBuffer = bb;
-        if( byteBuffer.capacity() < MessageImpl.MAX_TOTAL_MESSAGE_LENGTH ) {
-            if( LOG.isLoggable( Level.WARNING ) )
-                LOG.log( Level.WARNING, "byte buffer capacity is too small: capacity = " + byteBuffer.capacity() );
+        // We begin with a buffer containing data. Save the initial buffer
+        // state information. The best thing here is to get the backing store
+        // so that the bytes can be parsed directly. We also need to save the
+        // original limit so that we can place the buffer in the correct state at the
+        // end of parsing
+        message = null;
+        error = false;
+        messageLength = 0;
+        savedBuffer = bb;
+        savedBuffer.flip();
+        partial = false;
+        originalLimit = savedBuffer.limit();
+        nextMsgStartPos = savedBuffer.position();
+
+        // future optimization possibility:
+        // if (savedBuffer.hasArray) {
+        //      data = savedBuffer.array();
+        //      position = savedBuffer.position() + savedBuffer.arrayOffset();
+        //        limit = savedBuffer.limit() + savedBuffer.arrayOffset();
+        //    } else ...maybe copy out the data, or use put/get when parsing...
+        if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
+            LOG.log(DEBUG_LEVEL, this.logState("startBuffer"));
+        }
+
+        // constraint check remaining from initial revision of this ProtocolParser.
+        if( savedBuffer.capacity() < MessageImpl.MAX_TOTAL_MESSAGE_LENGTH ) {
+            LOG.log( Level.WARNING, "byte buffer capacity is too small: capacity = " + savedBuffer.capacity() +
+                                    " max total message length=" + MessageImpl.MAX_TOTAL_MESSAGE_LENGTH);
+           
         }
     }
 
+    /**
+     * No more parsing will be done on the buffer passed to
+     * {@link ProtocolParser#startBuffer(ByteBuffer)}.
+     * Set up the buffer so that its position is the first byte that was
+     * not part of a full message, and its limit is the original limit of
+     * the buffer.
+     *
+     * @return -- true if the parser has saved some state (e.g. information
+     * data in the buffer that hasn't been returned in a full message);
+     * otherwise false. If this method returns true, the framework will
+     * make sure that the same parser is used to process the buffer after
+     * more data has been read.
+     */
     public boolean releaseBuffer() {
-        if( !expectingMoreData ) {
-            hasMoreBytesToParse = false;
+        if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)){
+            LOG.log(DEBUG_LEVEL, logState("releaseBuffer - enter"));
+        }
+        if(!isExpectingMoreData()) {
             nextMsgStartPos = 0;
             messageLength = 0;
+            originalLimit = 0;
             error = false;
-            byteBuffer.clear();
+            savedBuffer.clear();
+
+        } else {
+            // partial message remains in buffer.  release buffer so rest of message can be written into buffer.
+            // crucial that savedBuffer position was set to correct position when partial true.  nextMsgStartPos
+            // was altered to trigger hasNoMoreBytesToParse().
+            savedBuffer.limit(originalLimit);
+            savedBuffer.compact();
+            nextMsgStartPos = 0;
+            originalLimit = 0;
         }
-        return expectingMoreData;
+        if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
+            LOG.log(DEBUG_LEVEL, logState("releaseBuffer - exit"));
+        }
+        return partial;
     }
 
-    private String logState( String where ) {
-        return where + " "
-               + "Thread:" + Thread.currentThread().getName()
-               + ",position:" + byteBuffer.position()
-               + ",nextMsgStartPos:" + nextMsgStartPos
-               + ",expectingMoreData:" + expectingMoreData
-               + ",hasMoreBytesToParse:" + hasMoreBytesToParse
-               + ",error:" + error
-               + ",msg size:" + messageLength
-               + ",message: " + message;
-    }
+    private String logState(String where) {
+        StringBuffer result = new StringBuffer(40);
+        result.append(where);
+        result.append(" Thread:" + Thread.currentThread().getName());
+        if (savedBuffer != null) {
+            result.append(",position:" + savedBuffer.position());
+            result.append(",limit:" + savedBuffer.limit());
+            result.append(",capacity:" + savedBuffer.capacity());
+            result.append(",isDirect:" + savedBuffer.isDirect());
+        }
+        result.append(",nextMsgStartPos:" + nextMsgStartPos);
+        result.append(",originalLimit: " + originalLimit);
+        result.append(",hasMoreBytesToParse:" + (boolean)(nextMsgStartPos < originalLimit));
+        result.append(",partialMsg:" + partial);
+        result.append(",error:" + error);
+        result.append(",msg size:" + messageLength);
+        result.append(",message: " + message);
 
-    /**
-     * @param neededBytes number of bytes that the given buffer should be able to hold
-     * @param buf         the bytebuffer which is queried for free space
-     *
-     * @return if buf can hold additinasl neededBytes
-     */
-    private static boolean byteBufferHasEnoughSpace( int neededBytes, ByteBuffer buf ) {
-        return ( buf.capacity() - buf.position() ) >= neededBytes;
-    }
-
-    /**
-     * Gives  current Thread a completely new Bytebuffer of @see Message.MessageMaxLength
-     * with the given byteBuffer copied into it.
-     *
-     * @param buf the buffer which should be put into the newly created byteBuffer.
-     */
-    private static void giveGrizzlyNewByteBuffer( ByteBuffer buf ) {
-        ByteBuffer newSpace = ByteBuffer.allocate( MessageImpl.MAX_TOTAL_MESSAGE_LENGTH );
-        newSpace.put( buf );
-        WorkerThread workerThread = (WorkerThread)Thread.currentThread();
-        workerThread.setByteBuffer( newSpace );
+        return result.toString();
     }
 }

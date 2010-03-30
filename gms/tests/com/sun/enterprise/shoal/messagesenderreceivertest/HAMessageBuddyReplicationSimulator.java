@@ -108,6 +108,10 @@ public class HAMessageBuddyReplicationSimulator {
     // to be displayed without having to turn FINE logging on and potentially changing
     // the timing of the test to a large degree.
     private static final boolean VERBOSE = false;
+    public static String expectedPayload;
+    public static int payloadErrors = 0;
+    public static boolean validateAllPayloads = true;
+    public static int validatedMessages = 0;
 
     public static void main(String[] args) {
 
@@ -149,6 +153,15 @@ public class HAMessageBuddyReplicationSimulator {
                 gmsLogger.log(Level.INFO, ("numberOfMsgsPerObject=" + numberOfMsgsPerObject));
                 payloadSize = Integer.parseInt(args[5]);
                 gmsLogger.log(Level.INFO, ("payloadSize=" + payloadSize));
+                /* header format is:
+                        *  long objectID
+                           long msgID
+                           int to
+                           int from
+                        */
+                int tmpSize = payloadSize - (8 + 8 + 4 + 4);
+                expectedPayload = new String(createPayload(tmpSize));
+
             } else {
                 usage();
             }
@@ -157,7 +170,6 @@ public class HAMessageBuddyReplicationSimulator {
         }
         Utility.setLogger(gmsLogger);
         Utility.setupLogHandler();
-
         /*
         replica = (int) ((numberOfInstances * Math.random()) + 101);
         if (replica == memberIDNum) {
@@ -195,7 +207,6 @@ public class HAMessageBuddyReplicationSimulator {
                 System.out.println("checking instance [" + instanceNum + "] in msgIDs_received");
 
                 int droppedMessages = 0;
-                int payloadErrors = 0;
 
                 ConcurrentHashMap<String, String> msgIDs = msgIDs_received.get(instanceNum);
                 //System.out.println("msgIDs=" + msgIDs.toString());
@@ -223,16 +234,6 @@ public class HAMessageBuddyReplicationSimulator {
                 }
                 System.out.println("================================================================");
 
-                /* header format is:
-                 *  long objectID
-                long msgID
-                int to
-                int from
-                 */
-                int tmpSize = payloadSize - (8 + 8 + 4 + 4);
-                String expectedPayload = new String(createPayload(tmpSize));
-                //gmsLogger.log(Level.INFO,("expected Payload" + expectedPayload);
-
                 ConcurrentHashMap<Long, String> payLoads = payloads_received.get(instanceNum);
 
                 for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
@@ -241,7 +242,13 @@ public class HAMessageBuddyReplicationSimulator {
                         System.out.println("INTERNAL ERROR: objectId:" + objectNum + " from:" + instanceNum + " missing from payload structure");
                     } else {
                         String payLoad = payLoads.get(objectNum);
-                        if (!payLoad.equals(expectedPayload)) {
+                        if (payLoad.equals(expectedPayload)) {
+                            if (!validateAllPayloads) {
+
+                                // avoid double counting when validation enabled in message receive processing.
+                                validatedMessages++;
+                            }
+                        } else {
                             System.out.println("actual Payload[objectNum]:" + payLoad);
                             payloadErrors++;
                             System.out.println("Payload did not match for objectId:" + objectNum + ", from:" + instanceNum);
@@ -253,9 +260,9 @@ public class HAMessageBuddyReplicationSimulator {
                 System.out.println("---------------------------------------------------------------");
 
                 if (payloadErrors == 0) {
-                    System.out.println(instanceNum + ": PASS.  No payload errors");
+                    System.out.println(instanceNum + ": PASS.  No payload errors. Confirmed valid " + validatedMessages + " payloads");
                 } else {
-                    System.out.println(instanceNum + ": FAILED. Confirmed (" + payloadErrors + ") payload errors");
+                    System.out.println(instanceNum + ": FAILED. Confirmed (" + payloadErrors + ") payload errors. Confirmed valid " + validatedMessages + " payloads.");
                 }
                 System.out.println("================================================================");
 
@@ -276,7 +283,7 @@ public class HAMessageBuddyReplicationSimulator {
                 } else {
                     msgPerSec = (numberOfObjects * numberOfMsgsPerObject * numberOfInstances) / timeDelta;
                 }
-                System.out.println("\nSending Messages Time data: Start[" + sendStartTime.getTime() + "], End[" + sendEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "]\n");
+                System.out.println("\nSending Messages Time data: Start[" + sendStartTime.getTime() + "], End[" + sendEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "], MsgSize[" + payloadSize + "]\n");
             }
             if (receiveEndTime != null && receiveStartTime != null) {
                 timeDelta = (receiveEndTime.getTimeInMillis() - receiveStartTime.getTimeInMillis()) / 1000;
@@ -286,7 +293,7 @@ public class HAMessageBuddyReplicationSimulator {
                 } else {
                     msgPerSec = (numberOfObjects * numberOfMsgsPerObject * numberOfInstances) / timeDelta;
                 }
-                System.out.println("\nReceiving Messages Time data: Start[" + receiveStartTime.getTime() + "], End[" + receiveEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "]\n");
+                System.out.println("\nReceiving Messages Time data: Start[" + receiveStartTime.getTime() + "], End[" + receiveEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec +"], MsgSize[" + payloadSize +  "]\n");
             }
         }
 
@@ -377,12 +384,9 @@ public class HAMessageBuddyReplicationSimulator {
             sendStartTime = new GregorianCalendar();
             gmsLogger.log(Level.INFO, "Send start time: " + sendStartTime);
 
-
-            for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
-                gmsLogger.log(Level.INFO, "Sending Object:" + objectNum + " to:" + replica);
-
-                for (long msgNum = 1; msgNum <= numberOfMsgsPerObject; msgNum++) {
-
+            for (long msgNum = 1; msgNum <= numberOfMsgsPerObject; msgNum++) {
+                for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
+                    gmsLogger.log(Level.INFO, "Sending Object:" + objectNum + ":" + msgNum + " to:" + replica);
 
                     // create a unique objectnum
                     //String sObject = Integer.toString(memberIDNum) + Long.toString(objectNum);
@@ -410,16 +414,14 @@ public class HAMessageBuddyReplicationSimulator {
                                     gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
                                     break; // if successful
                                 } catch (GMSException ge1) {
-                                    gmsLogger.log(Level.FINE, "\n-----------------------------\nException occured during send message retry (" + i + ") for (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge1, ge1);
+                                    gmsLogger.log(Level.WARNING, "\n-----------------------------\nException occurred during send message retry (" + i + ") for (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge1, ge1);
                                 }
                             }
                         }
                     }
-
-
-                    // think time
-                    sleep(10);
-
+                    if ((objectNum % 5) == 0) {
+                        sleep(10);
+                    }
                 }
 
             }
@@ -443,7 +445,7 @@ public class HAMessageBuddyReplicationSimulator {
                         gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", doneMsg.getBytes());
                         break; // if successful
                     } catch (GMSException ge1) {
-                        gmsLogger.log(Level.FINE, "\n-----------------------------\nException occured while resending DONE message retry (" + i + ") for (" + doneMsg + ") to replica:" + replica + " : " + ge1, ge1);
+                        gmsLogger.log(Level.WARNING, "\n-----------------------------\nException occurred while resending DONE message retry (" + i + ") for (" + doneMsg + ") to replica:" + replica + " : " + ge1, ge1);
                     }
                 }
             }
@@ -683,7 +685,6 @@ public class HAMessageBuddyReplicationSimulator {
                                 }
                                 if (msgID > 0) {
 
-
                                     // keep track of the objectIDs
                                     // if the INSTANCE does not exist in the map, create it.
                                     ConcurrentHashMap<Long, String> object = payloads_received.get(from);
@@ -692,6 +693,15 @@ public class HAMessageBuddyReplicationSimulator {
                                     }
                                     object.put(objectID, payload);
                                     payloads_received.put(from, object);
+
+                                    if (validateAllPayloads) {
+                                        if (payload.equals(expectedPayload)) {
+                                            validatedMessages++;
+                                        } else {
+                                            gmsLogger.severe("Payload did not match for objId:version[" + objectID + ":" + msgID + "] from: instance" + from + " actual Payload[objectNum]:" + payload);
+                                            payloadErrors++;
+                                        }
+                                    }
 
 
                                     // keep track of the msgIDs
