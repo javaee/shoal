@@ -59,37 +59,7 @@
   </component>
   <component name="FileColors" enabled="true" enabledForTabs="true" />
   <component name="FileEditorManager">
-    <leaf>
-      <file leaf-file-name="ReplicatedDataStore.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/ReplicatedDataStore.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="47" column="51" selection-start="1467" selection-end="1467" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="DataStoreContext.java" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreContext.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="32" column="42" selection-start="826" selection-end="826" vertical-scroll-proportion="0.3782435">
-              <folding>
-                <element signature="imports" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="CommandManager.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/CommandManager.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="34" column="11" selection-start="945" selection-end="945" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf />
   </component>
   <component name="FindManager">
     <FindUsagesManager>
@@ -99,19 +69,22 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/ReplicatedDataStore.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/CommandManager.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ExecutionInterceptor.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/Command.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/LoadRequestCommand.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/LoadResponseCommand.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/RemoveCommand.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationCommandTransmitter.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFrame.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFramePayloadCommand.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/SaveCommand.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/UpdateDeltaCommand.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreContext.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ExecutionInterceptor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ReceiveInterceptor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/TransmitInterceptor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/DefaultDataStoreEntryHelper.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/ReplicatedDataStore.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/CommandResponse.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/GroupEventListener.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Replicable.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ReplicationIOUtils.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ReplicationOutputStream.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ResponseMediator.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/SimpleSerializer.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/StringKeyMapper.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Utility.java" />
       </list>
     </option>
   </component>
@@ -292,6 +265,10 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="impl" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="interceptor" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -545,7 +522,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1920" height="1175" extended-state="1" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
@@ -556,7 +533,7 @@
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
@@ -597,108 +574,113 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ExecutionInterceptor.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="27" column="33" selection-start="699" selection-end="699" vertical-scroll-proportion="0.35928145">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/Command.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="118" column="35" selection-start="3218" selection-end="3218" vertical-scroll-proportion="0.46107784">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/LoadRequestCommand.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="51" column="47" selection-start="1351" selection-end="1351" vertical-scroll-proportion="0.46646342">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/RemoveCommand.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="55" selection-start="1063" selection-end="1063" vertical-scroll-proportion="0.4041916">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationCommandTransmitter.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="62" column="71" selection-start="2220" selection-end="2220" vertical-scroll-proportion="0.8540373">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFrame.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="169" column="93" selection-start="5086" selection-end="5086" vertical-scroll-proportion="0.14699793">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/UpdateDeltaCommand.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="40" column="51" selection-start="1158" selection-end="1158" vertical-scroll-proportion="0.5279503">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/SaveCommand.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="33" column="52" selection-start="834" selection-end="834" vertical-scroll-proportion="0.42682928">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFramePayloadCommand.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="39" column="51" selection-start="1190" selection-end="1190" vertical-scroll-proportion="0.48086867">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5482234">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFrame.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.53892213">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationCommandTransmitterManager.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="20" selection-start="1399" selection-end="1399" vertical-scroll-proportion="0.41158536">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.53892213">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationCommandOpcode.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/SimpleSerializer.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="5" column="13" selection-start="88" selection-end="88" vertical-scroll-proportion="0.0748503">
+        <state line="43" column="13" selection-start="2041" selection-end="2041" vertical-scroll-proportion="0.33333334">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/LoadResponseCommand.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ResponseMediator.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="66" column="56" selection-start="2057" selection-end="2057" vertical-scroll-proportion="0.5958084">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/ReplicatedDataStore.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ReplicationOutputStream.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="47" column="51" selection-start="1467" selection-end="1467" vertical-scroll-proportion="0.0">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/CommandManager.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ReplicationIOUtils.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="34" column="11" selection-start="945" selection-end="945" vertical-scroll-proportion="0.0">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreContext.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Replicable.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="32" column="42" selection-start="826" selection-end="826" vertical-scroll-proportion="0.3782435">
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ObjectInputStreamWithLoader.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="46" column="13" selection-start="2147" selection-end="2147" vertical-scroll-proportion="0.6859756">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/GroupEventListener.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="39" column="3" selection-start="1983" selection-end="2132" vertical-scroll-proportion="0.5838323">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/CommandResponse.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.53892213">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/StringKeyMapper.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="50" column="13" selection-start="2304" selection-end="2304" vertical-scroll-proportion="0.6437126">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Utility.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="3" column="22" selection-start="89" selection-end="89" vertical-scroll-proportion="0.04491018">
+          <folding />
         </state>
       </provider>
     </entry>
