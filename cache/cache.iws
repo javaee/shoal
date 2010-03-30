@@ -59,7 +59,53 @@
   </component>
   <component name="FileColors" enabled="true" enabledForTabs="true" />
   <component name="FileEditorManager">
-    <leaf />
+    <leaf>
+      <file leaf-file-name="DataStore.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStore.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="46" column="17" selection-start="2219" selection-end="2219" vertical-scroll-proportion="1.2">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DataStoreEntryEvaluator.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreEntryEvaluator.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="47" column="51" selection-start="2191" selection-end="2191" vertical-scroll-proportion="-23.5">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DataStoreEntryHelper.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreEntryHelper.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="45" column="17" selection-start="2111" selection-end="2111" vertical-scroll-proportion="-20.4">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DataStoreFactory.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreFactory.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="50" column="60" selection-start="2498" selection-end="2498" vertical-scroll-proportion="-21.4">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DataStoreConfigurator.java" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreConfigurator.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="94" column="4" selection-start="3226" selection-end="3226" vertical-scroll-proportion="0.9119497">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
   </component>
   <component name="FindManager">
     <FindUsagesManager>
@@ -69,9 +115,6 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/SaveCommand.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/UpdateDeltaCommand.java" />
-        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ExecutionInterceptor.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ReceiveInterceptor.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/TransmitInterceptor.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/DefaultDataStoreEntryHelper.java" />
@@ -85,6 +128,9 @@
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/SimpleSerializer.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/StringKeyMapper.java" />
         <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Utility.java" />
+        <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/src/test/java/org/shoal/cache/AppTest.java" />
+        <option value="$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreConfigurator.java" />
       </list>
     </option>
   </component>
@@ -187,128 +233,6 @@
               <option name="myItemId" value="store" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="impl" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="util" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cache" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cache" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="main" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="java" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ha" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="store" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="impl" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="store" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cache" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cache" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="main" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="java" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ha" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="store" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="impl" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="interceptor" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cache" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cache" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="main" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="java" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ha" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="store" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="impl" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="command" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -383,6 +307,7 @@
     <property name="options.splitter.main.proportions" value="0.3" />
     <property name="MemberChooser.sorted" value="false" />
     <property name="options.lastSelected" value="com.intellij.spellchecker.settings.SpellCheckerSettingsManager" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../gms" />
     <property name="MemberChooser.showClasses" value="true" />
     <property name="GoToClass.includeLibraries" value="false" />
     <property name="MemberChooser.copyJavadoc" value="false" />
@@ -521,7 +446,7 @@
     <supportedVersion>125</supportedVersion>
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1920" height="1175" extended-state="1" />
+    <frame x="0" y="0" width="1920" height="1175" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
@@ -572,90 +497,6 @@
     <breakpoint-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/interceptor/ExecutionInterceptor.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/UpdateDeltaCommand.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/SaveCommand.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFramePayloadCommand.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5482234">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationFrame.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.53892213">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/ReplicationCommandTransmitterManager.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.53892213">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/SimpleSerializer.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="43" column="13" selection-start="2041" selection-end="2041" vertical-scroll-proportion="0.33333334">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ResponseMediator.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ReplicationOutputStream.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ReplicationIOUtils.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Replicable.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="0" selection-start="1937" selection-end="1937" vertical-scroll-proportion="0.5487805">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/ObjectInputStreamWithLoader.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="46" column="13" selection-start="2147" selection-end="2147" vertical-scroll-proportion="0.6859756">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/GroupEventListener.java">
       <provider selected="true" editor-type-id="text-editor">
         <state line="39" column="3" selection-start="1983" selection-end="2132" vertical-scroll-proportion="0.5838323">
@@ -680,6 +521,90 @@
     <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/util/Utility.java">
       <provider selected="true" editor-type-id="text-editor">
         <state line="3" column="22" selection-start="89" selection-end="89" vertical-scroll-proportion="0.04491018">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/group/gms/GroupServiceProvider.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="152" column="59" selection-start="7237" selection-end="7237" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/command/CommandManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="53" column="13" selection-start="2409" selection-end="2409" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/impl/store/ReplicatedDataStore.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="125" column="8" selection-start="4467" selection-end="4467" vertical-scroll-proportion="0.61077845">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../gms/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="27" column="12" selection-start="1032" selection-end="1160" vertical-scroll-proportion="0.4041916">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/Main.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="44" column="83" selection-start="2077" selection-end="2152" vertical-scroll-proportion="0.67901236">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="28" column="54" selection-start="1052" selection-end="1052" vertical-scroll-proportion="0.43209878">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/java/org/shoal/cache/DataStoreFactoryTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="38" column="87" selection-start="819" selection-end="819" vertical-scroll-proportion="0.5092593">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStore.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="46" column="17" selection-start="2219" selection-end="2219" vertical-scroll-proportion="1.2">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreEntryEvaluator.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="47" column="51" selection-start="2191" selection-end="2191" vertical-scroll-proportion="-23.5">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreEntryHelper.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="45" column="17" selection-start="2111" selection-end="2111" vertical-scroll-proportion="-20.4">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreFactory.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="50" column="60" selection-start="2498" selection-end="2498" vertical-scroll-proportion="-21.4">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/org/shoal/ha/store/api/DataStoreConfigurator.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="94" column="4" selection-start="3226" selection-end="3226" vertical-scroll-proportion="0.9119497">
           <folding />
         </state>
       </provider>

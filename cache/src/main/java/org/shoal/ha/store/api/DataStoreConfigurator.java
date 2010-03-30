@@ -53,4 +53,44 @@ public class DataStoreConfigurator<K, V> {
 
     private DataStoreEntryHelper<K, V> dataStoreEntryHelper;
 
+    public K getkClazz() {
+        return kClazz;
+    }
+
+    public void setkClazz(K kClazz) {
+        this.kClazz = kClazz;
+    }
+
+    public V getvClazz() {
+        return vClazz;
+    }
+
+    public void setvClazz(V vClazz) {
+        this.vClazz = vClazz;
+    }
+
+    public KeyMapper getKeyMapper() {
+        return keyMapper;
+    }
+
+    public void setKeyMapper(KeyMapper keyMapper) {
+        this.keyMapper = keyMapper;
+    }
+
+    public DataStoreKeyHelper<K> getDataStoreKeyHelper() {
+        return dataStoreKeyHelper;
+    }
+
+    public void setDataStoreKeyHelper(DataStoreKeyHelper<K> dataStoreKeyHelper) {
+        this.dataStoreKeyHelper = dataStoreKeyHelper;
+    }
+
+    public DataStoreEntryHelper<K, V> getDataStoreEntryHelper() {
+        return dataStoreEntryHelper;
+    }
+
+    public void setDataStoreEntryHelper(DataStoreEntryHelper<K, V> dataStoreEntryHelper) {
+        this.dataStoreEntryHelper = dataStoreEntryHelper;
+    }
+    
 }
