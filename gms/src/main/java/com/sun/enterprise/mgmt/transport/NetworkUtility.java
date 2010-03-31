@@ -446,7 +446,7 @@ public class NetworkUtility {
     public static int getAvailableTCPPort( String host, int tcpStartPort, int tcpEndPort ) {
         if( tcpStartPort > tcpEndPort )
             tcpEndPort = tcpStartPort + 30;
-        for( int i = tcpStartPort; tcpStartPort <= tcpEndPort; i++ ) {
+        for( int i = tcpStartPort; i <= tcpEndPort; i++ ) {
             ServerSocket testSocket = null;
             try {
                 testSocket = new ServerSocket( i, -1, host == null ? null : InetAddress.getByName( host ) );
