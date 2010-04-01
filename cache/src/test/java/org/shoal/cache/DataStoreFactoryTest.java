@@ -3,8 +3,8 @@ package org.shoal.cache;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import org.shoal.ha.store.api.DataStore;
-import org.shoal.ha.store.api.DataStoreFactory;
+import org.shoal.ha.cache.api.DataStore;
+import org.shoal.ha.cache.api.DataStoreFactory;
 
 /**
  * Unit test for simple App.
