@@ -441,15 +441,15 @@ public class NetworkUtility {
      * @param host specific host name
      * @param tcpStartPort start port
      * @param tcpEndPort end port
-     * @return an available tcp port which is not bound yet
+     * @return an available tcp port which is not bound yet. Throws IllegalStateException if no ports exist.
      */
     public static int getAvailableTCPPort( String host, int tcpStartPort, int tcpEndPort ) {
         if( tcpStartPort > tcpEndPort )
             tcpEndPort = tcpStartPort + 30;
-        for( int i = tcpStartPort; i <= tcpEndPort; i++ ) {
+        for( int portInRange = tcpStartPort; portInRange <= tcpEndPort; portInRange++ ) {
             ServerSocket testSocket = null;
             try {
-                testSocket = new ServerSocket( i, -1, host == null ? null : InetAddress.getByName( host ) );
+                testSocket = new ServerSocket( portInRange, -1, host == null ? null : InetAddress.getByName( host ) );
             } catch( IOException ie ) {
                 continue;
             } finally {
@@ -460,9 +460,9 @@ public class NetworkUtility {
                     }
                 }
             }
-            return i;
+            return portInRange;
         }
-        return tcpStartPort;
+        throw new IllegalStateException("Fatal error. No available ports exist for " + host + " in range " + tcpStartPort + " to " + tcpEndPort);
     }
 
     private static final Field DEPTH_FIELD;
