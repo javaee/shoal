@@ -76,9 +76,9 @@ public class UpdateDeltaCommand<K, V>
     }
 
     @Override
-    public void execute() {
+    public void execute(DataStoreContext<K, V> ctx) {
         //getReplicaCache().put(eval);
-//        System.out.println("SaveCommand["+getReplicationService().getMyName()+"] received: " + eval);
+//        System.out.println("SaveCommand["+getDataStoreContext().getMyName()+"] received: " + eval);
     }
 
 }

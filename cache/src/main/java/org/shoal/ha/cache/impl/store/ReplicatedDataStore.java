@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.impl.store;
 
+import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
@@ -84,13 +85,13 @@ public class ReplicatedDataStore<K, V>
         DataStoreContext<K, V> dsc = new DataStoreContext<K, V>(storeName, gs);
         this.transformer = helper;
         dsc.setDataStoreEntryHelper(helper);
-        cm = new CommandManager<K, V>(dsc);
+        cm = dsc.getCommandManager();
+        cm.registerExecutionInterceptor(new CommandMonitorInterceptor<K, V>());
     }
 
     @Override
     public void put(K k, V v) {
-        SaveCommand<K, V> cmd = new SaveCommand<K, V>();
-        cmd.setValue(v);
+        SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
         cm.execute(cmd);
     }
 

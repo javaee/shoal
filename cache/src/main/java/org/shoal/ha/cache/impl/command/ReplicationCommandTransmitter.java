@@ -58,21 +58,15 @@ public class ReplicationCommandTransmitter<K, V>
 
     private String targetName;
 
-    private Thread thread;
-
     private ConcurrentLinkedQueue<Command<K, V>> list
             = new ConcurrentLinkedQueue<Command<K, V>>();
 
     public void initialize(String targetName, DataStoreContext<K, V> rsInfo) {
         this.targetName = targetName;
         this.dsc = rsInfo;
-
-        thread = new Thread(this, "ReplicationCommandTransmitter[" + targetName + "]");
-        thread.setDaemon(true);
-        thread.start();
     }
 
-    public void send(String targetName, Command<K, V> cmd) {
+    public void addCommand(Command<K, V> cmd) {
         list.add(cmd);
         System.out.println("ReplicationCommandTransmitter[" + targetName + "] just "
         + " accumulated: " + cmd.getOpcode());
@@ -83,7 +77,6 @@ public class ReplicationCommandTransmitter<K, V>
             try {
                 Thread.sleep(15);
                 if (list.peek() != null) {
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     ReplicationFrame<K, V> frame = new ReplicationFrame<K, V>((byte)255,
                             dsc.getServiceName(), dsc.getInstanceName());
 

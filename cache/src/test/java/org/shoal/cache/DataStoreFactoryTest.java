@@ -35,7 +35,7 @@ public class DataStoreFactoryTest
      */
     public void testApp()
     {
-        DataStore ds = DataStoreFactory.createDataStore("cache1", "instance1", "group1");
+        DataStore ds = DataStoreFactory.createDataStore("cache1", "instance1", "group1"+System.currentTimeMillis());
         assertTrue( true );
     }
 }

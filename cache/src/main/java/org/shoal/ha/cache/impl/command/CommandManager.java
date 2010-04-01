@@ -64,6 +64,8 @@ public class CommandManager<K, V>
 
     private Command<K, V>[] commands = (Command<K, V>[]) Array.newInstance(Command.class, 256);
 
+    private int interceptorSz = 0;
+
     private volatile ExecutionInterceptor<K, V> head;
 
     private volatile ExecutionInterceptor<K, V> tail;
@@ -93,6 +95,7 @@ public class CommandManager<K, V>
         interceptor.setPrev(tail);
         interceptor.setNext(null);
         tail = interceptor;
+        interceptorSz++;
     }
 
     public Command getCommand(byte opcode) {

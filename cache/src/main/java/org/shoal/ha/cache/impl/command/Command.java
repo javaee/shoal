@@ -177,6 +177,6 @@ public abstract class Command<K, V> {
     protected abstract void readCommandPayload(DataStoreContext<K, V> t, byte[] data, int offset)
             throws IOException, DataStoreException;
 
-    protected abstract void execute();
+    protected abstract void execute(DataStoreContext<K, V> ctx);
 
 }

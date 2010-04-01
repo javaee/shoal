@@ -36,22 +36,36 @@
 
 package org.shoal.ha.cache.impl.interceptor;
 
+import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+
+import java.io.IOException;
 
 
 /**
  * @author Mahesh Kannan
  *
  */
-public final class TransmitInterceptor
-    extends ExecutionInterceptor {
+public final class TransmitInterceptor<K, V>
+    extends ExecutionInterceptor<K, V> {
 
-    public void onTransmit(Command cmd) {
-        //Must transmit    
+    public void onTransmit(Command<K, V> cmd) {
+        DataStoreContext<K, V> ctx = getDataStoreContext();
+        byte[] data = new byte[0];
+        ReplicationOutputStream ros = new ReplicationOutputStream();
+        try {
+            cmd.writeCommandState(ros);
+            data = ros.toByteArray();
+        } catch (IOException ioEx) {
+            //TODO
+        }
+        ctx.getGroupService().sendMessage(cmd.getTargetName(),
+                ctx.getServiceName(), data);
     }
 
-    public void onReceive(Command cmd) {
-
+    public void onReceive(Command<K, V> cmd) {
+        super.onReceive(cmd);
     }
 
 }

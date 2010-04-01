@@ -94,9 +94,9 @@ public class LoadRequestCommand<K, V>
     }
 
     @Override
-    public void execute() {
+    public void execute(DataStoreContext<K, V> ctx) {
         //System.out.println("LoadRequestCommand: Received FROM: " + ctx.getInitiatorName() + " - " + this);
-        //ReplicationState result = getReplicationService().getReplicaCache().get(key);
+        //ReplicationState result = getDataStoreContext().getReplicaCache().get(key);
         LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key);
         if (isMarkedForResponseRequired()) {
             rsp.setTokenId(getTokenId());

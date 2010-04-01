@@ -62,6 +62,7 @@ public class DataStoreContext<K, V> {
 
     private ResponseMediator responseMediator;
 
+    private GroupService groupService;
 
     public DataStoreContext(String serviceName, GroupService gs) {
         this.serviceName = serviceName;
@@ -112,5 +113,9 @@ public class DataStoreContext<K, V> {
 
     public ResponseMediator getResponseMediator() {
         return responseMediator;
+    }
+
+    public GroupService getGroupService() {
+        return groupService;
     }
 }

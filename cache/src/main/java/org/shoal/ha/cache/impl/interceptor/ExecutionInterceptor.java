@@ -60,7 +60,7 @@ public abstract class ExecutionInterceptor<K, V> {
         this.cm = dsc.getCommandManager();
     }
 
-    public final DataStoreContext<K, V> getReplicationService() {
+    public final DataStoreContext<K, V> getDataStoreContext() {
         return dsc;
     }
 

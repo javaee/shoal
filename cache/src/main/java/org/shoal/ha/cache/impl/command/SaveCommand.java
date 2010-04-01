@@ -37,8 +37,8 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
 
@@ -48,10 +48,22 @@ import java.io.IOException;
 public class SaveCommand<K, V>
     extends Command<K, V> {
 
+    private K k;
+
     private V v;
 
     public SaveCommand() {
         super(ReplicationCommandOpcode.SAVE);
+    }
+
+    public SaveCommand(K k, V v) {
+        this();
+        setKey(k);
+        setValue(v);
+    }
+
+    public void setKey(K k) {
+        this.k = k;
     }
 
     public void setValue(V v) {
@@ -66,21 +78,27 @@ public class SaveCommand<K, V>
     @Override
     public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream bos)
         throws IOException {
+        int keyLenMark = bos.mark();
+        bos.write(Utility.intToBytes(0));
+        trans.getDataStoreKeyHelper().writeKey(bos, k);
+        int valueOffset = bos.mark() - keyLenMark;
+        bos.reWrite(keyLenMark, Utility.intToBytes(valueOffset));
         trans.getDataStoreEntryHelper().writeObject(bos, v);
     }
 
     @Override
     public void readCommandPayload(DataStoreContext<K, V> ctx, byte[] data, int offset)
         throws IOException {
-        DataStoreEntry<K, V> entry = ctx.getDataStoreEntryHelper().createDataStoreEntry();
-        entry.readDataStoreEntry(ctx, data, offset);
+        int valueOffset = Utility.bytesToInt(data, offset);
+        k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
+        v = (V) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
         //setReplicationEntry(entry);
     }
 
     @Override
-    public void execute() {
+    public void execute(DataStoreContext<K, V> ctx) {
         //getReplicaCache().put(entry);
-//        System.out.println("SaveCommand["+getReplicationService().getMyName()+"] received: " + entry);
+//        System.out.println("SaveCommand["+getDataStoreContext().getMyName()+"] received: " + entry);
     }
 
 }

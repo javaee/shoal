@@ -110,7 +110,7 @@ public class LoadResponseCommand<K, V>
     }
 
     @Override
-    public void execute() {
+    public void execute(DataStoreContext<K, V> ctx) {
         ResponseMediator respMed = getReplicationService().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(getTokenId());
         if (resp != null) {

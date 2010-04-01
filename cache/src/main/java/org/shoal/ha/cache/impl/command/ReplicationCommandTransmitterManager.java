@@ -70,7 +70,7 @@ public class ReplicationCommandTransmitterManager<K, V>
                  + groupName + ")");
 
         ReplicationCommandTransmitter<K, V> trans = new ReplicationCommandTransmitter<K, V>();
-        trans.initialize(instanceName, getReplicationService());
+        trans.initialize(instanceName, getDataStoreContext());
         TreeSet<String> set = new TreeSet<String>(Arrays.asList(instances));
         set.add(instanceName);
         instances = set.toArray(new String[0]);
@@ -109,7 +109,12 @@ public class ReplicationCommandTransmitterManager<K, V>
             System.out.println("** ReplicationCommandTransmitterManager: "
                     + "About to transmit to " + target + "; cmd: " + cmd);
             ReplicationCommandTransmitter<K, V> rft = transmitters.get(target);
-            rft.send(target, cmd);
+            if (rft == null) {
+                rft = new ReplicationCommandTransmitter<K, V>();
+                rft.initialize(target, getDataStoreContext());
+                transmitters.put(target, rft);
+            }
+            rft.addCommand(cmd);
         } else {
             super.onTransmit(cmd);
         }
