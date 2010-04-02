@@ -39,12 +39,16 @@ package org.shoal.ha.cache.impl.command;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ReplicationState;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author Mahesh Kannan
@@ -98,19 +102,24 @@ public class LoadRequestCommand<K, V>
         //System.out.println("LoadRequestCommand: Received FROM: " + ctx.getInitiatorName() + " - " + this);
         //ReplicationState result = getDataStoreContext().getReplicaCache().get(key);
         LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key);
-        if (isMarkedForResponseRequired()) {
-            rsp.setTokenId(getTokenId());
-        }
+        //rsp.setTokenId(getTokenId());
         rsp.setReplicationState((ReplicationState<K, V>) result);
         //rsp.setDestinationName(ctx.getInitiatorName());
         getCommandManager().execute(rsp);
     }
 
     public DataStoreEntry<K, V> getResult() {
-        if (isMarkedForResponseRequired()) {
-            entry = (DataStoreEntry) getResult(15000);
+        CommandResponse cr = new CommandResponse(getDataStoreContext().getResponseMediator());
+        try {
+            return (DataStoreEntry<K, V>) cr.getFuture().get(15000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException inEx) {
+            System.out.println("Error: InterruptedException while waiting for result");
+        } catch (TimeoutException timeoutEx) {
+            System.out.println("Error: Timedout while waiting for result");
+        } catch (ExecutionException exeEx) {
+
         }
 
-        return entry;
+        return null;
     }
 }

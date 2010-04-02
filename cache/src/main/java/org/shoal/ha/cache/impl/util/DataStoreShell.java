@@ -34,14 +34,70 @@
  * holder.
  */
 
-package org.shoal.ha.cache.api;
+package org.shoal.ha.cache.impl.util;
+
+import org.shoal.ha.cache.api.DataStore;
+import org.shoal.ha.cache.api.DataStoreFactory;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
 
 /**
  * @author Mahesh Kannan
  */
-public class Main {
+public class DataStoreShell {
+
+    DataStore ds;
+
+    int counter = 0;
 
     public static void main(String[] args) {
         DataStore ds = DataStoreFactory.createDataStore(args[0], args[1], args[2]);
+
+        DataStoreShell main = new DataStoreShell();
+        main.runShell(ds);
+    }
+
+    private void runShell(DataStore ds) {
+        this.ds = ds;
+        String line = "";
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        do {
+            prompt();
+            try {
+                line = br.readLine();
+                List<String> args = new ArrayList<String>();
+                for (StringTokenizer tok = new StringTokenizer(line, "\n\r\t\f \f"); tok.hasMoreTokens();) {
+                    String str = tok.nextToken();
+                    args.add(str);
+                }
+
+                if (args.size() > 0) {
+                    String command = args.remove(0);
+                    String[] params = args.toArray(new String[0]);
+
+                    execute(command, params);
+                    counter++;
+                }
+            } catch (IOException ioEx) {
+                //TODO
+            }
+        } while (!"quit".equalsIgnoreCase(line));
+    }
+
+    private void prompt() {
+        System.out.print("" + counter + ">");
+        System.out.flush();
+    }
+
+    private void execute(String command, String[] params) {
+
+        if ("save".equalsIgnoreCase(command)) {
+            ds.put(params[0], params[1]);    
+        }
     }
 }

@@ -82,7 +82,7 @@ public class RemoveCommand<K, V>
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
         //getReplicaCache().remove(key);
-        System.out.println("RemoveCommand ["+getReplicationService().getServiceName()
+        System.out.println("RemoveCommand ["+ getDataStoreContext().getServiceName()
                 +"] received: " + key);
     }
 

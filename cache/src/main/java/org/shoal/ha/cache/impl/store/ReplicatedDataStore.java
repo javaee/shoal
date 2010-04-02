@@ -37,6 +37,9 @@
 package org.shoal.ha.cache.impl.store;
 
 import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
+import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
+import org.shoal.ha.cache.impl.util.SimpleSerializer;
+import org.shoal.ha.cache.impl.util.StringKeyHelper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
@@ -63,30 +66,28 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreEntryHelper<K, V> transformer;
 
-    public ReplicatedDataStore(String storeName, GroupService gs) {
-        this(storeName, gs,
-                new DefaultDataStoreEntryHelper<K, V>(Thread.currentThread().getContextClassLoader()),
-                new StringKeyMapper<K>(gs.getGroupName()));
-    }
-
     public ReplicatedDataStore(String storeName, GroupService gs,
-                               DataStoreEntryHelper<K, V> helper) {
-        this(storeName, gs, helper,
-                new StringKeyMapper<K>(gs.getGroupName()));
-    }
-
-    public ReplicatedDataStore(String storeName, GroupService gs,
-                               DataStoreEntryHelper<K, V> helper, KeyMapper<K> keyMapper) {
+                               DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
+                               KeyMapper<K> keyMapper) {
         this.storeName = storeName;
         this.gs = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
+        initialize(helper, keyHelper, keyMapper);
+    }
 
+    private void initialize(DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
+                            KeyMapper<K> keyMapper) {
         DataStoreContext<K, V> dsc = new DataStoreContext<K, V>(storeName, gs);
         this.transformer = helper;
         dsc.setDataStoreEntryHelper(helper);
+        dsc.setDataStoreKeyHelper(keyHelper);
+        dsc.setKeyMapper(keyMapper);
         cm = dsc.getCommandManager();
         cm.registerExecutionInterceptor(new CommandMonitorInterceptor<K, V>());
+        cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
+
+        cm.registerCommand(new SaveCommand<K, V>());
     }
 
     @Override

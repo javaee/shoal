@@ -166,6 +166,7 @@ public class GroupServiceProvider
         try {
             gms.join();
             status = true;
+            System.out.println("*** REPORTED JOINED & READY ***");
         } catch (GMSException gmsEx) {
             //TODO
         }

@@ -76,14 +76,19 @@ public class SaveCommand<K, V>
     }
 
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream bos)
+    protected void beforeTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), k));
+    }
+
+    @Override
+    public void writeCommandPayload(DataStoreContext<K, V> ctx, ReplicationOutputStream bos)
         throws IOException {
         int keyLenMark = bos.mark();
         bos.write(Utility.intToBytes(0));
-        trans.getDataStoreKeyHelper().writeKey(bos, k);
+        ctx.getDataStoreKeyHelper().writeKey(bos, k);
         int valueOffset = bos.mark() - keyLenMark;
         bos.reWrite(keyLenMark, Utility.intToBytes(valueOffset));
-        trans.getDataStoreEntryHelper().writeObject(bos, v);
+        ctx.getDataStoreEntryHelper().writeObject(bos, v);
     }
 
     @Override

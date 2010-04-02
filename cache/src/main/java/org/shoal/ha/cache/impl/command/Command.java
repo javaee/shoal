@@ -82,7 +82,7 @@ public abstract class Command<K, V> {
         this.cm = rs.getCommandManager();
     }
 
-    protected DataStoreContext<K, V> getReplicationService() {
+    protected DataStoreContext<K, V> getDataStoreContext() {
         return dsc;
     }
 
@@ -98,48 +98,12 @@ public abstract class Command<K, V> {
         return opcode;
     }
 
-    protected void setTargetName(String targetName) {
-        this.targetName = targetName;
+    protected void setTargetName(String val) {
+        targetName = val;
     }
 
-    protected void mapTarget(K hashKey) {
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), hashKey));
-    }
+    protected void beforeTransmit(DataStoreContext<K, V> ctx) {
 
-    public final boolean isMarkedForResponseRequired() {
-        return markedForResponseRequired;
-    }
-
-    protected final void markResponseRequired(Class type) {
-        markedForResponseRequired = true;
-        cr = dsc.getResponseMediator().createCommandResponse(type);
-    }
-
-    protected long getTokenId() {
-        return tokenId;
-    }
-
-    protected Object getResult(long millis) {
-        Object result = null;
-        try {
-            return cr.getFuture().get(millis, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException inEx) {
-            System.out.println("Error: InterruptedException while waiting for result");
-        } catch (TimeoutException timeoutEx) {
-            System.out.println("Error: Timedout while waiting for result");
-        } catch (ExecutionException exeEx) {
-
-        }
-
-        return result;
-    }
-
-    public void setResult(Object result) {
-        this.result = result;
-    }
-
-    public void setTokenId(long tokenId) {
-        this.tokenId = tokenId;
     }
 
     public final void writeCommandState(ReplicationOutputStream bos)

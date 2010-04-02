@@ -72,10 +72,6 @@ public class LoadResponseCommand<K, V>
         this.state = state;
     }
 
-    public void setDestinationName(String target) {
-        super.setTargetName(target);
-    }
-
     @Override
     protected LoadResponseCommand<K, V> createNewInstance() {
         return new LoadResponseCommand<K, V>();
@@ -83,7 +79,7 @@ public class LoadResponseCommand<K, V>
 
     @Override
     public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        ros.write(Utility.longToBytes(getTokenId()));
+        //ros.write(Utility.longToBytes(getTokenId()));
 //        System.out.println("** LoadResponseCommand: wrote key: " +
 //                key + "; token: " + getTokenId());
 
@@ -97,7 +93,7 @@ public class LoadResponseCommand<K, V>
     @Override
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
         throws IOException, DataStoreException {
-        setTokenId(Utility.bytesToLong(data, offset));
+        //setTokenId(Utility.bytesToLong(data, offset));
         int transKeyLen = Utility.bytesToInt(data, offset+8);
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset+12);
         offset += 12 + (key == null ? 0 : transKeyLen);
@@ -111,12 +107,12 @@ public class LoadResponseCommand<K, V>
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
-        ResponseMediator respMed = getReplicationService().getResponseMediator();
-        CommandResponse resp = respMed.getCommandResponse(getTokenId());
-        if (resp != null) {
-            System.out.println("RECEIVED LOAD RESPONSE: " + getTokenId());
-            resp.setResult(getReplicationState());
-        }
+//        ResponseMediator respMed = getDataStoreContext().getResponseMediator();
+//        CommandResponse resp = respMed.getCommandResponse(getTokenId());
+//        if (resp != null) {
+//            //System.out.println("RECEIVED LOAD RESPONSE: " + getTokenId());
+//            resp.setResult(getReplicationState());
+//        }
     }
 
 
