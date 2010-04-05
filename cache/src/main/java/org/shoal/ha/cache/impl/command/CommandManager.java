@@ -36,15 +36,13 @@
 
 package org.shoal.ha.cache.impl.command;
 
-import com.sun.enterprise.ee.cms.core.*;
-import org.shoal.ha.group.GroupMessageReceiver;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.impl.interceptor.ExecutionInterceptor;
+import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -52,7 +50,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class CommandManager<K, V>
-        implements GroupMessageReceiver, CallBack {
+        extends MessageReceiver {
 
     private final static Logger logger = Logger.getLogger("ReplicationLogger");
 
@@ -71,9 +69,12 @@ public class CommandManager<K, V>
     private volatile ExecutionInterceptor<K, V> tail;
 
     public CommandManager(DataStoreContext<K, V> dsc) {
+        super(dsc.getServiceName());
         this.dsc = dsc;
         this.myName = dsc.getInstanceName();
         this.groupName = dsc.getGroupName();
+
+        dsc.getGroupService().registerGroupMessageReceiver(dsc.getServiceName(), this);
     }
 
     public void registerCommand(Command<K, V> command) {
@@ -114,6 +115,7 @@ public class CommandManager<K, V>
         cmd.initialize(dsc);
         if (head != null) {
             if (forward) {
+                cmd.prepareToTransmit(dsc);
                 head.onTransmit(cmd);
             } else {
                 tail.onReceive(cmd);
@@ -142,7 +144,8 @@ public class CommandManager<K, V>
         return dsc.getResponseMediator();
     }
 
-    public void handleMessage(String sourceMemberName, String token, byte[] frameData) {
+    @Override
+    protected void handleMessage(String sourceMemberName, String token, byte[] frameData) {
 
         byte opCode = frameData[0];
         Command<K, V> cmd2 = commands[opCode];
@@ -156,35 +159,6 @@ public class CommandManager<K, V>
             } catch (IOException dse) {
                 //TODO
             }
-        }
-    }
-
-    @Override
-    public void processNotification(Signal signal) {
-        Object message = null;
-        try {
-            MessageSignal messageSignal = null;
-            signal.acquire();
-            //logger.log(Level.INFO, "Source Member: " + signal.getMemberToken() + " group : " + signal.getGroupName());
-            if (signal instanceof MessageSignal) {
-                messageSignal = (MessageSignal) signal;
-                message = ((MessageSignal) signal).getMessage();
-//                logger.log(Level.INFO, "\t\t***  Message received: "
-//                        + ((MessageSignal) signal).getTargetComponent() + "; "
-//                        + ((MessageSignal) signal).getMemberToken());
-
-                if (messageSignal != null) {
-                    this.handleMessage(messageSignal.getMemberToken(), messageSignal.getTargetComponent(),
-                            (byte[]) message);
-                }
-            }
-            signal.release();
-
-
-        } catch (SignalAcquireException e) {
-            logger.log(Level.WARNING, "Exception occured while acquiring signal" + e);
-        } catch (SignalReleaseException e) {
-            logger.log(Level.WARNING, "Exception occured while releasing signal" + e);
         }
     }
 }

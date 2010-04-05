@@ -33,7 +33,7 @@ public class NoopCommand
     }
 
     @Override
-    protected void execute(DataStoreContext ctx) {
+    public void execute(DataStoreContext ctx) {
         System.out.println("***>> Executed Noop command");
     }
 }

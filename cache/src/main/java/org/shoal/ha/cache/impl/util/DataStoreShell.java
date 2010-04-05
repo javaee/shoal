@@ -96,7 +96,7 @@ public class DataStoreShell {
 
     private void execute(String command, String[] params) {
 
-        if ("save".equalsIgnoreCase(command)) {
+        if ("put".equalsIgnoreCase(command)) {
             ds.put(params[0], params[1]);    
         }
     }

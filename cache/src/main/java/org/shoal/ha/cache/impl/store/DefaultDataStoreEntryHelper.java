@@ -112,9 +112,9 @@ public class DefaultDataStoreEntryHelper<K, V>
     }
 
     @Override
-    public DataStoreEntryEvaluator<K, V> readObject(byte[] data, int index) throws DataStoreException {
+    public Object readObject(byte[] data, int index) throws DataStoreException {
         try {
-            return (DataStoreEntryEvaluator<K, V>) SimpleSerializer.deserialize(loader, data, index);
+            return SimpleSerializer.deserialize(loader, data, index);
         } catch (ClassNotFoundException cnfEx) {
             throw new DataStoreException("Cannot desrialize value", cnfEx);
         } catch (IOException ioEx) {

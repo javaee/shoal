@@ -1,7 +1,7 @@
 package org.shoal.test.common;
 
+import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.group.GroupMemberEventListener;
-import org.shoal.ha.group.GroupMessageReceiver;
 import org.shoal.ha.group.GroupService;
 
 /**
@@ -44,7 +44,7 @@ public class DummyGroupService
     }
 
     @Override
-    public void registerGroupMessageReceiver(GroupMessageReceiver receiver) {
+    public void registerGroupMessageReceiver(String messagetoken, MessageReceiver receiver) {
         //To change body of implemented methods use File | Settings | File Templates.
     }
 

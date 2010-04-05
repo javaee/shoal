@@ -44,6 +44,7 @@ import org.shoal.ha.cache.impl.util.ReplicationState;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -95,6 +96,16 @@ public class LoadRequestCommand<K, V>
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
         throws DataStoreException {
         setKey((K) trans.getDataStoreKeyHelper().readKey(data, offset));
+    }
+
+
+    @Override
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
+        //TODO must create a ResponseMediator
+        ResponseMediator respMed = ctx.getResponseMediator();
+        CommandResponse resp = respMed.createCommandResponse();
+        
     }
 
     @Override

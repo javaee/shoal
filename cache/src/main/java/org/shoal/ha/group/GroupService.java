@@ -1,5 +1,6 @@
 package org.shoal.ha.group;
 
+import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.group.GroupMemberEventListener;
 
 /**
@@ -19,8 +20,8 @@ public interface GroupService {
 
     public void close();
 
-    public void registerGroupMessageReceiver(GroupMessageReceiver receiver);
+    public void registerGroupMessageReceiver(String messageToken, MessageReceiver receiver);
 
-    public boolean sendMessage(String targetMemberName, String token, byte[] data);
+    public boolean sendMessage(String targetMemberName, String messageToken, byte[] data);
 
 }

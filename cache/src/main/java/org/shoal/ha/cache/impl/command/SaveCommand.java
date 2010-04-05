@@ -76,7 +76,7 @@ public class SaveCommand<K, V>
     }
 
     @Override
-    protected void beforeTransmit(DataStoreContext<K, V> ctx) {
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), k));
     }
 
@@ -96,14 +96,16 @@ public class SaveCommand<K, V>
         throws IOException {
         int valueOffset = Utility.bytesToInt(data, offset);
         k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
-        v = (V) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
+        Object obj = ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
+
+        System.out.println("**Save command received KEY: " + k + " => " + obj.getClass().getName() + "; " + obj);
         //setReplicationEntry(entry);
     }
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
         //getReplicaCache().put(entry);
-//        System.out.println("SaveCommand["+getDataStoreContext().getMyName()+"] received: " + entry);
+        System.out.println("SaveCommand["+ctx.getServiceName() +"] to execute: " + this);
     }
 
 }

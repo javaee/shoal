@@ -1,16 +1,16 @@
 package org.shoal.ha.group.gms;
 
 import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.client.FailureNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
+import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.group.GroupMemberEventListener;
-import org.shoal.ha.group.GroupMessageReceiver;
 import org.shoal.ha.group.GroupService;
 
 import java.util.Properties;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.List;
 import java.util.ArrayList;
@@ -38,20 +38,22 @@ public class GroupServiceProvider
 
     private List<GroupMemberEventListener> listeners = new ArrayList<GroupMemberEventListener>();
 
-    private GroupMessageReceiver messageReceiver;
-
     public GroupServiceProvider(String myName, String groupName) {
         init(myName, groupName);
     }
 
     public void processNotification(Signal notification) {
         MemberStates[] states;
-
+        logger.info("[$$$ ALIVE & READY] => " + notification.getMemberToken());
         if ((notification instanceof JoinedAndReadyNotificationSignal)
+                || (notification instanceof JoinNotificationSignal)
                 || (notification instanceof FailureNotificationSignal)
                 || (notification instanceof FailureSuspectedSignal)) {
             // getMemberState constraint check for member being added.
             MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());
+
+            logger.info("[2] $$$ ALIVE & READY => " + notification.getMemberToken() + " : "
+            + state);
             if (state == MemberStates.ALIVEANDREADY || state == MemberStates.READY) {
                 JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
                 List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
@@ -85,30 +87,6 @@ public class GroupServiceProvider
                     }
                 }
             }
-        } else if (notification instanceof MessageSignal) {
-            Object message = null;
-            try {
-                MessageSignal messageSignal = (MessageSignal) notification;
-                messageSignal.acquire();
-                //logger.log(Level.INFO, "Source Member: " + signal.getMemberToken() + " group : " + signal.getGroupName());
-                message = ((MessageSignal) messageSignal).getMessage();
-//                logger.log(Level.INFO, "\t\t***  Message received: "
-//                        + ((MessageSignal) signal).getTargetComponent() + "; "
-//                        + ((MessageSignal) signal).getMemberToken());
-
-                if ((messageSignal != null) && (messageReceiver != null)) {
-                    messageReceiver.handleMessage(messageSignal.getMemberToken(),
-                            messageSignal.getTargetComponent(),
-                            (byte[]) message);
-                }
-                messageSignal.release();
-
-
-            } catch (SignalAcquireException e) {
-                logger.log(Level.WARNING, "Exception occured while acquiring signal" + e);
-            } catch (SignalReleaseException e) {
-                logger.log(Level.WARNING, "Exception occured while releasing signal" + e);
-            }
         }
     }
 
@@ -116,9 +94,19 @@ public class GroupServiceProvider
         List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
         for (String instanceName : members) {
             for (GroupMemberEventListener listener : listeners) {
-                if (aliveInstances.putIfAbsent(instanceName, instanceName) == null) {
+                listener.memberReady(instanceName, groupName);
+            }
+        }
+    }
+
+    private void notifyCurrentAliveMembers() {
+        System.out.println("notifyCurrentAliveMembers ==> Notifying...");
+        List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
+        for (String instanceName : members) {
+            for (GroupMemberEventListener listener : listeners) {
+                System.out.println("\tnotifyCurrentAliveMembers ==> Notifying... " + listener + instanceName);
+                aliveInstances.putIfAbsent(instanceName, instanceName);
                     listener.memberReady(instanceName, groupName);
-                }
             }
         }
     }
@@ -156,22 +144,17 @@ public class GroupServiceProvider
         this.myName = myName;
         this.groupName = groupName;
 
+        gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
-        gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
 
-    }
-
-    public boolean reportJoinedAndReadyState() {
-        boolean status = false;
         try {
             gms.join();
-            status = true;
-            System.out.println("*** REPORTED JOINED & READY ***");
-        } catch (GMSException gmsEx) {
+            Thread.sleep(3000);
+            gms.reportJoinedAndReadyState(groupName);
+        } catch (Exception ex) {
             //TODO
         }
 
-        return status;
     }
 
     public void shutdown() {
@@ -201,13 +184,14 @@ public class GroupServiceProvider
     }
 
     @Override
-    public void registerGroupMessageReceiver(GroupMessageReceiver receiver) {
-        messageReceiver = receiver;
+    public void registerGroupMessageReceiver(String messageToken, MessageReceiver receiver) {
+        gms.addActionFactory(new MessageActionFactoryImpl(receiver), messageToken);
     }
 
     @Override
     public void registerGroupMemberEventListener(GroupMemberEventListener listener) {
         listeners.add(listener);
+        notifyCurrentAliveMembers();
     }
 
     @Override

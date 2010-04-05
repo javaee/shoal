@@ -51,8 +51,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class StringKeyMapper<K>
         implements KeyMapper<K>, GroupMemberEventListener {
 
+    private String myName;
 
     private String groupName;
+
+    private boolean includeMe;
 
     private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -60,12 +63,17 @@ public class StringKeyMapper<K>
 
     private ReentrantReadWriteLock.WriteLock wLock;
 
-    private volatile TreeSet<String> currentMemeberMap = new TreeSet<String>();
+    private volatile TreeSet<String> currentMemberSet = new TreeSet<String>();
 
     private volatile String[] members;
 
+    private volatile String[] otherMembers;
 
-    public StringKeyMapper(String groupName) {
+
+    public StringKeyMapper(String myName, String groupName) {
+        this.myName = myName;
+        this.groupName = groupName;
+
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
     }
@@ -74,9 +82,9 @@ public class StringKeyMapper<K>
     public String getMappedInstance(String groupName, K key1) {
         rLock.lock();
         try {
-        int hc = Math.abs(getDigestHashCode(key1.toString()));
-        //System.out.println("Key: " + key1 + " => " + hc + ";   " + hc%(members.length));
-        return members[hc % (members.length)];
+            int hc = Math.abs(getDigestHashCode(key1.toString()));
+            System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + members[hc % (members.length)]);
+            return members[hc % (members.length)];
         } finally {
             rLock.unlock();
         }
@@ -101,15 +109,19 @@ public class StringKeyMapper<K>
         }
     }
 
-    private static int getDigestHashCode(String name) {
-        int hc = 0;
+    private static int getDigestHashCode(String val) {
+        int hc = val.hashCode();
         try {
+            String hcStr = "_" + val.hashCode() + "_";
             MessageDigest dig = MessageDigest.getInstance("MD5");
-            dig.update(name.getBytes());
+            dig.update(hcStr.getBytes());
+            dig.update(val.getBytes());
+            dig.update(hcStr.getBytes());
             BigInteger bi = new BigInteger(dig.digest());
             hc = bi.intValue();
+            return hc;
         } catch (NoSuchAlgorithmException nsaEx) {
-            hc = name.hashCode();
+            hc = val.hashCode();
         }
 
         return hc;
@@ -118,12 +130,11 @@ public class StringKeyMapper<K>
     public void registerInstance(String inst) {
         wLock.lock();
         try {
-            if (!currentMemeberMap.contains(inst)) {
-                currentMemeberMap.add(inst);
+            if (!currentMemberSet.contains(inst)) {
+                currentMemberSet.add(inst);
             }
-
-            members = currentMemeberMap.toArray(new String[0]);
-
+            members = currentMemberSet.toArray(new String[0]);
+            printMemberStates();
         } finally {
             wLock.unlock();
         }
@@ -132,15 +143,15 @@ public class StringKeyMapper<K>
     public synchronized void removeInstance(String inst) {
         wLock.lock();
         try {
-            currentMemeberMap.remove(inst);
-            members = currentMemeberMap.toArray(new String[0]);
+            currentMemberSet.remove(inst);
+            members = currentMemberSet.toArray(new String[0]);
         } finally {
             wLock.unlock();
         }
     }
 
     public void printMemberStates() {
-        System.out.print("Members[");
+        System.out.print("StringKeyMapper:: Members[");
         for (String st : members) {
             System.out.print("<" + st + "> ");
         }
@@ -177,7 +188,7 @@ public class StringKeyMapper<K>
     }
 
     private static void mapTest(StringKeyMapper km) {
-        String[] keys = new String[] {"Key0", "Key1", "Key2"};
+        String[] keys = new String[]{"Key0", "Key1", "Key2"};
 
         for (String key : keys) {
             System.out.println("\t" + key + " => " + km.getMappedInstance("g1", key));
@@ -187,14 +198,14 @@ public class StringKeyMapper<K>
     }
 
     public static void main(String[] args) {
-        StringKeyMapper km = new StringKeyMapper("g1");
+        StringKeyMapper km = new StringKeyMapper("n0", "g1");
 
         km.registerInstance("n0");
         km.registerInstance("n1");
         mapTest(km);
-        km.registerInstance("DAS");
-        km.registerInstance("instance0");
-        km.registerInstance("instance1");
+
+        km.registerInstance("inst0");
+        km.registerInstance("inst1");
         km.registerInstance("instancen0");
         km.registerInstance("instancen1");
         mapTest(km);

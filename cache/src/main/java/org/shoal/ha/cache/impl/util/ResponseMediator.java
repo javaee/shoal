@@ -52,7 +52,7 @@ public class ResponseMediator {
     private ConcurrentHashMap<Long, CommandResponse> responses =
             new ConcurrentHashMap<Long, CommandResponse>();
 
-    public CommandResponse createCommandResponse(Class type) {
+    public CommandResponse createCommandResponse() {
         CommandResponse resp = new CommandResponse(this);
         responses.put(resp.getTokenId(), resp);
 

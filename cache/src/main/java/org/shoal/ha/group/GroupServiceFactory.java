@@ -30,12 +30,6 @@ public class GroupServiceFactory {
         if (server == null) {
             server = new GroupServiceProvider(myName, groupName);
             groupHandles.put(key, server);
-            try {
-                Thread.currentThread().sleep(3 * 1000);
-            } catch (InterruptedException inEx) {
-
-            }
-            server.reportJoinedAndReadyState();
         }
 
         return server;

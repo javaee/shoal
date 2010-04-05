@@ -1,0 +1,7 @@
+#! /usr/bin/zsh
+
+CACHE_HOME=/space/work/SHOAL_1_1_ABSTRACTING_TRANSPORT/cache
+
+CP=${CACHE_HOME}/target/classes:${CACHE_HOME}/../gms/target/shoal-1.5-SNAPSHOT.jar:${CACHE_HOME}/../gms/lib/grizzly-framework.jar:${CACHE_HOME}/../gms/lib/grizzly-utils.jar
+
+java -cp ${CP} org.shoal.ha.cache.impl.util.DataStoreShell cache $1 $2

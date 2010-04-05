@@ -66,6 +66,7 @@ public class DataStoreContext<K, V> {
 
     public DataStoreContext(String serviceName, GroupService gs) {
         this.serviceName = serviceName;
+        this.groupService = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
         this.cm = new CommandManager<K, V>(this);

@@ -39,6 +39,7 @@ package org.shoal.ha.cache.impl.interceptor;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.group.GroupService;
 
 import java.io.IOException;
 
@@ -60,7 +61,9 @@ public final class TransmitInterceptor<K, V>
         } catch (IOException ioEx) {
             //TODO
         }
-        ctx.getGroupService().sendMessage(cmd.getTargetName(),
+        GroupService gs = ctx.getGroupService();
+        System.out.println("TransmitInterceptor  onTransmit(" + cmd.getTargetName() + ")");
+        gs.sendMessage(cmd.getTargetName(),
                 ctx.getServiceName(), data);
     }
 

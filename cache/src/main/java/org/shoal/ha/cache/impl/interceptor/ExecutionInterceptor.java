@@ -94,8 +94,10 @@ public abstract class ExecutionInterceptor<K, V> {
     public void onReceive(Command<K, V> cmd) {
         ExecutionInterceptor<K, V> p = getPrev();
         if (p != null) {
-            p.onTransmit(cmd);
-        }    
+            p.onReceive(cmd);
+        }  else {
+            cmd.execute(dsc);
+        }
     }
 
 }

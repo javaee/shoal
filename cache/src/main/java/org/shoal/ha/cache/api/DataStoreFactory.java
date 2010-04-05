@@ -57,7 +57,8 @@ public class DataStoreFactory {
                 new DefaultDataStoreEntryHelper<String, Object>(Thread.currentThread().getContextClassLoader());
         DataStoreKeyHelper<String> keyHelper =
                 new StringKeyHelper();
-        KeyMapper<String> keyMapper = new StringKeyMapper<String>(gs.getGroupName());
+        StringKeyMapper<String> keyMapper = new StringKeyMapper<String>(gs.getMemberName(), gs.getGroupName());
+        gs.registerGroupMemberEventListener(keyMapper);
         return new ReplicatedDataStore<String, Object>(storeName, gs, helper, keyHelper, keyMapper);
     }
 
