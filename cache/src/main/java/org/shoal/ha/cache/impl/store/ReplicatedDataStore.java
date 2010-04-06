@@ -88,6 +88,8 @@ public class ReplicatedDataStore<K, V>
         cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
 
         cm.registerCommand(new SaveCommand<K, V>());
+        cm.registerCommand(new LoadRequestCommand<K, V>());
+        cm.registerCommand(new LoadResponseCommand<K, V>());
 
         gs.registerGroupMessageReceiver(storeName, cm);
     }

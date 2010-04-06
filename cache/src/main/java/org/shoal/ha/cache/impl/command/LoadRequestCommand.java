@@ -103,20 +103,19 @@ public class LoadRequestCommand<K, V>
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
         //TODO must create a ResponseMediator
-        ResponseMediator respMed = ctx.getResponseMediator();
-        CommandResponse resp = respMed.createCommandResponse();
+//        ResponseMediator respMed = ctx.getResponseMediator();
+//        CommandResponse resp = respMed.createCommandResponse();
         
     }
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
-        //System.out.println("LoadRequestCommand: Received FROM: " + ctx.getInitiatorName() + " - " + this);
-        //ReplicationState result = getDataStoreContext().getReplicaCache().get(key);
-        LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key);
-        //rsp.setTokenId(getTokenId());
-        rsp.setReplicationState((ReplicationState<K, V>) result);
-        //rsp.setDestinationName(ctx.getInitiatorName());
-        getCommandManager().execute(rsp);
+        V v = ctx.getReplicaStore().get(key);
+//        LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key);
+//        //rsp.setTokenId(getTokenId());
+//        rsp.setReplicationState((ReplicationState<K, V>) result);
+//        //rsp.setDestinationName(ctx.getInitiatorName());
+//        getCommandManager().execute(rsp);
     }
 
     public DataStoreEntry<K, V> getResult() {

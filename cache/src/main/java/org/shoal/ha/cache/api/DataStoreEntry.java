@@ -137,9 +137,4 @@ public abstract class DataStoreEntry<K, V> {
     protected void readPayloadState(DataStoreEntryHelper<K, V> helper,
                                     byte[] data, int index) {
     }
-
-    protected V getV() {
-        return null;
-    }
-
 }

@@ -1,6 +1,7 @@
 package org.shoal.ha.group.gms;
 
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.client.FailureNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
@@ -44,7 +45,8 @@ public class GroupServiceProvider
 
     public void processNotification(Signal notification) {
         MemberStates[] states;
-        logger.info("[$$$ ALIVE & READY] => " + notification.getMemberToken());
+//        logger.info("[$$$Received notification] => " + notification.getMemberToken() + " ==> "
+//            + gms.getGroupHandle().getMemberState(notification.getMemberToken()));
         if ((notification instanceof JoinedAndReadyNotificationSignal)
                 || (notification instanceof JoinNotificationSignal)
                 || (notification instanceof FailureNotificationSignal)
@@ -52,15 +54,12 @@ public class GroupServiceProvider
             // getMemberState constraint check for member being added.
             MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());
 
-            logger.info("[2] $$$ ALIVE & READY => " + notification.getMemberToken() + " : "
-            + state);
             if (state == MemberStates.ALIVEANDREADY || state == MemberStates.READY) {
                 JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
                 List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
                 states = new MemberStates[currentCoreMembers.size()];
                 int i = 0;
                 for (String instanceName : currentCoreMembers) {
-                    logger.info("[ALIVE & READY] => " + instanceName);
                     states[i] = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
                     switch (states[i]) {
                         case STARTING:
@@ -76,14 +75,15 @@ public class GroupServiceProvider
                             break;
                     }
                 }
-            } else if (state == MemberStates.INDOUBT ||
+            } else if (state == MemberStates.STOPPED ||
                     state == MemberStates.CLUSTERSTOPPING ||
                     state == MemberStates.UNKNOWN) {
+
                 String instance = notification.getMemberToken();
                 aliveInstances.remove(instance);
                 if (!myName.equals(instance)) {
                     for (GroupMemberEventListener listener : listeners) {
-                        //listener.memberLeft(instance, groupName);
+                        listener.memberLeft(instance, groupName, (state == MemberStates.CLUSTERSTOPPING));
                     }
                 }
             }
@@ -104,7 +104,6 @@ public class GroupServiceProvider
         List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
         for (String instanceName : members) {
             for (GroupMemberEventListener listener : listeners) {
-                System.out.println("\tnotifyCurrentAliveMembers ==> Notifying... " + listener + instanceName);
                 aliveInstances.putIfAbsent(instanceName, instanceName);
                     listener.memberReady(instanceName, groupName);
             }
@@ -146,6 +145,7 @@ public class GroupServiceProvider
 
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
+        gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
 
         try {
             gms.join();

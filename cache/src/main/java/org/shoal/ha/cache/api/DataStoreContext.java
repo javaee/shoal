@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.impl.command.CommandManager;
@@ -64,12 +65,16 @@ public class DataStoreContext<K, V> {
 
     private GroupService groupService;
 
+    private ReplicaStore<K, V> replica;
+
     public DataStoreContext(String serviceName, GroupService gs) {
         this.serviceName = serviceName;
         this.groupService = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
         this.cm = new CommandManager<K, V>(this);
+
+        replica = new ReplicaStore<K, V>(this);
     }
 
     public String getServiceName() {
@@ -118,5 +123,9 @@ public class DataStoreContext<K, V> {
 
     public GroupService getGroupService() {
         return groupService;
+    }
+
+    public ReplicaStore<K, V> getReplicaStore() {
+        return replica;
     }
 }

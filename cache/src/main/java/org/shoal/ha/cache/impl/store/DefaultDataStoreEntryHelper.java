@@ -40,13 +40,12 @@ import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreEntryEvaluator;
 import org.shoal.ha.cache.api.DataStoreEntryHelper;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.impl.util.ObjectInputStreamWithLoader;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ReplicationState;
 import org.shoal.ha.cache.impl.util.SimpleSerializer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 
 /**
  * @author Mahesh Kannan
@@ -75,8 +74,6 @@ public class DefaultDataStoreEntryHelper<K, V>
             oos = new ObjectOutputStream(bos);
             oos.writeObject(obj);
             oos.flush();
-            byte[] data = bos.toByteArray();
-            state.setAttribute("value", data);
         } catch (IOException ioEx) {
             //TODO
         } finally {
@@ -90,19 +87,32 @@ public class DefaultDataStoreEntryHelper<K, V>
             }
         }
 
+        byte[] data = bos.toByteArray();
+        state.setAttribute("value", data);
+
         return state;
     }
 
     @Override
     public V getV(DataStoreEntry<K, V> replicationEntry)
             throws DataStoreException {
+        byte[] data = ((ReplicationState<K, V>) replicationEntry).getAttribute("value");
+        ByteArrayInputStream bis = new ByteArrayInputStream(data);
+        ObjectInputStreamWithLoader ois = null;
+        V v = null;
         try {
-            return (V) SimpleSerializer.deserialize(loader, ((ReplicationState<K, V>) replicationEntry).getAttribute("value"), 0);
-        } catch (ClassNotFoundException cnfEx) {
-            throw new DataStoreException("Cannot desrialize value", cnfEx);
+            ois = new ObjectInputStreamWithLoader(bis, loader);
+            v = (V) ois.readObject();
         } catch (IOException ioEx) {
-            throw new DataStoreException("Cannot desrialize value", ioEx);
+            throw new DataStoreException(ioEx);
+        } catch (ClassNotFoundException cnfEx) {
+            throw new DataStoreException(cnfEx);
+        } finally {
+            try {ois.close();} catch (IOException ioEx1) {}
+            try {bis.close();} catch (IOException ioEx2) {}
         }
+
+        return v;
     }
 
     @Override

@@ -96,16 +96,14 @@ public class SaveCommand<K, V>
         throws IOException {
         int valueOffset = Utility.bytesToInt(data, offset);
         k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
-        Object obj = ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
+        v = (V) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
 
-        System.out.println("**Save command received KEY: " + k + " => " + obj.getClass().getName() + "; " + obj);
-        //setReplicationEntry(entry);
+        System.out.println("**Save command received KEY: " + k + " => " + v.getClass().getName() + "; " + v);
     }
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
-        //getReplicaCache().put(entry);
-        System.out.println("SaveCommand["+ctx.getServiceName() +"] to execute: " + this);
+        ctx.getReplicaStore().put(k, v);
     }
 
 }
