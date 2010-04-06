@@ -74,9 +74,8 @@ public interface DataStore<K, V> {
      * Updates the timestamp associated with this entry. see #{removeIdleEntries}
      *
      * @param k The key
-     * @param timestamp The current time
      */
-    public void touch(K k, long timestamp);
+    public void touch(K k, long ttl);
 
     /**
      * Performs an incremental update of the value associated with this key. The

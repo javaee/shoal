@@ -67,23 +67,24 @@ public class RemoveCommand<K, V>
     }
 
     @Override
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
+    }
+
+    @Override
     public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
         trans.getDataStoreKeyHelper().writeKey(ros, key);
-        System.out.println("Just wrote REMOVE Command: " + key);
     }
 
     @Override
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
         throws DataStoreException {
-        int transKeyLen = Utility.bytesToInt(data, offset);
-        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset+4);
+        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset);
     }
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
-        //getReplicaCache().remove(key);
-        System.out.println("RemoveCommand ["+ getDataStoreContext().getServiceName()
-                +"] received: " + key);
+        ctx.getReplicaStore().remove(key);
     }
 
 }

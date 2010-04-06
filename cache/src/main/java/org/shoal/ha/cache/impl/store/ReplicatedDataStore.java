@@ -38,15 +38,13 @@ package org.shoal.ha.cache.impl.store;
 
 import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
 import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
-import org.shoal.ha.cache.impl.util.SimpleSerializer;
-import org.shoal.ha.cache.impl.util.StringKeyHelper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.*;
-import org.shoal.ha.cache.impl.util.StringKeyMapper;
 
 import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mahesh Kannan
@@ -65,6 +63,7 @@ public class ReplicatedDataStore<K, V>
     private CommandManager<K, V> cm;
 
     private DataStoreEntryHelper<K, V> transformer;
+
 
     public ReplicatedDataStore(String storeName, GroupService gs,
                                DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
@@ -90,6 +89,8 @@ public class ReplicatedDataStore<K, V>
         cm.registerCommand(new SaveCommand<K, V>());
         cm.registerCommand(new LoadRequestCommand<K, V>());
         cm.registerCommand(new LoadResponseCommand<K, V>(null, null, 0));
+        cm.registerCommand(new RemoveCommand<K, V>());
+        cm.registerCommand(new TouchCommand<K, V>());
 
         gs.registerGroupMessageReceiver(storeName, cm);
     }
@@ -128,8 +129,9 @@ public class ReplicatedDataStore<K, V>
     }
 
     @Override
-    public void touch(K k, long timestamp) {
-        //To change body of implemented methods use File | Settings | File Templates.
+    public void touch(K k, long ttl) {
+        //TODO pass the correct version and ts
+        TouchCommand<K, V> tc = new TouchCommand<K, V>(k, 0, 0, ttl);
     }
 
     @Override
@@ -151,4 +153,6 @@ public class ReplicatedDataStore<K, V>
     public void close() {
         //To change body of implemented methods use File | Settings | File Templates.
     }
+
+
 }

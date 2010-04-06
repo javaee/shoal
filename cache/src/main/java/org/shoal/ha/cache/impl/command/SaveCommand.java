@@ -41,6 +41,7 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mahesh Kannan
@@ -51,7 +52,6 @@ public class SaveCommand<K, V>
     private K k;
 
     private V v;
-
     public SaveCommand() {
         super(ReplicationCommandOpcode.SAVE);
     }
@@ -97,8 +97,6 @@ public class SaveCommand<K, V>
         int valueOffset = Utility.bytesToInt(data, offset);
         k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
         v = (V) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
-
-        System.out.println("**Save command received KEY: " + k + " => " + v.getClass().getName() + "; " + v);
     }
 
     @Override

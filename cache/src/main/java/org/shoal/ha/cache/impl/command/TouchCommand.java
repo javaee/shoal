@@ -36,23 +36,69 @@
 
 package org.shoal.ha.cache.impl.command;
 
+import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.Utility;
+
+import java.io.IOException;
+
 /**
  * @author Mahesh Kannan
  */
-public class ReplicationCommandOpcode {
+public class TouchCommand<K, V>
+    extends Command<K, V> {
 
-    public static final byte SAVE = 33;
+    private K key;
 
-    public static final byte SAVE_WITH_DSEE = 34;
+    private long ts;
 
-    public static final byte LOAD_REQUEST = 35;
+    private long version;
 
-    public static final byte REMOVE = 36;
+    private long ttl;
 
-    public static final byte LOAD_RESPONSE = 37;
+    public TouchCommand() {
+        super(ReplicationCommandOpcode.TOUCH);
+    }
 
-    public static final byte TOUCH = 38;
+    public TouchCommand(K key, long ts, long version, long ttl) {
+        this();
+        this.key = key;
+        this.ts = ts;
+        this.version = version;
+        this.ttl = ttl;
+    }
 
-    public static final byte REPLICATION_FRAME_PAYLOAD = 51;
+    @Override
+    protected TouchCommand<K, V> createNewInstance() {
+        return new TouchCommand<K, V>();
+    }
+
+    @Override
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
+    }
+
+    @Override
+    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
+        ros.write(Utility.longToBytes(ts));
+        ros.write(Utility.longToBytes(version));
+        ros.write(Utility.longToBytes(ttl));
+        trans.getDataStoreKeyHelper().writeKey(ros, key);
+    }
+
+    @Override
+    public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
+        throws DataStoreException {
+        ts = Utility.bytesToLong(data, offset);
+        version = Utility.bytesToLong(data, offset+8);
+        ttl = Utility.bytesToLong(data, offset+16);
+        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset+24);
+    }
+
+    @Override
+    public void execute(DataStoreContext<K, V> ctx) {
+        ctx.getReplicaStore().touch(key, version, ts, ttl);
+    }
 
 }

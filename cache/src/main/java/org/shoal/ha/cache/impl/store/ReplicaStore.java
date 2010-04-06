@@ -25,25 +25,35 @@ public class ReplicaStore<K, V> {
         DataStoreEntryHelper<K, V> helper = ctx.getDataStoreEntryHelper();
         DataStoreEntry<K, V> e = helper.createDataStoreEntry(k, v);
         map.put(k, e);
-        System.out.println("SaveCommand["+ctx.getServiceName() +"] put(" + k + ", " + e.getClass().getName() + ");");
         //TODO Need to take care of out of order messages
     }
 
     public V get(K k) {
-        System.out.println("ReplicaStore.get["+ctx.getServiceName() +"] get(" + k + ") : size: " + map.size() + ");");
         DataStoreEntryHelper<K, V> helper = ctx.getDataStoreEntryHelper();
         DataStoreEntry<K, V> e = map.get(k);
 
-        System.out.println("ReplicaStore.get.2["+ctx.getServiceName() +"] get(" + k + ") : e: " + e + ");");
-
         V v = null;
         try {
-            v = helper.getV(e);
+            if (e != null) {
+                v = helper.getV(e);
+            }
         } catch (DataStoreException dsEx) {
             dsEx.printStackTrace();
         }
-        System.out.println("Load["+ctx.getServiceName() +"] get(" + k + ", " + v + ");");
 
         return v;
+    }
+
+    public void remove(K k) {
+        map.remove(k);
+    }
+
+    public void touch(K k, long ts, long version, long ttl) {
+        DataStoreEntry<K, V> e = map.get(k);
+        if (e != null) {
+            e.setLastAccessedAt(ts);
+            e.setMaxIdleTime(ttl);
+            e.setVersion(version);
+        }
     }
 }

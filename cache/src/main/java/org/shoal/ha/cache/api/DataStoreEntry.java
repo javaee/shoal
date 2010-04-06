@@ -49,6 +49,8 @@ public abstract class DataStoreEntry<K, V> {
 
     private K key;
 
+    private long version;
+
     private long maxIdleTime;
 
     private long lastAccessedAt;
@@ -59,6 +61,14 @@ public abstract class DataStoreEntry<K, V> {
 
     public K getKey() {
         return key;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void setVersion(long version) {
+        this.version = version;
     }
 
     public long getMaxIdleTime() {
