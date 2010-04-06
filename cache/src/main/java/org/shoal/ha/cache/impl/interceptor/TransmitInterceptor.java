@@ -62,7 +62,6 @@ public final class TransmitInterceptor<K, V>
             //TODO
         }
         GroupService gs = ctx.getGroupService();
-        System.out.println("TransmitInterceptor  onTransmit(" + cmd.getTargetName() + ")");
         gs.sendMessage(cmd.getTargetName(),
                 ctx.getServiceName(), data);
     }

@@ -25,7 +25,7 @@ public abstract class MessageReceiver
         try {
             MessageSignal messageSignal = null;
             signal.acquire();
-            logger.log(Level.INFO, "Source Member: " + signal.getMemberToken() + " group : " + signal.getGroupName());
+//            logger.log(Level.INFO, "Source Member: " + signal.getMemberToken() + " group : " + signal.getGroupName());
             if (signal instanceof MessageSignal) {
                 messageSignal = (MessageSignal) signal;
                 message = ((MessageSignal) signal).getMessage();

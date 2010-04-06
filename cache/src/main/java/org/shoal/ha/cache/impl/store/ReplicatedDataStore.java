@@ -89,7 +89,7 @@ public class ReplicatedDataStore<K, V>
 
         cm.registerCommand(new SaveCommand<K, V>());
         cm.registerCommand(new LoadRequestCommand<K, V>());
-        cm.registerCommand(new LoadResponseCommand<K, V>());
+        cm.registerCommand(new LoadResponseCommand<K, V>(null, null, 0));
 
         gs.registerGroupMessageReceiver(storeName, cm);
     }
@@ -113,7 +113,7 @@ public class ReplicatedDataStore<K, V>
         cm.execute(cmd);
 
         try {
-            return transformer.getV(cmd.getReplicationEntry());
+            return cmd.getResult();
         } catch (DataStoreException dsEx) {
             //TODO Log?
             return null;

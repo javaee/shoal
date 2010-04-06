@@ -18,7 +18,6 @@ public class CommandMonitorInterceptor<K, V>
     public void onTransmit(Command cmd) {
         super.onTransmit(cmd);
         transCount.incrementAndGet();
-        System.out.println("***>> NoopCommandInterceptor.onTransmit(" + cmd.getOpcode() + ")");
     }
 
     @Override

@@ -99,7 +99,7 @@ public class DataStoreShell {
         if ("put".equalsIgnoreCase(command)) {
             ds.put(params[0], params[1]);
         } else if ("get".equalsIgnoreCase(command)) {
-            ds.get(params[0]);
+            System.out.println("get(" + params[0] + ") => " + ds.get(params[0]));
         } else if ("remove".equalsIgnoreCase(command)) {
             ds.remove(params[0]);
         }

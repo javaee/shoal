@@ -83,7 +83,7 @@ public class StringKeyMapper<K>
         rLock.lock();
         try {
             int hc = Math.abs(getDigestHashCode(key1.toString()));
-            System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + members[hc % (members.length)]);
+//            System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + members[hc % (members.length)]);
             return members[hc % (members.length)];
         } finally {
             rLock.unlock();

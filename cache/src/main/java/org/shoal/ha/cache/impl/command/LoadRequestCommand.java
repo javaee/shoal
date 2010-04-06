@@ -39,15 +39,13 @@ package org.shoal.ha.cache.impl.command;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.impl.util.CommandResponse;
-import org.shoal.ha.cache.impl.util.ReplicationState;
+import org.shoal.ha.cache.impl.util.*;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
-import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -59,7 +57,14 @@ public class LoadRequestCommand<K, V>
 
     private K key;
 
-    private DataStoreEntry<K, V> entry;
+    CommandResponse resp;
+
+    private Future future;
+
+    private long tokenId;
+
+    private String originatingInstance;
+
 
     public LoadRequestCommand() {
         this(null);
@@ -78,10 +83,6 @@ public class LoadRequestCommand<K, V>
         this.key = key;
     }
 
-    public DataStoreEntry<K, V> getReplicationEntry() {
-        return entry;
-    }
-
     @Override
     protected LoadRequestCommand<K, V> createNewInstance() {
         return new LoadRequestCommand<K, V>();
@@ -89,47 +90,58 @@ public class LoadRequestCommand<K, V>
 
     @Override
     public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
+        ros.write(Utility.longToBytes(resp.getTokenId()));
+        int keyLen = ReplicationIOUtils.writeLengthPrefixedKey(key, trans.getDataStoreKeyHelper(), ros);
+        ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
+//        System.out.println("**LoadRequestCommand.writeCommandPayload: " + keyLen);
         trans.getDataStoreKeyHelper().writeKey(ros, key);
     }
 
     @Override
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-        throws DataStoreException {
-        setKey((K) trans.getDataStoreKeyHelper().readKey(data, offset));
+        throws IOException {
+        tokenId = Utility.bytesToLong(data, offset);
+        ReplicationIOUtils.KeyInfo keyInfo = ReplicationIOUtils.readLengthPrefixedKey(
+                trans.getDataStoreKeyHelper(), data, offset + 8);
+//        System.out.println("**LoadRequestCommand.readCommandPayload: " + keyInfo.keyLen);
+        key = (K) keyInfo.key;
+        originatingInstance = ReplicationIOUtils.readLengthPrefixedString(
+                data, offset + 8 + 4 + keyInfo.keyLen);
     }
 
 
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        originatingInstance = ctx.getInstanceName();
         setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
-        //TODO must create a ResponseMediator
-//        ResponseMediator respMed = ctx.getResponseMediator();
-//        CommandResponse resp = respMed.createCommandResponse();
-        
+        ResponseMediator respMed = ctx.getResponseMediator();
+        resp = respMed.createCommandResponse();
+
+        future = resp.getFuture();
     }
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
         V v = ctx.getReplicaStore().get(key);
-//        LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key);
-//        //rsp.setTokenId(getTokenId());
-//        rsp.setReplicationState((ReplicationState<K, V>) result);
-//        //rsp.setDestinationName(ctx.getInitiatorName());
-//        getCommandManager().execute(rsp);
+        LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);
+        rsp.setOriginatingInstance(originatingInstance);
+//        System.out.println("LoadRequestCommand.execute: " + key + ", " + v + ", " + originatingInstance + "; tokenId: " + tokenId);
+        getCommandManager().execute(rsp);
     }
 
-    public DataStoreEntry<K, V> getResult() {
-        CommandResponse cr = new CommandResponse(getDataStoreContext().getResponseMediator());
+    public V getResult()
+        throws DataStoreException {
         try {
-            return (DataStoreEntry<K, V>) cr.getFuture().get(15000, TimeUnit.MILLISECONDS);
+            return (V) future.get(15000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException inEx) {
             System.out.println("Error: InterruptedException while waiting for result");
+            throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
             System.out.println("Error: Timedout while waiting for result");
+            throw new DataStoreException(timeoutEx);
         } catch (ExecutionException exeEx) {
-
+            System.out.println("Error: ExecutionException while waiting for result");
+            throw new DataStoreException(exeEx);
         }
-
-        return null;
     }
 }

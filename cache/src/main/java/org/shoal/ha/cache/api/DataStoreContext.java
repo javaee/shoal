@@ -73,6 +73,7 @@ public class DataStoreContext<K, V> {
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
         this.cm = new CommandManager<K, V>(this);
+        this.responseMediator = new ResponseMediator();
 
         replica = new ReplicaStore<K, V>(this);
     }

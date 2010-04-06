@@ -49,27 +49,29 @@ import java.io.IOException;
  * @author Mahesh Kannan
  */
 public class LoadResponseCommand<K, V>
-    extends Command<K, V> {
+        extends Command<K, V> {
 
     private K key;
 
-    private ReplicationState<K, V> state;
+    private V v;
 
-    public LoadResponseCommand() {
-        this(null);
+    private long tokenId;
+
+    private String originatingInstance;
+
+    private LoadResponseCommand() {
+        super(ReplicationCommandOpcode.LOAD_RESPONSE);
     }
 
-    public LoadResponseCommand(K key) {
+    public LoadResponseCommand(K key, V v, long tokenId) {
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
         this.key = key;
+        this.v = v;
+        this.tokenId = tokenId;
     }
 
-    public ReplicationState<K, V> getReplicationState() {
-        return state;
-    }
-
-    public void setReplicationState(ReplicationState<K, V> state) {
-        this.state = state;
+    public void setOriginatingInstance(String originatingInstance) {
+        this.originatingInstance = originatingInstance;
     }
 
     @Override
@@ -79,40 +81,48 @@ public class LoadResponseCommand<K, V>
 
     @Override
     public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        //ros.write(Utility.longToBytes(getTokenId()));
-//        System.out.println("** LoadResponseCommand: wrote key: " +
-//                key + "; token: " + getTokenId());
-
+        int vMark = ros.mark();
+        int vOffset = vMark;
+        ros.write(Utility.intToBytes(vOffset));
+        ros.write(Utility.longToBytes(tokenId));
+        ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
         trans.getDataStoreKeyHelper().writeKey(ros, key);
-        ros.write(state == null ? (new byte[] {0}) : (new byte[] {1}));
-        if (state != null) {
-            state.writeDataStoreEntry(trans, ros);
+        vOffset = ros.mark() - vOffset;
+        ros.reWrite(vMark, Utility.intToBytes(vOffset));
+        ros.write(v == null ? 0 : 1);
+        if (v != null) {
+            trans.getDataStoreEntryHelper().writeObject(ros, v);
         }
     }
 
     @Override
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-        throws IOException, DataStoreException {
-        //setTokenId(Utility.bytesToLong(data, offset));
-        int transKeyLen = Utility.bytesToInt(data, offset+8);
-        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset+12);
-        offset += 12 + (key == null ? 0 : transKeyLen);
-
-        if (data[offset] != 0) {
-            ReplicationState<K, V> state = new ReplicationState<K, V>();
-            state.readDataStoreEntry(trans, data, offset+1);
-            setReplicationState(state);
+            throws IOException, DataStoreException {
+        int vOffset = Utility.bytesToInt(data, offset);
+        tokenId = Utility.bytesToLong(data, offset + 4);
+        originatingInstance =
+                ReplicationIOUtils.readLengthPrefixedString(data, offset + 12);
+        int instOffset = 4 + ((originatingInstance == null) ? 0 : originatingInstance.length());
+        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset + 12 + instOffset);
+        byte flag = data[offset + vOffset];
+        if (flag != 0) {
+            v = (V) trans.getDataStoreEntryHelper().readObject(data, offset + vOffset + 1);
         }
     }
 
     @Override
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(originatingInstance);
+    }
+
+    @Override
     public void execute(DataStoreContext<K, V> ctx) {
-//        ResponseMediator respMed = getDataStoreContext().getResponseMediator();
-//        CommandResponse resp = respMed.getCommandResponse(getTokenId());
-//        if (resp != null) {
-//            //System.out.println("RECEIVED LOAD RESPONSE: " + getTokenId());
-//            resp.setResult(getReplicationState());
-//        }
+        ResponseMediator respMed = getDataStoreContext().getResponseMediator();
+        CommandResponse resp = respMed.getCommandResponse(tokenId);
+        if (resp != null) {
+//            System.out.println("RECEIVED LOAD RESPONSE: " + tokenId + ", " + key + ", " + v + "  from " + originatingInstance);
+            resp.setResult(v);
+        }
     }
 
 

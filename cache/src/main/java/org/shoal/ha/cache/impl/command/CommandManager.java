@@ -151,7 +151,7 @@ public class CommandManager<K, V>
         Command<K, V> cmd2 = commands[opCode];
         if (cmd2 != null) {
             Command<K, V> cmd = cmd2.createNewInstance();
-            System.out.println("RECEIVED MEEESSAGE FOR: " + cmd.getClass().getName());
+//            System.out.println("RECEIVED MEEESSAGE FOR: " + cmd.getClass().getName());
             cmd.initialize(dsc);
             try {
                 cmd.readCommandState(frameData, 0);
