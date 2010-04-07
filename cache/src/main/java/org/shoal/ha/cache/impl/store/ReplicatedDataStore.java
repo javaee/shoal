@@ -114,7 +114,10 @@ public class ReplicatedDataStore<K, V>
         cm.execute(cmd);
 
         try {
-            return cmd.getResult();
+            DataStoreEntry<K, V> entry = cmd.getResult();
+            V v = transformer.getV(entry);
+
+            return v;
         } catch (DataStoreException dsEx) {
             //TODO Log?
             return null;

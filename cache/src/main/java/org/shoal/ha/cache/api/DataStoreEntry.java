@@ -90,43 +90,34 @@ public abstract class DataStoreEntry<K, V> {
     public final void writeDataStoreEntry(DataStoreContext<K, V> ctx,
                                  ReplicationOutputStream ros)
             throws IOException {
-        int stateSizeMark = ros.mark();
-        int stateSize = 0;
-        ros.write(Utility.intToBytes(stateSize));
-        stateSize = ros.mark();
+        int payloadOffsetMark = ros.mark();
+        int payloadOffset = ros.mark();
+        ros.write(Utility.intToBytes(payloadOffset));
 
-        int headerSizeMark = ros.mark();
-        int headerSize = 0;
-        ros.write(Utility.intToBytes(headerSize));
-        headerSize = ros.mark();
-
+        ros.write(Utility.longToBytes(getVersion()));
         ros.write(Utility.longToBytes(getMaxIdleTime()));
         ros.write(Utility.longToBytes(getLastAccessedAt()));
 
         ctx.getDataStoreKeyHelper().writeKey(ros, key);
 
-        headerSize = ros.mark() - headerSize;
-        ros.reWrite(headerSizeMark, Utility.intToBytes(headerSize));
+        payloadOffset = ros.mark() - payloadOffset;
+        ros.reWrite(payloadOffsetMark, Utility.intToBytes(payloadOffset));
 
         writePayloadState(ctx.getDataStoreEntryHelper(), ros);
-        stateSize = ros.mark() - stateSize;
-        ros.reWrite(stateSizeMark, Utility.intToBytes(stateSize));
+
     }
 
     public void readDataStoreEntry(DataStoreContext<K, V> ctx,
                           byte[] data, int index) throws IOException {
-        int origIndex = index;
-        int totalSz = Utility.bytesToInt(data, index);
-        int headerSz = Utility.bytesToInt(data, index + 4);
-        index += 8;
+        int payloadOffset = Utility.bytesToInt(data, index);
 
-        setMaxIdleTime(Utility.bytesToLong(data, index));
-        setLastAccessedAt(Utility.bytesToLong(data, index + 8));
-        index += 16;
+        setVersion(Utility.bytesToLong(data, index+4));
+        setMaxIdleTime(Utility.bytesToLong(data, index+12));
+        setLastAccessedAt(Utility.bytesToLong(data, index + 20));
 
-        setKey(ctx.getDataStoreKeyHelper().readKey(data, index));
+        setKey(ctx.getDataStoreKeyHelper().readKey(data, index + 28));
         readPayloadState(ctx.getDataStoreEntryHelper(),
-                data, origIndex + headerSz);
+                data, index + payloadOffset);
 
     }
     

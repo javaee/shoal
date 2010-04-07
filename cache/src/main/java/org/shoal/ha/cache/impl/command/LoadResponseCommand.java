@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.util.ReplicationState;
 import org.shoal.ha.cache.impl.command.Command;
@@ -53,7 +54,7 @@ public class LoadResponseCommand<K, V>
 
     private K key;
 
-    private V v;
+    private DataStoreEntry<K, V> entry;
 
     private long tokenId;
 
@@ -63,10 +64,10 @@ public class LoadResponseCommand<K, V>
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
     }
 
-    public LoadResponseCommand(K key, V v, long tokenId) {
+    public LoadResponseCommand(K key, DataStoreEntry<K, V> e, long tokenId) {
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
         this.key = key;
-        this.v = v;
+        this.entry = e;
         this.tokenId = tokenId;
     }
 
@@ -89,9 +90,9 @@ public class LoadResponseCommand<K, V>
         trans.getDataStoreKeyHelper().writeKey(ros, key);
         vOffset = ros.mark() - vOffset;
         ros.reWrite(vMark, Utility.intToBytes(vOffset));
-        ros.write(v == null ? 0 : 1);
-        if (v != null) {
-            trans.getDataStoreEntryHelper().writeObject(ros, v);
+        ros.write(entry == null ? 0 : 1);
+        if (entry != null) {
+            entry.writeDataStoreEntry(trans, ros);
         }
     }
 
@@ -106,7 +107,8 @@ public class LoadResponseCommand<K, V>
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset + 12 + instOffset);
         byte flag = data[offset + vOffset];
         if (flag != 0) {
-            v = (V) trans.getDataStoreEntryHelper().readObject(data, offset + vOffset + 1);
+            entry = trans.getDataStoreEntryHelper().createDataStoreEntry();
+            entry.readDataStoreEntry(trans, data, offset + vOffset + 1);
         }
     }
 
@@ -121,7 +123,7 @@ public class LoadResponseCommand<K, V>
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
 //            System.out.println("RECEIVED LOAD RESPONSE: " + tokenId + ", " + key + ", " + v + "  from " + originatingInstance);
-            resp.setResult(v);
+            resp.setResult(entry);
         }
     }
 

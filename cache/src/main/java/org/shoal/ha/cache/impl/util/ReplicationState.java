@@ -49,9 +49,8 @@ public final class ReplicationState<K, V>
         }
     }
 
-    protected void writePayLoadState(DataStoreEntryHelper<K, V> transformer, ReplicationOutputStream ros)
+    protected void writePayloadState(DataStoreEntryHelper<K, V> transformer, ReplicationOutputStream ros)
             throws IOException {
-
 
         ros.write(Utility.intToBytes(deletedAttributes.size()));
         for (String key : deletedAttributes) {
@@ -61,21 +60,12 @@ public final class ReplicationState<K, V>
         int attrLen = attributes.size();
         ros.write(Utility.intToBytes(attrLen));
 
-        byte[] attrOffset = new byte[4 * attributes.size()];
-        int offsetMark = ros.mark();
-        ros.write(attrOffset);
-        int index = 0;
-        int base = ros.size();
         for (String k : attributes.keySet()) {
-            Utility.intToBytes(ros.size() - base, attrOffset, index*4);
-            System.out.println("[*RS*] write => " + k + " :=> " + (ros.size() - base));
-            index++;
             ReplicationIOUtils.writeLengthPrefixedString(ros, k);
             byte[] v = attributes.get(k);
             ros.write(Utility.intToBytes(v.length));
             ros.write(v);
         }
-        ros.reWrite(offsetMark, attrOffset);
     }
 
     protected void readPayloadState(DataStoreEntryHelper<K, V> trans, byte[] data, int index) {
@@ -91,20 +81,14 @@ public final class ReplicationState<K, V>
 
         int attrSz = Utility.bytesToInt(data, index);
         index += 4;
-        int[] attrOffsets = new int[attrSz];
 
         for (int i = 0; i < attrSz; i++) {
-            attrOffsets[i] = Utility.bytesToInt(data, index);
-            index+=4;
-            System.out.println("[*RS*] write => " + getKey() + " <=: " + attrOffsets[i]);
-        }
-        int base = index;
-        for (int i = 0; i < attrSz; i++) {
-            String k = ReplicationIOUtils.readLengthPrefixedString(data, attrOffsets[i]+base);
-            int len = Utility.bytesToInt(data, attrOffsets[i]+base+k.length());
+            String k = ReplicationIOUtils.readLengthPrefixedString(data, index);
+            index += 4 + k.length();
 
+            int len = Utility.bytesToInt(data, index);
             byte[] v = new byte[len];
-            System.arraycopy(data, attrOffsets[i]+base+k.length()+len, v, 0, len);
+            System.arraycopy(data, index+4, v, 0, len);
             attributes.put(k, v);
         }
     }

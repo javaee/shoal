@@ -28,20 +28,9 @@ public class ReplicaStore<K, V> {
         //TODO Need to take care of out of order messages
     }
 
-    public V get(K k) {
-        DataStoreEntryHelper<K, V> helper = ctx.getDataStoreEntryHelper();
-        DataStoreEntry<K, V> e = map.get(k);
+    public DataStoreEntry<K, V> get(K k) {
+        return map.get(k);
 
-        V v = null;
-        try {
-            if (e != null) {
-                v = helper.getV(e);
-            }
-        } catch (DataStoreException dsEx) {
-            dsEx.printStackTrace();
-        }
-
-        return v;
     }
 
     public void remove(K k) {
