@@ -38,9 +38,9 @@ package com.sun.enterprise.mgmt.transport;
 
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -406,13 +406,13 @@ public class NetworkUtility {
         return count;
     }
 
-    public static void deserialize( final ByteArrayInputStream bais, final int count, final Map<String, Serializable> messages ) throws MessageIOException {
-        if( bais == null || count <= 0 || messages == null )
+    public static void deserialize( final InputStream is, final int count, final Map<String, Serializable> messages ) throws MessageIOException {
+        if( is == null || count <= 0 || messages == null )
             return;
         String name = null;
         ObjectInputStream ois = null;
         try {
-            ois = new ObjectInputStream( bais );
+            ois = new ObjectInputStream( is );
             Object obj = null;
             for( int i = 0; i < count; i++ ) {
                 name = (String)ois.readObject();

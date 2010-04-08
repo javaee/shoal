@@ -44,7 +44,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Collections;
@@ -73,7 +74,7 @@ public class MessageImpl implements Message {
 
     private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
 
-    public static final int MAX_TOTAL_MESSAGE_LENGTH = 8192;
+    public static final int MAX_TOTAL_MESSAGE_LENGTH = 128 * 1024;
     public static final int UNSPECIFIED_MESSAGE_LENGTH = -1;
 
     private static final int MAGIC_NUMBER = 770303;
@@ -143,31 +144,44 @@ public class MessageImpl implements Message {
             throw new IllegalArgumentException( "offset is too small" );
         if( bytes.length < offset + HEADER_LENGTH )
             throw new IllegalArgumentException( "bytes' length is too small" );
-        return parseHeader( ByteBuffer.wrap( bytes, offset, HEADER_LENGTH ), offset );
+
+        int messageLen;
+        if (bytes.length - offset < HEADER_LENGTH) {
+            throw new IllegalArgumentException("byte[] is too small");
+    }
+
+        int magicNumber = readInt(bytes, offset);
+        if (magicNumber != MAGIC_NUMBER) {
+            throw new IllegalArgumentException("magic number is not valid");
+        }
+        version = readInt(bytes, offset + 4);
+        type = readInt(bytes, offset + 8);
+        messageLen = readInt(bytes, offset + 12);
+        return messageLen;
     }
 
     /**
      * {@inheritDoc}
      */
-    public int parseHeader( final ByteBuffer byteBuffer, final int offset ) throws IllegalArgumentException {
-        if( byteBuffer == null )
+    public int parseHeader( final Buffer buffer, final int offset ) throws IllegalArgumentException {
+        if( buffer == null )
             throw new IllegalArgumentException( "byte buffer must be initialized" );
         if( offset < 0 )
             throw new IllegalArgumentException( "offset is too small" );
         int messageLen;
-        int restorePosition = byteBuffer.position();
+        int restorePosition = buffer.position();
         try {
-            byteBuffer.position( offset );
-            if( byteBuffer.remaining() < HEADER_LENGTH )
+            buffer.position( offset );
+            if( buffer.remaining() < HEADER_LENGTH )
                 throw new IllegalArgumentException( "byte buffer's remaining() is too small" );
-            int magicNumber = byteBuffer.getInt();
+            int magicNumber = buffer.getInt();
             if( magicNumber != MAGIC_NUMBER )
                 throw new IllegalArgumentException( "magic number is not valid" );
-            version = byteBuffer.getInt();
-            type = byteBuffer.getInt();
-            messageLen = byteBuffer.getInt();
+            version = buffer.getInt();
+            type = buffer.getInt();
+            messageLen = buffer.getInt();
         } finally {
-            byteBuffer.position( restorePosition );
+            buffer.position( restorePosition );
         }
         return messageLen;
     }
@@ -184,14 +198,36 @@ public class MessageImpl implements Message {
             throw new IllegalArgumentException( "length is too small" );
         if( bytes.length < offset + length )
             throw new IllegalArgumentException( "bytes' length is too small" );
-        parseMessage( ByteBuffer.wrap( bytes, offset, length ), offset, length );
+
+        if( length > 0 ) {
+            int msgSize = HEADER_LENGTH + length;
+            if( msgSize > MAX_TOTAL_MESSAGE_LENGTH ) {
+                if( LOG.isLoggable( Level.WARNING ) )
+                    LOG.log( Level.WARNING,
+                             "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+    }
+
+            if (bytes.length - offset < length) {
+                throw new IllegalArgumentException("byte[] is too small");
+            }
+
+            ByteArrayInputStream bais = new ByteArrayInputStream( bytes, offset, length );
+            try {
+                readMessagesInputStream(bais);
+            } finally {
+                try {
+                    bais.close();
+                } catch (IOException e) {
+                }
+            }
+        }
     }
 
     /**
      * {@inheritDoc}
      */
-    public void parseMessage( final ByteBuffer byteBuffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException {
-        if( byteBuffer == null )
+    public void parseMessage( final Buffer buffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException {
+        if( buffer == null )
             throw new IllegalArgumentException( "byte buffer must be initialized" );
         if( offset < 0 )
             throw new IllegalArgumentException( "offset is too small" );
@@ -204,46 +240,34 @@ public class MessageImpl implements Message {
                     LOG.log( Level.WARNING,
                              "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
             }
-            int restorePosition = byteBuffer.position();
+            int restorePosition = buffer.position();
+            int restoreLimit = buffer.limit();
+
             try {
-                byteBuffer.position( offset );
-                if( byteBuffer.remaining() < length )
+                buffer.position( offset );
+                if( buffer.remaining() < length )
                     throw new IllegalArgumentException( "byte buffer's remaining() is too small" );
-                byte[] bytes = new byte[length];
-                byteBuffer.get( bytes );
-                readMessagesFromBytes( bytes, 0, length );
+
+                buffer.limit(offset + length);
+                readMessagesInputStream(new BufferInputStream(buffer));
             } finally {
-                byteBuffer.position( restorePosition );
+                BufferUtils.setPositionLimit(buffer, restorePosition, restoreLimit);
             }
         }
     }
 
-    private void readMessagesFromBytes( final byte[] bytes, final int offset, final int length ) throws IllegalArgumentException, MessageIOException {
-        if( bytes == null )
-            return;
-        if( bytes.length < offset + length )
-            throw new IllegalArgumentException( "bytes' length is too small" );
-        ByteArrayInputStream bais = new ByteArrayInputStream( bytes, offset, length );
-        DataInputStream dis = null;
+    private void readMessagesInputStream(InputStream is) throws IllegalArgumentException, MessageIOException {
         try {
-            dis = new DataInputStream( bais );
-            int messageCount = dis.readInt();
+            int messageCount = readInt(is);
             messageLock.lock();
             try {
-                NetworkUtility.deserialize( bais, messageCount, messages );
+                NetworkUtility.deserialize( is, messageCount, messages );
             } finally {
                 modified = true;
                 messageLock.unlock();
             }
         } catch( IOException ie ) {
             throw new MessageIOException( ie );
-        } finally {
-            if( dis != null ) {
-                try {
-                    dis.close();
-                } catch( IOException e ) {
-                }
-            }
         }
     }
 
@@ -406,6 +430,26 @@ public class MessageImpl implements Message {
             }
         }
         return sb.toString();
+    }
+
+    private static int readInt(InputStream is) throws IOException {
+        int ch1 = is.read();
+        int ch2 = is.read();
+        int ch3 = is.read();
+        int ch4 = is.read();
+        if ((ch1 | ch2 | ch3 | ch4) < 0)
+            throw new EOFException();
+        
+        return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
+    }
+
+    private static int readInt(byte[] bytes, int offset) {
+        int ch1 = bytes[offset] & 0xFF;
+        int ch2 = bytes[offset + 1] & 0xFF;
+        int ch3 = bytes[offset + 2] & 0xFF;
+        int ch4 = bytes[offset + 3] & 0xFF;
+        
+        return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
     }
 
     private class MessageByteArrayOutputStream extends ByteArrayOutputStream {

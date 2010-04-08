@@ -36,11 +36,13 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.enterprise.mgmt.transport.ByteBuffersBuffer;
 import com.sun.grizzly.ProtocolParser;
 import com.sun.grizzly.SSLConfig;
-import com.sun.grizzly.filter.*;
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageImpl;
+import com.sun.grizzly.filter.ParserProtocolFilter;
+import com.sun.grizzly.util.WorkerThread;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
@@ -68,18 +70,20 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
 
     private static final Logger LOG = GrizzlyUtil.getLogger();
 
+    private static final int MIN_BUFFER_FREE_SPACE = 1024;
+
     private SSLConfig sslConfig;   // TBD.
 
+    private final ByteBuffersBuffer workBuffer = new ByteBuffersBuffer();
+    
     private Message message;
-    private ByteBuffer savedBuffer;
-    private boolean partial;              // is there only a partial message left in the buffer
-    private int nextMsgStartPos;
+    private ByteBuffer lastBuffer;
     private boolean error;
     private int messageLength;
-    private int originalLimit;
+    private boolean justParsedMessage;
 
-    static private final Level DEBUG_LEVEL = Level.FINEST;  // set this to Level.INFO to trace parsing.
-    static private boolean DEBUG_ENABLED = false;           // must be set to TRUE to enable debugging.
+    static volatile Level DEBUG_LEVEL = Level.FINE;          // set this to Level.INFO to trace parsing.
+    static volatile boolean DEBUG_ENABLED = false;           // must be set to TRUE to enable debugging.
 
     protected GrizzlyMessageProtocolParser() {
     }
@@ -87,7 +91,7 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
     protected GrizzlyMessageProtocolParser( SSLConfig sslConfig ) {
         this.sslConfig = sslConfig;
         if (sslConfig != null) {
-            throw new UnsupportedOperationException("GrizzlyMesageProtocolParser: sslConfig is not yet supported");
+            throw new UnsupportedOperationException("GrizzlyMessageProtocolParser: sslConfig is not yet supported");
         }
     }
 
@@ -113,10 +117,12 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
      *		 return false.
      */
     public boolean isExpectingMoreData() {
+        final boolean isExpectingMoreData = workBuffer.hasRemaining() && !justParsedMessage;
+
         if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
-            LOG.log( DEBUG_LEVEL, logState( "isExpectingMoreData() return partial=" + partial));
+            LOG.log( DEBUG_LEVEL, logState( "isExpectingMoreData() return " + isExpectingMoreData));
         }
-        return partial;
+        return isExpectingMoreData;
     }
 
     /**
@@ -131,12 +137,12 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
      *         Otherwise <tt>false</tt>.
      */
     public boolean hasMoreBytesToParse() {
+        final boolean hasMoreBytesToParse = workBuffer.hasRemaining() && justParsedMessage;
         if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
             LOG.log( DEBUG_LEVEL, logState(
-                    "hasMoreBytesToParse() return nextMsgStartPos[" + nextMsgStartPos +
-                    "] < originalLimit[" + originalLimit));
+                    "hasMoreBytesToParse() return " + hasMoreBytesToParse));
         }
-        return nextMsgStartPos < originalLimit;
+        return hasMoreBytesToParse;
     }
 
     /**
@@ -157,13 +163,15 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
         }
 
         Message nextMsg = null;
-        if (error || partial) {
-            nextMsgStartPos = originalLimit;  // after error,  drop entire buffer.
+        if (error) {
+            workBuffer.dispose();  // after error,  drop entire buffer.
         } else {
             nextMsg= message;
-
-            // now that next Message has been read, increment to the nextMsgStartPos.
-            nextMsgStartPos += MessageImpl.HEADER_LENGTH + messageLength;
+            workBuffer.disposeUnused();
+            if (!workBuffer.hasRemaining()) {
+                lastBuffer = null;
+            }
+            justParsedMessage = true;
         }
 
         // reset cached values from last hasNextMessage() call.
@@ -184,66 +192,54 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
      * re-parse the data.
      */
     public boolean hasNextMessage() {
+        justParsedMessage = false;
         String partialReason = "";
-        partial = false;
-        int savedBufferRemainingBytes = originalLimit - nextMsgStartPos;
+        boolean hasMessage = false;
         if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
             LOG.log(DEBUG_LEVEL,  logState("hasNextMessage() - enter"));
         }
         try {
             if( message == null ) {
-                savedBuffer.position(nextMsgStartPos);
-                savedBuffer.limit(originalLimit);
-                if( savedBufferRemainingBytes < MessageImpl.HEADER_LENGTH ) {
-                    partial = true;
-                    message = null;
+                if( workBuffer.remaining() < MessageImpl.HEADER_LENGTH ) {
                     messageLength = 0;
                     if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
                         partialReason = "isPartialMsg:not enough buffer for msg header";
                     }
-                    nextMsgStartPos = originalLimit;  // so hasNoMoreBytesToParse returns true and releaseBuffer will compact partial data.
                 } else {
                     Message incomingMessage = new MessageImpl();
-                    messageLength = incomingMessage.parseHeader(savedBuffer, nextMsgStartPos );
+                    messageLength = incomingMessage.parseHeader(workBuffer, workBuffer.position());
                     message = incomingMessage;
                 }
             }
-            if( !partial && messageLength > 0 ) {
+            if(message != null && messageLength > 0 ) {
                 if( messageLength + MessageImpl.HEADER_LENGTH > MessageImpl.MAX_TOTAL_MESSAGE_LENGTH ){
                     throw new Exception( "too large message" );
                 }
                 int totalMsgLength = MessageImpl.HEADER_LENGTH + messageLength;
-                savedBuffer.position(nextMsgStartPos);
-                savedBuffer.limit(originalLimit);
-                if( savedBufferRemainingBytes <  totalMsgLength) {
-                    message = null;
-                    partial = true;
+                if( workBuffer.remaining() <  totalMsgLength) {
                     if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)){
                         partialReason = "isPartialMsg:not enough buffer for msg length";
                     }
-                    nextMsgStartPos = originalLimit;  // so hasMoreBytesToParse() returns true and releaseBuffer will get called and compact partial data.
                 } else {
-                    savedBuffer.limit(nextMsgStartPos + totalMsgLength);
-                    message.parseMessage(savedBuffer, nextMsgStartPos + MessageImpl.HEADER_LENGTH, messageLength );
+                    int pos = workBuffer.position();
+                    message.parseMessage(workBuffer, workBuffer.position() + MessageImpl.HEADER_LENGTH, messageLength );
 
-                    // ensure when getNextMessage() is called, that position is set to start of data corresponding to 'message' and limit is
-                    // to end of data for that message.
-                    savedBuffer.position(nextMsgStartPos + MessageImpl.HEADER_LENGTH);
+                    // Go to the next message
+                    workBuffer.position(pos + totalMsgLength);
+                    hasMessage = true;
                 }
             }
         } catch( Throwable t ) {
             if( DEBUG_ENABLED && LOG.isLoggable( Level.WARNING ) ) {
                 LOG.log( Level.WARNING, logState( "hasNextMessage() - exit with error" ), t );
             }
-            partial = false;
             error = true;
-            nextMsgStartPos = originalLimit;   // so no more bytes to parse.
         } finally {
             if ( !error && DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
                 LOG.log(DEBUG_LEVEL,  logState("hasNextMessage() - exit" + partialReason));
             }
         }
-        return !partial;
+        return hasMessage;
     }
 
     /**
@@ -259,30 +255,21 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
         // so that the bytes can be parsed directly. We also need to save the
         // original limit so that we can place the buffer in the correct state at the
         // end of parsing
-        message = null;
+        justParsedMessage  = false;
         error = false;
-        messageLength = 0;
-        savedBuffer = bb;
-        savedBuffer.flip();
-        partial = false;
-        originalLimit = savedBuffer.limit();
-        nextMsgStartPos = savedBuffer.position();
-
-        // future optimization possibility:
-        // if (savedBuffer.hasArray) {
-        //      data = savedBuffer.array();
-        //      position = savedBuffer.position() + savedBuffer.arrayOffset();
-        //        limit = savedBuffer.limit() + savedBuffer.arrayOffset();
-        //    } else ...maybe copy out the data, or use put/get when parsing...
+        bb.flip();
+        if (bb == lastBuffer) {
+            // If coming bb is already in the workBuffer
+            // recalc workBuffer capacity
+            workBuffer.recalcCapacity();
+            workBuffer.limit(workBuffer.capacity());
+        } else {
+            // If coming bb is not in the workBuffer - add it
+            lastBuffer = bb;
+            workBuffer.append(lastBuffer);
+        }
         if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
             LOG.log(DEBUG_LEVEL, this.logState("startBuffer"));
-        }
-
-        // constraint check remaining from initial revision of this ProtocolParser.
-        if( savedBuffer.capacity() < MessageImpl.MAX_TOTAL_MESSAGE_LENGTH ) {
-            LOG.log( Level.WARNING, "byte buffer capacity is too small: capacity = " + savedBuffer.capacity() +
-                                    " max total message length=" + MessageImpl.MAX_TOTAL_MESSAGE_LENGTH);
-           
         }
     }
 
@@ -303,42 +290,65 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
         if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)){
             LOG.log(DEBUG_LEVEL, logState("releaseBuffer - enter"));
         }
-        if(!isExpectingMoreData()) {
-            nextMsgStartPos = 0;
-            messageLength = 0;
-            originalLimit = 0;
-            error = false;
-            savedBuffer.clear();
 
+        final boolean hasRemaining = workBuffer.hasRemaining();
+        if(!hasRemaining || error) {
+            if (lastBuffer != null) {
+                lastBuffer.clear();
+            }
+            workBuffer.dispose();
+            messageLength = 0;
+            lastBuffer = null;
+            error = false;
         } else {
-            // partial message remains in buffer.  release buffer so rest of message can be written into buffer.
-            // crucial that savedBuffer position was set to correct position when partial true.  nextMsgStartPos
-            // was altered to trigger hasNoMoreBytesToParse().
-            savedBuffer.limit(originalLimit);
-            savedBuffer.compact();
-            nextMsgStartPos = 0;
-            originalLimit = 0;
+            compactBuffers();
         }
+
         if (DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL)) {
             LOG.log(DEBUG_LEVEL, logState("releaseBuffer - exit"));
         }
-        return partial;
+        return hasRemaining;
+    }
+
+    private void compactBuffers() {
+        workBuffer.disposeUnused();
+        if (workBuffer.remaining() < lastBuffer.remaining()) {
+            // We've parsed a message, and part of the part of the next message
+            // is ready in the workBuffer.
+            // But next message, which workerBuffer refers, starts in the
+            // midle of lastBuffer. So in order to prepare last buffer for the
+            // next read - we need to compact it
+
+            lastBuffer.position(lastBuffer.limit() - workBuffer.remaining());
+            lastBuffer.compact();
+            lastBuffer.flip();
+            workBuffer.dispose();
+            workBuffer.append(lastBuffer);
+        }
+
+        int lastBufferFreeSpace = lastBuffer.capacity() - lastBuffer.remaining();
+
+        if (lastBufferFreeSpace < MIN_BUFFER_FREE_SPACE) {
+            // if lastBuffer has less than min buffer size available for the
+            // next read operation - make Grizzly to forget about it and
+            // allocate a new buffer
+            ((WorkerThread) Thread.currentThread()).setByteBuffer(null);
+        } else {
+            // prepare lastBuffer for the next read operation
+            lastBuffer.position(lastBuffer.limit());
+            lastBuffer.limit(lastBuffer.capacity());
+        }
     }
 
     private String logState(String where) {
-        StringBuffer result = new StringBuffer(40);
+        StringBuilder result = new StringBuilder(40);
         result.append(where);
         result.append(" Thread:" + Thread.currentThread().getName());
-        if (savedBuffer != null) {
-            result.append(",position:" + savedBuffer.position());
-            result.append(",limit:" + savedBuffer.limit());
-            result.append(",capacity:" + savedBuffer.capacity());
-            result.append(",isDirect:" + savedBuffer.isDirect());
+        if (workBuffer != null) {
+            result.append(",workerBuffer:" + workBuffer);
+            result.append(",lastBuffer:" + lastBuffer);
         }
-        result.append(",nextMsgStartPos:" + nextMsgStartPos);
-        result.append(",originalLimit: " + originalLimit);
-        result.append(",hasMoreBytesToParse:" + (boolean)(nextMsgStartPos < originalLimit));
-        result.append(",partialMsg:" + partial);
+        result.append(",justParsedMessage:" + justParsedMessage);
         result.append(",error:" + error);
         result.append(",msg size:" + messageLength);
         result.append(",message: " + message);

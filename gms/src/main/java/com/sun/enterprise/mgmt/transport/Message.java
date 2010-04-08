@@ -128,7 +128,7 @@ public interface Message extends Serializable {
      * @return the message's length(body length) which this message contains
      * @throws IllegalArgumentException if the argument is not valid or an unexpected error occurs
      */
-    public int parseHeader( final ByteBuffer byteBuffer, final int offset ) throws IllegalArgumentException;
+    public int parseHeader( final Buffer buffer, final int offset ) throws IllegalArgumentException;
 
     /**
      * Parses the message's body from given byte array
@@ -150,7 +150,7 @@ public interface Message extends Serializable {
      * @throws IllegalArgumentException if the argument is not valid or an unexpected error occurs
      * @throws MessageIOException if an I/O error occurs
      */
-    public void parseMessage( final ByteBuffer byteBuffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException;
+    public void parseMessage( final Buffer buffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException;
 
     /**
      * Returns the message's version
