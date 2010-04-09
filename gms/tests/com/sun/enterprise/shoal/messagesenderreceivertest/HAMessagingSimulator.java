@@ -588,7 +588,6 @@ public class HAMessagingSimulator {
                     receiveStartTime = new GregorianCalendar();
                 }
                 try {
-                    notification.acquire();
                     MessageSignal messageSignal = (MessageSignal) notification;
 
                     final byte[] msg = messageSignal.getMessage();
@@ -655,16 +654,8 @@ public class HAMessagingSimulator {
                             completedCheck.notify();
                         }
                     }
-                } catch (SignalAcquireException e) {
-                    e.printStackTrace();
                 } catch (Throwable t) {
                     t.printStackTrace();
-                } finally {
-                    try {
-                        notification.release();
-                    } catch (Exception e) {
-                    }
-
                 }
             }
         }

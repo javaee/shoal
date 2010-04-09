@@ -69,9 +69,9 @@ lib_home=$SHOALWORKSPACE/lib
 \$ECHO "Arg8=\${8}"
 
 if [ "\${1}" == "server" ] ; then
-java -Dcom.sun.management.jmxremote -DLOG_LEVEL=\$3 -cp \${publish_home}/shoal-gms-test.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar  -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.messagesenderreceivertest.HAMessagingSimulator \$1 \$2
+java -Dcom.sun.management.jmxremote -DLOG_LEVEL=\$3 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar  -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.messagesenderreceivertest.HAMessagingSimulator \$1 \$2
 else
-java -Dcom.sun.management.jmxremote -DLOG_LEVEL=\$8 -cp \${publish_home}/shoal-gms-test.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=\$6 -DTCPENDPORT=\$7 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.messagesenderreceivertest.HAMessagingSimulator \$1 \$2 \$3 \$4 \$5
+java -Dcom.sun.management.jmxremote -DLOG_LEVEL=\$8 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=\$6 -DTCPENDPORT=\$7 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.messagesenderreceivertest.HAMessagingSimulator \$1 \$2 \$3 \$4 \$5
 fi
 
 ENDSCRIPT
@@ -193,7 +193,7 @@ numOfMsgsPerObject=1000
 startInstanceNum=101
 msgSize=1024
 startdtcpport=9130
-logLevel=INFO
+logLevel=FINER
 
 $ECHO "Number of Instances=${numInstances}"
 $ECHO "Number of Objects=${numOfObjects}"

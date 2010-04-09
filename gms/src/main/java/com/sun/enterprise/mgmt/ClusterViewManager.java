@@ -111,7 +111,7 @@ public class ClusterViewManager {
                         .toString());
                 manager.getNetworkManager().addRemotePeer(advertisement.getID());
                 if (LOG.isLoggable(Level.FINE)) {
-                    LOG.log(Level.FINE, "add " + advertisement.getName() + " newViewSize=" + view.size(), new Exception("stack trace"));
+                    LOG.log(Level.FINE, "add " + advertisement.getName() + " newViewSize=" + view.size());
                 }
                 view.put(advertisement.getID(), advertisement);
                 result = true;
@@ -163,7 +163,7 @@ public class ClusterViewManager {
                 viewLock.unlock();
             }
             if (notify) {
-                LOG.log(Level.FINE, "setMaster master:" + advertisement.getName(), new Exception("stack trace"));
+                LOG.log(Level.FINE, "setMaster master:" + advertisement.getName());
                 notifyListeners(new ClusterViewEvent(
                         ClusterViewEvents.MASTER_CHANGE_EVENT,
                         advertisement));
@@ -250,7 +250,7 @@ public class ClusterViewManager {
         }
         if (removed != null ) {
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "Removed " + removed.getName() + "   " + id, new Exception("stack trace"));
+                LOG.log(Level.FINE, "Removed " + removed.getName() + "   " + id);
             }
             manager.getNetworkManager().removePeerID(id);
         } else {
@@ -447,7 +447,7 @@ public class ClusterViewManager {
         boolean changed = false;
         lockLog( "addToView() - reset and add newView" );
         if (LOG.isLoggable(Level.FINE)) {
-            LOG.log(Level.FINE, "addToView newViewSize=" + newView.size(), new Exception("stack trace"));
+            LOG.log(Level.FINE, "addToView newViewSize=" + newView.size());
         }
         viewLock.lock();
         reset();

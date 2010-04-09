@@ -270,4 +270,7 @@ public class GMSContextImpl extends GMSContextBase {
     public boolean isWatchdog() {
         return this.getMemberType() == WATCHDOG;
     }
+    public int outstandingNotifications() {
+        return viewQueue.size();
+    }
 }

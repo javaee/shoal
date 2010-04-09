@@ -459,4 +459,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     private boolean isWatchdog() {
         return ctx.getMemberType() == MemberType.WATCHDOG;
     }
+
+    public int outstandingNotifications() {
+        return ((com.sun.enterprise.ee.cms.impl.base.GMSContextImpl)ctx).outstandingNotifications();
+    }
 }
