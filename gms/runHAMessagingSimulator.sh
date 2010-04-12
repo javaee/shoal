@@ -30,7 +30,7 @@
 
 SHOALWORKSPACE=`pwd`
 TMPDIR=$SHOALWORKSPACE/tmp
-LOGDIR=$SHOALWORKSPACE/runhamessagesimulator_logs
+LOGDIR=$SHOALWORKSPACE/LOGS/hamessagesimulator
 
 ECHO=`which echo`
 if [ ! -d ${TMPDIR} ] ; then
