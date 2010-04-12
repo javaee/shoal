@@ -75,10 +75,12 @@ public class ApplicationServer implements Runnable, CallBack {
     public GroupManagementService gms = null;
     private GMSClientService gcs1;
     private GMSClientService gcs2;
+    private GMSAdminAgent gaa;
     private String serverName;
     private String groupName;
     final private GroupManagementService.MemberType memberType;
     private volatile boolean stopped = false;
+    private long lifeTime=0;
 
     public ApplicationServer(final String serverName, final String groupName,
                              final GroupManagementService.MemberType memberType,
@@ -88,12 +90,15 @@ public class ApplicationServer implements Runnable, CallBack {
         this.memberType = memberType;
         GMSFactory.setGMSEnabledState(groupName, Boolean.TRUE);
         gms = (GroupManagementService) GMSFactory.startGMSModule(serverName, groupName, memberType, props);
+        this.lifeTime = Long.parseLong(System.getProperty("LIFEINMILLIS", "30000"));
         initClientServices(Boolean.valueOf(System.getProperty("MESSAGING_MODE", "true")));
     }
 
     private void initClientServices(boolean sendMessages) {
         gcs1 = new GMSClientService("EJBContainer", serverName, sendMessages);
         gcs2 = new GMSClientService("TransactionService", serverName, false);
+
+        gaa = new GMSAdminAgent(gms, groupName, serverName, lifeTime);
     }
 
     /*    private static void setupLogHandler() {
@@ -123,11 +128,10 @@ public class ApplicationServer implements Runnable, CallBack {
         } catch (InterruptedException ie) {}
         logger.log(Level.FINE,"reporting joined and ready state...");
         gms.reportJoinedAndReadyState(groupName);
-        try {
-            Thread.sleep(Long.parseLong(System.getProperty("LIFEINMILLIS", "15000")));
-        } catch (InterruptedException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
-        }
+        
+        logger.log(Level.INFO, "Waiting for timeout or group shutdown...");
+        gaa.waitTillNotified();
+
         stopClientServices();
         stopGMS();
         System.exit(0);
@@ -175,7 +179,7 @@ public class ApplicationServer implements Runnable, CallBack {
 
     public void stopGMS() {
         logger.log(Level.FINE, "ApplicationServer: Stopping GMS service");
-        gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
+        gms.shutdown(gaa.getShutdownType());
     }
 
     private void stopClientServices() {
@@ -388,6 +392,7 @@ public class ApplicationServer implements Runnable, CallBack {
         } catch (InterruptedException e) {
             logger.log(Level.SEVERE, e.getLocalizedMessage());
         }
+        logger.info("ApplicationServer finished");
     }
 
     boolean isWatchdog() {

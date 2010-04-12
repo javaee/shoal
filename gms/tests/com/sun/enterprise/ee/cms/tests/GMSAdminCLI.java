@@ -1,0 +1,668 @@
+/*
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ *
+ * Copyright 2010 Sun Microsystems, Inc. All rights reserved.
+ *
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License. You can obtain
+ * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
+ * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific
+ * language governing permissions and limitations under the License.
+ *
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at glassfish/bootstrap/legal/LICENSE.txt.
+ * Sun designates this particular file as subject to the "Classpath" exception
+ * as provided by Sun in the GPL Version 2 section of the License file that
+ * accompanied this code.  If applicable, add the following below the License
+ * Header, with the fields enclosed by brackets [] replaced by your own
+ * identifying information: "Portions Copyrighted [year]
+ * [name of copyright owner]"
+ *
+ * Contributor(s):
+ *
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ */
+package com.sun.enterprise.ee.cms.tests;
+
+import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.logging.NiceLogFormatter;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
+import java.util.Properties;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.ErrorManager;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class GMSAdminCLI implements CallBack {
+//public class ApplicationAdmin {
+
+    private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private static final Logger myLogger = java.util.logging.Logger.getLogger("GMSAdminCLI");
+    private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
+    private static final Level DEBUG_LEVEL = Level.FINE;
+    private static GroupManagementService gms = null;
+    static String memberID = GMSAdminConstants.APPLICATIONADMIN;
+    static String groupName = null;
+    static String memberName = null;
+    static MemberStates whichState = MemberStates.UNKNOWN;
+    static String command = null;
+    private static AtomicBoolean receivedReply = new AtomicBoolean(false);
+    private String replyMsg = null;
+    private String replyFrom = null;
+    private List<String> failToReceiveReplyFrom = null;
+    private boolean receivedStopClusterReply = false;
+    private AtomicBoolean receivedJoinOrJoinedAndReady = new AtomicBoolean(false);
+    private long currentTime = 0;
+
+    public static void main(String[] args) {
+
+        if (args[0].equalsIgnoreCase("-h")) {
+            usage();
+        }
+
+        if (args.length < 1 || args.length > 3) {
+            System.err.println("ERROR: Incorrect number of arguments");
+            usage();
+        }
+        command = args[0].toLowerCase();
+        groupName = args[1];
+
+        if ((!command.equals("list"))
+                && (!command.equals("stopc"))
+                && (!command.equals("stopm"))
+                && (!command.equals("killa"))
+                && (!command.equals("killm"))
+                && (!command.equals("state"))
+                && (!command.equals("waits"))) {
+            System.err.println("ERROR: Invalid command specified");
+            usage();
+        }
+
+        if (groupName == null || groupName.length() == 0) {
+            System.err.println("ERROR: missing groupName");
+
+        }
+
+        if (args.length == 3) {
+            if (command.equals("state")) {
+                try {
+                    whichState = MemberStates.valueOf(args[2]);
+                } catch (IllegalArgumentException iae) {
+                    System.err.println("ERROR: Invalid memberstate specified, it must be one of the following:");
+                    for (MemberStates c : MemberStates.values()) {
+                        System.err.print(c + ", ");
+                    }
+                    System.err.println("\n");
+                    usage();
+                }
+
+            } else {
+                memberName = args[2];
+                if (!memberName.contains(GMSAdminConstants.ADMINNAME) && !memberName.equals(GMSAdminConstants.INSTANCEPREFIX)) {
+                    System.err.println("ERROR: Invalid memberName specified, must be either server or contain instance");
+                    usage();
+                }
+            }
+        }
+
+        if (command.equals("stopm") || command.equals("killm")) {
+            if (memberName == null || memberName.length() == 0) {
+                System.err.println("ERROR: missing memberName");
+                usage();
+            }
+        }
+
+        if (command.equals("killa") && memberName.length() > 1) {
+            System.err.println("WARNING: Ignoring invalid argument [" + memberName + "]");
+            memberName = null;
+        }
+
+        try {
+            gmsLogger.setLevel(Level.parse(System.getProperty("LOG_LEVEL", GMSDEFAULTLOGLEVEL.toString())));
+        } catch (Exception e) {
+            gmsLogger.setLevel(GMSDEFAULTLOGLEVEL);
+        }
+        gmsLogger.info("GMS Logging using log level of:" + gmsLogger.getLevel());
+
+
+        // this configures the formatting of the gms log output
+        Utility.setLogger(gmsLogger);
+        Utility.setupLogHandler();
+
+        // this sets the grizzly log level
+        GrizzlyUtil.getLogger().setLevel(Level.WARNING);
+
+        // this configures the formatting of the myLogger output
+        GMSAdminCLI.setupLogHandler();
+
+        if (myLogger.isLoggable(DEBUG_LEVEL)) {
+            myLogger.log(DEBUG_LEVEL, "Command=" + command);
+            myLogger.log(DEBUG_LEVEL, "GroupName=" + groupName);
+            myLogger.log(DEBUG_LEVEL, "MemberName=" + memberName);
+        }
+        if (command.equals("state")) {
+            if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                myLogger.log(DEBUG_LEVEL, "State=" + whichState.toString());
+            }
+        }
+
+
+
+
+        GMSAdminCLI appAdmin = new GMSAdminCLI();
+        appAdmin.registerAndJoinCluster();
+        appAdmin.execute();
+        leaveGroupAndShutdown();
+
+
+    }
+
+    public static void usage() {
+        System.out.println(new StringBuffer().append("USAGE: java ").append(" -Dcom.sun.management.jmxremote").append(" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly").append(" -DTCPSTARTPORT=9060").append(" -DTCPENDPORT=9089").append(" -DMULTICASTADDRESS=229.9.1.1").append(" -DMULTICASTPORT=2299").append(" -cp shoal-gms-tests.jar:shoal-gms.jar:grizzly-framework.jar:grizzly-utils.jar").append(" com.sun.enterprise.ee.cms.tests.GMSAdminCLI").append(" ARGUMENTS").toString());
+        System.out.println("ARGUMENT usages:");
+        System.out.println("        list groupName [memberName(default is all)]  - list member(s)");
+        System.out.println("        stopc groupName - stops a cluster");
+        System.out.println("        stopm groupName memberName - stop a member");
+        System.out.println("        killm groupName memberName - kill a member");
+        System.out.println("        killa groupName - kills all members of the cluster ");
+        System.out.println("        waits groupName - wait for the cluster to complete startup");
+        System.out.println("        state groupName gmsmemberstate  - list member(s) in the specific state");
+        System.exit(0);
+    }
+
+    private void registerAndJoinCluster() {
+        if (myLogger.isLoggable(DEBUG_LEVEL)) {
+            myLogger.log(DEBUG_LEVEL, "Registering for group event notifications");
+        }
+        gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.SPECTATOR);
+        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.APPLICATIONADMIN);
+        gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
+        gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
+        try {
+            gms.join();
+        } catch (GMSException e) {
+            myLogger.severe("Exception occured :" + e);
+            System.exit(1);
+        }
+        // give time to join group and receive cluster status
+        sleep(5);
+    }
+
+    private void execute() {
+
+
+        if (command.equals("list")) {
+            if (memberName == null) {
+                // all members in the group
+                List<String> members = gms.getGroupHandle().getAllCurrentMembers();
+                StringBuffer sb = new StringBuffer();
+                for (String _memberName : members) {
+                    if (!_memberName.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                        sb.append(" ");
+                        sb.append(_memberName);
+                        sb.append(":");
+                        sb.append(gms.getGroupHandle().getMemberState(_memberName));
+                    }
+                }
+                if (sb.length() > 0) {
+                    String s = sb.toString();
+                    if (!s.equals(" ")) {
+
+                        s = s.replace(' ', ',');
+                        if (s.charAt(0) == ',') {
+                            s = s.substring(1);
+                        }
+                        displayMembers(s);
+                        displaySuccessful();
+                    } else {
+                        displayUnsuccessful();
+                    }
+                } else {
+                    displayUnsuccessful();
+                }
+            } else if (memberName.contains("instance")) {
+                // only a specfic instance
+                List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
+                StringBuffer sb = new StringBuffer(" ");
+                for (String _memberName : members) {
+                    if (_memberName.equals(memberName)) {
+                        sb.append(_memberName);
+                        sb.append(":");
+                        sb.append(gms.getGroupHandle().getMemberState(_memberName));
+                    }
+                }
+                if (sb.length() > 0) {
+                    String s = sb.toString();
+                    if (!s.equals(" ")) {
+                        s = s.replace(' ', ',');
+                        if (s.charAt(0) == ',') {
+                            s = s.substring(1);
+                        }
+                        displayMembers(s);
+                        displaySuccessful();
+                    } else {
+                        displayUnsuccessful();
+                    }
+                } else {
+                    displayUnsuccessful();
+                }
+            } else {
+                // only the das
+                List<String> members = gms.getGroupHandle().getAllCurrentMembers();
+                StringBuffer sb = new StringBuffer(" ");
+                for (String _memberName : members) {
+                    if (_memberName.equals(GMSAdminConstants.ADMINNAME)) {
+                        sb.append(_memberName);
+                        sb.append(":");
+                        sb.append(gms.getGroupHandle().getMemberState(_memberName));
+                    }
+                }
+                if (sb.length() > 0) {
+                    String s = sb.toString();
+                    if (!s.equals(" ")) {
+                        s = s.replace(' ', ',');
+                        if (s.charAt(0) == ',') {
+                            s = s.substring(1);
+                        }
+                        displayMembers(s);
+                        displaySuccessful();
+                    } else {
+                        displayUnsuccessful();
+                    }
+                } else {
+                    displayUnsuccessful();
+                }
+            }
+        } else if (command.equals("stopc")) {
+            replyMsg = GMSAdminConstants.STOPCLUSTERREPLY;
+            replyFrom = gms.getGroupHandle().getGroupLeader();
+            try {
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Broadcast stopcluster message to master");
+                }
+                // broadcast the shutdown cluster message, only the master should react to this
+                gms.getGroupHandle().sendMessage("adminagent", GMSAdminConstants.STOPCLUSTER.getBytes());
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Done broadcasting stopcluster message to master");
+                }
+            } catch (GMSException e) {
+                myLogger.warning("Exception occurred with broadcasting stopcluster message:" + e);
+                //retry the send up to 3 times
+                for (int i = 1; i <= 3; i++) {
+                    try {
+                        sleep(3);
+                       myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STOPCLUSTER + ")");
+                        gms.getGroupHandle().sendMessage("adminagent", GMSAdminConstants.STOPCLUSTER.getBytes());
+                        break; // if successful
+                    } catch (GMSException ge1) {
+                        myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.STOPCLUSTER + ") : " + ge1);
+                    }
+                }
+            }
+
+            synchronized (receivedReply) {
+                try {
+                    receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                } catch (InterruptedException ie) {
+                }
+            }
+            if (receivedReply.get() == false) {
+                myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                displayUnsuccessful();
+            } else {
+                displaySuccessful();
+
+            }
+
+        } else if (command.equals("stopm")) {
+            replyMsg = GMSAdminConstants.STOPINSTANCEREPLY;
+            replyFrom = memberName;
+
+            try {
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Sending stopinstance message to:" + memberName);
+                }
+                gms.getGroupHandle().sendMessage(memberName, "adminagent", GMSAdminConstants.STOPINSTANCE.getBytes());
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Done sending stopinstance message to:" + memberName);
+                }
+                synchronized (receivedReply) {
+                    try {
+                        receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                    } catch (InterruptedException ie) {
+                    }
+                    if (receivedReply.get() == false) {
+                       myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                        displayUnsuccessful();
+
+                    } else {
+                        displaySuccessful();
+                    }
+                }
+            } catch (GMSException e) {
+                myLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e.getLocalizedMessage(), e);
+                displayUnsuccessful();
+            }
+
+        } else if (command.equals("killm")) {
+            replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
+            replyFrom = memberName;
+
+            try {
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Sending killinstance message to:" + memberName);
+                }
+                gms.getGroupHandle().sendMessage(memberName, "adminagent", GMSAdminConstants.KILLINSTANCE.getBytes());
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Done sending killinstance message to:" + memberName);
+                }
+                synchronized (receivedReply) {
+                    try {
+                        receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                    } catch (InterruptedException ie) {
+                    }
+                    if (receivedReply.get() == false) {
+                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                        displayUnsuccessful();
+
+                    } else {
+                        displaySuccessful();
+                    }
+                }
+            } catch (GMSException e) {
+               myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                displayUnsuccessful();
+            }
+
+        } else if (command.equals("killa")) {
+
+            if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                myLogger.log(DEBUG_LEVEL, "Executing killa");
+            }
+            List<String> members = gms.getGroupHandle().getAllCurrentMembers();
+            List<String> failedToReceiveReplyFrom = gms.getGroupHandle().getAllCurrentMembers();
+            // remove are selves from the lists
+            members.remove(GMSAdminConstants.APPLICATIONADMIN);
+            failedToReceiveReplyFrom.remove(GMSAdminConstants.APPLICATIONADMIN);
+            if (members.size() > 0) {
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Current members are:" + members.toString());
+                }
+                String groupLeader = gms.getGroupHandle().getGroupLeader();
+
+                for (String _memberName : members) {
+                    if (!_memberName.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                        // do everyone else first then the groupLeader
+                        if (!_memberName.equals(groupLeader)) {
+                            replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
+                            replyFrom = _memberName;
+                            if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                                myLogger.log(DEBUG_LEVEL, "Sending killinstance message to:" + _memberName);
+                            }
+                            try {
+                                gms.getGroupHandle().sendMessage(_memberName, "adminagent", GMSAdminConstants.KILLINSTANCE.getBytes());
+                                synchronized (receivedReply) {
+                                    try {
+                                        receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                                    } catch (InterruptedException ie) {
+                                    }
+                                    if (receivedReply.get() != false) {
+                                        failedToReceiveReplyFrom.remove(replyFrom);
+                                    } else {
+                                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                                    }
+                                }
+                            } catch (GMSException e) {
+                               myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                            }
+                        }
+                    }
+                }
+                // now do group leader
+                replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
+                replyFrom = groupLeader;
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "Sending killinstance message to:" + groupLeader);
+                }
+                try {
+                    gms.getGroupHandle().sendMessage(groupLeader, "adminagent", GMSAdminConstants.KILLINSTANCE.getBytes());
+                    synchronized (receivedReply) {
+                        try {
+                            receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                        } catch (InterruptedException ie) {
+                        }
+                        if (receivedReply.get() != false) {
+                            failedToReceiveReplyFrom.remove(replyFrom);
+                        } else {
+                            myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                        }
+                    }
+                } catch (GMSException e) {
+                    myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                }
+
+                if (failedToReceiveReplyFrom.size() > 0) {
+                    myLogger.severe("The members that did not stop or did not reply in time are:" + failedToReceiveReplyFrom.toString());
+                    displayUnsuccessful();
+                } else {
+                    displaySuccessful();
+                }
+            } else {
+                if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                    myLogger.log(DEBUG_LEVEL, "No members exist to kill");
+                }
+                displaySuccessful();
+            }
+        } else if (command.equals("state")) {
+            // all members in the group
+            int count = 0;
+            List<String> members = gms.getGroupHandle().getAllCurrentMembers();
+            StringBuffer sb = new StringBuffer();
+            for (String _memberName : members) {
+                if (!_memberName.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                    if (gms.getGroupHandle().getMemberState(_memberName).equals(whichState)) {
+                        sb.append(" ");
+                        sb.append(_memberName);
+                        sb.append(":");
+                        sb.append(gms.getGroupHandle().getMemberState(_memberName));
+                        count++;
+                    }
+                }
+            }
+            if (sb.length() > 0) {
+                String s = sb.toString();
+                s = s.replace(' ', ',');
+                if (s.charAt(0) == ',') {
+                    s = s.substring(1);
+                }
+                displayMembers(s);
+                displayCount(count);
+                displaySuccessful();
+            } else {
+                displayCount(count);
+                displaySuccessful();
+            }
+        } else if (command.equals("waits")) {
+            // all members in the group
+            int count = 0;
+            List<String> members = gms.getGroupHandle().getAllCurrentMembers();
+            // if there is someone else in the cluster besides ourselves
+            if (members.size() > 1) {
+
+
+                replyMsg = GMSAdminConstants.ISSTARTUPCOMPLETEREPLY;
+                replyFrom = GMSAdminConstants.ADMINNAME;
+
+                try {
+                    if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                        myLogger.log(DEBUG_LEVEL, "Sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
+                    }
+                    gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, "adminagent", GMSAdminConstants.ISSTARTUPCOMPLETE.getBytes());
+                    if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                        myLogger.log(DEBUG_LEVEL, "Done sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
+                    }
+                    synchronized (receivedReply) {
+                        try {
+                            receivedReply.wait(0); // wait till we receive reply
+                        } catch (InterruptedException ie) {
+                        }
+
+                        displaySuccessful();
+
+                    }
+                } catch (GMSException e) {
+                    myLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e.getLocalizedMessage(), e);
+                    displayUnsuccessful();
+                }
+
+            } else {
+                myLogger.severe("No members exist in cluster:" + groupName );
+                displayUnsuccessful();
+            }
+        }
+    }
+
+    private void displayMembers(String s) {
+        myLogger.info("\nMembers are:[" + s + "]\n");
+    }
+
+    private void displayCount(int count) {
+        myLogger.info("\nNumber of members:" + count + "\n");
+    }
+
+    private void displaySuccessful() {
+        if (memberName == null) {
+            myLogger.info(command + " of group:" + groupName + " WAS SUCCESSFUL");
+        } else {
+            myLogger.info(command + " of group:" + groupName + " member:" + memberName + " WAS SUCCESSFUL");
+        }
+    }
+
+    private void displayUnsuccessful() {
+        if (memberName == null) {
+            myLogger.info(command + " of group:" + groupName + " WAS UNSUCCESSFUL");
+        } else {
+            myLogger.info(command + " of group:" + groupName + " member:" + memberName + " WAS UNSUCCESSFUL");
+        }
+    }
+
+    private GroupManagementService initializeGMS(String memberID, String groupName, GroupManagementService.MemberType mType) {
+        myLogger.fine("entering initializeGMS");
+        Properties configProps = new Properties();
+        String ma = System.getProperty("MULTICASTADDRESS", "229.9.1.1");
+        myLogger.config("MULTICASTADDRESS=" + ma);
+        configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(), ma);
+        String mp = System.getProperty("MULTICASTPORT", "2299");
+        myLogger.config("MULTICASTPORT=" + mp);
+        configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), mp);
+
+        myLogger.config("IS_BOOTSTRAPPING_NODE=false");
+        configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(), "false");
+
+        String mmh = System.getProperty("MAX_MISSED_HEARTBEATS", "3");
+        myLogger.config("MAX_MISSED_HEARTBEATS=" + mp);
+        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), mmh);
+
+        String hf = System.getProperty("HEARTBEAT_FREQUENCY", "2000");
+        myLogger.config("HEARTBEAT_FREQUENCY=" + hf);
+        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(), hf);
+
+        final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
+        myLogger.config("BIND_INTERFACE_ADDRESS=" + bindInterfaceAddress);
+        if (bindInterfaceAddress != null) {
+            configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
+        }
+
+        if (myLogger.isLoggable(DEBUG_LEVEL)) {
+            myLogger.log(DEBUG_LEVEL, "leaving initializeGMS");
+        }
+        return (GroupManagementService) GMSFactory.startGMSModule(
+                memberID,
+                groupName,
+                mType,
+                configProps);
+    }
+
+    private static void leaveGroupAndShutdown() {
+        if (myLogger.isLoggable(DEBUG_LEVEL)) {
+            myLogger.log(DEBUG_LEVEL, "Shutting down gms " + gms + "for member: " + memberID);
+        }
+        gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
+    }
+
+    public static void sleep(int i) {
+        try {
+            if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                myLogger.log(DEBUG_LEVEL, "start sleeping");
+            }
+            Thread.sleep(i * 1000);
+            if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                myLogger.log(DEBUG_LEVEL, "done sleeping");
+            }
+
+        } catch (InterruptedException ex) {
+        }
+    }
+
+    public synchronized void processNotification(final Signal notification) {
+        final String from = notification.getMemberToken();
+        if (myLogger.isLoggable(DEBUG_LEVEL)) {
+            myLogger.log(DEBUG_LEVEL, "Received a NOTIFICATION from member " + from);
+        }
+        if (notification instanceof MessageSignal) {
+
+            MessageSignal messageSignal = (MessageSignal) notification;
+            String msgString = new String(messageSignal.getMessage());
+            if (myLogger.isLoggable(DEBUG_LEVEL)) {
+                myLogger.log(DEBUG_LEVEL, "Message received was:" + msgString);
+            }
+            if (from.equals(replyFrom) && msgString.equals(replyMsg)) {
+                receivedReply.set(true);
+                synchronized (receivedReply) {
+                    receivedReply.notifyAll();
+                }
+            }
+        }
+
+    }
+
+    public static void setupLogHandler() {
+        final ConsoleHandler consoleHandler = new ConsoleHandler();
+        try {
+            consoleHandler.setLevel(Level.ALL);
+            consoleHandler.setFormatter(new NiceLogFormatter());
+        } catch (SecurityException e) {
+            new ErrorManager().error(
+                    "Exception caught in setting up ConsoleHandler ",
+                    e, ErrorManager.GENERIC_FAILURE);
+        }
+        myLogger.addHandler(consoleHandler);
+        myLogger.setUseParentHandlers(false);
+        //final String level = System.getProperty("LOG_LEVEL", "INFO");
+        //myLogger.setLevel(Level.parse(level));
+        myLogger.setLevel(Level.parse("INFO"));
+
+    }
+}
+
+
+
