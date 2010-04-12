@@ -168,7 +168,7 @@ chmod 755 /tmp/script1
 chmod 755 /tmp/script2
 chmod 755 /tmp/script3
 
-logdir=`pwd`/runsenderreceivertest_logs
+logdir=`pwd`/LOGS/senderreceivertest
 if [ ! -d ${logdir} ] ; then
     mkdir ${logdir}
 else
