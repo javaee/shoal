@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/sh -x
 
 #
 # Copyright 2004-2005 Sun Microsystems, Inc.  All rights reserved.
@@ -26,34 +26,124 @@
  #
  # Copyright 2006 Sun Microsystems, Inc. All rights reserved.
  #
-publish_home=./dist
-lib_home=./lib
+
+PUBLISH_HOME=./dist
+LIB_HOME=./lib
 
 usage () {
     cat << USAGE 
 Usage: $0 <parameters...> 
 The required parameters are :
- <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxtanew,jxta} <tcpstartport> <tcpendport>
-Life in milliseconds should be at least 60000 to demo failure fencing.
-<tcpstartport> and <tcpendport> are optional.  Grizzly and jxta transports have different defaults.
+ <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxtanew,jxta} <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport>
+
+Life in milliseconds should be either 0 or at least 60000 to demo failure fencing.
+
+<-ts tcpstartport>, <-te tcpendport>, <-ma multicastaddress>, <-mp multicastport> are optional parameters.
+Grizzly and jxta transports have different defaults.
 USAGE
    exit 0
 }
 
-if [ $# -lt 3 ]; then
+MAINCLASS=com.sun.enterprise.ee.cms.tests.ApplicationServer
+
+GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+JXTA_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar:${LIB_HOME}/jxta.jar
+DEBUGARGS="-Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005 -DjxtaMulticastPoolsize=25"
+NONDEBUGARGS="-Dcom.sun.management.jmxremote"
+
+DEBUG=false
+TCPSTARTPORT=""
+TCPENDPORT=""
+MULTICASTADDRESS="-DMULTICASTADDRESS=229.9.1.2"
+MULTICASTPORT="-DMULTICASTPORT=2299"
+TRANSPORT=grizzly
+
+JARS=${GRIZZLY_JARS}
+DONEREQUIRED=false
+while [ $# -ne 0 ]
+do
+     case ${1} in
+       -h)
+       usage
+       exit 1
+       ;;
+       -debug)
+       shift
+       DEBUG=true
+       ;;
+       -ts)
+       shift
+       TCPSTARTPORT=${1}
+       shift
+       ;;
+       -te)
+       shift
+       TCPENDPORT=${1}
+       shift
+       ;;
+       -ma)
+       shift
+       MULTICASTADDRESS=${1}
+       shift
+       ;;
+       -mp)
+       shift
+       MULTICASTPORT=${1}
+       shift
+       ;;
+       *)
+       if [ ${DONEREQUIRED} = false ]; then
+           INSTANCEID=$1
+           shift
+           CLUSTERNAME=$1
+           shift
+           MEMBERTYPE=$1
+           shift
+           LIFEINMILLIS=$1
+           shift
+           LOGLEVEL=$1
+           shift
+           TRANSPORT=$1
+           shift
+           DONEREQUIRED=true
+       else
+          echo "ERRROR: ignoring invalid argument $1"
+          shift
+       fi
+       ;;
+     esac
+done
+
+if [ -z ${INSTANCEID} -o -z ${CLUSTERNAME} -o -z ${MEMBERTYPE} -o -z ${LIFEINMILLIS} -o -z ${LOGLEVEL} -o -z ${TRANSPORT} ]; then
+    echo "ERROR: Missing a required argument"
     usage;
 fi
 
-if [ $# -gt 5 ]; then 
-    if [ $5 = "-debug" ]; then
-	java -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005 -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=INFO -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DjxtaMulticastPoolsize=25 com.sun.enterprise.ee.cms.tests.ApplicationServer;
-    elif [ $6 = "grizzly" ]; then
-        echo Running using Shoal with transport grizzly
-#  If you run shoal over grizzly on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
-       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=$7 -DTCPENDPORT=$8 -DMULTICASTADDRESS="229.9.1.2" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.ee.cms.tests.ApplicationServer;
-  else
-       echo Running using Shoal with transport $6
-       java -Dcom.sun.management.jmxremote -DMEMBERTYPE=$3 -DINSTANCEID=$1 -DCLUSTERNAME=$2 -DMESSAGING_MODE=true -DLIFEINMILLIS=$4 -DLOG_LEVEL=$5 -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar:${lib_home}/jxta.jar -DTCPSTARTPORT=9090 -DTCPENDPORT=9120 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=$6 -DMULTICASTADDRESS="229.9.1.2"  com.sun.enterprise.ee.cms.tests.ApplicationServer;
-    fi 
+if [ "${MEMBERTYPE}" != "CORE" -a "${MEMBERTYPE}" != "SPECTATOR" -a "${MEMBERTYPE}" != "WATCHDOG" ]; then
+    echo "ERROR: Invalid membertype specified"
+    usage;
 fi
+if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" -a "${TRANSPORT}" != "jxtanew" ]; then
+    echo "ERROR: Invalid transport specified"
+    usage;
+fi
+
+if [ $TRANSPORT != "grizzly" ]; then
+    JARS=${JXTA_JARS}
+fi
+
+if [ ${DEBUG} = false ]; then
+    OTHERARGS=${NONDEBUGARGS}
+else
+    OTHERARGS=${DEBUGARGS}
+fi
+
+echo Running using Shoal with transport ${TRANSPORT}
+#  If you run shoal over grizzly on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
+echo "=========================="
+echo "Excuting:"
+echo java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -cp ${JARS} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT}   -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
+echo "=========================="
+java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -cp ${JARS} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT}   -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
+
 

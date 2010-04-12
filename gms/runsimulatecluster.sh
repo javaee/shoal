@@ -1,18 +1,54 @@
-#!/bin/csh
-set TRANSPORT=$1
-if (${TRANSPORT} == "") set TRANSPORT="grizzly"
+#!/bin/sh +x
+
+TRANSPORT=grizzly
+if [ ! -z "${1}" ]; then
+    TRANSPORT=${1}
+fi
 echo Running with transport ${TRANSPORT}
-./rungmsdemo.sh server cluster SPECTATOR 180000 INFO ${TRANSPORT} >&! server.log &
+
+
+LOGS_DIR=LOGS/simulateCluster
+
+mkdir -p ${LOGS_DIR}
+echo "Removing old logs"
+rm -f ${LOGS_DIR}/server.log ${LOGS_DIR}/instance??.log
+
+GROUPNAME=cluster
+
+echo "Starting admin"
+./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 INFO ${TRANSPORT} -ts 9130 -te 9160 > ${LOGS_DIR}/server.log 2>&1 &
 sleep 5
-./rungmsdemo.sh instance01 cluster CORE 120000 INFO ${TRANSPORT} 9130 9160 >&! instance01.log &
-./rungmsdemo.sh instance02 cluster CORE 120000 INFO ${TRANSPORT} 9160 9190 >&! instance02.log &
-./rungmsdemo.sh instance03 cluster CORE 120000 CONFIG ${TRANSPORT} 9230 9260 >&! instance03.log &
-./rungmsdemo.sh instance04 cluster CORE 120000 CONFIG ${TRANSPORT} 9261 9290 >&! instance04.log &
-./rungmsdemo.sh instance05 cluster CORE 120000 CONFIG ${TRANSPORT} 9330 9360 >&! instance05.log &
-./rungmsdemo.sh instance06 cluster CORE 120000 CONFIG ${TRANSPORT} 9361 9390 >&! instance06.log &
-./rungmsdemo.sh instance07 cluster CORE 120000 CONFIG ${TRANSPORT} 9430 9460 >&! instance07.log &
-./rungmsdemo.sh instance08 cluster CORE 120000 CONFIG ${TRANSPORT} 9461 9490 >&! instance08.log &
-./rungmsdemo.sh instance09 cluster CORE 120000 CONFIG ${TRANSPORT} 9530 9560 >&! instance09.log &
-./rungmsdemo.sh instance10 cluster CORE 120000 CONFIG ${TRANSPORT} 9561 9590 >&! instance10.log &
+echo "Starting CORE members"
+./rungmsdemo.sh instance01 ${GROUPNAME} CORE 0 INFO ${TRANSPORT} -ts 9161 -te 9190 > ${LOGS_DIR}/instance01.log 2>&1 &
+./rungmsdemo.sh instance02 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9230 -te 9260 > ${LOGS_DIR}/instance02.log 2>&1 &
+./rungmsdemo.sh instance03 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9261 -te 9290 > ${LOGS_DIR}/instance03.log 2>&1 &
+./rungmsdemo.sh instance04 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9330 -te 9360 > ${LOGS_DIR}/instance04.log 2>&1 &
+./rungmsdemo.sh instance05 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9361 -te 9390 > ${LOGS_DIR}/instance05.log 2>&1 &
+./rungmsdemo.sh instance06 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9430 -te 9460 > ${LOGS_DIR}/instance06.log 2>&1 &
+./rungmsdemo.sh instance07 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9461 -te 9490 > ${LOGS_DIR}/instance07.log 2>&1 &
+./rungmsdemo.sh instance08 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9530 -te 9560 > ${LOGS_DIR}/instance08.log 2>&1 &
+./rungmsdemo.sh instance09 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9561 -te 9590 > ${LOGS_DIR}/instance09.log 2>&1 &
+./rungmsdemo.sh instance10 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9631 -te 9690 > ${LOGS_DIR}/instance10.log 2>&1 &
+
+echo "Waiting for group [${GROUPNAME}] to complete startup"
+./gms_admin.sh waits ${GROUPNAME}
+
+echo "Group startup has completed, shutting down group [${GROUPNAME}]"
+./gms_admin.sh stopc ${GROUPNAME}
+
+
+# The old way of running this test scenario
+#./rungmsdemo.sh server cluster SPECTATOR 180000 INFO ${TRANSPORT} > ${LOGS_DIR}/server.log 2>&1 &
+#sleep 5
+#./rungmsdemo.sh instance01 cluster CORE 120000 INFO ${TRANSPORT} 9130 9160 > ${LOGS_DIR}/instance01.log 2>&1 &
+#./rungmsdemo.sh instance02 cluster CORE 120000 INFO ${TRANSPORT} 9160 9190 > ${LOGS_DIR}/instance02.log 2>&1 &
+#./rungmsdemo.sh instance03 cluster CORE 120000 CONFIG ${TRANSPORT} 9230 9260 > ${LOGS_DIR}/instance03.log 2>&1 &
+#./rungmsdemo.sh instance04 cluster CORE 120000 CONFIG ${TRANSPORT} 9261 9290 > ${LOGS_DIR}/instance04.log 2>&1 &
+#./rungmsdemo.sh instance05 cluster CORE 120000 CONFIG ${TRANSPORT} 9330 9360 > ${LOGS_DIR}/instance05.log 2>&1 &
+#./rungmsdemo.sh instance06 cluster CORE 120000 CONFIG ${TRANSPORT} 9361 9390 > ${LOGS_DIR}/instance06.log 2>&1 &
+#./rungmsdemo.sh instance07 cluster CORE 120000 CONFIG ${TRANSPORT} 9430 9460 > ${LOGS_DIR}/instance07.log 2>&1 &
+#./rungmsdemo.sh instance08 cluster CORE 120000 CONFIG ${TRANSPORT} 9461 9490 > ${LOGS_DIR}/instance08.log 2>&1 &
+#./rungmsdemo.sh instance09 cluster CORE 120000 CONFIG ${TRANSPORT} 9530 9560 > ${LOGS_DIR}/instance09.log 2>&1 &
+#./rungmsdemo.sh instance10 cluster CORE 120000 CONFIG ${TRANSPORT} 9561 9590 > ${LOGS_DIR}/instance10.log 2>&1 &
 
 
