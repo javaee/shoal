@@ -39,13 +39,11 @@ COMMUNICATION_PROVIDER=grizzly
 
 MAINCLASS=com.sun.enterprise.ee.cms.tests.GMSAdminCLI
 
-TMPDIR=$SHOALWORKSPACE/tmp
-
-
-if [ ! -d ${TMPDIR} ] ; then
-    mkdir ${TMPDIR}
-else
-    rm -rf ${TMPDIR}/script*
+if [ -e ./currentMulticastAddress.txt ]; then
+    MULTICASTADDRESS=`cat currentMulticastAddress.txt`
+    if [ -z "${MULTICASTADDRESS}" ]; then
+        MULTICASTADDRESS=229.9.1.2
+    fi
 fi
 
 usage() {
