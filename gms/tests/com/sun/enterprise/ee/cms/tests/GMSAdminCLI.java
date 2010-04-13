@@ -131,7 +131,7 @@ public class GMSAdminCLI implements CallBack {
             }
         }
 
-        if (command.equals("killa") && memberName.length() > 1) {
+        if (command.equals("killm") && memberName.length() > 1) {
             System.err.println("WARNING: Ignoring invalid argument [" + memberName + "]");
             memberName = null;
         }
