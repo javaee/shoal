@@ -30,11 +30,10 @@ TCPSTARTPORT=9060
 TCPENDPORT=9089
 MULTICASTADDRESS=229.9.1.2
 MULTICASTPORT=2299
-LOGLEVEL=WARNING
+LOG_LEVEL="-DLOG_LEVEL=WARNING"
 
-SHOALWORKSPACE=`pwd`
-PUBLISH_HOME=$SHOALWORKSPACE/dist
-LIB_HOME=$SHOALWORKSPACE/lib
+PUBLISH_HOME=./dist
+LIB_HOME=./lib
 JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
 COMMUNICATION_PROVIDER=grizzly
 
@@ -43,27 +42,13 @@ MAINCLASS=com.sun.enterprise.ee.cms.tests.GMSAdminCLI
 TMPDIR=$SHOALWORKSPACE/tmp
 
 
-
 if [ ! -d ${TMPDIR} ] ; then
     mkdir ${TMPDIR}
 else
     rm -rf ${TMPDIR}/script*
 fi
 
-#########################################
-# Create the scripts used to run the test
-#########################################
-
-#===============================================
-# Create the script that actually runs the test
-#===============================================
-cat << ENDSCRIPT > ${TMPDIR}/applicationadmin.sh
-#!/bin/sh +x
-
-ECHO=\`which echo\`
-
-
-usage () {
+usage() {
     echo "Usage:"
     echo "    list groupName [memberName(all is default)] - list member(s)"
     echo "    stopc groupName - stops a cluster"
@@ -79,97 +64,69 @@ usage () {
     exit 0
 }
 
-
-_TCPSTARTPORT=${TCPSTARTPORT}
-_TCPENDPORT=${TCPENDPORT}
-_MULTICASTADDRESS=${MULTICASTADDRESS}
-_MULTICASTPORT=${MULTICASTPORT}
-_LOGLEVEL=${LOGLEVEL}
-
-DONEREQUIRED=false
-while [ \$# -ne 0 ]
-do
-     case \$1 in
-       -h)
-       usage
-       ;;
-       -ts)
-       shift
-       _TCPSTARTPORT=\${1}
-       shift
-       ;;
-       -te)
-       shift
-       _TCPENDPORT=\${1}
-       shift
-       ;;
-       -ma)
-       shift
-       _MULTICASTADDRESS=\${1}
-       shift
-       ;;
-       -mp)
-       shift
-       _MULTICASTPORT=\${1}
-       shift
-       ;;
-       -l)
-       shift
-       _LOGLEVEL=\${1}
-       shift
-       ;;
-       *)
-       if [ \$DONEREQUIRED = false ]; then
-           COMMAND=\${1}
-           shift
-           GROUPNAME=\${1}
-           shift           
-           DONEREQUIRED=true
-       else
-           MEMBERNAME=\${1}
-           shift
-       fi
-       ;;
-     esac
-done
-
-LOG_LEVEL="-DLOG_LEVEL=\${_LOGLEVEL}"
-
-java -Dcom.sun.management.jmxremote  -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=\${_TCPSTARTPORT} -DTCPENDPORT=\${_TCPENDPORT} -DMULTICASTADDRESS=\${_MULTICASTADDRESS} -DMULTICASTPORT=\${_MULTICASTPORT} -cp ${JARS} \${LOG_LEVEL} $MAINCLASS \${COMMAND} \${GROUPNAME} \${MEMBERNAME}
-
-ENDSCRIPT
-#=====================================================================
-
-############################################
-# This is where test execution really begins
-############################################
-
-chmod 755 ${TMPDIR}/applicationadmin.sh
-
-
-usage () {
-
-${TMPDIR}/applicationadmin.sh -h
-exit 1
-}
-
-if [ "$1" = "-h" ]; then
-    usage
-fi
-
-if [ "$1" = "-programhelp" ]; then
-    java -cp ${JARS} $MAINCLASS -h
+programhelp() {
+    java -cp ${JARS} ${MAINCLASS} -h
     exit 0
-fi
+}
 
 if [ $# -lt 2 ]; then
      echo "Error: Command and GroupName must be specified"
      usage
 fi
 
-${TMPDIR}/applicationadmin.sh  $@  
+DONEREQUIRED=false
+while [ $# -ne 0 ]
+do
+     case $1 in
+       -h)
+       usage
+       ;;
+       -ph)
+       programhelp
+       ;;
+       -ts)
+       shift
+       TCPSTARTPORT="${1}"
+       shift
+       ;;
+       -te)
+       shift
+       TCPENDPORT="${1}"
+       shift
+       ;;
+       -ma)
+       shift
+       MULTICASTADDRESS="${1}"
+       shift
+       ;;
+       -mp)
+       shift
+       MULTICASTPORT="${1}"
+       shift
+       ;;
+       -l)
+       shift
+       LOG_LEVEL="-DLOG_LEVEL=${1}"
+
+       shift
+       ;;
+       *)
+       if [ $DONEREQUIRED = false ]; then
+           COMMAND="${1}"
+           shift
+           GROUPNAME="${1}"
+           shift
+           DONEREQUIRED=true
+       else
+           MEMBERNAME="${1}"
+           shift
+       fi
+       ;;
+     esac
+done
 
 
+java -Dcom.sun.management.jmxremote  -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -cp ${JARS} ${LOG_LEVEL} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
 
 
 
