@@ -1,5 +1,5 @@
-#! /usr/bin/zsh
-
+#! /bin/sh
+# usage:   shell <membername> <groupname>
 CACHE_HOME=.
 
 CP=${CACHE_HOME}/target/classes:${CACHE_HOME}/../gms/target/shoal-1.5-SNAPSHOT.jar:${CACHE_HOME}/../gms/lib/grizzly-framework.jar:${CACHE_HOME}/../gms/lib/grizzly-utils.jar
