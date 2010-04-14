@@ -1,5 +1,6 @@
 #!/bin/csh
 
+set APPLICATIONADMIN=applicationadmin
 set LOGS_DIR=LOGS/simulateCluster
 set SERVERLOG=${LOGS_DIR}/server.log
 set ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "[server.log|instance*.log]"`
@@ -13,7 +14,7 @@ echo -n "Check for JOINED_AND_READY_EVENT in DAS log. Expect 11.  Found:"
 grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | wc -l
 echo
 echo -n "PlannedShutdownEvent in DAS log. Expect 10. Found:" 
-grep "Received PlannedShutdownEvent"  ${SERVERLOG} | wc -l
+grep "Received PlannedShutdownEvent"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l
 echo
 echo -n "Check for GroupLeadershipNotifications in DAS log. Expect 2 from server. Found:"
 grep "adding GroupLeadershipNotification"  ${SERVERLOG} | wc -l
