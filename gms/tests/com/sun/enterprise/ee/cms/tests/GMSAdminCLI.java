@@ -93,7 +93,7 @@ public class GMSAdminCLI implements CallBack {
                 && (!command.equals("killm"))
                 && (!command.equals("state"))
                 && (!command.equals("waits"))) {
-            System.err.println("ERROR: Invalid command specified");
+            System.err.println("ERROR: Invalid command specified ["+command+"]");
             usage();
         }
 
@@ -118,7 +118,7 @@ public class GMSAdminCLI implements CallBack {
             } else {
                 memberName = args[2];
                 if (!memberName.contains(GMSAdminConstants.ADMINNAME) && !memberName.equals(GMSAdminConstants.INSTANCEPREFIX)) {
-                    System.err.println("ERROR: Invalid memberName specified, must be either server or contain instance");
+                    System.err.println("ERROR: Invalid memberName specified ["+memberName+"], must be either server or contain instance");
                     usage();
                 }
             }
@@ -130,8 +130,7 @@ public class GMSAdminCLI implements CallBack {
                 usage();
             }
         }
-
-        if (command.equals("killm") && memberName.length() > 1) {
+        if (command.equals("killa") && memberName != null && memberName.length() > 1) {
             System.err.println("WARNING: Ignoring invalid argument [" + memberName + "]");
             memberName = null;
         }
