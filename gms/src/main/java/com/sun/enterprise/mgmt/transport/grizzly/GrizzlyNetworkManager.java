@@ -49,8 +49,10 @@ import com.sun.enterprise.mgmt.transport.NetworkUtility;
 import com.sun.enterprise.mgmt.transport.VirtualMulticastSender;
 
 import com.sun.grizzly.*;
-import com.sun.grizzly.util.DefaultThreadPool;
+import com.sun.grizzly.util.ThreadPoolConfig;
+import com.sun.grizzly.util.GrizzlyExecutorService;
 import com.sun.grizzly.util.SelectorFactory;
+import com.sun.grizzly.util.DefaultThreadPool;
 import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -109,7 +111,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private int multicastPacketSize;
     private int writeSelectorPoolSize;
     private String virtualUriList;
-    private DefaultThreadPool threadPool;
+    private GrizzlyExecutorService execService;
     private ExecutorService multicastSenderThreadPool = null;
     private TCPSelectorHandler tcpSelectorHandler = null;
 
@@ -172,7 +174,23 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( host != null )
             localInetAddress = InetAddress.getByName( host );
 
-        threadPool = new DefaultThreadPool( "GMS-GrizzlyNetMgr-Group-" + groupName,
+       ThreadPoolConfig threadPoolConfig = new ThreadPoolConfig("GMS-GrizzlyNetMgr-Group-" + groupName,
+                corePoolSize,
+                maxPoolSize,
+                new ArrayBlockingQueue<Runnable>( poolQueueSize ),
+                poolQueueSize,
+                keepAliveTime,
+                TimeUnit.MILLISECONDS,
+                null,
+                java.lang.Thread.NORM_PRIORITY, //priority = 5
+                null);
+
+        execService = GrizzlyExecutorService.createInstance(threadPoolConfig);
+        controller.setThreadPool( execService );
+
+        //commented out the following when upgrading from grizzly 1.9.18 to 1.9.19-beta1
+        //TODO : remove when all tests pass
+       /* threadPool = new DefaultThreadPool( "GMS-GrizzlyNetMgr-Group-" + groupName,
                                                               corePoolSize,
                                                               maxPoolSize,
                                                               keepAliveTime,
@@ -180,7 +198,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                                                               null,
                                                               new ArrayBlockingQueue<Runnable>( poolQueueSize ) );
         threadPool.setInitialByteBufferSize( MessageImpl.MAX_TOTAL_MESSAGE_LENGTH );
-        controller.setThreadPool( threadPool );
+        controller.setThreadPool( threadPool );  */
 
         ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallel );
         controller.setConnectorHandlerPool( cacheableHandlerPool );
@@ -367,7 +385,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         selectionKeyMap.clear();
         pingMessageLockMap.clear();
         controller.stop();
-        threadPool.stop();
+        execService.shutdown();
     }
 
     protected void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {

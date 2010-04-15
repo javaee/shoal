@@ -133,9 +133,9 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
                 datagramSocket = datagramChannel.socket();
                 datagramSocket.setReuseAddress( reuseAddress );
                 if( inet == null )
-                    datagramSocket.bind( new InetSocketAddress( port ) );
+                    datagramSocket.bind( new InetSocketAddress( getPort() ) );
                 else
-                    datagramSocket.bind( new InetSocketAddress( inet, port ) );
+                    datagramSocket.bind( new InetSocketAddress( inet, getPort() ) );
 
                 datagramChannel.configureBlocking( false );
                 datagramChannel.register( selector, SelectionKey.OP_READ );
@@ -155,7 +155,7 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
             }
             ctx.getController().notifyReady();
         } catch( SocketException ex ) {
-            throw new BindException( ex.getMessage() + ": " + port );
+            throw new BindException( ex.getMessage() + ": " + getPort() );
         }
     }
 

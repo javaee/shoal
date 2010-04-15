@@ -20,13 +20,13 @@
         </dependency>
         <dependency>
             <groupId>com.sun.grizzly</groupId>
-            <version>1.9.18-k</version>
+            <version>1.9.19-beta1</version>
             <artifactId>grizzly-utils</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.sun.grizzly</groupId>
-            <version>1.9.18-k</version>
+            <version>1.9.19-beta1</version>
             <artifactId>grizzly-framework</artifactId>
             <optional>true</optional>
         </dependency>
