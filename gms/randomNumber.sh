@@ -28,7 +28,8 @@
 
 seed=`( echo $$ ; date ) | cksum | cut -f1 -d" " `
 #echo "seed=${seed}"
-NUM=`expr $seed / 10000000`
+NUM=`expr $seed % 255`
+# something broken in logic below.  just ensured seed was less than 255 by mod by 255.
 while [ ${NUM} -lt 1 -a ${NUM} -gt 254 ];
 do
    seed=`( echo $$ ; time ps ; w ; date ) | cksum | cut -f1 -d" " `
