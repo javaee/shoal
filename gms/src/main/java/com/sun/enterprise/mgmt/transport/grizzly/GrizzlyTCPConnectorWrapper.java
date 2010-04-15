@@ -100,7 +100,27 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
         ConnectorHandler connectorHandler = null;
         try {
             connectorHandler = controller.acquireConnectorHandler( Controller.Protocol.TCP );
-            connectorHandler.connect( remoteAddress, localAddress );
+            try {
+                connectorHandler.connect( remoteAddress, localAddress );
+            } catch (IOException io) {
+                //LOG.log(Level.WARNING, "retry once with another connectorHandler: IOException connecting to connectorHandler:" + connectorHandler.toString() + " remoteAddr:" + remoteAddress +
+                //        " message:" + message, io);
+                if( connectorHandler != null ) {
+                    try {
+                        connectorHandler.close();
+                    } catch( IOException e ) {
+                        LOG.log(Level.FINE, "send: exception closing connectorHandler", e);
+                    } finally {
+                        controller.releaseConnectorHandler( connectorHandler );
+                        connectorHandler = null;
+                    }
+                }
+                connectorHandler = controller.acquireConnectorHandler(Controller.Protocol.TCP);
+                connectorHandler.connect( remoteAddress, localAddress );
+                if (LOG.isLoggable(Level.FINE)){
+                    LOG.log(Level.FINE, "reconnect succeeded to remote address:" + remoteAddress + " for message " + message.toString());
+                }
+            }
             OutputWriter.flushChannel( connectorHandler.getUnderlyingChannel(), message.getPlainByteBuffer(), writeTimeout );
             //connectorHandler.writeToAsyncQueue( message.getPlainByteBuffer());
         } finally {

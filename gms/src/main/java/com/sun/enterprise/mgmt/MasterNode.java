@@ -333,7 +333,7 @@ class MasterNode implements MessageListener, Runnable {
     boolean isMaster() {
         if (masterLogger.isLoggable(Level.FINER)) {
             masterLogger.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
-        } else {
+        } else if (LOG.isLoggable(Level.FINER)) {
             LOG.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
         }
         return clusterViewManager.isMaster();

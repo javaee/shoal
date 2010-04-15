@@ -457,19 +457,15 @@ public class ClusterViewManager {
                           manager.getSystemAdvertisement() );
             }
             for( SystemAdvertisement elem : newView ) {
-                LOG.log( Level.FINER,
-                         new StringBuffer().append( "Adding " )
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.log( Level.FINER,
+                            new StringBuffer().append( "Adding " )
                                  .append( elem.getID() ).append( " to view" )
                                  .toString() );
+                }
                 // verify that each member in new view was in old view; otherwise, set change to TRUE.
                 if( !changed && !view.containsKey( elem.getID() ) ) {
                     changed = true;
-                    boolean added = manager.getHealthMonitor().addHealthEntryIfMissing(advertisement);
-                    if (added) {
-                        if (LOG.isLoggable(Level.FINE)) {
-                            LOG.log(Level.FINE, "ensured ClusterViewManager and HealthMonitor both aware of member: " + advertisement.getName());
-                        }
-                    }
                 }
                 // Always add the wire version of the adv
                 manager.getNetworkManager().addRemotePeer(elem.getID());

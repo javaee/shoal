@@ -653,7 +653,9 @@ public class HealthMonitor implements MessageListener, Runnable {
     }
 
     private void cleanAllCaches(HealthMessage.Entry entry) {
-        LOG.fine("HealthMonitor.cleanAllCaches : removing pipes and route from cache..." + entry.id);
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("HealthMonitor.cleanAllCaches : removing pipes and route from cache..." + entry.id);
+        }
         manager.getNetworkManager().removePeerID( entry.id );
         synchronized(joinedAndReadyMembers) {
             joinedAndReadyMembers.remove(entry.adv.getName());

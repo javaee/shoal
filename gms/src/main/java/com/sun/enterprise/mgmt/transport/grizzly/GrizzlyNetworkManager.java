@@ -111,6 +111,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private String virtualUriList;
     private DefaultThreadPool threadPool;
     private ExecutorService multicastSenderThreadPool = null;
+    private TCPSelectorHandler tcpSelectorHandler = null;
 
     private final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
@@ -184,7 +185,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallel );
         controller.setConnectorHandlerPool( cacheableHandlerPool );
 
-        TCPSelectorHandler tcpSelectorHandler = new ReusableTCPSelectorHandler();
+        tcpSelectorHandler = new ReusableTCPSelectorHandler();
         tcpSelectorHandler.setPort( tcpPort );
         tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
         tcpSelectorHandler.setInet( localInetAddress );
@@ -421,6 +422,16 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         }
     }
 
+    public void removeRemotePeer(String instanceName) {
+        for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
+            if (entry.getValue().equals(instanceName)) {
+                getLogger().log(Level.INFO, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
+                tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
+                selectionKeyMap.remove(entry.getKey());
+            }
+        }
+    }
+
     public void removeRemotePeer( SelectionKey selectionKey ) {
         if( selectionKey == null )
             return;
@@ -482,8 +493,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             LOG.log(debugLevel, "removePeerID peerid=" + peerID, new Exception("stack trace"));
         }
         peerIDMap.remove( instanceName );
-        // todo should we remove selection key?
-        // selectionKeyMap.remove( key );
+        removeRemotePeer( instanceName );
     }
 
     public boolean isConnected( final PeerID peerID ) {
