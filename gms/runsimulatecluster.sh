@@ -25,7 +25,7 @@ echo "Starting admin"
 ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 INFO ${TRANSPORT} -ts 9130 -te 9160 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/server.log 2>&1 &
 sleep 5
 echo "Starting CORE members"
-./rungmsdemo.sh instance01 ${GROUPNAME} CORE 0 INFO ${TRANSPORT} -ts 9161 -te 9190 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance01.log 2>&1 &
+./rungmsdemo.sh instance01 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9161 -te 9190 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance01.log 2>&1 &
 ./rungmsdemo.sh instance02 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9230 -te 9260 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance02.log 2>&1 &
 ./rungmsdemo.sh instance03 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9261 -te 9290 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance03.log 2>&1 &
 ./rungmsdemo.sh instance04 ${GROUPNAME} CORE 0 CONFIG ${TRANSPORT} -ts 9330 -te 9360 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance04.log 2>&1 &
