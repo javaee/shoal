@@ -122,7 +122,7 @@ public class LoadResponseCommand<K, V>
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
-//            System.out.println("RECEIVED LOAD RESPONSE: " + tokenId + ", " + key + ", " + v + "  from " + originatingInstance);
+            System.out.println("RECEIVED LOAD RESPONSE: " + tokenId + ", " + key + "  from " + originatingInstance);
             resp.setResult(entry);
         }
     }

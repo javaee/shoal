@@ -116,7 +116,11 @@ public class CommandManager<K, V>
         if (head != null) {
             if (forward) {
                 cmd.prepareToTransmit(dsc);
+                if (! cmd.getTargetName().equals(myName)) {
                 head.onTransmit(cmd);
+                } else {
+                    cmd.execute(dsc);
+                }
             } else {
                 tail.onReceive(cmd);
             }

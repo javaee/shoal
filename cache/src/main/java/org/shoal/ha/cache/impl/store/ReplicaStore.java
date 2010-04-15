@@ -25,6 +25,7 @@ public class ReplicaStore<K, V> {
         DataStoreEntryHelper<K, V> helper = ctx.getDataStoreEntryHelper();
         DataStoreEntry<K, V> e = helper.createDataStoreEntry(k, v);
         map.put(k, e);
+        System.out.println("** ReplicaStore::put("+k+", "+v);
         //TODO Need to take care of out of order messages
     }
 

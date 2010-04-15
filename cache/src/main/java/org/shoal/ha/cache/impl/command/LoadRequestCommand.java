@@ -99,7 +99,7 @@ public class LoadRequestCommand<K, V>
 
     @Override
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-        throws IOException {
+            throws IOException {
         tokenId = Utility.bytesToLong(data, offset);
         ReplicationIOUtils.KeyInfo keyInfo = ReplicationIOUtils.readLengthPrefixedKey(
                 trans.getDataStoreKeyHelper(), data, offset + 8);
@@ -113,7 +113,9 @@ public class LoadRequestCommand<K, V>
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         originatingInstance = ctx.getInstanceName();
-        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
+        String targetName = ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key);
+        setTargetName(targetName);
+        System.out.println("Sending loadRequest to: " + getTargetName());
         ResponseMediator respMed = ctx.getResponseMediator();
         resp = respMed.createCommandResponse();
 
@@ -123,14 +125,18 @@ public class LoadRequestCommand<K, V>
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
         DataStoreEntry<K, V> e = ctx.getReplicaStore().get(key);
-        LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
-        rsp.setOriginatingInstance(originatingInstance);
-//        System.out.println("LoadRequestCommand.execute: " + key + ", " + v + ", " + originatingInstance + "; tokenId: " + tokenId);
-        getCommandManager().execute(rsp);
+        if (!originatingInstance.equals(ctx.getInstanceName())) {
+            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
+            rsp.setOriginatingInstance(originatingInstance);
+            System.out.println("LoadRequestCommand.execute: key: " + key +  " from " + originatingInstance + "; tokenId: " + tokenId);
+            getCommandManager().execute(rsp);
+        } else {
+            resp.setResult(e);
+        }
     }
 
     public DataStoreEntry<K, V> getResult()
-        throws DataStoreException {
+            throws DataStoreException {
         try {
             return (DataStoreEntry<K, V>) future.get(15000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException inEx) {

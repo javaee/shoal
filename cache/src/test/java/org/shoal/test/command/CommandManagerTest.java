@@ -49,6 +49,7 @@ public class CommandManagerTest
         assert (true);
     }
 
+    /*
     public void testInterceptors() {
         GroupService gs = new DummyGroupService("inst1", "grp1");
         DataStoreContext dsc = new DataStoreContext("test", gs);
@@ -87,5 +88,5 @@ public class CommandManagerTest
         stat = stat && (bat.getTransmitCount() == 1);
         assertTrue(stat);
     }
-
+    */
 }

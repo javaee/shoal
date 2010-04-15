@@ -83,8 +83,20 @@ public class StringKeyMapper<K>
         rLock.lock();
         try {
             int hc = Math.abs(getDigestHashCode(key1.toString()));
-//            System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + members[hc % (members.length)]);
-            return members[hc % (members.length)];
+            String mappedInstance = members[hc % (members.length)];
+            /*
+            //If the mapped instance is the current instance, then
+            // both active and replica lives in the same instance!!
+            // Need to fix this.
+            
+            if (mappedInstance.equals(myName)) {
+                mappedInstance = members[(hc + 1) % (members.length)];
+                System.out.println("Mapping(*) Key: " + key1 + " => " + hc + ";   " + mappedInstance);
+            } else {
+                System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + mappedInstance);
+            }
+            */
+            return mappedInstance;
         } finally {
             rLock.unlock();
         }
@@ -145,6 +157,7 @@ public class StringKeyMapper<K>
         try {
             currentMemberSet.remove(inst);
             members = currentMemberSet.toArray(new String[0]);
+            printMemberStates();
         } finally {
             wLock.unlock();
         }
