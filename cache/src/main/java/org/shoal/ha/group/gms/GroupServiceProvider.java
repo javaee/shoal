@@ -38,6 +38,8 @@ public class GroupServiceProvider
     private ConcurrentHashMap<String, String> aliveInstances = new ConcurrentHashMap<String, String>();
 
     private List<GroupMemberEventListener> listeners = new ArrayList<GroupMemberEventListener>();
+    
+    private boolean createdAndJoinedGMSGroup;
 
     public GroupServiceProvider(String myName, String groupName) {
         init(myName, groupName);
@@ -111,34 +113,42 @@ public class GroupServiceProvider
     }
 
     private void init(String myName, String groupName) {
-
-        GroupManagementService.MemberType memberType = myName.equals("DAS") ? GroupManagementService.MemberType.SPECTATOR :
-                GroupManagementService.MemberType.CORE;
-
-        configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
-                System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
-        configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
-        logger.info("Is initial host=" + System.getProperty("IS_INITIAL_HOST"));
-        configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
-                System.getProperty("IS_INITIAL_HOST", "false"));
-        if (System.getProperty("INITIAL_HOST_LIST") != null) {
-            configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
-                    myName.equals("DAS"));
+        try {
+            gms = GMSFactory.getGMSModule(groupName);
+            logger.config("GroupServiceProvider found gms module for group:" + groupName);
+        } catch (Exception e){
+            logger.severe("GMS module for group "+groupName+" not enabled");
         }
-        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(),
-                System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
-        configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(),
-                System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
-        //Uncomment this to receive loop back messages
-        //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
-        final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
-        if (bindInterfaceAddress != null) {
-            configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
+        createdAndJoinedGMSGroup = gms == null;
+        if (createdAndJoinedGMSGroup) {
+            logger.config("GroupServiceProvider creating gms module for group " + groupName);
+            GroupManagementService.MemberType memberType = myName.equals("DAS") ? GroupManagementService.MemberType.SPECTATOR
+                    : GroupManagementService.MemberType.CORE;
+
+            configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
+                    System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
+            configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), 2299);
+            logger.info("Is initial host=" + System.getProperty("IS_INITIAL_HOST"));
+            configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
+                    System.getProperty("IS_INITIAL_HOST", "false"));
+            if (System.getProperty("INITIAL_HOST_LIST") != null) {
+                configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
+                        myName.equals("DAS"));
+            }
+            configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(),
+                    System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
+            configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(),
+                    System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
+            //Uncomment this to receive loop back messages
+            //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
+            final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
+            if (bindInterfaceAddress != null) {
+                configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
+            }
+
+            gms = (GroupManagementService) GMSFactory.startGMSModule(
+                    myName, groupName, memberType, configProps);
         }
-
-        gms = (GroupManagementService) GMSFactory.startGMSModule(
-                myName, groupName, memberType, configProps);
-
         this.groupHandle = gms.getGroupHandle();
         this.myName = myName;
         this.groupName = groupName;
@@ -147,14 +157,15 @@ public class GroupServiceProvider
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
         gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
 
-        try {
-            gms.join();
-            Thread.sleep(3000);
-            gms.reportJoinedAndReadyState(groupName);
-        } catch (Exception ex) {
-            //TODO
+        if (createdAndJoinedGMSGroup) {
+            try {
+                gms.join();
+                Thread.sleep(3000);
+                gms.reportJoinedAndReadyState(groupName);
+            } catch (Exception ex) {
+                //TODO
+            }
         }
-
     }
 
     public void shutdown() {
@@ -201,7 +212,9 @@ public class GroupServiceProvider
 
     @Override
     public void close() {
-        shutdown();
+        if (createdAndJoinedGMSGroup) {
+            shutdown();
+        }
+        
     }
-
 }
