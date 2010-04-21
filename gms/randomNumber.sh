@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh +x
 #
 # Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
