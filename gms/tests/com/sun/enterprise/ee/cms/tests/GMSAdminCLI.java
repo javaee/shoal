@@ -56,11 +56,14 @@ public class GMSAdminCLI implements CallBack {
 //public class ApplicationAdmin {
 
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+        private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
+
     private static final Logger myLogger = java.util.logging.Logger.getLogger("GMSAdminCLI");
-    private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
-    private static final Level DEBUG_LEVEL = Level.FINE;
+        private static final Level TESTDEFAULTLOGLEVEL = Level.INFO;
+
+
     private static GroupManagementService gms = null;
-    static String memberID = GMSAdminConstants.APPLICATIONADMIN;
+    static String memberID = GMSAdminConstants.ADMINCLI;
     static String groupName = null;
     static String memberName = null;
     static MemberStates whichState = MemberStates.UNKNOWN;
@@ -92,8 +95,9 @@ public class GMSAdminCLI implements CallBack {
                 && (!command.equals("killa"))
                 && (!command.equals("killm"))
                 && (!command.equals("state"))
+                && (!command.equals("test"))
                 && (!command.equals("waits"))) {
-            System.err.println("ERROR: Invalid command specified ["+command+"]");
+            System.err.println("ERROR: Invalid command specified [" + command + "]");
             usage();
         }
 
@@ -118,7 +122,7 @@ public class GMSAdminCLI implements CallBack {
             } else {
                 memberName = args[2];
                 if (!memberName.contains(GMSAdminConstants.ADMINNAME) && !memberName.equals(GMSAdminConstants.INSTANCEPREFIX)) {
-                    System.err.println("ERROR: Invalid memberName specified ["+memberName+"], must be either server or contain instance");
+                    System.err.println("ERROR: Invalid memberName specified [" + memberName + "], must be either server or contain instance");
                     usage();
                 }
             }
@@ -135,14 +139,6 @@ public class GMSAdminCLI implements CallBack {
             memberName = null;
         }
 
-        try {
-            gmsLogger.setLevel(Level.parse(System.getProperty("LOG_LEVEL", GMSDEFAULTLOGLEVEL.toString())));
-        } catch (Exception e) {
-            gmsLogger.setLevel(GMSDEFAULTLOGLEVEL);
-        }
-        gmsLogger.info("GMS Logging using log level of:" + gmsLogger.getLevel());
-
-
         // this configures the formatting of the gms log output
         Utility.setLogger(gmsLogger);
         Utility.setupLogHandler();
@@ -153,14 +149,31 @@ public class GMSAdminCLI implements CallBack {
         // this configures the formatting of the myLogger output
         GMSAdminCLI.setupLogHandler();
 
-        if (myLogger.isLoggable(DEBUG_LEVEL)) {
-            myLogger.log(DEBUG_LEVEL, "Command=" + command);
-            myLogger.log(DEBUG_LEVEL, "GroupName=" + groupName);
-            myLogger.log(DEBUG_LEVEL, "MemberName=" + memberName);
+        try {
+            gmsLogger.setLevel(Level.parse(System.getProperty("LOG_LEVEL", GMSDEFAULTLOGLEVEL.toString())));
+        } catch (Exception e) {
+            gmsLogger.setLevel(GMSDEFAULTLOGLEVEL);
         }
+        gmsLogger.info("GMS Logging using log level of:" + gmsLogger.getLevel());
+
+        try {
+            myLogger.setLevel(Level.parse(System.getProperty("TEST_LOG_LEVEL", TESTDEFAULTLOGLEVEL.toString())));
+        } catch (Exception e) {
+            myLogger.setLevel(TESTDEFAULTLOGLEVEL);
+        }
+        myLogger.info("Test Logging using log level of:" + myLogger.getLevel());
+
+
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Command=" + command);
+            myLogger.log(TESTDEFAULTLOGLEVEL, "GroupName=" + groupName);
+            myLogger.log(TESTDEFAULTLOGLEVEL, "MemberName=" + memberName);
+        }
+
+
         if (command.equals("state")) {
-            if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                myLogger.log(DEBUG_LEVEL, "State=" + whichState.toString());
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "State=" + whichState.toString());
             }
         }
 
@@ -176,7 +189,7 @@ public class GMSAdminCLI implements CallBack {
     }
 
     public static void usage() {
-        System.out.println(new StringBuffer().append("USAGE: java ").append(" -Dcom.sun.management.jmxremote").append(" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly").append(" -DTCPSTARTPORT=9060").append(" -DTCPENDPORT=9089").append(" -DMULTICASTADDRESS=229.9.1.1").append(" -DMULTICASTPORT=2299").append(" -cp shoal-gms-tests.jar:shoal-gms.jar:grizzly-framework.jar:grizzly-utils.jar").append(" com.sun.enterprise.ee.cms.tests.GMSAdminCLI").append(" ARGUMENTS").toString());
+        System.out.println(new StringBuffer().append("USAGE: java ").append(" -Dcom.sun.management.jmxremote").append(" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly").append(" -DTCPSTARTPORT=9060").append(" -DTCPENDPORT=9089").append(" -DMULTICASTADDRESS=229.9.1.1").append(" -DMULTICASTPORT=2299").append("-DTEST_LOG_LEVEL=WARNING").append("-DLOG_LEVEL=WARNING").append(" -cp shoal-gms-tests.jar:shoal-gms.jar:grizzly-framework.jar:grizzly-utils.jar").append(" com.sun.enterprise.ee.cms.tests.GMSAdminCLI").append(" ARGUMENTS").toString());
         System.out.println("ARGUMENT usages:");
         System.out.println("        list groupName [memberName(default is all)]  - list member(s)");
         System.out.println("        stopc groupName - stops a cluster");
@@ -184,16 +197,17 @@ public class GMSAdminCLI implements CallBack {
         System.out.println("        killm groupName memberName - kill a member");
         System.out.println("        killa groupName - kills all members of the cluster ");
         System.out.println("        waits groupName - wait for the cluster to complete startup");
+        System.out.println("        test groupName - start testing and wait until its complete");
         System.out.println("        state groupName gmsmemberstate  - list member(s) in the specific state");
         System.exit(0);
     }
 
     private void registerAndJoinCluster() {
-        if (myLogger.isLoggable(DEBUG_LEVEL)) {
-            myLogger.log(DEBUG_LEVEL, "Registering for group event notifications");
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Registering for group event notifications");
         }
         gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.SPECTATOR);
-        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.APPLICATIONADMIN);
+        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINCLI);
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
         try {
@@ -215,7 +229,7 @@ public class GMSAdminCLI implements CallBack {
                 List<String> members = gms.getGroupHandle().getAllCurrentMembers();
                 StringBuffer sb = new StringBuffer();
                 for (String _memberName : members) {
-                    if (!_memberName.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                    if (!_memberName.equals(GMSAdminConstants.ADMINCLI)) {
                         sb.append(" ");
                         sb.append(_memberName);
                         sb.append(":");
@@ -295,13 +309,13 @@ public class GMSAdminCLI implements CallBack {
             replyMsg = GMSAdminConstants.STOPCLUSTERREPLY;
             replyFrom = gms.getGroupHandle().getGroupLeader();
             try {
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Broadcast stopcluster message to master");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast stopcluster message to master");
                 }
                 // broadcast the shutdown cluster message, only the master should react to this
-                gms.getGroupHandle().sendMessage("adminagent", GMSAdminConstants.STOPCLUSTER.getBytes());
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Done broadcasting stopcluster message to master");
+                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPCLUSTER.getBytes());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting stopcluster message to master");
                 }
             } catch (GMSException e) {
                 myLogger.warning("Exception occurred with broadcasting stopcluster message:" + e);
@@ -309,8 +323,8 @@ public class GMSAdminCLI implements CallBack {
                 for (int i = 1; i <= 3; i++) {
                     try {
                         sleep(3);
-                       myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STOPCLUSTER + ")");
-                        gms.getGroupHandle().sendMessage("adminagent", GMSAdminConstants.STOPCLUSTER.getBytes());
+                        myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STOPCLUSTER + ")");
+                        gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPCLUSTER.getBytes());
                         break; // if successful
                     } catch (GMSException ge1) {
                         myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.STOPCLUSTER + ") : " + ge1);
@@ -337,12 +351,12 @@ public class GMSAdminCLI implements CallBack {
             replyFrom = memberName;
 
             try {
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Sending stopinstance message to:" + memberName);
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending stopinstance message to:" + memberName);
                 }
-                gms.getGroupHandle().sendMessage(memberName, "adminagent", GMSAdminConstants.STOPINSTANCE.getBytes());
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Done sending stopinstance message to:" + memberName);
+                gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPINSTANCE.getBytes());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending stopinstance message to:" + memberName);
                 }
                 synchronized (receivedReply) {
                     try {
@@ -350,7 +364,7 @@ public class GMSAdminCLI implements CallBack {
                     } catch (InterruptedException ie) {
                     }
                     if (receivedReply.get() == false) {
-                       myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
                         displayUnsuccessful();
 
                     } else {
@@ -367,12 +381,12 @@ public class GMSAdminCLI implements CallBack {
             replyFrom = memberName;
 
             try {
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Sending killinstance message to:" + memberName);
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + memberName);
                 }
-                gms.getGroupHandle().sendMessage(memberName, "adminagent", GMSAdminConstants.KILLINSTANCE.getBytes());
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Done sending killinstance message to:" + memberName);
+                gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killinstance message to:" + memberName);
                 }
                 synchronized (receivedReply) {
                     try {
@@ -388,37 +402,37 @@ public class GMSAdminCLI implements CallBack {
                     }
                 }
             } catch (GMSException e) {
-               myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
                 displayUnsuccessful();
             }
 
         } else if (command.equals("killa")) {
 
-            if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                myLogger.log(DEBUG_LEVEL, "Executing killa");
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Executing killa");
             }
             List<String> members = gms.getGroupHandle().getAllCurrentMembers();
             List<String> failedToReceiveReplyFrom = gms.getGroupHandle().getAllCurrentMembers();
             // remove are selves from the lists
-            members.remove(GMSAdminConstants.APPLICATIONADMIN);
-            failedToReceiveReplyFrom.remove(GMSAdminConstants.APPLICATIONADMIN);
+            members.remove(GMSAdminConstants.ADMINCLI);
+            failedToReceiveReplyFrom.remove(GMSAdminConstants.ADMINCLI);
             if (members.size() > 0) {
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Current members are:" + members.toString());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Current members are:" + members.toString());
                 }
                 String groupLeader = gms.getGroupHandle().getGroupLeader();
 
                 for (String _memberName : members) {
-                    if (!_memberName.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                    if (!_memberName.equals(GMSAdminConstants.ADMINCLI)) {
                         // do everyone else first then the groupLeader
                         if (!_memberName.equals(groupLeader)) {
                             replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
                             replyFrom = _memberName;
-                            if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                                myLogger.log(DEBUG_LEVEL, "Sending killinstance message to:" + _memberName);
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + _memberName);
                             }
                             try {
-                                gms.getGroupHandle().sendMessage(_memberName, "adminagent", GMSAdminConstants.KILLINSTANCE.getBytes());
+                                gms.getGroupHandle().sendMessage(_memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
                                 synchronized (receivedReply) {
                                     try {
                                         receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
@@ -431,7 +445,7 @@ public class GMSAdminCLI implements CallBack {
                                     }
                                 }
                             } catch (GMSException e) {
-                               myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                                myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
                             }
                         }
                     }
@@ -439,11 +453,11 @@ public class GMSAdminCLI implements CallBack {
                 // now do group leader
                 replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
                 replyFrom = groupLeader;
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "Sending killinstance message to:" + groupLeader);
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + groupLeader);
                 }
                 try {
-                    gms.getGroupHandle().sendMessage(groupLeader, "adminagent", GMSAdminConstants.KILLINSTANCE.getBytes());
+                    gms.getGroupHandle().sendMessage(groupLeader, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
                     synchronized (receivedReply) {
                         try {
                             receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
@@ -466,8 +480,8 @@ public class GMSAdminCLI implements CallBack {
                     displaySuccessful();
                 }
             } else {
-                if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                    myLogger.log(DEBUG_LEVEL, "No members exist to kill");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "No members exist to kill");
                 }
                 displaySuccessful();
             }
@@ -477,7 +491,7 @@ public class GMSAdminCLI implements CallBack {
             List<String> members = gms.getGroupHandle().getAllCurrentMembers();
             StringBuffer sb = new StringBuffer();
             for (String _memberName : members) {
-                if (!_memberName.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                if (!_memberName.equals(GMSAdminConstants.ADMINCLI)) {
                     if (gms.getGroupHandle().getMemberState(_memberName).equals(whichState)) {
                         sb.append(" ");
                         sb.append(_memberName);
@@ -512,12 +526,12 @@ public class GMSAdminCLI implements CallBack {
                 replyFrom = GMSAdminConstants.ADMINNAME;
 
                 try {
-                    if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                        myLogger.log(DEBUG_LEVEL, "Sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
                     }
-                    gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, "adminagent", GMSAdminConstants.ISSTARTUPCOMPLETE.getBytes());
-                    if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                        myLogger.log(DEBUG_LEVEL, "Done sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
+                    gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.ISSTARTUPCOMPLETE.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
                     }
                     synchronized (receivedReply) {
                         try {
@@ -534,9 +548,47 @@ public class GMSAdminCLI implements CallBack {
                 }
 
             } else {
-                myLogger.severe("No members exist in cluster:" + groupName );
+                myLogger.severe("No members exist in cluster:" + groupName);
                 displayUnsuccessful();
             }
+
+        } else if (command.equals("test")) {
+            try {
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast start testing message to "+GMSAdminConstants.TESTCOORDINATOR);
+                }
+                // broadcast the start testing message to all members
+                gms.getGroupHandle().sendMessage(GMSAdminConstants.TESTCOORDINATOR, GMSAdminConstants.STARTTESTING.getBytes());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting start testing message to cluster");
+                }
+            } catch (GMSException e) {
+                myLogger.warning("Exception occurred with broadcasting start testing message:" + e);
+                //retry the send up to 3 times
+                for (int i = 1; i <= 3; i++) {
+                    try {
+                        sleep(3);
+                        myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STARTTESTING + ")");
+                        gms.getGroupHandle().sendMessage(GMSAdminConstants.TESTCOORDINATOR, GMSAdminConstants.STARTTESTING.getBytes());
+                        break; // if successful
+                    } catch (GMSException ge1) {
+                        myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.STARTTESTING + ") : " + ge1);
+                    }
+                }
+            }
+
+            replyMsg = GMSAdminConstants.TESTINGCOMPLETE;
+            replyFrom = GMSAdminConstants.ADMINNAME;
+            synchronized (receivedReply) {
+                try {
+                    receivedReply.wait(0); // wait till we receive reply
+                } catch (InterruptedException ie) {
+                }
+
+                displaySuccessful();
+
+            }
+
         }
     }
 
@@ -591,8 +643,8 @@ public class GMSAdminCLI implements CallBack {
             configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
         }
 
-        if (myLogger.isLoggable(DEBUG_LEVEL)) {
-            myLogger.log(DEBUG_LEVEL, "leaving initializeGMS");
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "leaving initializeGMS");
         }
         return (GroupManagementService) GMSFactory.startGMSModule(
                 memberID,
@@ -602,20 +654,20 @@ public class GMSAdminCLI implements CallBack {
     }
 
     private static void leaveGroupAndShutdown() {
-        if (myLogger.isLoggable(DEBUG_LEVEL)) {
-            myLogger.log(DEBUG_LEVEL, "Shutting down gms " + gms + "for member: " + memberID);
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Shutting down gms " + gms + "for member: " + memberID);
         }
         gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
     }
 
     public static void sleep(int i) {
         try {
-            if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                myLogger.log(DEBUG_LEVEL, "start sleeping");
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "start sleeping");
             }
             Thread.sleep(i * 1000);
-            if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                myLogger.log(DEBUG_LEVEL, "done sleeping");
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "done sleeping");
             }
 
         } catch (InterruptedException ex) {
@@ -624,15 +676,15 @@ public class GMSAdminCLI implements CallBack {
 
     public synchronized void processNotification(final Signal notification) {
         final String from = notification.getMemberToken();
-        if (myLogger.isLoggable(DEBUG_LEVEL)) {
-            myLogger.log(DEBUG_LEVEL, "Received a NOTIFICATION from member " + from);
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Received a NOTIFICATION from member " + from);
         }
         if (notification instanceof MessageSignal) {
 
             MessageSignal messageSignal = (MessageSignal) notification;
             String msgString = new String(messageSignal.getMessage());
-            if (myLogger.isLoggable(DEBUG_LEVEL)) {
-                myLogger.log(DEBUG_LEVEL, "Message received was:" + msgString);
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Message received was:" + msgString);
             }
             if (from.equals(replyFrom) && msgString.equals(replyMsg)) {
                 receivedReply.set(true);
@@ -658,7 +710,7 @@ public class GMSAdminCLI implements CallBack {
         myLogger.setUseParentHandlers(false);
         //final String level = System.getProperty("LOG_LEVEL", "INFO");
         //myLogger.setLevel(Level.parse(level));
-        myLogger.setLevel(Level.parse("INFO"));
+        //myLogger.setLevel(Level.parse("INFO"));
 
     }
 }
