@@ -49,6 +49,10 @@ public class GMSAdminConstants  {
     public static final String STOPCLUSTERRECEIVED = "stop_cluster_received";
     public static final String ISSTARTUPCOMPLETE = "is_startup_complete";
     public static final String ISSTARTUPCOMPLETEREPLY = "isstartup_complete_reply";
+    public static final String STARTUPCOMPLETE = "startup_complete";
+    public static final String STARTTESTING = "start_testing";
+    public static final String TESTINGCOMPLETE = "testing_complete";
+
 
     // various states the GMSAdminAgent can go through
     public static final int UNASSIGNED = -1;
@@ -59,9 +63,11 @@ public class GMSAdminConstants  {
 
 
     public static final String ADMINAGENT = "adminagent";
-    public static final String APPLICATIONADMIN = "applicationadmin";
+    public static final String ADMINCLI = "admincli";
     public static final String ADMINNAME = "server";
     public static final String INSTANCEPREFIX = "instance";
+    public static final String TESTCOORDINATOR = "TestCoordinator";
+    public static final String TESTEXECUTOR = "TestExceutor";
 
 
 
