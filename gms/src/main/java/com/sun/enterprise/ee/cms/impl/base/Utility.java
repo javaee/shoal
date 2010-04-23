@@ -195,7 +195,7 @@ public class Utility {
         }
         logger.addHandler(consoleHandler);
         logger.setUseParentHandlers(false);
-        final String level = System.getProperty("LOG_LEVEL", "FINEST");
+        final String level = System.getProperty("LOG_LEVEL", "INFO");
         logger.setLevel(Level.parse(level));
     }
 
