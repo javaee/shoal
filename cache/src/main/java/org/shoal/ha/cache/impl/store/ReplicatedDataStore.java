@@ -64,6 +64,7 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreEntryHelper<K, V> transformer;
 
+    private DataStoreContext<K, V> dsc;
 
     public ReplicatedDataStore(String storeName, GroupService gs,
                                DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
@@ -77,7 +78,7 @@ public class ReplicatedDataStore<K, V>
 
     private void initialize(DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
                             KeyMapper<K> keyMapper) {
-        DataStoreContext<K, V> dsc = new DataStoreContext<K, V>(storeName, gs);
+        this.dsc = new DataStoreContext<K, V>(storeName, gs);
         this.transformer = helper;
         dsc.setDataStoreEntryHelper(helper);
         dsc.setDataStoreKeyHelper(keyHelper);
@@ -110,21 +111,26 @@ public class ReplicatedDataStore<K, V>
 
     @Override
     public V get(K k) {
-        LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(k);
-        cm.execute(cmd);
+
+        ReplicaStore<K, V> replicaStore = dsc.getReplicaStore();
+        DataStoreEntry<K, V> entry = replicaStore.get(k);
+        V v = null;
 
         try {
-            DataStoreEntry<K, V> entry = cmd.getResult();
-            V v = null;
+            if (entry == null) {
+                LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(k);
+                cm.execute(cmd);
+
+                entry = cmd.getResult();
+            }
             if (entry != null) {
                 v = transformer.getV(entry);
             }
-
-            return v;
-        } catch (DataStoreException dsEx) {
-            //TODO Log?
-            return null;
+        } catch (DataStoreException dseEx) {
+            dseEx.printStackTrace();
         }
+
+        return v;
     }
 
     @Override

@@ -65,7 +65,7 @@ public class StringKeyMapper<K>
 
     private volatile TreeSet<String> currentMemberSet = new TreeSet<String>();
 
-    private volatile String[] members;
+    private volatile String[] members = new String[0];
 
     private volatile String[] otherMembers;
 
@@ -142,11 +142,11 @@ public class StringKeyMapper<K>
     public void registerInstance(String inst) {
         wLock.lock();
         try {
-            if (!currentMemberSet.contains(inst)) {
+            if ((!currentMemberSet.contains(inst)) && (!inst.equals(myName))) {
                 currentMemberSet.add(inst);
+                members = currentMemberSet.toArray(new String[0]);
+                printMemberStates();
             }
-            members = currentMemberSet.toArray(new String[0]);
-            printMemberStates();
         } finally {
             wLock.unlock();
         }

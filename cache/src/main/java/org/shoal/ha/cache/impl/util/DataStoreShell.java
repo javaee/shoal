@@ -49,7 +49,8 @@ import java.util.StringTokenizer;
 /**
  * @author Mahesh Kannan
  */
-public class DataStoreShell {
+public class
+        DataStoreShell {
 
     DataStore ds;
 
