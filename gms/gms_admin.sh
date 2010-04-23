@@ -30,10 +30,13 @@ TCPSTARTPORT=9060
 TCPENDPORT=9089
 MULTICASTADDRESS=229.9.1.2
 MULTICASTPORT=2299
-LOG_LEVEL="-DLOG_LEVEL=WARNING"
 
-PUBLISH_HOME=./dist
-LIB_HOME=./lib
+TEST_LOG_LEVEL=WARNING
+SHOALGMS_LOG_LEVEL=WARNING
+
+SHOAL_WORKSPACE_HOME=`pwd`
+PUBLISH_HOME=${SHOAL_WORKSPACE_HOME}/dist
+LIB_HOME=${SHOAL_WORKSPACE_HOME}/lib
 JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
 COMMUNICATION_PROVIDER=grizzly
 
@@ -54,11 +57,17 @@ usage() {
     echo "    killm groupName memberName - kill a member"
     echo "    killa groupName - kills all members of the cluster "
     echo "    waits groupName - wait for the cluster to complete startup"
+    echo "    test groupName - start testing and wait until its complete"
     echo "    state groupName gmsmemberstate  - list member(s) in the specific state"
-
     echo
     echo " optional arguments:"
-    echo "      [<-l loglevel> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      [<-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      -tl - test log level"
+    echo "      -sl - shoal log level"
+    echo "      -ts - tcp start port"
+    echo "      -te - tcp end point"
+    echo "      -ma - multicast address"
+    echo "      -mp multicast port"
     exit 0
 }
 
@@ -102,10 +111,14 @@ do
        MULTICASTPORT="${1}"
        shift
        ;;
-       -l)
+       -tl)
        shift
-       LOG_LEVEL="-DLOG_LEVEL=${1}"
-
+       TEST_LOG_LEVEL="${1}"
+       shift
+       ;;
+       -sl)
+       shift
+       SHOALGMS_LOG_LEVEL="${1}"
        shift
        ;;
        *)
@@ -124,7 +137,8 @@ do
 done
 
 
-java -Dcom.sun.management.jmxremote  -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -cp ${JARS} ${LOG_LEVEL} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+# echo java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
 
 
 
