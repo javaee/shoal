@@ -33,26 +33,28 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-
 package com.sun.enterprise.ee.cms.tests;
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.logging.NiceLogFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.ErrorManager;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GMSAdminAgent implements CallBack {
 
-    private static final Level DEBUG_LEVEL = Level.FINE;
-    private Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private static final Logger myLogger = java.util.logging.Logger.getLogger("GMSAdminAgent");
+    private static final Level TESTDEFAULTLOGLEVEL = Level.INFO;
     private GroupManagementService gms;
     private String groupName;
     private String memberName;
@@ -67,6 +69,7 @@ public class GMSAdminAgent implements CallBack {
     private static AtomicLong diffTime = new AtomicLong(0);
     private static AtomicBoolean startupComplete = new AtomicBoolean(false);
     private static AtomicBoolean startupInitiated = new AtomicBoolean(false);
+    private static ArrayList<Thread> replyThreads = new ArrayList<Thread>();
 
     public GMSAdminAgent(final GroupManagementService gms,
             final String groupName,
@@ -82,6 +85,16 @@ public class GMSAdminAgent implements CallBack {
         if (this.memberName.equals(GMSAdminConstants.ADMINNAME)) {
             this.isAdmin = true;
         }
+        // this configures the formatting of the myLogger output
+        GMSAdminAgent.setupLogHandler();
+
+        try {
+            myLogger.setLevel(Level.parse(System.getProperty("TEST_LOG_LEVEL", TESTDEFAULTLOGLEVEL.toString())));
+        } catch (Exception e) {
+            myLogger.setLevel(TESTDEFAULTLOGLEVEL);
+        }
+        myLogger.info("Test Logging using log level of:" + myLogger.getLevel());
+
 
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
         gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINAGENT);
@@ -91,14 +104,14 @@ public class GMSAdminAgent implements CallBack {
 
     // returns true if shutdown was successful, false if shutdown was a result of a timeout
     public int waitTillNotified() {
-        gmsLogger.fine("GMSAdminAgent: entering waitTillNotified");
+        myLogger.fine("GMSAdminAgent: entering waitTillNotified");
 
         if (isAdmin) {
 
             if (lifeTime == 0) {
                 // only wait on startup if we AREN"T using specific times
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Waiting for startup to begin");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for startup to begin");
                 }
                 synchronized (startupInitiated) {
                     try {
@@ -106,34 +119,75 @@ public class GMSAdminAgent implements CallBack {
                     } catch (InterruptedException ie) {
                     }
                 }
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Startup has begun");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Startup has begun");
                 }
+                int previousOutstanding = 0;
                 while (!startupComplete.get()) {
                     // using this mechanism requires the registering of JoinNotification
                     // and JoinedAndReadyNotification
                     long currentTime = System.currentTimeMillis();
                     long diff = currentTime - timeReceivedLastJoinJoinedAndReady.get();
                     // if there are not outstanding messages and the delta time is greater than 5 seconds
-                    int outstanding = ((GroupManagementServiceImpl) gms).outstandingNotifications();
-                    if ((outstanding == 0) && (diff >= 5000)) {
+                    int currentOutstanding = ((GroupManagementServiceImpl) gms).outstandingNotifications();
+                    if ((currentOutstanding == 0) && (diff >= 5000)) {
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete - NumberOfJoinedAndReady=" + numJoinAndReadyReceived.get() + "currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
+                        }
+                        startupComplete.set(true);
+                        synchronized (startupComplete) {
+                            startupComplete.notifyAll();
+                        }
+
+                    } else if ((currentOutstanding > 0) && (currentOutstanding <= previousOutstanding) && (diff >= 120000)) {
+                        // if there are outstanding messages and the time is greater than 2 minutes this is a failure
+                        myLogger.severe("Waiting period exceeded 2 minutes, there appears to be an issue, we are going to assume startup is finished - currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
                         startupComplete.set(true);
                         synchronized (startupComplete) {
                             startupComplete.notifyAll();
                         }
                     } else {
-                        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                            gmsLogger.log(DEBUG_LEVEL, "Waiting to complete startup - outstanding=" + outstanding + ", diff:" + diff);
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting to complete startup - currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
                         }
                         sleep(1);
                     }
+                    previousOutstanding = currentOutstanding;
                 }
 
             }
-            startupComplete.set(true);
-            if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                gmsLogger.log(DEBUG_LEVEL, "Startup Complete");
+
+            /*
+            try {
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcasting isstartupcomplete reply to :" + GMSAdminConstants.ADMINCLI);
             }
+            gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINCLI, GMSAdminConstants.ISSTARTUPCOMPLETEREPLY.getBytes());
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting isstartupcomplete reply to :" + GMSAdminConstants.ADMINCLI);
+            }
+
+            } catch (GMSException ge1) {
+            myLogger.log(Level.SEVERE, "Exception occurred while broadcasting reply message: " + GMSAdminConstants.ISSTARTUPCOMPLETEREPLY + ge1, ge1);
+            }
+
+             */
+            try {
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast startup is complete to cluster");
+                }
+                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, GMSAdminConstants.STARTUPCOMPLETE.getBytes());
+            } catch (GMSException ge1) {
+                myLogger.log(Level.SEVERE, "Exception occurred while broadcasting message: " + GMSAdminConstants.STARTUPCOMPLETE + ge1, ge1);
+            }
+
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete");
+            }
+
+
+
+
 
             // wait until the Admin receives a shutdown message from the gmsadmincli
             synchronized (NotifiedOfStateChange) {
@@ -145,13 +199,13 @@ public class GMSAdminAgent implements CallBack {
             if (NotifiedOfStateChange.get() == GMSAdminConstants.SHUTDOWNCLUSTER) {
 
                 activeMembers = gms.getGroupHandle().getCurrentCoreMembers();
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "numberOfCoreMembers=" + activeMembers.size());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfCoreMembers=" + activeMembers.size());
                 }
 
                 // tell the cluster, shutdown has started
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Sending GroupShutdown Initiated");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending GroupShutdown Initiated");
                 }
                 gms.announceGroupShutdown(groupName, GMSConstants.shutdownState.INITIATED);
 
@@ -165,8 +219,8 @@ public class GMSAdminAgent implements CallBack {
                 List<String> dup = null;
                 synchronized (activeMembers) {
                     // tell the cluster,  shutdown has completed
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "activeMembers=|" + activeMembers.toString() + "|");
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "activeMembers=|" + activeMembers.toString() + "|");
                     }
                     if (activeMembers.size() > 0) {
                         // not all instances reported shutdown, so now individually
@@ -178,9 +232,9 @@ public class GMSAdminAgent implements CallBack {
                 if (dup != null && dup.size() > 0) {
                     for (String member : dup) {
                         try {
-                            gms.getGroupHandle().sendMessage(member, "adminagent", GMSAdminConstants.STOPINSTANCE.getBytes());
+                            gms.getGroupHandle().sendMessage(member, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPINSTANCE.getBytes());
                         } catch (GMSException e) {
-                            gmsLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e, e);
+                            myLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e, e);
                         }
                     }
                 }
@@ -190,24 +244,24 @@ public class GMSAdminAgent implements CallBack {
                             activeMembers.wait(15000); // wait till all remaining activeMembers have shutdown OR fifteen seconds
                         }
                         if (activeMembers.size() > 0) {
-                            gmsLogger.warning("Not all instances were successfully shutdown within 15 seconds: " + activeMembers.toString());
+                            myLogger.warning("Not all instances were successfully shutdown within 15 seconds: " + activeMembers.toString());
                         }
                     } catch (InterruptedException ie) {
                     }
                 }
 
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Sending GroupShutdown Completed");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending GroupShutdown Completed");
                 }
                 gms.announceGroupShutdown(groupName, GMSConstants.shutdownState.COMPLETED);
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "GMSAdminAgent: leaving waitTillNotified");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "GMSAdminAgent: leaving waitTillNotified");
                 }
             } else if (NotifiedOfStateChange.get() == GMSAdminConstants.KILL) {
 
                 // this is used to inject a fatal failure
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Killing ourselves as instructed to do so");
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Killing ourselves as instructed to do so");
                 }
                 Runtime.getRuntime().halt(0);
             }
@@ -224,15 +278,15 @@ public class GMSAdminAgent implements CallBack {
                 if (NotifiedOfStateChange.get() == GMSAdminConstants.KILL) {
 
                     // this is used to inject a fatal failure
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Killing ourselves as instructed to do so");
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Killing ourselves as instructed to do so");
                     }
                     Runtime.getRuntime().halt(0);
                 }
             }
         }
-        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-            gmsLogger.log(DEBUG_LEVEL, "GMSAdminAgent: exiting waitTillNotified");
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "GMSAdminAgent: exiting waitTillNotified");
         }
 
         return NotifiedOfStateChange.get();
@@ -254,20 +308,21 @@ public class GMSAdminAgent implements CallBack {
     public synchronized void processNotification(final Signal notification) {
         final String from = notification.getMemberToken();
 
-        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-            gmsLogger.log(DEBUG_LEVEL, "Received a NOTIFICATION from member: " + from);
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            myLogger.log(TESTDEFAULTLOGLEVEL, "Received a NOTIFICATION from :" + from + ", " + notification);
         }
+
         // PLANNEDSHUTDOWN  HANDLING
         if (notification instanceof PlannedShutdownSignal) {
             // don't processess gmsadmincli shutdown messages
-            if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                gmsLogger.log(DEBUG_LEVEL, "Received PlannedShutdownNotification from member " + from);
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Received PlannedShutdownNotification from :" + from);
             }
             if (isAdmin) {
-                if (!from.equals(GMSAdminConstants.APPLICATIONADMIN)) {
+                if (!from.equals(GMSAdminConstants.ADMINCLI)) {
                     synchronized (activeMembers) {
                         if (!activeMembers.remove(from)) {
-                            gmsLogger.severe("Received more than one plannedshutdown from:" + from);
+                            myLogger.severe("Received more than one plannedshutdown from :" + from);
                         }
                         if (activeMembers.size() == 0) {
                             activeMembers.notifyAll();
@@ -285,56 +340,98 @@ public class GMSAdminAgent implements CallBack {
                     }
                 }
             }
+        } else if (notification instanceof JoinNotificationSignal) {
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "JOIN NOTIFICATION was received from :" + from);
+            }
+            if (isAdmin) {
+
+                // if we are the master and we've received an join from someone other than ourselves or admincli
+                // this basically means all the core members
+                if (!from.equals(GMSAdminConstants.ADMINNAME) && !from.equals(GMSAdminConstants.ADMINCLI)) {
+                    if (startupInitiated.get() == false) {
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "STARTUP INITIATED ");
+                        }
+                        startupInitiated.set(true);
+                        synchronized (startupInitiated) {
+                            startupInitiated.notifyAll();
+                        }
+                    }
+                }
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Resetting time received last Join");
+                }
+                timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
+            }
+
+
+        } else if (notification instanceof JoinedAndReadyNotificationSignal) {
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "JOINANDREADY NOTIFICATION was received from :" + from);
+            }
+            if (isAdmin) {
+                // if we are the master and we've received an join from someone other than ourselves or admincli
+                // this basically means all the core members
+                if (!from.equals(GMSAdminConstants.ADMINNAME) && !from.equals(GMSAdminConstants.ADMINCLI)) {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Resetting time received last JoinedAndReady");
+                    }
+                    timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
+                }
+            }
             // }
+
+
             // MESSAGE HANDLING
         } else if (notification instanceof MessageSignal) {
             MessageSignal messageSignal = (MessageSignal) notification;
             String msgString = new String(messageSignal.getMessage());
-            if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                gmsLogger.log(DEBUG_LEVEL, "Message received was:" + msgString);
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Message received from [" + from + "] was:" + msgString);
             }
             if (msgString.equals(GMSAdminConstants.STOPCLUSTER)) {
                 // only allow admin to stop cluster
                 if (isAdmin) {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Received stopcluster from member " + from);
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Received stopcluster from :" + from);
                     }
                     try {
-                        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                            gmsLogger.log(DEBUG_LEVEL, "Sending stop cluster reply to member " + from);
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Sending stop cluster reply to :" + from);
                         }
-                        gms.getGroupHandle().sendMessage(from, GMSAdminConstants.APPLICATIONADMIN, GMSAdminConstants.STOPCLUSTERREPLY.getBytes());
-                        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                            gmsLogger.log(DEBUG_LEVEL, "Done sending stopcluster reply to member " + from);
+                        gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.STOPCLUSTERREPLY.getBytes());
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending stopcluster reply to :" + from);
                         }
 
                     } catch (GMSException ge1) {
-                        gmsLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.STOPCLUSTERREPLY + ge1, ge1);
+                        myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.STOPCLUSTERREPLY + ge1, ge1);
                     }
                     NotifiedOfStateChange.set(GMSAdminConstants.SHUTDOWNCLUSTER);
                     synchronized (NotifiedOfStateChange) {
                         NotifiedOfStateChange.notifyAll();                    //}
                     }
                 } else {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Ignoring " + GMSAdminConstants.STOPCLUSTER + " since we are not the admin");
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Ignoring " + GMSAdminConstants.STOPCLUSTER + " since we are not the admin");
                     }
                 }
             } else if (msgString.equals(GMSAdminConstants.STOPINSTANCE)) {
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Received instance stop from member " + from);
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Received instance stop from :" + from);
                 }
                 try {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Sending stop instance reply to member " + from);
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending stop instance reply to :" + from);
                     }
-                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.APPLICATIONADMIN, GMSAdminConstants.STOPINSTANCEREPLY.getBytes());
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Done sending stop instance reply to member " + from);
+                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.STOPINSTANCEREPLY.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending stop instance reply to :" + from);
                     }
 
                 } catch (GMSException ge1) {
-                    gmsLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.STOPINSTANCEREPLY + ge1, ge1);
+                    myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.STOPINSTANCEREPLY + ge1, ge1);
                 }
                 NotifiedOfStateChange.set(GMSAdminConstants.STOP);
 
@@ -342,20 +439,20 @@ public class GMSAdminAgent implements CallBack {
                     NotifiedOfStateChange.notifyAll();                    //}
                 }
             } else if (msgString.equals(GMSAdminConstants.KILLINSTANCE)) {
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Received kill instance from member " + from);
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Received kill instance from :" + from);
                 }
                 try {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Sending kill instance reply to member " + from);
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending kill instance reply to :" + from);
                     }
-                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.APPLICATIONADMIN, GMSAdminConstants.KILLINSTANCEREPLY.getBytes());
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Done sending kill instance reply to member " + from);
+                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.KILLINSTANCEREPLY.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending kill instance reply to :" + from);
                     }
 
                 } catch (GMSException ge1) {
-                    gmsLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.KILLINSTANCEREPLY + ge1, ge1);
+                    myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.KILLINSTANCEREPLY + ge1, ge1);
                 }
                 NotifiedOfStateChange.set(GMSAdminConstants.KILL);
 
@@ -365,75 +462,118 @@ public class GMSAdminAgent implements CallBack {
             } else if (msgString.equals(GMSAdminConstants.ISSTARTUPCOMPLETE)) {
                 // this message is only for master
                 if (isAdmin) {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Received isstartupcomplete from member " + from);
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Received isstartupcomplete from :" + from);
                     }
-                    if (startupComplete.get() == false) {
-                        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                            gmsLogger.log(DEBUG_LEVEL, "Waiting for startup to complete before sending back message");
-                        }
-                        synchronized (startupComplete) {
-                            try {
-                                startupComplete.wait(0);
-                            } catch (InterruptedException ie) {
-                            }
-                        }
-                    }
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Startup Complete detected, ok to reply");
+                    /*
+                    if (startupComplete.get() == true) {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Startup is already complete, sending back reply message");
                     }
                     try {
-                        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                            gmsLogger.log(DEBUG_LEVEL, "Sending isstartupcomplete reply to member " + from);
-                        }
-                        gms.getGroupHandle().sendMessage(from, GMSAdminConstants.APPLICATIONADMIN, GMSAdminConstants.ISSTARTUPCOMPLETEREPLY.getBytes());
-                        if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                            gmsLogger.log(DEBUG_LEVEL, "Done sending isstartupcomplete reply to member " + from);
-                        }
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcasting isstartupcomplete reply to :" + from);
+                    }
+                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.ISSTARTUPCOMPLETEREPLY.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting isstartupcomplete reply to :" + from);
+                    }
 
                     } catch (GMSException ge1) {
-                        gmsLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.ISSTARTUPCOMPLETEREPLY + ge1, ge1);
+                    myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.ISSTARTUPCOMPLETEREPLY + ge1, ge1);
                     }
+                    }
+
+                     */
+
+                    int id = replyThreads.size();
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Creating reply thread :" + id);
+                    }
+                    replyThreads.add(new ReplyToIsStartupCompleteThread(id, from));
+                    replyThreads.get(id).start();
                 } else {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "Ignoring " + GMSAdminConstants.ISSTARTUPCOMPLETE + " since we are not the admin");
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Ignoring message" + GMSAdminConstants.ISSTARTUPCOMPLETE + " since we are not the admin");
                     }
                 }
             } else {
-                if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                    gmsLogger.log(DEBUG_LEVEL, "Ignoring message:" + msgString);
-                }
-            }
-        } else if (notification instanceof JoinNotificationSignal) {
-            if (isAdmin) {
-
-                // if we are the master and we've received an add from someone else but not the application admin
-                if (!from.equals(GMSAdminConstants.ADMINNAME) && !from.equals(GMSAdminConstants.APPLICATIONADMIN)) {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "JOIN NOTIFICATION was received ");
-                        gmsLogger.log(DEBUG_LEVEL, "STARTUP INITIATED ");
-                    }
-                    if (startupInitiated.get() == false) {
-                        startupInitiated.set(true);
-                        synchronized (startupInitiated) {
-                            startupInitiated.notifyAll();
-                        }
-                    }
-                }
-                timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
-            }
-        } else if (notification instanceof JoinedAndReadyNotificationSignal) {
-
-            if (isAdmin) {
-                // if we are the master and we've received an add from someone else but not the application admin
-                if (!from.equals(GMSAdminConstants.ADMINNAME) && !from.equals(GMSAdminConstants.APPLICATIONADMIN)) {
-                    if (gmsLogger.isLoggable(DEBUG_LEVEL)) {
-                        gmsLogger.log(DEBUG_LEVEL, "JOINANDREADY NOTIFICATION was received");
-                    }
-                    timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Ignoring message:" + msgString);
                 }
             }
 
+        }
+
+
+    }
+
+    public static void setupLogHandler() {
+        final ConsoleHandler consoleHandler = new ConsoleHandler();
+        try {
+            consoleHandler.setLevel(Level.ALL);
+            consoleHandler.setFormatter(new NiceLogFormatter());
+        } catch (SecurityException e) {
+            new ErrorManager().error(
+                    "Exception caught in setting up ConsoleHandler ",
+                    e, ErrorManager.GENERIC_FAILURE);
+        }
+        myLogger.addHandler(consoleHandler);
+        myLogger.setUseParentHandlers(false);
+        //final String level = System.getProperty("LOG_LEVEL", "INFO");
+        //myLogger.setLevel(Level.parse(level));
+        myLogger.setLevel(TESTDEFAULTLOGLEVEL);
+
+    }
+
+    public class ReplyToIsStartupCompleteThread extends Thread {
+        private String name = "ReplyToIsStartupCompleteThread";
+        private Thread thread;
+        private String from;
+        private String threadName = null;
+
+        public ReplyToIsStartupCompleteThread(int id, String from) {
+            this.from = from;
+            this.threadName = name + id;
+        }
+
+        @Override
+        public void start() {
+            thread = new Thread(this, threadName);
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Starting " + threadName + " thread");
+            }
+            thread.start();
+        }
+
+        public void run() {
+            if (!startupComplete.get()) {
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for startup to complete, before sending reply");
+                }
+                synchronized (startupComplete) {
+                    try {
+                        startupComplete.wait(0);
+                    } catch (InterruptedException ie) {
+                    }
+                }
+                try {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending isstartupcomplete reply to :" + from);
+                    }
+                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.ISSTARTUPCOMPLETEREPLY.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending isstartupcomplete reply to :" + from);
+                    }
+
+                } catch (GMSException ge1) {
+                    myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.ISSTARTUPCOMPLETEREPLY + " to " + from + ge1, ge1);
+                }
+            }
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                myLogger.log(TESTDEFAULTLOGLEVEL, "Stopping " + threadName + " thread");
+            }
+            thread = null;
         }
     }
 }
