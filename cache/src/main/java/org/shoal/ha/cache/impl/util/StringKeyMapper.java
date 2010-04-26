@@ -39,9 +39,6 @@ package org.shoal.ha.cache.impl.util;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.mapper.KeyMapper;
 
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -65,37 +62,85 @@ public class StringKeyMapper<K>
 
     private volatile TreeSet<String> currentMemberSet = new TreeSet<String>();
 
-    private volatile String[] members = new String[0];
+    private volatile TreeSet<String> currentMemberSetMinusMe = new TreeSet<String>();
 
-    private volatile String[] otherMembers;
+    private volatile String[] currentView = new String[0];
 
+    private volatile String[] previousView = new String[0];
+
+    private volatile String[] currentViewMinusMe = new String[0];
+
+    private volatile String currentViewCausedBy = "";
+
+    private static final String UNMAPPED = "UNMAPPED__" + StringKeyMapper.class.getName();
+
+    private boolean debug;
 
     public StringKeyMapper(String myName, String groupName) {
         this.myName = myName;
         this.groupName = groupName;
-
+        this.currentViewCausedBy = myName;
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
+
+        registerInstance(myName);
     }
 
     @Override
     public String getMappedInstance(String groupName, K key1) {
         rLock.lock();
         try {
-            int hc = Math.abs(getDigestHashCode(key1.toString()));
-            String mappedInstance = members[hc % (members.length)];
-            /*
+            if (currentView.length == 0) {
+                return UNMAPPED;
+            }
+            int hc = Math.abs(getHashCode(key1));
+            String mappedInstance = currentView[hc % (currentView.length)];
+
             //If the mapped instance is the current instance, then
             // both active and replica lives in the same instance!!
-            // Need to fix this.
-            
+
             if (mappedInstance.equals(myName)) {
-                mappedInstance = members[(hc + 1) % (members.length)];
-                System.out.println("Mapping(*) Key: " + key1 + " => " + hc + ";   " + mappedInstance);
+                if (currentViewMinusMe.length == 0) {
+                    return UNMAPPED;
+                }
+                mappedInstance = currentViewMinusMe[hc % currentViewMinusMe.length];
+                //System.out.println("Mapping(*) Key: " + key1 + " => " + hc + ";   " + mappedInstance);
             } else {
-                System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + mappedInstance);
+                //System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + mappedInstance);
             }
-            */
+
+            return mappedInstance;
+        } finally {
+            rLock.unlock();
+        }
+    }
+
+    public String findReplicaInstance(String groupName, K key1) {
+        rLock.lock();
+        try {
+            if (currentViewCausedBy.equals(myName)) {
+                return getMappedInstance(groupName, key1);
+            }
+            if (previousView.length == 0) {
+                return UNMAPPED;
+            }
+            int hc = Math.abs(getHashCode(key1));
+            String mappedInstance = previousView[hc % (previousView.length)];
+
+            if (debug) {
+                printMemberStates();
+            }
+            if (mappedInstance.equals(currentViewCausedBy)) {
+                mappedInstance = currentView[hc % currentView.length];
+                if (debug) {
+                    System.out.println("REPLICA(*) Key: " + key1 + " => " + hc + ";   " + mappedInstance);
+                }
+            } else {
+                if (debug) {
+                    System.out.println("REPLICA Key: " + key1 + " => " + hc + ";   " + mappedInstance);
+                }
+            }
+
             return mappedInstance;
         } finally {
             rLock.unlock();
@@ -121,8 +166,9 @@ public class StringKeyMapper<K>
         }
     }
 
-    private static int getDigestHashCode(String val) {
+    private int getHashCode(K val) {
         int hc = val.hashCode();
+        /*
         try {
             String hcStr = "_" + val.hashCode() + "_";
             MessageDigest dig = MessageDigest.getInstance("MD5");
@@ -135,18 +181,25 @@ public class StringKeyMapper<K>
         } catch (NoSuchAlgorithmException nsaEx) {
             hc = val.hashCode();
         }
-
+        */
         return hc;
     }
 
     public void registerInstance(String inst) {
         wLock.lock();
         try {
-            if ((!currentMemberSet.contains(inst)) && (!inst.equals(myName))) {
+            if (!currentMemberSet.contains(inst)) {
+                previousView = currentView;
                 currentMemberSet.add(inst);
-                members = currentMemberSet.toArray(new String[0]);
-                printMemberStates();
+                currentView = currentMemberSet.toArray(new String[0]);
+                currentViewCausedBy = inst;
+
+                if ((!currentMemberSetMinusMe.contains(inst)) && (!inst.equals(myName))) {
+                    currentMemberSetMinusMe.add(inst);
+                    currentViewMinusMe = currentMemberSetMinusMe.toArray(new String[0]);
+                }
             }
+            //printMemberStates();
         } finally {
             wLock.unlock();
         }
@@ -155,20 +208,37 @@ public class StringKeyMapper<K>
     public synchronized void removeInstance(String inst) {
         wLock.lock();
         try {
-            currentMemberSet.remove(inst);
-            members = currentMemberSet.toArray(new String[0]);
-            printMemberStates();
+            if (currentMemberSet.contains(inst)) {
+                previousView = currentView;
+                currentViewCausedBy = inst;
+                currentMemberSet.remove(inst);
+                currentView = currentMemberSet.toArray(new String[0]);
+
+                if ((currentMemberSetMinusMe.contains(inst)) && (!inst.equals(myName))) {
+                    currentMemberSetMinusMe.remove(inst);
+                    currentViewMinusMe = currentMemberSetMinusMe.toArray(new String[0]);
+                }
+            }
+            //printMemberStates();
         } finally {
             wLock.unlock();
         }
     }
 
+    public void setDebug(boolean val) {
+        debug = val;
+    }
+
     public void printMemberStates() {
         System.out.print("StringKeyMapper:: Members[");
-        for (String st : members) {
+        for (String st : currentView) {
             System.out.print("<" + st + "> ");
         }
-        System.out.println("]");
+        System.out.println("]");        System.out.print("StringKeyMapper:: PreviousMembers[");
+        for (String st : previousView) {
+            System.out.print("<" + st + "> ");
+        }
+        System.out.println("];  currentViewCausedBy: " + currentViewCausedBy);
     }
 
     private static class ReplicaState
@@ -198,32 +268,6 @@ public class StringKeyMapper<K>
         public String toString() {
             return "<" + name + ":" + active + ">";
         }
-    }
-
-    private static void mapTest(StringKeyMapper km) {
-        String[] keys = new String[]{"Key0", "Key1", "Key2"};
-
-        for (String key : keys) {
-            System.out.println("\t" + key + " => " + km.getMappedInstance("g1", key));
-        }
-
-        System.out.println();
-    }
-
-    public static void main(String[] args) {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
-
-        km.registerInstance("n0");
-        km.registerInstance("n1");
-        mapTest(km);
-
-        km.registerInstance("inst0");
-        km.registerInstance("inst1");
-        km.registerInstance("instancen0");
-        km.registerInstance("instancen1");
-        mapTest(km);
-
-        km.printMemberStates();
     }
 
 }
