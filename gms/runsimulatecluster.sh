@@ -1,11 +1,42 @@
 #!/bin/sh +x
 
+
+usage () {
+ echo "usage: [-h] [-t grizzly|jxta|jxtanew] [numberOfMembers(10 is default)]"
+ exit 1
+}
+
+if [ "$1" == "-h" ]; then
+    usage
+fi
+
 TRANSPORT=grizzly
 if [ ! -z "${1}" ]; then
-    TRANSPORT=${1}
+   if [ "$1" = "-t" ]; then
+      TRANSPORT=${1}
+      shift
+      if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" -a "${TRANSPORT}" != "jxtanew" ]; then
+         echo "ERROR: Invalid transport specified"
+         usage
+      fi
+   fi
 fi
 echo Running with transport ${TRANSPORT}
 
+NUMOFMEMBERS=10
+if [ ! -z "${1}" ]; then
+    NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
+    if [ "${NUMOFMEMBERS}" != "" ]; then
+       if [ ${NUMOFMEMBERS} -le 0 ];then
+          echo "ERROR: Invalid number of members specified"
+          usage
+       fi
+    else
+       echo "ERROR: Invalid number of members specified"
+       usage
+    fi
+    shift
+fi
 
 LOGS_DIR=LOGS/simulateCluster
 
@@ -25,17 +56,37 @@ SHOALGMS_LOG_LEVEL=INFO
 echo "Starting admin"
 ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9130 -te 9160 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/server.log 2>&1 &
 sleep 5
-echo "Starting CORE members"
-./rungmsdemo.sh instance01 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9161 -te 9190 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance01.log 2>&1 &
-./rungmsdemo.sh instance02 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9230 -te 9260 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance02.log 2>&1 &
-./rungmsdemo.sh instance03 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9261 -te 9290 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance03.log 2>&1 &
-./rungmsdemo.sh instance04 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9330 -te 9360 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance04.log 2>&1 &
-./rungmsdemo.sh instance05 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9361 -te 9390 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance05.log 2>&1 &
-./rungmsdemo.sh instance06 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9430 -te 9460 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance06.log 2>&1 &
-./rungmsdemo.sh instance07 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9461 -te 9490 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance07.log 2>&1 &
-./rungmsdemo.sh instance08 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9530 -te 9560 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance08.log 2>&1 &
-./rungmsdemo.sh instance09 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9561 -te 9590 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance09.log 2>&1 &
-./rungmsdemo.sh instance10 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9631 -te 9690 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance10.log 2>&1 &
+
+echo "Starting ${NUMOFMEMBERS} CORE members"
+
+instanceNum=1
+sdtcp=9161
+edtcp=`expr ${sdtcp} + 30`
+count=1
+while [ $count -le ${NUMOFMEMBERS} ]
+do
+    if [  ${instanceNum} -lt 10 ]; then
+       iNum="0${instanceNum}"
+    else
+       iNum=${instanceNum}
+    fi
+    ./rungmsdemo.sh instance${iNum} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance${iNum}.log 2>&1 &
+    instanceNum=`expr ${instanceNum} + 1`
+    sdtcp=`expr ${edtcp} + 1`
+    edtcp=`expr ${sdtcp} + 30`
+    count=`expr ${count} + 1`
+done
+# replaced the following with the while code above
+#./rungmsdemo.sh instance01 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9161 -te 9190 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance01.log 2>&1 &
+#./rungmsdemo.sh instance02 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9230 -te 9260 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance02.log 2>&1 &
+#./rungmsdemo.sh instance03 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9261 -te 9290 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance03.log 2>&1 &
+#./rungmsdemo.sh instance04 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9330 -te 9360 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance04.log 2>&1 &
+#./rungmsdemo.sh instance05 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9361 -te 9390 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance05.log 2>&1 &
+#./rungmsdemo.sh instance06 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9430 -te 9460 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance06.log 2>&1 &
+#./rungmsdemo.sh instance07 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9461 -te 9490 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance07.log 2>&1 &
+#./rungmsdemo.sh instance08 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9530 -te 9560 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance08.log 2>&1 &
+#./rungmsdemo.sh instance09 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9561 -te 9590 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance09.log 2>&1 &
+#./rungmsdemo.sh instance10 ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9631 -te 9690 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} > ${LOGS_DIR}/instance10.log 2>&1 &
 
 echo "Waiting for group [${GROUPNAME}] to complete startup"
 # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
