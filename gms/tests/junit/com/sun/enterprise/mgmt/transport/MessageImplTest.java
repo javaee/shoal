@@ -137,7 +137,7 @@ public class MessageImplTest {
     @Test
     public void testMessageFromByteBuffer() {
         try {
-            ByteBuffer plainByteBuffer = message.getPlainByteBuffer();
+            byte[] plainByteBuffer = message.getPlainByteBuffer().array();
             Message message4 = new MessageImpl();
             int messageLen = message4.parseHeader(plainByteBuffer, 0);
             message4.parseMessage(plainByteBuffer, MessageImpl.HEADER_LENGTH, messageLen);
@@ -163,7 +163,7 @@ public class MessageImplTest {
         assertNull(message.getMessageElement(key1));
         Message message3 = new MessageImpl();
         try {
-            ByteBuffer plainByteBuffer = message.getPlainByteBuffer();
+            byte[] plainByteBuffer = message.getPlainByteBuffer().array();
             Message message5 = new MessageImpl();
             int messageLen = message5.parseHeader(plainByteBuffer, 0);
             message5.parseMessage(plainByteBuffer, MessageImpl.HEADER_LENGTH, messageLen);
@@ -180,7 +180,7 @@ public class MessageImplTest {
     public void testAddLargeAppMessage() {
         message.addMessageElement("APPMESSAGE", new byte[8192]);
         try {
-            ByteBuffer plainByteBuffer = message.getPlainByteBuffer();
+            byte[] plainByteBuffer = message.getPlainByteBuffer().array();
             Message message6 = new MessageImpl();
             int messageLen = message6.parseHeader(plainByteBuffer, 0);
             message6.parseMessage(plainByteBuffer, MessageImpl.HEADER_LENGTH, messageLen);
