@@ -46,7 +46,7 @@
 SHOALWORKSPACE=`pwd`
 TMPDIR=$SHOALWORKSPACE/tmp
 LOGDIR=$SHOALWORKSPACE/LOGS/hamessagebuddyreplicasimulator
-NUMOFINSTANCES=10
+NUMOFMEMBERS=10
 NUMOFOBJECTS=100
 NUMOFOBJECTS=10
 NUMOFMSGSPEROBJECT=500
@@ -211,7 +211,7 @@ chmod 755 ${TMPDIR}/script3
 usage () {
     cat << USAGE
 Usage: $0
-`${TMPDIR}/script1 -h|-dist`
+`${TMPDIR}/script1 [-h|-dist] [numberofmembers(default of 10)]`
 USAGE
 exit 1
 }
@@ -221,12 +221,28 @@ if [ "$1" == "-h" ]; then
 fi
 
 
-$ECHO "Number of Instances=${NUMOFINSTANCES}"
+$ECHO "Number of members=${NUMOFMEMBERS}"
 $ECHO "GroupName=${GROUPNAME}"
 $ECHO "Number of Objects=${NUMOFOBJECTS}"
 $ECHO "Number of messages Per Object=${NUMOFMSGSPEROBJECT}"
 $ECHO "Message size=${MSGSIZE}"
 $ECHO "Log Directory=${LOGDIR}"
+
+
+if [ ! -z "${1}" ]; then
+    NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
+    if [ "${NUMOFMEMBERS}" != "" ]; then
+       if [ ${NUMOFMEMBERS} -le 0 ];then
+          echo "ERROR: Invalid number of members specified"
+          usage
+       fi
+    else
+       echo "ERROR: Invalid number of members specified"
+       usage
+    fi
+    shift
+fi
+
 
 if [ "$1" != "-dist" ]; then
     # non-distributed environment
@@ -234,68 +250,67 @@ if [ "$1" != "-dist" ]; then
     $ECHO "Starting DAS"
     sdtcp=${STARTTCPPORT}
     edtcp=`expr ${sdtcp} + 30`
-    ${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFINSTANCES} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/master.log &
-    #${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFINSTANCES} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/master.log &
+    ${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFMEMBERS} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/master.log &
+    #${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/master.log &
 
     # give time for the DAS to start
     sleep 5
-    $ECHO "Starting ${NUMOFINSTANCES} instances"
+    $ECHO "Starting ${NUMOFMEMBERS} members"
     sin=${STARTINSTANCENUM}
     sdtcp=`expr ${edtcp} + 1`
     edtcp=`expr ${sdtcp} + 30`
     count=1
-    while [ $count -le ${NUMOFINSTANCES} ]
+    while [ $count -le ${NUMOFMEMBERS} ]
     do
-         ${TMPDIR}/script1 instance${sin} ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/instance${sin}.log &
+         ${TMPDIR}/script1 instance${sin} ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/instance${sin}.log &
          sin=`expr ${sin} + 1`
          sdtcp=`expr ${edtcp} + 1`
          edtcp=`expr ${sdtcp} + 30`
         count=`expr ${count} + 1`
     done
 
-    #${TMPDIR}/script1 instance101 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9161 9191 INFO >& ${LOGDIR}/instance101.log &
-    #${TMPDIR}/script1 instance102 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9192 9222 INFO >& ${LOGDIR}/instance102.log &
-    #${TMPDIR}/script1 instance103 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9223 9253 INFO >& ${LOGDIR}/instance103.log &
-    #${TMPDIR}/script1 instance104 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9254 9284 INFO >& ${LOGDIR}/instance104.log &
-    #${TMPDIR}/script1 instance105 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9285 9315 INFO >& ${LOGDIR}/instance105.log &
-    #${TMPDIR}/script1 instance106 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9316 9346 INFO >& ${LOGDIR}/instance106.log &
-    #${TMPDIR}/script1 instance107 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9347 9377 INFO >& ${LOGDIR}/instance107.log &
-    #${TMPDIR}/script1 instance108 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9378 9408 INFO >& ${LOGDIR}/instance108.log &
-    #${TMPDIR}/script1 instance109 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9409 9439 INFO >& ${LOGDIR}/instance109.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9440 9470 INFO >& ${LOGDIR}/instance110.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9471 9500 INFO >& ${LOGDIR}/instance110.log &
-    $ECHO "Finished starting ${NUMOFINSTANCES} instances"
+    #${TMPDIR}/script1 instance101 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9161 9191 INFO >& ${LOGDIR}/instance101.log &
+    #${TMPDIR}/script1 instance102 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9192 9222 INFO >& ${LOGDIR}/instance102.log &
+    #${TMPDIR}/script1 instance103 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9223 9253 INFO >& ${LOGDIR}/instance103.log &
+    #${TMPDIR}/script1 instance104 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9254 9284 INFO >& ${LOGDIR}/instance104.log &
+    #${TMPDIR}/script1 instance105 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9285 9315 INFO >& ${LOGDIR}/instance105.log &
+    #${TMPDIR}/script1 instance106 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9316 9346 INFO >& ${LOGDIR}/instance106.log &
+    #${TMPDIR}/script1 instance107 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9347 9377 INFO >& ${LOGDIR}/instance107.log &
+    #${TMPDIR}/script1 instance108 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9378 9408 INFO >& ${LOGDIR}/instance108.log &
+    #${TMPDIR}/script1 instance109 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9409 9439 INFO >& ${LOGDIR}/instance109.log &
+    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9440 9470 INFO >& ${LOGDIR}/instance110.log &
+    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9471 9500 INFO >& ${LOGDIR}/instance110.log &
+    $ECHO "Finished starting ${NUMOFMEMBERS} members"
 
     # give time for the instances to start
     sleep 3
     # monitor for the testing to begin
-    ${TMPDIR}/script3 ${NUMOFINSTANCES}
+    ${TMPDIR}/script3 ${NUMOFMEMBERS}
     # monitor when the testing is complete
-    ${TMPDIR}/script2 ${NUMOFINSTANCES}
+    ${TMPDIR}/script2 ${NUMOFMEMBERS}
 
 else
     # distributed environment
    # $ECHO "Starting DAS"
    # sdtcp=${STARTTCPPORT}
    # edtcp=`expr ${sdtcp} + 30`
-   # ${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFINSTANCES} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/master.log &
+   # ${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/master.log &
 
     # give time for the DAS to start
    # sleep 5
-    $ECHO "Starting instances"
+    $ECHO "YOU NEED TO START THE members ON THE REMOTE MACHINES"
 
-    #${TMPDIR}/script1 instance101 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9161 9191 INFO >& ${LOGDIR}/instance101.log &
-    #${TMPDIR}/script1 instance102 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9192 9222 INFO >& ${LOGDIR}/instance102.log &
-    ${TMPDIR}/script1 instance103 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9223 9253 INFO >& ${LOGDIR}/instance103.log &
-    ${TMPDIR}/script1 instance104 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9254 9284 INFO >& ${LOGDIR}/instance104.log &
-    #${TMPDIR}/script1 instance105 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9285 9315 INFO >& ${LOGDIR}/instance105.log &
-    #${TMPDIR}/script1 instance106 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9316 9346 INFO >& ${LOGDIR}/instance106.log &
-    #${TMPDIR}/script1 instance107 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9347 9377 INFO >& ${LOGDIR}/instance107.log &
-    #${TMPDIR}/script1 instance108 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9378 9408 INFO >& ${LOGDIR}/instance108.log &
-    #${TMPDIR}/script1 instance109 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9409 9439 INFO >& ${LOGDIR}/instance109.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9440 9470 INFO >& ${LOGDIR}/instance110.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFINSTANCES} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9471 9500 INFO >& ${LOGDIR}/instance110.log &
-    $ECHO "Finished starting ${NUMOFINSTANCES} instances"
+    #${TMPDIR}/script1 instance101 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9161 9191 INFO >& ${LOGDIR}/instance101.log &
+    #${TMPDIR}/script1 instance102 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9192 9222 INFO >& ${LOGDIR}/instance102.log &
+    #${TMPDIR}/script1 instance103 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9223 9253 INFO >& ${LOGDIR}/instance103.log &
+    #${TMPDIR}/script1 instance104 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9254 9284 INFO >& ${LOGDIR}/instance104.log &
+    #${TMPDIR}/script1 instance105 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9285 9315 INFO >& ${LOGDIR}/instance105.log &
+    #${TMPDIR}/script1 instance106 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9316 9346 INFO >& ${LOGDIR}/instance106.log &
+    #${TMPDIR}/script1 instance107 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9347 9377 INFO >& ${LOGDIR}/instance107.log &
+    #${TMPDIR}/script1 instance108 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9378 9408 INFO >& ${LOGDIR}/instance108.log &
+    #${TMPDIR}/script1 instance109 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9409 9439 INFO >& ${LOGDIR}/instance109.log &
+    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9440 9470 INFO >& ${LOGDIR}/instance110.log &
+    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9471 9500 INFO >& ${LOGDIR}/instance110.log &
 
 fi
 
