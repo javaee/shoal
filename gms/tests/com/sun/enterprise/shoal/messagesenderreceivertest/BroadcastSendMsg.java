@@ -477,7 +477,6 @@ public class BroadcastSendMsg {
                         receiveStartTime = new GregorianCalendar();
                     }
                     try {
-                        notification.acquire();
                         MessageSignal messageSignal = (MessageSignal) notification;
 
                         String msgString = new String(messageSignal.getMessage());
@@ -519,16 +518,8 @@ public class BroadcastSendMsg {
                             //System.out.println("chm.size()=" + chm.size());
 
                         }
-                    } catch (SignalAcquireException e) {
-                        e.printStackTrace();
                     } catch (Throwable t) {
                         t.printStackTrace();
-                    } finally {
-                        try {
-                            notification.release();
-                        } catch (Exception e) {
-                        }
-
                     }
                 }
             }
