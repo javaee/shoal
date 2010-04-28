@@ -21,5 +21,5 @@
  #
  # Copyright 2006 Sun Microsystems, Inc. All rights reserved.
  #
-java -Dcom.sun.management.jmxremote -DINAME=client$1 -cp ./lib/jxta.jar:dist/shoal-gms-test.jar:dist/shoal-gms.jar com.sun.enterprise.jxtamgmt.LWRMulticastSenderTest
+java -Dcom.sun.management.jmxremote -DINAME=client$1 -cp ./lib/jxta.jar:dist/shoal-gms-tests.jar:dist/shoal-gms.jar com.sun.enterprise.jxtamgmt.LWRMulticastSenderTest
 

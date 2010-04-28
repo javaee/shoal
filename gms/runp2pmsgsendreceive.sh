@@ -44,6 +44,6 @@ USAGE
 
 #if [ -n $5 ]; then 
 
-java -Dcom.sun.management.jmxremote -cp ${publish_home}/shoal-gms-test.jar:${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DTYPE=$1 com.sun.enterprise.ee.cms.tests.p2pmessagesend.P2PMessageSendAndReceive;
+java -Dcom.sun.management.jmxremote -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/jxta.jar:${lib_home}/bcprov-jdk14.jar -DTYPE=$1 com.sun.enterprise.ee.cms.tests.p2pmessagesend.P2PMessageSendAndReceive;
 
 
