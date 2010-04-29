@@ -123,7 +123,7 @@ do
      esac
 done
 
-if [ -z ${INSTANCEID} -o -z ${CLUSTERNAME} -o -z ${MEMBERTYPE} -o -z ${LIFEINMILLIS} -o -z ${LOGLEVEL} -o -z ${TRANSPORT} ]; then
+if [ -z "${INSTANCEID}" -o -z "${CLUSTERNAME}" -o -z "${MEMBERTYPE}" -o -z "${LIFEINMILLIS}" -o -z "${LOGLEVEL}" -o -z "${TRANSPORT}" ]; then
     echo "ERROR: Missing a required argument"
     usage;
 fi
