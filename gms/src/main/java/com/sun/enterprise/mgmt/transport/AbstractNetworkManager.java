@@ -158,10 +158,9 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         return localPeerID;
     }
 
-    private static NetworkManager networkManager = null;
-
 
     private static NetworkManager findByServiceLoader(String transport) {
+        NetworkManager networkManager = null;
         ServiceLoader<NetworkManager> loader = ServiceLoader.load(NetworkManager.class);
         Iterator<NetworkManager> iter = loader.iterator();
 
@@ -185,6 +184,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     }
 
     private static NetworkManager findByClassLoader(String classname) {
+        NetworkManager networkManager = null;
         // for jdk 5.  just use class loader.
         try{
             Class networkManagerClass = Class.forName(classname);
@@ -196,21 +196,20 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     }
 
     public static NetworkManager getInstance(String transport) {
+        NetworkManager networkManager = null;
+        try {
+            networkManager = findByServiceLoader(transport);
+        } catch (Throwable t) {
+            // jdk 5 will end up here.
+        }
         if (networkManager == null) {
-            try {
-                networkManager = findByServiceLoader(transport);
-            } catch (Throwable t) {
-                // jdk 5 will end up here.    
+            String classname = null;
+            if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
+                classname = "com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager";
+            } else {
+                classname = "com.sun.enterprise.mgmt.transport.jxta.JxtaNetworkManager";
             }
-            if (networkManager == null) {
-                String classname = null;
-                if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
-                    classname = "com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager";
-                } else {
-                    classname = "com.sun.enterprise.mgmt.transport.jxta.JxtaNetworkManager";
-                }
-                networkManager = findByClassLoader(classname);
-            }
+            networkManager = findByClassLoader(classname);
         }
         return networkManager;
     }
