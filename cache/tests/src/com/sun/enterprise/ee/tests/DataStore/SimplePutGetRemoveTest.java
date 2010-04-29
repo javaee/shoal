@@ -35,7 +35,6 @@
  */
 
 /* this program is run using the runSimplePutGetRemove.sh */
-
 package com.sun.enterprise.ee.tests.DataStore;
 
 import com.sun.enterprise.ee.cms.core.CallBack;
@@ -88,7 +87,7 @@ public class SimplePutGetRemoveTest implements CallBack {
     static int numberOfInstances = 0;
     static int payloadSize = 0;
     static int numberOfObjects = 0;
-    static AtomicInteger numberOfJoinedAndReady = new AtomicInteger(0);
+    static AtomicInteger numberOfMembers = new AtomicInteger(0);
     static String groupName = null;
     static AtomicBoolean startupComplete = new AtomicBoolean(false);
     static AtomicBoolean testingStarted = new AtomicBoolean(false);
@@ -106,11 +105,10 @@ public class SimplePutGetRemoveTest implements CallBack {
         }
         memberID = System.getProperty("INSTANCEID");
         groupName = System.getProperty("CLUSTERNAME");
-        numberOfInstances = Integer.parseInt(System.getProperty("NUMINSTANCES", "0"));
         numberOfObjects = Integer.parseInt(System.getProperty("NUMOBJECTS", "0"));
         payloadSize = Integer.parseInt(System.getProperty("PAYLOADSIZE", "0"));
-        if (memberID == null || groupName == null || numberOfInstances == 0) {
-            System.err.println("Missing either memberid groupname or number of instances");
+        if (memberID == null || groupName == null) {
+            System.err.println("Missing either memberid or groupname");
             usage();
         }
         if (memberID.contains("instance")) {
@@ -146,7 +144,6 @@ public class SimplePutGetRemoveTest implements CallBack {
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(Level.INFO, ("memberID=" + memberID));
             myLogger.log(Level.INFO, ("GroupName=" + groupName));
-            myLogger.log(Level.INFO, ("numberOfInstances=" + numberOfInstances));
             myLogger.log(Level.INFO, ("numberOfObjects=" + numberOfObjects));
             myLogger.log(Level.INFO, ("payloadSize=" + payloadSize));
         }
@@ -158,9 +155,9 @@ public class SimplePutGetRemoveTest implements CallBack {
 
     public static void usage() {
         System.out.println(" For server:");
-        System.out.println("    <memberid(server)> <groupName> <number_of_instances>");
+        System.out.println("    <memberid(server)> <groupName>");
         System.out.println(" For instances:");
-        System.out.println("    <memberid(instancexxx)> <groupName> <number_of_instances> <number_of_objects>  <payloadsize>");
+        System.out.println("    <memberid(instancexxx)> <groupName>  <number_of_objects>  <payloadsize>");
         System.exit(0);
     }
 
@@ -176,7 +173,6 @@ public class SimplePutGetRemoveTest implements CallBack {
             gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.SPECTATOR);
         } else {
             gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.CORE);
-            
             //
             //register DataStore GMS handlers before joining GMS group so datastore receives GMS Joined and
             //Ready notifications
@@ -267,6 +263,7 @@ public class SimplePutGetRemoveTest implements CallBack {
             }
             } else */
             if (msgString.equals(GMSAdminConstants.STARTTESTING)) {
+                numberOfMembers.set(gms.getGroupHandle().getCurrentCoreMembers().size());
                 if (!isAdmin) {
                     if (!testingStarted.get()) {
                         testingStarted.set(true);
@@ -278,8 +275,8 @@ public class SimplePutGetRemoveTest implements CallBack {
                 if (isAdmin) {
                     numberOfWAITINGTOPROCEED.getAndIncrement();
                     myLogger.info("numberOfWAITINGTOPROCEED=" + numberOfWAITINGTOPROCEED.get());
-                    myLogger.info("numberOfJoinedAndReady=" + numberOfJoinedAndReady.get());
-                    if (numberOfWAITINGTOPROCEED.get() == numberOfJoinedAndReady.get()) {
+                    myLogger.info("numberOfMembers=" + numberOfMembers.get());
+                    if (numberOfWAITINGTOPROCEED.get() == numberOfMembers.get()) {
                         // if everyone has reported WAITINGTOPROCEED then broadcast OKToProcced
                         numberOfWAITINGTOPROCEED.set(0);
                         try {
@@ -294,8 +291,8 @@ public class SimplePutGetRemoveTest implements CallBack {
                 if (isAdmin) {
                     numberOfTestingComplete.getAndIncrement();
                     myLogger.info("numberOfTestingComplete=" + numberOfTestingComplete.get());
-                    myLogger.info("numberOfJoinedAndReady=" + numberOfJoinedAndReady.get());
-                    if (numberOfTestingComplete.get() == numberOfJoinedAndReady.get()) {
+                    myLogger.info("numberOfMembers=" + numberOfMembers.get());
+                    if (numberOfTestingComplete.get() == numberOfMembers.get()) {
                         // if everyone has reported TestingComplete then broadcast TestingComplete to CLI
                         numberOfTestingComplete.set(0);
                         try {
@@ -313,9 +310,6 @@ public class SimplePutGetRemoveTest implements CallBack {
             myLogger.info("Received Join Notification from:" + from);
         } else if (notification instanceof JoinedAndReadyNotificationSignal) {
             myLogger.info("Received JoinedAndReady Notification from:" + from);
-            if (isAdmin) {
-                numberOfJoinedAndReady.getAndIncrement();
-            }
         }
     }
 
@@ -465,7 +459,6 @@ public class SimplePutGetRemoveTest implements CallBack {
                 }
                 myLogger.log(Level.INFO, "Removing " + onceExistedId);
                 ds.remove(onceExistedId);
-
                 //
                 // this might need to be modified the wait until remove has been sucessfully accomplished before
                 // moving on
@@ -518,7 +511,7 @@ public class SimplePutGetRemoveTest implements CallBack {
                     ds.put(id, value);
                 }
                 value--;
-                                //
+                //
                 // this might need to be modified the wait until put has been sucessfully accomplished before
                 // moving on
                 //
@@ -1061,7 +1054,6 @@ public class SimplePutGetRemoveTest implements CallBack {
         }
 
         private void LoadOthersDataTest() {
-            byte[][] persistedData = new byte[numberOfObjects][payloadSize];
             myLogger.log(Level.INFO, "Starting LoadOthersDataTest");
             if (ds != null) {
                 myLogger.log(Level.INFO, "Accessing persisted data");
@@ -1075,7 +1067,7 @@ public class SimplePutGetRemoveTest implements CallBack {
                             Object o = ds.get(id);
                             if (o != null) {
                                 byte[] restoredPayload = (byte[]) o;
-                                if (restoredPayload != null) {
+                                if (restoredPayload.length > 0) {
                                     int persistedDataLength = persistedData[num].length;
                                     if (persistedDataLength != restoredPayload.length) {
                                         myLogger.severe("Length of restored payload[" + restoredPayload.length + "] does not equal payload[" + persistedDataLength + "]");
@@ -1102,7 +1094,7 @@ public class SimplePutGetRemoveTest implements CallBack {
                                         }
                                     }
                                 } else {
-                                    myLogger.log(Level.SEVERE, "Error received null value for id  [" + id + "]");
+                                    myLogger.log(Level.SEVERE, "Error received an empty value for id  [" + id + "]");
                                 }
                             } else {
                                 myLogger.log(Level.SEVERE, "Error: get of id [" + id + "] resulted in a null return value");

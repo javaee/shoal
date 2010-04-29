@@ -24,7 +24,11 @@
  # you own identifying information:
  # "Portions Copyrighted [year] [name of copyright owner]"
 
+TEST_LOG_LEVEL=WARNING
+SHOALGMS_LOG_LEVEL=WARNING
+TRANSPORT=grizzly
 
+MAINCLASS="com.sun.enterprise.ee.tests.DataStore.SimplePutGetRemoveTest"
 CACHEWORKSPACE=../..
 LOGS_DIR=$CACHEWORKSPACE/LOGS/simpleputgetremove
 SHOALWORKSPACE=${CACHEWORKSPACE}/../gms
@@ -41,20 +45,15 @@ usage () {
     exit 0
 }
 
-MAINCLASS="com.sun.enterprise.ee.tests.DataStore.SimplePutGetRemoveTest"
 
 GRIZZLY_JARS=${SHOAL_DIST}/shoal-gms-tests.jar:${SHOAL_DIST}/shoal-gms.jar:${SHOAL_LIB}/grizzly-framework.jar:${SHOAL_LIB}/grizzly-utils.jar
 CACHE_JARS=${CACHE_DIST}/cache-1.0-SNAPSHOT.jar:${CACHE_TESTS_DIST}/cache-tests.jar
 JARS=${GRIZZLY_JARS}:${CACHE_JARS}
 
-TEST_LOG_LEVEL=WARNING
-SHOALGMS_LOG_LEVEL=WARNING
-
 TCPSTARTPORT=""
 TCPENDPORT=""
 MULTICASTADDRESS="-DMULTICASTADDRESS=229.9.1.2"
 MULTICASTPORT="-DMULTICASTPORT=2299"
-TRANSPORT=grizzly
 
 DONEREQUIRED=false
 while [ $# -ne 0 ]
@@ -100,8 +99,6 @@ do
            shift
            CLUSTERNAME=$1
            shift
-           NUMINSTANCES=$1
-           shift
            if [ "${INSTANCEID}" != "server" ];
            then
              NUMOBJECTS="-DNUMOBJECTS=$1"
@@ -118,13 +115,13 @@ do
      esac
 done
 
-if [ -z ${INSTANCEID} -o -z ${CLUSTERNAME} -o -z ${NUMINSTANCES} ]; then
+if [ -z ${INSTANCEID} -o -z ${CLUSTERNAME} ]; then
     echo "ERROR: Missing a required argument"
     usage;
 fi
 if [ "${INSTANCEID}" != "server" ];
 then
-    if [ -z ${NUMINSTANCES} -o -z ${NUMOBJECTS} ]; then
+    if [ -z ${NUMOBJECTS} ]; then
         echo "ERROR: Missing a required argument"
         usage;
     fi
@@ -134,6 +131,6 @@ fi
 echo Running using Shoal with transport ${TRANSPORT}
 echo "=========================="
 #echo java -Dcom.sun.management.jmxremote  -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DNUMINSTANCES=${NUMINSTANCES} ${NUMOBJECTS} ${PAYLOADSIZE} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL}   -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
-java -Dcom.sun.management.jmxremote  -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DNUMINSTANCES=${NUMINSTANCES} ${NUMOBJECTS} ${PAYLOADSIZE} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
+java -Dcom.sun.management.jmxremote  -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} ${NUMOBJECTS} ${PAYLOADSIZE} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
 
 
