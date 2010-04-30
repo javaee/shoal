@@ -102,9 +102,14 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
             connectorHandler = controller.acquireConnectorHandler( Controller.Protocol.TCP );
             try {
                 connectorHandler.connect( remoteAddress, localAddress );
-            } catch (IOException io) {
+//   TBD:  this is a short-term workaround for shoal issue 106 so developer testing is not blocked.
+//         This worksaround for an unhandled NPE from line above. Looks like there is a misuse and/or corruption in the cached ConnectionHandler.
+//         After this failure, the second attempt succeeds.  This is not a true fix but a workaround for time being.
+//            } catch (IOException io) {
+            } catch (Throwable io) {
                 //LOG.log(Level.WARNING, "retry once with another connectorHandler: IOException connecting to connectorHandler:" + connectorHandler.toString() + " remoteAddr:" + remoteAddress +
                 //        " message:" + message, io);
+                LOG.log(Level.INFO, "handled exception during connect to remote address: " + remoteAddress + ": workaround for shoal issue 106: retry one more time to connect", io);
                 if( connectorHandler != null ) {
                     try {
                         connectorHandler.close();
