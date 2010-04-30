@@ -1,63 +1,112 @@
-#!/bin/csh
+#!/bin/sh +x
 
-set APPLICATIONADMIN=applicationadmin
-set LOGS_DIR=LOGS/simulateCluster
-set SERVERLOG=${LOGS_DIR}/server.log
-set ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "[server.log|instance*.log]"`
+usage () {
+ echo "usage: [-h] [numberOfMembers(10 is default)] "
+ exit 1
+}
 
-echo -n "Report for simulation " ; grep "Running using Shoal with transport" ${SERVERLOG}
+NUMOFMEMBERS=10
+if [ $# -gt 0 ]; then
+   NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
+   shift
+   if [ "${NUMOFMEMBERS}" != "" ]; then
+       if [ ${NUMOFMEMBERS} -le 0 ];then
+          echo "ERROR: Invalid number of members specified"
+          usage
+       fi
+   else
+       echo "ERROR: Invalid number of members specified"
+       usage
+   fi
+fi
+
+APPLICATIONADMIN=admincli
+LOGS_DIR=LOGS/simulateCluster
+SERVERLOG=${LOGS_DIR}/server.log
+ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "[server.log|instance*.log]"`
+
+echo "Report for simulation "
+grep "Running using Shoal with transport" ${SERVERLOG}
 echo
-echo -n "Check for JOIN in DAS log. Expect 10.      Found:"  
-grep "Adding Join member:"  ${SERVERLOG} | wc -l
+
+TMP=`grep "Adding Join member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "Check for JOIN in DAS log. Expect ${NUMOFMEMBERS}.      Found: ${TMP}"
 echo
-echo -n "Check for JOINED_AND_READY_EVENT in DAS log. Expect 11.  Found:" 
-grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | wc -l
+JARE_DAS=`expr ${NUMOFMEMBERS} + 1`
+TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "Check for JOINED_AND_READY_EVENT in DAS log. Expect ${JARE_DAS}.  Found: ${TMP}"
 echo
-echo -n "PlannedShutdownEvent in DAS log. Expect 10. Found:" 
-grep "Received PlannedShutdownEvent"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l
+TMP=`grep "Received PlannedShutdownEvent"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "PlannedShutdownEvent in DAS log. Expect ${NUMOFMEMBERS}. Found: ${TMP}"
+
 echo
-echo -n "Check for GroupLeadershipNotifications in DAS log. Expect 2 from server. Found:"
-grep "adding GroupLeadershipNotification"  ${SERVERLOG} | wc -l
+TMP=`grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "Check for GroupLeadershipNotifications in DAS log. Expect 2 from server. Found: ${TMP}"
+
 echo "Check for issues in any members sending a GroupLeadershipNotification to server for this scenario"
-grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v server
+grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | grep -v server
 echo
 echo "*****************************************"
 echo
-echo -n "Check for Join members over all logs.  Expect 100.  Found: "
-grep "Adding Join member:"  ${ALLLOGS} | wc -l
-echo -n "Join in server    : " ; grep "Adding Join member:"  ${SERVERLOG} | wc -l
-echo -n "Join in instance01: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance01.log | wc -l
-echo -n "Join in instance02: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance02.log | wc -l
-echo -n "Join in instance03: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance03.log | wc -l
-echo -n "Join in instance04: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance04.log | wc -l
-echo -n "Join in instance05: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance05.log | wc -l
-echo -n "Join in instance06: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance06.log | wc -l
-echo -n "Join in instance07: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance07.log | wc -l
-echo -n "Join in instance08: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance08.log | wc -l
-echo -n "Join in instance09: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance09.log | wc -l
-echo -n "Join in instance10: " ; grep "Adding Join member:"  ${LOGS_DIR}/instance10.log | wc -l
+TMP=`grep "Adding Join member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+JOIN_IN_ALLLOGS=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS}`
+echo "Check for Join members over all logs.  Expect ${JOIN_IN_ALLLOGS}.  Found: ${TMP}"
+
+TMP=`grep "Adding Join member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}  | wc -l`
+echo "Join in server    : ${TMP}"
+ 
+count=1
+num=0
+while [ $count -le ${NUMOFMEMBERS} ]
+do
+    if [ ${count} -lt 10 ]; then
+       num="0${count}"
+    else
+       num=${count}
+    fi
+    TMP=`grep "Adding Join member:"  ${LOGS_DIR}/instance${num}.log | grep -v ${APPLICATIONADMIN}  | wc -l`
+    echo "Join in instance${num}: ${TMP}"
+    count=`expr ${count} + 1`
+done
+
+
+
 echo
-echo -n "Check for JOINED_AND_READY_EVENT over all logs. Expect 111. Found:"
-grep  "JOINED_AND_READY_EVENT for Member:"  ${ALLLOGS} | wc -l
-echo -n "JoinAndReady in server    : " ; grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | wc -l
-echo -n "JoinAndReady in instance01: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance01.log | wc -l
-echo -n "JoinAndReady in instance02: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance02.log | wc -l
-echo -n "JoinAndReady in instance03: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance03.log | wc -l
-echo -n "JoinAndReady in instance04: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance04.log | wc -l
-echo -n "JoinAndReady in instance05: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance05.log | wc -l
-echo -n "JoinAndReady in instance06: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance06.log | wc -l
-echo -n "JoinAndReady in instance07: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance07.log | wc -l
-echo -n "JoinAndReady in instance08: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance08.log | wc -l
-echo -n "JoinAndReady in instance09: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance09.log | wc -l
-echo -n "JoinAndReady in instance10: " ; grep "JOINED_AND_READY_EVENT for Member:"  ${LOGS_DIR}/instance10.log | wc -l
+JARE_ALL_LOGS=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 1`
+
+#echo -n "Check for JOINED_AND_READY_EVENT over all logs. Expect 111. Found:"
+TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "Check for JOINED_AND_READY_EVENT over all logs. Expect ${JARE_ALL_LOGS}. Found: ${TMP}"
+
+TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "JoinAndReady in server    : ${TMP}"
+
+count=1
+num=0
+while [ $count -le ${NUMOFMEMBERS} ]
+do
+    if [  ${count} -lt 10 ]; then
+       num="0${count}"
+    else
+       num=${count}
+    fi
+    LOG=${LOGS_DIR}/instance${num}.log
+    TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${LOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+    echo "JoinAndReady in instance${num}: ${TMP}"
+    count=`expr ${count} + 1`
+done
+
 echo
 echo "*****************************************"
-echo -n "Number of Severe : " ; grep "|SEVERE|" ${ALLLOGS} | wc -l
-echo -n "Number of Warnings:"  ; grep WARNING  ${ALLLOGS} | wc -l
+TMP=`grep "|SEVERE|" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "Number of Severe :  ${TMP}"
+
+TMP=`grep WARNING ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+echo "Number of Warnings: ${TMP}"
 echo
 echo
 echo SEVERE events
-grep "|SEVERE|"  ${ALLLOGS}
+grep "|SEVERE|"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
 echo WARNING events
-grep WARNING  ${ALLLOGS}
+grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
 
