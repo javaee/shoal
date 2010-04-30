@@ -56,12 +56,9 @@ public class GMSAdminCLI implements CallBack {
 //public class ApplicationAdmin {
 
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-        private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
-
+    private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
     private static final Logger myLogger = java.util.logging.Logger.getLogger("GMSAdminCLI");
-        private static final Level TESTDEFAULTLOGLEVEL = Level.INFO;
-
-
+    private static final Level TESTDEFAULTLOGLEVEL = Level.INFO;
     private static GroupManagementService gms = null;
     static String memberID = GMSAdminConstants.ADMINCLI;
     static String groupName = null;
@@ -75,20 +72,19 @@ public class GMSAdminCLI implements CallBack {
     private boolean receivedStopClusterReply = false;
     private AtomicBoolean receivedJoinOrJoinedAndReady = new AtomicBoolean(false);
     private long currentTime = 0;
+    private static boolean resend = false;
+    private static int resendCount = 0;
 
     public static void main(String[] args) {
-
         if (args[0].equalsIgnoreCase("-h")) {
             usage();
         }
-
         if (args.length < 1 || args.length > 3) {
             System.err.println("ERROR: Incorrect number of arguments");
             usage();
         }
         command = args[0].toLowerCase();
         groupName = args[1];
-
         if ((!command.equals("list"))
                 && (!command.equals("stopc"))
                 && (!command.equals("stopm"))
@@ -100,12 +96,9 @@ public class GMSAdminCLI implements CallBack {
             System.err.println("ERROR: Invalid command specified [" + command + "]");
             usage();
         }
-
         if (groupName == null || groupName.length() == 0) {
             System.err.println("ERROR: missing groupName");
-
         }
-
         if (args.length == 3) {
             if (command.equals("state")) {
                 try {
@@ -118,16 +111,14 @@ public class GMSAdminCLI implements CallBack {
                     System.err.println("\n");
                     usage();
                 }
-
             } else {
                 memberName = args[2];
-                if (!memberName.contains(GMSAdminConstants.ADMINNAME) && !memberName.equals(GMSAdminConstants.INSTANCEPREFIX)) {
+                if (!memberName.contains(GMSAdminConstants.ADMINNAME) && !memberName.contains(GMSAdminConstants.INSTANCEPREFIX)) {
                     System.err.println("ERROR: Invalid memberName specified [" + memberName + "], must be either server or contain instance");
                     usage();
                 }
             }
         }
-
         if (command.equals("stopm") || command.equals("killm")) {
             if (memberName == null || memberName.length() == 0) {
                 System.err.println("ERROR: missing memberName");
@@ -138,58 +129,50 @@ public class GMSAdminCLI implements CallBack {
             System.err.println("WARNING: Ignoring invalid argument [" + memberName + "]");
             memberName = null;
         }
-
+        String optArgs = System.getProperty("OPTARGS", null);
+        if (optArgs != null) {
+            if (optArgs.contains("-retry")) {
+                resend = true;
+            }
+        }
         // this configures the formatting of the gms log output
         Utility.setLogger(gmsLogger);
         Utility.setupLogHandler();
-
         // this sets the grizzly log level
         GrizzlyUtil.getLogger().setLevel(Level.WARNING);
-
         // this configures the formatting of the myLogger output
         GMSAdminCLI.setupLogHandler();
-
         try {
             gmsLogger.setLevel(Level.parse(System.getProperty("LOG_LEVEL", GMSDEFAULTLOGLEVEL.toString())));
         } catch (Exception e) {
             gmsLogger.setLevel(GMSDEFAULTLOGLEVEL);
         }
         gmsLogger.info("GMS Logging using log level of:" + gmsLogger.getLevel());
-
         try {
             myLogger.setLevel(Level.parse(System.getProperty("TEST_LOG_LEVEL", TESTDEFAULTLOGLEVEL.toString())));
         } catch (Exception e) {
             myLogger.setLevel(TESTDEFAULTLOGLEVEL);
         }
         myLogger.info("Test Logging using log level of:" + myLogger.getLevel());
-
-
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Command=" + command);
             myLogger.log(TESTDEFAULTLOGLEVEL, "GroupName=" + groupName);
             myLogger.log(TESTDEFAULTLOGLEVEL, "MemberName=" + memberName);
+            myLogger.log(TESTDEFAULTLOGLEVEL, "RetrySend=" + resend);
         }
-
-
         if (command.equals("state")) {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "State=" + whichState.toString());
             }
         }
-
-
-
-
         GMSAdminCLI appAdmin = new GMSAdminCLI();
         appAdmin.registerAndJoinCluster();
         appAdmin.execute();
         leaveGroupAndShutdown();
-
-
     }
 
     public static void usage() {
-        System.out.println(new StringBuffer().append("USAGE: java ").append(" -Dcom.sun.management.jmxremote").append(" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly").append(" -DTCPSTARTPORT=9060").append(" -DTCPENDPORT=9089").append(" -DMULTICASTADDRESS=229.9.1.1").append(" -DMULTICASTPORT=2299").append("-DTEST_LOG_LEVEL=WARNING").append("-DLOG_LEVEL=WARNING").append(" -cp shoal-gms-tests.jar:shoal-gms.jar:grizzly-framework.jar:grizzly-utils.jar").append(" com.sun.enterprise.ee.cms.tests.GMSAdminCLI").append(" ARGUMENTS").toString());
+        System.out.println(new StringBuffer().append("USAGE: java ").append(" -Dcom.sun.management.jmxremote").append(" -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly").append(" -DTCPSTARTPORT=9060").append(" -DTCPENDPORT=9089").append(" -DMULTICASTADDRESS=229.9.1.1").append(" -DMULTICASTPORT=2299").append("-DTEST_LOG_LEVEL=WARNING").append("-DLOG_LEVEL=WARNING").append("-DOPTARGS=OPTARGS").append(" -cp shoal-gms-tests.jar:shoal-gms.jar:grizzly-framework.jar:grizzly-utils.jar").append(" com.sun.enterprise.ee.cms.tests.GMSAdminCLI").append(" ARGUMENTS").toString());
         System.out.println("ARGUMENT usages:");
         System.out.println("        list groupName [memberName(default is all)]  - list member(s)");
         System.out.println("        stopc groupName - stops a cluster");
@@ -221,8 +204,6 @@ public class GMSAdminCLI implements CallBack {
     }
 
     private void execute() {
-
-
         if (command.equals("list")) {
             if (memberName == null) {
                 // all members in the group
@@ -239,7 +220,6 @@ public class GMSAdminCLI implements CallBack {
                 if (sb.length() > 0) {
                     String s = sb.toString();
                     if (!s.equals(" ")) {
-
                         s = s.replace(' ', ',');
                         if (s.charAt(0) == ',') {
                             s = s.substring(1);
@@ -308,106 +288,171 @@ public class GMSAdminCLI implements CallBack {
         } else if (command.equals("stopc")) {
             replyMsg = GMSAdminConstants.STOPCLUSTERREPLY;
             replyFrom = gms.getGroupHandle().getGroupLeader();
-            try {
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast stopcluster message to master");
-                }
-                // broadcast the shutdown cluster message, only the master should react to this
-                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPCLUSTER.getBytes());
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting stopcluster message to master");
-                }
-            } catch (GMSException e) {
-                myLogger.warning("Exception occurred with broadcasting stopcluster message:" + e);
-                //retry the send up to 3 times
-                for (int i = 1; i <= 3; i++) {
-                    try {
-                        sleep(3);
-                        myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STOPCLUSTER + ")");
-                        gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPCLUSTER.getBytes());
-                        break; // if successful
-                    } catch (GMSException ge1) {
-                        myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.STOPCLUSTER + ") : " + ge1);
+            boolean sendWorked = true;
+            do {
+                int retryCount = 0;
+                try {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast stopcluster message to master");
+                    }
+                    // broadcast the shutdown cluster message, only the master should react to this
+                    gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPCLUSTER.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting stopcluster message to master");
+                    }
+                } catch (GMSException e) {
+                    myLogger.warning("Exception occurred with broadcasting stopcluster message:" + e);
+                    //retry the send up to 3 times
+                    for (int i = 1; i <= 3; i++) {
+                        try {
+                            sleep(3);
+                            myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STOPCLUSTER + ")");
+                            gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPCLUSTER.getBytes());
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting stopcluster message to master");
+                            }
+                            sendWorked = true;
+                            break; // if successful
+                        } catch (GMSException ge1) {
+                            myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.STOPCLUSTER + ") : " + ge1);
+                        }
+                        sendWorked = false;
                     }
                 }
-            }
-
-            synchronized (receivedReply) {
-                try {
-                    receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
-                } catch (InterruptedException ie) {
+                if (sendWorked) {
+                    synchronized (receivedReply) {
+                        try {
+                            receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                        } catch (InterruptedException ie) {
+                        }
+                    }
                 }
-            }
+                resendCount++;
+                if (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false) {
+                    myLogger.info("No Reply received, retry enabled so trying again");
+                }
+            } while (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false);
             if (receivedReply.get() == false) {
-                myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                if (resend) {
+                    myLogger.severe(replyMsg + " was never received even with retry enabled from:" + replyFrom);
+                } else {
+                    myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                }
                 displayUnsuccessful();
             } else {
                 displaySuccessful();
-
             }
-
         } else if (command.equals("stopm")) {
             replyMsg = GMSAdminConstants.STOPINSTANCEREPLY;
             replyFrom = memberName;
-
-            try {
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending stopinstance message to:" + memberName);
-                }
-                gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPINSTANCE.getBytes());
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending stopinstance message to:" + memberName);
-                }
-                synchronized (receivedReply) {
-                    try {
-                        receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
-                    } catch (InterruptedException ie) {
+            boolean sendWorked = true;
+            do {
+                try {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending stopmember message to:" + memberName);
                     }
-                    if (receivedReply.get() == false) {
-                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
-                        displayUnsuccessful();
-
-                    } else {
-                        displaySuccessful();
+                    gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPINSTANCE.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending stopmember message to:" + memberName);
+                    }
+                } catch (GMSException e) {
+                    myLogger.warning("Exception occurred while sending stopmember message:" + e);
+                    //retry the send up to 3 times
+                    for (int i = 0; i < 3; i++) {
+                        try {
+                            sleep(3);
+                            myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STOPINSTANCE + ")");
+                            gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPINSTANCE.getBytes());
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending stopmember message to:" + memberName);
+                            }
+                            sendWorked = true;
+                            break; // if successful break out of loop
+                        } catch (GMSException ge1) {
+                            myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.STOPINSTANCE + ") : " + ge1);
+                        }
+                        sendWorked = false;
                     }
                 }
-            } catch (GMSException e) {
-                myLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e.getLocalizedMessage(), e);
+                if (sendWorked) {
+                    synchronized (receivedReply) {
+                        try {
+                            receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                        } catch (InterruptedException ie) {
+                        }
+                    }
+                }
+                resendCount++;
+                if (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false) {
+                    myLogger.info("No Reply received [" + resendCount + "] time(s),retry enabled so trying again");
+                }
+            } while (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false);
+            if (receivedReply.get() == false) {
+                if (resend) {
+                    myLogger.severe(replyMsg + " was never received even with retry enabled from:" + replyFrom);
+                } else {
+                    myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                }
                 displayUnsuccessful();
+            } else {
+                displaySuccessful();
             }
-
         } else if (command.equals("killm")) {
             replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
             replyFrom = memberName;
-
-            try {
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + memberName);
-                }
-                gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killinstance message to:" + memberName);
-                }
-                synchronized (receivedReply) {
-                    try {
-                        receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
-                    } catch (InterruptedException ie) {
+            boolean sendWorked = true;
+            do {
+                try {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killmember message to:" + memberName);
                     }
-                    if (receivedReply.get() == false) {
-                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
-                        displayUnsuccessful();
-
-                    } else {
-                        displaySuccessful();
+                    gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killmember message to:" + memberName);
+                    }
+                } catch (GMSException e) {
+                    myLogger.warning("Exception occurred while sending killmember message:" + e);
+                    //retry the send up to 3 times
+                    for (int i = 1; i <= 3; i++) {
+                        try {
+                            sleep(3);
+                            myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.KILLINSTANCE + ")");
+                            gms.getGroupHandle().sendMessage(memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killmember message to:" + memberName);
+                            }
+                            sendWorked = true;
+                            break; // if successful
+                        } catch (GMSException ge1) {
+                            myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.KILLINSTANCE + ") : " + ge1);
+                        }
+                        sendWorked = false;
                     }
                 }
-            } catch (GMSException e) {
-                myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                if (sendWorked) {
+                    synchronized (receivedReply) {
+                        try {
+                            receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                        } catch (InterruptedException ie) {
+                        }
+                    }
+                }
+                resendCount++;
+                if (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false) {
+                    myLogger.info("No Reply received, retry enabled so trying again");
+                }
+            } while (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false);
+            if (receivedReply.get() == false) {
+                if (resend) {
+                    myLogger.severe(replyMsg + " was never received even with retry enabled from:" + replyFrom);
+                } else {
+                    myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                }
                 displayUnsuccessful();
+            } else {
+                displaySuccessful();
             }
-
         } else if (command.equals("killa")) {
-
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Executing killa");
             }
@@ -421,31 +466,62 @@ public class GMSAdminCLI implements CallBack {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "Current members are:" + members.toString());
                 }
                 String groupLeader = gms.getGroupHandle().getGroupLeader();
-
                 for (String _memberName : members) {
                     if (!_memberName.equals(GMSAdminConstants.ADMINCLI)) {
                         // do everyone else first then the groupLeader
                         if (!_memberName.equals(groupLeader)) {
                             replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
                             replyFrom = _memberName;
-                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                                myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + _memberName);
-                            }
-                            try {
-                                gms.getGroupHandle().sendMessage(_memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
-                                synchronized (receivedReply) {
-                                    try {
-                                        receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
-                                    } catch (InterruptedException ie) {
+                            boolean sendWorked = true;
+                            do {
+                                try {
+                                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + _memberName);
                                     }
-                                    if (receivedReply.get() != false) {
-                                        failedToReceiveReplyFrom.remove(replyFrom);
-                                    } else {
-                                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                                    gms.getGroupHandle().sendMessage(_memberName, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killmember message to:" + memberName);
+                                    }
+                                } catch (GMSException e) {
+                                    myLogger.warning("Exception occurred while sending killmember message:" + e);
+                                    //retry the send up to 3 times
+                                    for (int i = 1; i <= 3; i++) {
+                                        try {
+                                            sleep(3);
+                                            myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.KILLINSTANCE + ")");
+                                            gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                                myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killmember message to:" + memberName);
+                                            }
+                                            sendWorked = true;
+                                            break; // if successful
+                                        } catch (GMSException ge1) {
+                                            myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.KILLINSTANCE + ") : " + ge1);
+                                        }
+                                        sendWorked = false;
                                     }
                                 }
-                            } catch (GMSException e) {
-                                myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                                if (sendWorked) {
+                                    synchronized (receivedReply) {
+                                        try {
+                                            receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                                        } catch (InterruptedException ie) {
+                                        }
+                                    }
+                                }
+                                resendCount++;
+                                if (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false) {
+                                    myLogger.info("No Reply received, retry enabled so trying again");
+                                }
+                            } while (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false);
+                            if (receivedReply.get()) {
+                                failedToReceiveReplyFrom.remove(replyFrom);
+                            } else {
+                                if (resend) {
+                                    myLogger.severe(replyMsg + " was never received even with retry enabled from:" + replyFrom);
+                                } else {
+                                    myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                                }
                             }
                         }
                     }
@@ -453,26 +529,57 @@ public class GMSAdminCLI implements CallBack {
                 // now do group leader
                 replyMsg = GMSAdminConstants.KILLINSTANCEREPLY;
                 replyFrom = groupLeader;
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + groupLeader);
-                }
-                try {
-                    gms.getGroupHandle().sendMessage(groupLeader, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
-                    synchronized (receivedReply) {
-                        try {
-                            receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
-                        } catch (InterruptedException ie) {
+                boolean sendWorked = true;
+                do {
+                    try {
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Sending killinstance message to:" + groupLeader);
                         }
-                        if (receivedReply.get() != false) {
-                            failedToReceiveReplyFrom.remove(replyFrom);
-                        } else {
-                            myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                        gms.getGroupHandle().sendMessage(groupLeader, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killmember message to:" + memberName);
+                        }
+                    } catch (GMSException e) {
+                        myLogger.warning("Exception occurred while sending killmember message:" + e);
+                        //retry the send up to 3 times
+                        for (int i = 1; i <= 3; i++) {
+                            try {
+                                sleep(3);
+                                myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.KILLINSTANCE + ")");
+                                gms.getGroupHandle().sendMessage(groupLeader, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.KILLINSTANCE.getBytes());
+                                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending killmember message to:" + memberName);
+                                }
+                                sendWorked = true;
+                                break; // if successful
+                            } catch (GMSException ge1) {
+                                myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.KILLINSTANCE + ") : " + ge1);
+                            }
+                            sendWorked = false;
                         }
                     }
-                } catch (GMSException e) {
-                    myLogger.log(Level.SEVERE, "Exception occurred while sending killinstance message:" + e, e);
+                    if (sendWorked) {
+                        synchronized (receivedReply) {
+                            try {
+                                receivedReply.wait(10000); // wait till we receive reply OR 10 seconds
+                            } catch (InterruptedException ie) {
+                            }
+                        }
+                    }
+                    resendCount++;
+                    if (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false) {
+                        myLogger.info("No Reply received, retry enabled so trying again");
+                    }
+                } while (sendWorked && resend && resendCount <= 2 && receivedReply.get() == false);
+                if (receivedReply.get()) {
+                    failedToReceiveReplyFrom.remove(replyFrom);
+                } else {
+                    if (resend) {
+                        myLogger.severe(replyMsg + " was never received even with retry enabled from:" + replyFrom);
+                    } else {
+                        myLogger.severe(replyMsg + " was never received from:" + replyFrom);
+                    }
                 }
-
                 if (failedToReceiveReplyFrom.size() > 0) {
                     myLogger.severe("The members that did not stop or did not reply in time are:" + failedToReceiveReplyFrom.toString());
                     displayUnsuccessful();
@@ -516,15 +623,13 @@ public class GMSAdminCLI implements CallBack {
             }
         } else if (command.equals("waits")) {
             // all members in the group
+            boolean sendWorked = true;
             int count = 0;
             List<String> members = gms.getGroupHandle().getAllCurrentMembers();
             // if there is someone else in the cluster besides ourselves
             if (members.size() > 1) {
-
-
                 replyMsg = GMSAdminConstants.ISSTARTUPCOMPLETEREPLY;
                 replyFrom = GMSAdminConstants.ADMINNAME;
-
                 try {
                     if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                         myLogger.log(TESTDEFAULTLOGLEVEL, "Sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
@@ -533,31 +638,47 @@ public class GMSAdminCLI implements CallBack {
                     if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                         myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
                     }
+                } catch (GMSException e) {
+                    myLogger.warning("Exception occurred while sending isstartupcomplete message:" + e);
+                    //retry the send up to 3 times
+                    for (int i = 1; i <= 3; i++) {
+                        try {
+                            sleep(3);
+                            myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.ISSTARTUPCOMPLETE + ")");
+                            gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.ISSTARTUPCOMPLETE.getBytes());
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending isstartupcomplete message to:" + GMSAdminConstants.ADMINNAME);
+                            }
+                            sendWorked = true;
+                            break; // if successful
+                        } catch (GMSException ge1) {
+                            myLogger.warning("Exception occurred while resending message: retry (" + i + ") for (" + GMSAdminConstants.ISSTARTUPCOMPLETE + ") : " + ge1);
+                        }
+                        sendWorked = false;
+                    }
+                }
+                if (sendWorked) {
                     synchronized (receivedReply) {
                         try {
                             receivedReply.wait(0); // wait till we receive reply
                         } catch (InterruptedException ie) {
                         }
-
-                        displaySuccessful();
-
                     }
-                } catch (GMSException e) {
-                    myLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e.getLocalizedMessage(), e);
+                    displaySuccessful();
+                } else {
+                    myLogger.severe(replyMsg + " was never received from:" + replyFrom);
                     displayUnsuccessful();
                 }
-
             } else {
                 myLogger.severe("No members exist in cluster:" + groupName);
                 displayUnsuccessful();
             }
-
-        } else if (command.equals("test")) {
+        } else if (command.equals(
+                "test")) {
             try {
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast start testing message to "+GMSAdminConstants.TESTCOORDINATOR);
-                }
-                // broadcast the start testing message to all members
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast start testing message to " + GMSAdminConstants.TESTCOORDINATOR);
+                } // broadcast the start testing message to all members
                 gms.getGroupHandle().sendMessage(GMSAdminConstants.TESTCOORDINATOR, GMSAdminConstants.STARTTESTING.getBytes());
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "Done broadcasting start testing message to cluster");
@@ -565,7 +686,8 @@ public class GMSAdminCLI implements CallBack {
             } catch (GMSException e) {
                 myLogger.warning("Exception occurred with broadcasting start testing message:" + e);
                 //retry the send up to 3 times
-                for (int i = 1; i <= 3; i++) {
+                for (int i = 1; i
+                        <= 3; i++) {
                     try {
                         sleep(3);
                         myLogger.warning("Retry [" + i + "] time(s) to send message (" + GMSAdminConstants.STARTTESTING + ")");
@@ -576,7 +698,6 @@ public class GMSAdminCLI implements CallBack {
                     }
                 }
             }
-
             replyMsg = GMSAdminConstants.TESTINGCOMPLETE;
             replyFrom = GMSAdminConstants.ADMINNAME;
             synchronized (receivedReply) {
@@ -584,20 +705,17 @@ public class GMSAdminCLI implements CallBack {
                     receivedReply.wait(0); // wait till we receive reply
                 } catch (InterruptedException ie) {
                 }
-
-                displaySuccessful();
-
             }
-
+            displaySuccessful();
         }
     }
 
     private void displayMembers(String s) {
-        myLogger.info("\nMembers are:[" + s + "]\n");
+        System.out.println("\nMembers are:[" + s + "]\n");
     }
 
     private void displayCount(int count) {
-        myLogger.info("\nNumber of members:" + count + "\n");
+        System.out.println("\nNumber of members:" + count + "\n");
     }
 
     private void displaySuccessful() {
@@ -625,24 +743,19 @@ public class GMSAdminCLI implements CallBack {
         String mp = System.getProperty("MULTICASTPORT", "2299");
         myLogger.config("MULTICASTPORT=" + mp);
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(), mp);
-
         myLogger.config("IS_BOOTSTRAPPING_NODE=false");
         configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(), "false");
-
         String mmh = System.getProperty("MAX_MISSED_HEARTBEATS", "3");
         myLogger.config("MAX_MISSED_HEARTBEATS=" + mp);
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(), mmh);
-
         String hf = System.getProperty("HEARTBEAT_FREQUENCY", "2000");
         myLogger.config("HEARTBEAT_FREQUENCY=" + hf);
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(), hf);
-
         final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
         myLogger.config("BIND_INTERFACE_ADDRESS=" + bindInterfaceAddress);
         if (bindInterfaceAddress != null) {
             configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
         }
-
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "leaving initializeGMS");
         }
@@ -669,7 +782,6 @@ public class GMSAdminCLI implements CallBack {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "done sleeping");
             }
-
         } catch (InterruptedException ex) {
         }
     }
@@ -680,7 +792,6 @@ public class GMSAdminCLI implements CallBack {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Received a NOTIFICATION from member " + from);
         }
         if (notification instanceof MessageSignal) {
-
             MessageSignal messageSignal = (MessageSignal) notification;
             String msgString = new String(messageSignal.getMessage());
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
@@ -693,7 +804,6 @@ public class GMSAdminCLI implements CallBack {
                 }
             }
         }
-
     }
 
     public static void setupLogHandler() {
@@ -711,7 +821,6 @@ public class GMSAdminCLI implements CallBack {
         //final String level = System.getProperty("LOG_LEVEL", "INFO");
         //myLogger.setLevel(Level.parse(level));
         //myLogger.setLevel(Level.parse("INFO"));
-
     }
 }
 
