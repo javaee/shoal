@@ -42,7 +42,7 @@ COMMUNICATION_PROVIDER=grizzly
 
 MAINCLASS=com.sun.enterprise.ee.cms.tests.GMSAdminCLI
 
-if [ -e ./currentMulticastAddress.txt ]; then
+if [ -f ./currentMulticastAddress.txt ]; then
     MULTICASTADDRESS=`cat currentMulticastAddress.txt`
     if [ -z "${MULTICASTADDRESS}" ]; then
         MULTICASTADDRESS=229.9.1.2
@@ -61,7 +61,8 @@ usage() {
     echo "    state groupName gmsmemberstate  - list member(s) in the specific state"
     echo
     echo " optional arguments:"
-    echo "      [<-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      [<-resend> <-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      -resend - if reply is not received, try 2 additional times"
     echo "      -tl - test log level"
     echo "      -sl - shoal log level"
     echo "      -ts - tcp start port"
@@ -81,6 +82,7 @@ if [ $# -lt 2 ]; then
      usage
 fi
 
+_OPTARGS=""
 DONEREQUIRED=false
 while [ $# -ne 0 ]
 do
@@ -90,6 +92,10 @@ do
        ;;
        -ph)
        programhelp
+       ;;
+       -resend)
+       _OPTARGS="${_OPTARGS}${1}"
+       shift
        ;;
        -ts)
        shift
@@ -136,9 +142,13 @@ do
      esac
 done
 
+OPTARGS=""
+if [ ! -z ${_OPTARGS} ];then
+   OPTARGS="-DOPTARGS=${_OPTARGS}"
+fi
 
-# echo java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
-java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+# echo java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
 
 
 

@@ -25,14 +25,27 @@
  #
  # Copyright 2006 Sun Microsystems, Inc. All rights reserved.
  #
+DIVISOR=10000000
+LIMIT=254
+if [ ! -z "${1}" ]; then
+    TMP=`echo "${1}" | egrep "^[0-9]+$" `
+    if [ ! -z ${TMP} ]; then
+       LIMIT=${TMP}
+    fi
+fi
+if [ ${LIMIT} -lt 100 ]; then
+   DIVISOR=${DIVISOR}0
+elif [ ${LIMIT} -lt 10 ]; then
+   DIVISOR=${DIVISOR}00
+fi
 
 seed=`( echo $$ ; w ; date ) | cksum | cut -f1 -d" " `
 #echo "seed=${seed}"
 NUM=`expr $seed / 10000000`
-while [ ${NUM} -lt 1 -o ${NUM} -gt 254 ];
+while [ ${NUM} -lt 1 -o ${NUM} -gt ${LIMIT} ];
 do
    seed=`( echo $$ ; w ; date ) | cksum | cut -f1 -d" " `
    #echo "seed=${seed}"
-   NUM=`expr $seed / 10000000`
+   NUM=`expr $seed / ${DIVISOR}`
 done
 echo $NUM
