@@ -45,8 +45,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * @author Mahesh Kannan
  */
-public class StringKeyMapper<K>
-        implements KeyMapper<K>, GroupMemberEventListener {
+public class DefaultKeyMapper
+        implements KeyMapper, GroupMemberEventListener {
 
     private String myName;
 
@@ -72,11 +72,11 @@ public class StringKeyMapper<K>
 
     private volatile String currentViewCausedBy = "";
 
-    private static final String UNMAPPED = "UNMAPPED__" + StringKeyMapper.class.getName();
+    private static final String UNMAPPED = "UNMAPPED__" + DefaultKeyMapper.class.getName();
 
     private boolean debug;
 
-    public StringKeyMapper(String myName, String groupName) {
+    public DefaultKeyMapper(String myName, String groupName) {
         this.myName = myName;
         this.groupName = groupName;
         this.currentViewCausedBy = myName;
@@ -87,7 +87,7 @@ public class StringKeyMapper<K>
     }
 
     @Override
-    public String getMappedInstance(String groupName, K key1) {
+    public String getMappedInstance(String groupName, Object key1) {
         rLock.lock();
         try {
             if (currentView.length == 0) {
@@ -115,7 +115,7 @@ public class StringKeyMapper<K>
         }
     }
 
-    public String findReplicaInstance(String groupName, K key1) {
+    public String findReplicaInstance(String groupName, Object key1) {
         rLock.lock();
         try {
             if (currentViewCausedBy.equals(myName)) {
@@ -166,7 +166,7 @@ public class StringKeyMapper<K>
         }
     }
 
-    private int getHashCode(K val) {
+    private int getHashCode(Object val) {
         int hc = val.hashCode();
         /*
         try {
@@ -199,7 +199,7 @@ public class StringKeyMapper<K>
                     currentViewMinusMe = currentMemberSetMinusMe.toArray(new String[0]);
                 }
             }
-            //printMemberStates();
+            printMemberStates();
         } finally {
             wLock.unlock();
         }
@@ -230,11 +230,11 @@ public class StringKeyMapper<K>
     }
 
     public void printMemberStates() {
-        System.out.print("StringKeyMapper:: Members[");
+        System.out.print("DefaultKeyMapper:: Members[");
         for (String st : currentView) {
             System.out.print("<" + st + "> ");
         }
-        System.out.println("]");        System.out.print("StringKeyMapper:: PreviousMembers[");
+        System.out.println("]");        System.out.print("DefaultKeyMapper:: PreviousMembers[");
         for (String st : previousView) {
             System.out.print("<" + st + "> ");
         }

@@ -113,9 +113,9 @@ public class LoadRequestCommand<K, V>
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         originatingInstance = ctx.getInstanceName();
-        String targetName = ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key);
+        String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
         setTargetName(targetName);
-        System.out.println("Sending loadRequest to: " + getTargetName());
+        System.out.println("**Sending loadRequest to: " + getTargetName());
         ResponseMediator respMed = ctx.getResponseMediator();
         resp = respMed.createCommandResponse();
 

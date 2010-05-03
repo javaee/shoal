@@ -35,14 +35,14 @@ public class CommandManagerTest
      */
     public void testCreateCommandManager() {
         GroupService gs = new DummyGroupService("inst1", "grp1");
-        DataStoreContext dsc = new DataStoreContext("test", gs);
+        DataStoreContext dsc = new DataStoreContext("test", gs, this.getClass().getClassLoader());
         CommandManager cm = new CommandManager(dsc);
         assertTrue(true);
     }
 
     public void testRegistercommands() {
         GroupService gs = new DummyGroupService("inst1", "grp1");
-        DataStoreContext dsc = new DataStoreContext("test", gs);
+        DataStoreContext dsc = new DataStoreContext("test", gs, this.getClass().getClassLoader());
         CommandManager cm = new CommandManager(dsc);
         cm.registerCommand(new NoopCommand());
         cm.execute(new NoopCommand());

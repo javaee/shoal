@@ -37,9 +37,9 @@
 package org.shoal.ha.cache.api;
 
 import org.shoal.ha.cache.impl.store.DefaultDataStoreEntryHelper;
-import org.shoal.ha.cache.impl.util.SimpleSerializer;
 import org.shoal.ha.cache.impl.util.StringKeyHelper;
-import org.shoal.ha.cache.impl.util.StringKeyMapper;
+import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
+import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.group.GroupServiceFactory;
 import org.shoal.ha.mapper.KeyMapper;
@@ -51,22 +51,38 @@ import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
 public class DataStoreFactory {
 
     public static DataStore<String, Object> createDataStore(String storeName, String instanceName, String groupName) {
-        GroupService gs = GroupServiceFactory.getInstance().getGroupService(instanceName, groupName);
-
         DataStoreEntryHelper<String, Object> helper =
                 new DefaultDataStoreEntryHelper<String, Object>(Thread.currentThread().getContextClassLoader());
-        DataStoreKeyHelper<String> keyHelper =
-                new StringKeyHelper();
-        StringKeyMapper<String> keyMapper = new StringKeyMapper<String>(gs.getMemberName(), gs.getGroupName());
-        gs.registerGroupMemberEventListener(keyMapper);
-        return new ReplicatedDataStore<String, Object>(storeName, gs, helper, keyHelper, keyMapper);
+        DataStoreKeyHelper<String> keyHelper = new StringKeyHelper();
+        DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
+
+        return DataStoreFactory.createDataStore(storeName, instanceName, groupName,
+                String.class, Object.class, Thread.currentThread().getContextClassLoader(),
+                helper, keyHelper, keyMapper);
     }
 
     public static <K, V> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
+                                                  Class<K> keyClazz, Class<V> vClazz, ClassLoader loader) {
+        DataStoreEntryHelper<K, V> helper =
+                new DefaultDataStoreEntryHelper<K, V>(Thread.currentThread().getContextClassLoader());
+        DataStoreKeyHelper<K> keyHelper = new ObjectKeyHelper(loader);
+        DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
+        
+        return DataStoreFactory.createDataStore(storeName, instanceName, groupName, keyClazz, vClazz,
+                loader, helper, keyHelper, keyMapper);
+    }
+
+    public static <K, V> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
+                                                  Class<K> keyClazz, Class<V> vClazz, ClassLoader loader,
                                                   DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
-                                                  KeyMapper<K> keyMapper) {
+                                                  KeyMapper keyMapper) {
         GroupService gs = GroupServiceFactory.getInstance().getGroupService(instanceName, groupName);
-        return new ReplicatedDataStore<K, V>(storeName, gs, helper, keyHelper, keyMapper);
+        if (keyMapper instanceof GroupMemberEventListener) {
+            GroupMemberEventListener groupListener = (GroupMemberEventListener) keyMapper;
+            gs.registerGroupMemberEventListener(groupListener);
+        }
+
+        return new ReplicatedDataStore<K, V>(storeName, gs, loader, helper, keyHelper, keyMapper);
     }
 
 }

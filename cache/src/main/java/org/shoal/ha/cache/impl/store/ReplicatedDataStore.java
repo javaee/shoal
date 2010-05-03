@@ -66,19 +66,19 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreContext<K, V> dsc;
 
-    public ReplicatedDataStore(String storeName, GroupService gs,
+    public ReplicatedDataStore(String storeName, GroupService gs, ClassLoader loader,
                                DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
-                               KeyMapper<K> keyMapper) {
+                               KeyMapper keyMapper) {
         this.storeName = storeName;
         this.gs = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
-        initialize(helper, keyHelper, keyMapper);
+        initialize(loader, helper, keyHelper, keyMapper);
     }
 
-    private void initialize(DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
-                            KeyMapper<K> keyMapper) {
-        this.dsc = new DataStoreContext<K, V>(storeName, gs);
+    private void initialize(ClassLoader loader, DataStoreEntryHelper<K, V> helper,
+                            DataStoreKeyHelper<K> keyHelper, KeyMapper keyMapper) {
+        this.dsc = new DataStoreContext<K, V>(storeName, gs, loader);
         this.transformer = helper;
         dsc.setDataStoreEntryHelper(helper);
         dsc.setDataStoreKeyHelper(keyHelper);

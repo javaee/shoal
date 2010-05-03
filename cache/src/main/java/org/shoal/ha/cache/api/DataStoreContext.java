@@ -67,7 +67,7 @@ public class DataStoreContext<K, V> {
 
     private ReplicaStore<K, V> replica;
 
-    public DataStoreContext(String serviceName, GroupService gs) {
+    public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
         this.serviceName = serviceName;
         this.groupService = gs;
         this.instanceName = gs.getMemberName();

@@ -94,6 +94,11 @@ public class GroupServiceProvider
 
     private void notifyOnMemberReady() {
         List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
+        List<GMSMember> prevGMSMembers = gms.getGroupHandle().getPreviousView();
+        List<String> prevMembers = null;
+        for (GMSMember member : prevGMSMembers) {
+            prevMembers.add(member.getMemberToken());
+        }
         for (String instanceName : members) {
             for (GroupMemberEventListener listener : listeners) {
                 listener.memberReady(instanceName, groupName);

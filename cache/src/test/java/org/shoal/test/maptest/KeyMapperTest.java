@@ -3,7 +3,7 @@ package org.shoal.test.maptest;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import org.shoal.ha.cache.impl.util.StringKeyMapper;
+import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
 
 /**
  * Unit test for simple App.
@@ -27,7 +27,7 @@ public class KeyMapperTest
     }
 
 
-    private static void mapStringKeyTest(StringKeyMapper km) {
+    private static void mapStringKeyTest(DefaultKeyMapper km) {
         String[] keys = new String[]{"Key0", "Key1", "Key2"};
 
         System.out.print("{");
@@ -41,7 +41,7 @@ public class KeyMapperTest
     }
 
     public void testRegisterOnly() {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
         km.registerInstance("n0");
         km.registerInstance("n1");
@@ -49,7 +49,7 @@ public class KeyMapperTest
     }
 
     public void testUnregisterOnly() {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
         km.removeInstance("n0");
         km.removeInstance("n1");
@@ -57,7 +57,7 @@ public class KeyMapperTest
     }
 
     public void testRegisterAndUnregister() {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
         km.registerInstance("n0");
         km.registerInstance("n1");
@@ -67,7 +67,7 @@ public class KeyMapperTest
     }
 
     public void testEmptyMapTest() {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
         String mappedInstance = km.getMappedInstance("g1", "Key1");
         String replicaInstance = km.findReplicaInstance("g1", "Key1");
 
@@ -79,7 +79,7 @@ public class KeyMapperTest
     }
 
     public void testRegisterAndTest() {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
         km.registerInstance("n0");
         km.registerInstance("n1");
@@ -95,7 +95,7 @@ public class KeyMapperTest
     }
 
     public void testMappedToMyself() {
-        StringKeyMapper km = new StringKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
         km.registerInstance("n0");
         km.registerInstance("n1");
@@ -123,7 +123,7 @@ public class KeyMapperTest
     }
 
     public void testReplicaUponFailure() {
-        StringKeyMapper km = new StringKeyMapper("n2", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("n2", "g1");
 
         km.registerInstance("n0");
         km.registerInstance("n1");
@@ -152,7 +152,7 @@ public class KeyMapperTest
     }
 
     public void testReplicaUponFailureFromMultipleNodes() {
-        StringKeyMapper km2 = new StringKeyMapper("n2", "g1");
+        DefaultKeyMapper km2 = new DefaultKeyMapper("n2", "g1");
 
         km2.registerInstance("n0");
         km2.registerInstance("n1");
@@ -161,7 +161,7 @@ public class KeyMapperTest
         km2.registerInstance("n4");
         km2.registerInstance("n5");
 
-        StringKeyMapper km5 = new StringKeyMapper("n5", "g1");
+        DefaultKeyMapper km5 = new DefaultKeyMapper("n5", "g1");
 
         km5.registerInstance("n0");
         km5.registerInstance("n1");
@@ -208,13 +208,13 @@ public class KeyMapperTest
 
     public void testReplicaUponFailureFromAllOtherNodes() {
         String[] survivingNodes = new String[]{"n0", "n1", "n2", "n4", "n5"};
-        StringKeyMapper[] mappers = new StringKeyMapper[5];
+        DefaultKeyMapper[] mappers = new DefaultKeyMapper[5];
         for (int i = 0; i < mappers.length; i++) {
-            mappers[i] = new StringKeyMapper(survivingNodes[i], "g1");
+            mappers[i] = new DefaultKeyMapper(survivingNodes[i], "g1");
         }
 
         for (int i = 0; i < mappers.length; i++) {
-            StringKeyMapper mapper = mappers[i];
+            DefaultKeyMapper mapper = mappers[i];
 
             mapper.registerInstance("n0");
             mapper.registerInstance("n1");
@@ -235,7 +235,7 @@ public class KeyMapperTest
 
         boolean result = true;
         for (int j = 0; j < mappers.length; j++) {
-            StringKeyMapper mapper = mappers[j];
+            DefaultKeyMapper mapper = mappers[j];
 
             for (int i = 0; i < keys.length; i++) {
                 if (!mapper.findReplicaInstance("g1", keys[i]).equals(expectedReplica[i])) {
@@ -262,7 +262,7 @@ public class KeyMapperTest
 
 
 
-        StringKeyMapper mapper = new StringKeyMapper("n3", "g1");
+        DefaultKeyMapper mapper = new DefaultKeyMapper("n3", "g1");
         mapper.registerInstance("n0");
         mapper.registerInstance("n1");
         mapper.registerInstance("n2");
