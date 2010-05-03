@@ -96,7 +96,7 @@
                deprecation="${javac.deprecation}"
                failonerror="true"
                includes="**/*.java"
-               excludes="com/sun/enterprise/osgi/ShoalActivator.java,**/${junit.test.dir}"
+               excludes="com/sun/enterprise/osgi/ShoalActivator.java,**/${junit_src_dir}/**"
                >
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
@@ -117,7 +117,7 @@
                deprecation="${javac.deprecation}"
                failonerror="true"
                includes="**/*.java"
-               excludes="${build.excludes},${junit.test.dir}/**"
+               excludes="${build.excludes},**/${junit_src_dir}/**"
                >
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
@@ -130,12 +130,15 @@
     <!-- assemble: create jar files and jar files containing localized
     content -->
     <target name="assemble" depends="init"
-            description="Create ${component.name} jar files">
+            description="Create jar files">
+        <antcall target="assemblejar" />
+        <antcall target="assembletestjar" />
+    </target>
 
+    <target name="assemblejar" description="create ${shoal-gms.jar}" >
         <copy todir="${component.classes.dir}">
             <fileset dir="${src.dir}"
                      includes="**/*.properties"/>
-            <!--<fileset dir="${tests.dir}"/>-->
         </copy>
 
         <!-- don't include the tests, they will be put in seperate jar file -->
@@ -152,7 +155,6 @@
                 <include name="**/services/*"/>
             </fileset>
         </jar>
-        <antcall target="assembletestjar" />
     </target>
 
     <target name="assembleGrizzly" depends="clean, init, compile"
@@ -182,7 +184,6 @@
                 <include name="**/services/*"/>
             </fileset>
         </jar>
-        <antcall target="assembletestjar" />
     </target>
 
     <target name="assembletestjar" description="create ${shoal-gms-tests.jar}" >
@@ -329,15 +330,22 @@
     </target>
 
     <target name="check-for-junit-jar">
-        <available file="tmp/junit/${junit.jar}" property="junit.jar.present"/>
+        <available file="${junit_download_dir}/${junit_jar}" property="junit_jar.present"/>
     </target>
-    <target name="download-junit-jar" depends="check-for-junit-jar" unless="junit.jar.present" >
-        <mkdir dir="${tmp}/junit"/>
-        <get src="${junit.download}" dest="${tmp}/junit/${junit.jar}" verbose="true"/>
+    <target name="download-junit-jar" depends="check-for-junit-jar" unless="junit_jar.present" >
+        <mkdir dir="${junit_download_dir}"/>
+        <get src="${junit_download}" dest="${junit_download_dir}/${junit_jar}" verbose="true"/>
     </target>
     <target name="run-junit-tests" depends="download-junit-jar" description="builds and runs the juit tests">
-        <javac srcdir="tests/${junit.test.dir}"
-               destdir="tests/${junit.test.dir}"
+        <delete includeemptydirs="true" failonerror="false">
+            <fileset dir="${junit_results}" includes="**/*"/>
+        </delete>
+        <mkdir dir="${junit.results}"/>
+        <mkdir dir="${junit_classes_dir}"/>
+        <mkdir dir="${junit_results_junit}"/>
+
+        <javac srcdir="${junit_src_dir}"
+               destdir="${junit_classes_dir}"
                debug="${javac.debug}"
                optimize="${javac.optimize}"
                source="${javac.source}"
@@ -349,27 +357,37 @@
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
                 <pathelement location="dist/${shoal-gms.jar}"/>
-                <pathelement location="${tmp}/junit/${junit.jar}"/>
+                <pathelement location="${junit_download_dir}/${junit_jar}"/>
             </classpath>
         </javac>
-        <mkdir dir="${junit.results}"/>
         <junit printsummary="yes" showoutput="true" haltonfailure="no">
             <classpath>
                 <pathelement location="dist/${shoal-gms.jar}"/>
-                <pathelement location="${tmp}/junit/${junit.jar}"/>
-                <pathelement path="tests/${junit.test.dir}"/>
+                <pathelement location="${junit_download_dir}/${junit_jar}"/>
+                <pathelement path="${junit_classes_dir}"/>
                 <pathelement location="${grizzly-framework.jar}"/>
                 <pathelement location="${grizzly-utils.jar}"/>
             </classpath>
 
-            <formatter type="plain"/>
-            <batchtest fork="yes" todir="${junit.results}">
-                <fileset dir="tests/${junit.test.dir}">
-                    <include name="**/*Test*.java"/>
+            <batchtest fork="yes" todir="${junit_reports}">
+                <formatter type="xml"/>
+
+                <fileset dir="${junit_classes_dir}">
+                    <include name="**/*Test.class"/>
                 </fileset>
             </batchtest>
         </junit>
+        <antcall target="generate-junit-html-report"/>
+        <delete  dir="${junit_results_junit}"/>
+    </target>
 
-
+    <target name="generate-junit-html-report"  description="generate html results">
+        <mkdir dir="${junit_results_html}"/>
+        <junitreport todir="${junit_reports}">
+            <fileset dir="${junit_reports}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${junit_results_html}"/>
+        </junitreport>
     </target>
 </project>
