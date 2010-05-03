@@ -1,4 +1,4 @@
-package org.shoal.gf.store;
+package org.shoal.adapter.store;
 
 import org.glassfish.ha.store.spi.BackingStore;
 import org.glassfish.ha.store.spi.BackingStoreException;
@@ -15,15 +15,17 @@ import java.util.Properties;
 public class ReplicationBackingStoreFactory
     implements BackingStoreFactory {
 
-    private String instanceName;
-
-    private String groupName;
-
-    @Override
+     @Override
     public <K, V> BackingStore<K, V> createBackingStore(String storeName, Class<K> keyClazz, Class<V> vClazz, Properties env) throws BackingStoreException {
-        DataStore<K, V> ds = (DataStore<K, V>) DataStoreFactory.createDataStore(storeName, instanceName, groupName);
+        InMemoryBackingStore<K, V> bStore = new InMemoryBackingStore<K, V>();
+        Properties props = new Properties(env);
+        String instanceName = (String) props.get("instance.name");
+        String groupName = (String) props.get("group.name");
+        bStore.initialize(storeName, keyClazz, vClazz, props);
+        DataStore<K, V> ds = (DataStore<K, V>) DataStoreFactory.createDataStore(storeName, instanceName, groupName,
+                keyClazz, vClazz, Thread.currentThread().getContextClassLoader());
 
-        return null;
+        return bStore;
     }
 
     @Override
