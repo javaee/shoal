@@ -4,6 +4,7 @@ import org.glassfish.ha.store.spi.BackingStore;
 import org.glassfish.ha.store.spi.BackingStoreException;
 import org.glassfish.ha.store.spi.BackingStoreFactory;
 import org.glassfish.ha.store.spi.BatchBackingStore;
+import org.jvnet.hk2.annotations.Service;
 import org.shoal.ha.cache.api.DataStore;
 import org.shoal.ha.cache.api.DataStoreFactory;
 
@@ -12,6 +13,7 @@ import java.util.Properties;
 /**
  * @author Mahesh Kannan
  */
+@Service
 public class ReplicationBackingStoreFactory
     implements BackingStoreFactory {
 

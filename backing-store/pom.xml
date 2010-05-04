@@ -9,9 +9,21 @@
 
     <groupId>org.shoal.adapter.store</groupId>
     <artifactId>backing-store</artifactId>
-    <packaging>jar</packaging>
+    <packaging>hk2-jar</packaging>
     <name>backing-store</name>
     <url>http://maven.apache.org</url>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.sun.enterprise</groupId>
+                <artifactId>hk2-maven-plugin</artifactId>
+                <version>${hk2.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+        </plugins>
+
+    </build>
 
     <developers>
         <developer>
@@ -38,5 +50,5 @@
             <version>${ha.api.version}</version>
         </dependency>
     </dependencies>
-    
+
 </project>
