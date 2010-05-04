@@ -9,7 +9,7 @@
 
     <groupId>org.shoal.cache</groupId>
     <artifactId>replication-cache</artifactId>
-    <packaging>jar</packaging>
+    <packaging>bundle</packaging>
     <name>replication-cache</name>
     <url>http://maven.apache.org</url>
 
@@ -42,5 +42,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Export-Package>org.shoal.ha.cache.api,org.shoal.ha.mapper</Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+
+    </build>
 </project>
