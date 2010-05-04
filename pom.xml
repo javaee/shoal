@@ -1,18 +1,79 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    
+
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.shoal.cache</groupId>
-    <artifactId>shoal-adapter</artifactId>
+    <artifactId>shoal-cache</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
-    <name>SHOAL-ADAPTER</name>
+    <name>SHOAL-CACHE</name>
     <url>http://maven.apache.org</url>
+
+    <developers>
+        <developer>
+            <id>mk111283</id>
+            <name>Mahesh Kannan</name>
+            <url>http://forum.java.sun.com/profile.jspa?userID=487934</url>
+            <organization>Oracle Inc.</organization>
+            <roles>
+                <role>lead (For shoal cache)</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <properties>
+        <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
+        <junit.group.id>junit</junit.group.id>
+
+        <grizzly.version>1.9.19-beta1</grizzly.version>
+        <junit.version>3.8.1</junit.version>
+
+        <ha.api.version>3.1-SNAPSHOT</ha.api.version>
+    </properties>
 
     <modules>
         <module>cache</module>
         <module>backing-store</module>
-        <module>gms</module>
     </modules>
-    
+
+    <build>
+        <!-- needed to build with JDK 1.5 or higher -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <!--
+                    <scope>system</scope>
+                    <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                    -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${grizzly.group.id}</groupId>
+                <version>${grizzly.version}</version>
+                <artifactId>grizzly-utils</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>${grizzly.group.id}</groupId>
+                <version>${grizzly.version}</version>
+                <artifactId>grizzly-framework</artifactId>
+            </dependency>
+
+            <dependency>
+                <groupId>${junit.group.id}</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
 </project>
