@@ -362,7 +362,7 @@ public class ApplicationServer implements Runnable, CallBack {
             }
             // developer level manual WATCHDOG test.
             // Start each of the following items in a different terminal window.
-            // Fix permissions for shell scripts: chmod +x rungmsdemo.sh killmember.sh
+            // Fix permissions for shell scripts: chmod +x rungmsdemo.sh killmembers.sh
             // 1. ./rungmsdemo.sh server cluster1 SPECTATOR 600000 FINE &> server.log 
             // 2. ./rungmsdemo.sh instance1 cluster1 CORE 600000 FINE
             // 3. ./rungmsdemo.sh instance10 cluster1 CORE 600000 FINE
@@ -379,7 +379,7 @@ public class ApplicationServer implements Runnable, CallBack {
                     final String TOBEKILLED_MEMBER="instance10";
 
                     GroupHandle gh = applicationServer.gms.getGroupHandle();
-                    Runtime.getRuntime().exec("./killmember.sh " + TOBEKILLED_MEMBER);
+                    Runtime.getRuntime().exec("./killmembers.sh " + TOBEKILLED_MEMBER);
                     logger.info("killed member " + TOBEKILLED_MEMBER);
                     gh.announceWatchdogObservedFailure(TOBEKILLED_MEMBER);
                     logger.info("Killed instance10 and WATCHDOG notify group " + gh.toString() + " that instance10 has failed.");
