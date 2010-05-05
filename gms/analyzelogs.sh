@@ -80,7 +80,7 @@ TMP=`grep "Adding Join member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 elif [ "${CMD}" = "kill" ]; then
-   EXPECTED=`expr ${NUMOFMEMBERS} + 1`
+   EXPECTED=`expr ${NUMOFMEMBERS}`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 else
@@ -93,7 +93,7 @@ TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICA
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 2`
 elif [ "${CMD}" = "kill" ]; then
-   EXPECTED=`expr ${NUMOFMEMBERS} + 2`
+   EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 2`
 else
@@ -106,7 +106,7 @@ TMP=`grep "Received PlannedShutdownEvent"  ${SERVERLOG} | grep -v ${APPLICATIONA
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 elif [ "${CMD}" = "kill" ]; then
-   EXPECTED=${NUMOFMEMBERS}
+   EXPECTED=`expr ${NUMOFMEMBERS} - 1`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=${NUMOFMEMBERS}
 else
@@ -133,10 +133,11 @@ echo
 echo "*****************************************"
 echo
 TMP=`grep "Adding Join member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+# format of the expected   instance counts  +  das counts  + test count adjustments
 if [ "${CMD}" = "stop" ]; then
-   EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 6`
+   EXPECTED=`expr \( \( ${NUMOFMEMBERS} + 1 \) \* ${NUMOFMEMBERS} \)  +  ${NUMOFMEMBERS} + 1 + \( ${NUMOFMEMBERS} - 1 \) `
 elif [ "${CMD}" = "kill" ]; then
-   EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 4`
+   EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS}`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 6`
 else
@@ -166,9 +167,9 @@ done
 echo
 TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
-   EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 5`
+   EXPECTED=`expr \( \( ${NUMOFMEMBERS} + 1 \) \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 2`
 elif [ "${CMD}" = "kill" ]; then
-   EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 5`
+   EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 1 `
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 7`
 else
