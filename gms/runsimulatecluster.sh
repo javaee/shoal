@@ -239,6 +239,8 @@ if [ "${CMD}" = "stop" ]; then
        else
            ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
        fi
+       count=1
+       CMD_OK=false
        while [ true ]
        do
          ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
@@ -250,11 +252,20 @@ if [ "${CMD}" = "stop" ]; then
          #echo $TMP
          _TMP=`echo ${TMP} | grep "WAS SUCCESSFUL"`
          if [ ! -z "${_TMP}" ];then
-            echo "Instanced ${INSTANCE_EFFECTED} has restarted"
+            CMD_OK=true
             break;
+         fi
+         count=`expr ${count} + 1`
+         if [ ${count} -gt 10 ]; then
+            break
          fi
          sleep 1
        done
+       if [ ${CMD_OK} = true ]; then
+            echo "Instance ${INSTANCE_EFFECTED} has restarted"
+       else
+            echo "ERROR: Instance ${INSTANCE_EFFECTED} DID NOT restarted"
+       fi
 elif [ "${CMD}" = "kill" ]; then
        echo "Killing ${INSTANCE_EFFECTED}"
        ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
@@ -278,7 +289,9 @@ elif [ "${CMD}" = "rejoin" ]; then
            ${EFFECTED_MEMBERSTARTCMD}
        else
            ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
-       fi       
+       fi
+       count=1
+       CMD_OK=false
        while [ true ]
        do
          ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
@@ -289,11 +302,20 @@ elif [ "${CMD}" = "rejoin" ]; then
          fi
          _TMP=`echo ${TMP} | grep "WAS SUCCESSFUL"`
          if [ ! -z "${_TMP}" ];then
-            echo "Instanced ${INSTANCE_EFFECTED} has restarted"
+            CMD_OK=true
             break;
+         fi
+         count=`expr ${count} + 1`
+         if [ ${count} -gt 10 ]; then
+            break
          fi
          sleep 1
        done
+       if [ ${CMD_OK} = true ]; then
+            echo "Instance ${INSTANCE_EFFECTED} has restarted"
+       else
+            echo "ERROR: Instance ${INSTANCE_EFFECTED} DID NOT restarted"
+       fi
 fi
 
 echo "Shutting down group [${GROUPNAME}]"
