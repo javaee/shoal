@@ -720,17 +720,17 @@ public class GMSAdminCLI implements CallBack {
 
     private void displaySuccessful() {
         if (memberName == null) {
-            myLogger.info(command + " of group:" + groupName + " WAS SUCCESSFUL");
+            System.out.println(command + " of group:" + groupName + " WAS SUCCESSFUL");
         } else {
-            myLogger.info(command + " of group:" + groupName + " member:" + memberName + " WAS SUCCESSFUL");
+            System.out.println(command + " of group:" + groupName + " member:" + memberName + " WAS SUCCESSFUL");
         }
     }
 
     private void displayUnsuccessful() {
         if (memberName == null) {
-            myLogger.info(command + " of group:" + groupName + " WAS UNSUCCESSFUL");
+            System.out.println(command + " of group:" + groupName + " WAS UNSUCCESSFUL");
         } else {
-            myLogger.info(command + " of group:" + groupName + " member:" + memberName + " WAS UNSUCCESSFUL");
+            System.out.println(command + " of group:" + groupName + " member:" + memberName + " WAS UNSUCCESSFUL");
         }
     }
 
