@@ -34,11 +34,11 @@ usage () {
     cat << USAGE 
 Usage: $0 <parameters...> 
 The required parameters are :
- <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxtanew,jxta} <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport>
+ <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxtanew,jxta} <-l logdir> <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport>
 
 Life in milliseconds should be either 0 or at least 60000 to demo failure fencing.
 
-<-ts tcpstartport>, <-te tcpendport>, <-ma multicastaddress>, <-mp multicastport> are optional parameters.
+<-l fullpathtologdir> <-ts tcpstartport>, <-te tcpendport>, <-ma multicastaddress>, <-mp multicastport> are optional parameters.
 Grizzly and jxta transports have different defaults.
 USAGE
    exit 0
@@ -74,6 +74,11 @@ do
        -debug)
        shift
        DEBUG=true
+       ;;
+       -l)
+       shift
+       LOGS_DIR="${1}"
+       shift
        ;;
        -tl)
        shift
@@ -147,11 +152,23 @@ else
     OTHERARGS=${DEBUGARGS}
 fi
 
-echo Running using Shoal with transport ${TRANSPORT}
 #  If you run shoal over grizzly on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
-echo "=========================="
-echo "Excuting:"
-echo java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
-java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS};
-
+CMD="java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${MAINCLASS}"
+if [ -z "${LOGS_DIR}" ]; then
+   echo "Running using Shoal with transport ${TRANSPORT}"
+   echo "=========================="
+   echo ${CMD}
+   echo "=========================="
+   ${CMD} &
+else
+   if [ ! -d ${LOGS_DIR} ];then
+      mkdir -p ${LOGS_DIR}
+   fi
+   #echo "LOGS_DIR=${LOGS_DIR}"
+   echo "Running using Shoal with transport ${TRANSPORT}" >> ${LOGS_DIR}/${INSTANCEID}.log
+   echo "==========================" >> ${LOGS_DIR}/${INSTANCEID}.log
+   echo ${CMD} >> ${LOGS_DIR}/${INSTANCEID}.log
+   echo "==========================" >> ${LOGS_DIR}/${INSTANCEID}.log
+   ${CMD}  >> ${LOGS_DIR}/${INSTANCEID}.log 2>&1 &
+fi
 
