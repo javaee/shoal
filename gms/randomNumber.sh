@@ -39,12 +39,12 @@ elif [ ${LIMIT} -lt 10 ]; then
    DIVISOR=${DIVISOR}00
 fi
 
-seed=`( echo $$ ; w ; date ) | cksum | cut -f1 -d" " `
+seed=`( echo $$ ; w ; date ) | cksum | awk -F" "  '{print $1}' `
 #echo "seed=${seed}"
 NUM=`expr $seed / 10000000`
 while [ ${NUM} -lt 1 -o ${NUM} -gt ${LIMIT} ];
 do
-   seed=`( echo $$ ; w ; date ) | cksum | cut -f1 -d" " `
+   seed=`( echo $$ ; w ; date ) | cksum | awk -F" "  '{print $1}' `
    #echo "seed=${seed}"
    NUM=`expr $seed / ${DIVISOR}`
 done
