@@ -143,7 +143,7 @@ do
 done
 
 OPTARGS=""
-if [ ! -z ${_OPTARGS} ];then
+if [ ! -z "${_OPTARGS}" ];then
    OPTARGS="-DOPTARGS=${_OPTARGS}"
 fi
 
