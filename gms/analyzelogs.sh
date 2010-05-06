@@ -1,13 +1,13 @@
 #!/bin/sh +x
 
 usage () {
- echo "usage: [-h] [-c stop|kill|rejoin|default is normal)]  [numberOfMembers(10 is default)] "
+ echo "usage: [-h] [-l logdir] [-c stop|kill|rejoin|default is normal)]  [numberOfMembers(10 is default)] "
  exit 1
 }
 
 NUMOFMEMBERS=10
 CMD=normal
-
+LOG_DIR_ROOT=LOGS
 while [ $# -ne 0 ]
 do
      case ${1} in
@@ -25,6 +25,19 @@ do
             fi
          else
             echo "ERROR: Missing command value"
+            usage
+         fi
+       ;;
+       -l)
+         shift
+         LOG_DIR_ROOT=${1}
+         shift
+         if [ ! -z "${LOG_DIR_ROOT}" ] ;then
+             if [ ! -d "${LOG_DIR_ROOT}" ] ;then
+                echo "ERROR: The log dir specified does not exist"
+             fi
+         else
+            echo "ERROR: Missing log dir value"
             usage
          fi
        ;;
@@ -61,13 +74,13 @@ fi
 
 APPLICATIONADMIN=admincli
 if [ "${CMD}" = "stop" ]; then
-    LOGS_DIR=LOGS/simulateCluster_stop
+    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster_stop
 elif [ "${CMD}" = "kill" ]; then
-    LOGS_DIR=LOGS/simulateCluster_kill
+    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster_kill
 elif [ "${CMD}" = "rejoin" ]; then
-    LOGS_DIR=LOGS/simulateCluster_rejoin
+    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster_rejoin
 else
-    LOGS_DIR=LOGS/simulateCluster
+    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster
 fi
 SERVERLOG=${LOGS_DIR}/server.log
 ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "[server.log|instance*.log]"`
