@@ -142,7 +142,7 @@ if [ $DIST = false ]; then
     mkdir -p ${LOGS_DIR}
     echo "Removing old logs"
     rm -f ${LOGS_DIR}/*.log
-    echo "Starting admin"
+    echo "Starting server"
     ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9130 -te 9160 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR}
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
@@ -150,10 +150,10 @@ else
        MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
        TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
-       echo "Starting admin"
+       echo "Starting server on ${MACHINE_NAME}"
        ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/server.log; mkdir -p ${LOGS_DIR}; ${WORKSPACE_HOME}/rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9130 -te 9160 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
     else
-       echo "Error: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
+       echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
        exit 1
     fi
 fi
@@ -175,6 +175,7 @@ if [ $DIST = false ]; then
         else
            INSTANCE_NAME=instance${count}
         fi
+        echo "Starting ${INSTANCE_NAME}"
         MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR}"
         ${MEMBERSTARTCMD}
 
@@ -188,6 +189,8 @@ if [ $DIST = false ]; then
     done
 else
    # distributed environment startup
+    echo "Starting CORE members in the distributed environment"
+
    MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties  `
    for member in ${MEMBERS}
    do
@@ -197,10 +200,14 @@ else
       INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
       TMP=`egrep "^WORKSPACE_HOME" ${member}`
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
+
       MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
       if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
            EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
+           EFFECTED_MEMBER_MACHINE_NAME=${MACHINE_NAME}
+           EFFECTED_MEMBER_WORKSPACE_HOME=${WORKSPACE_HOME}
       fi
    done
 fi
@@ -209,7 +216,7 @@ fi
 TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
 MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
 TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-REMOTE_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
 
 echo "Waiting for group [${GROUPNAME}] to complete startup"
 # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
@@ -217,7 +224,7 @@ ADMINCMD="./gms_admin.sh waits ${GROUPNAME} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMI
 if [ $DIST = false ]; then
     ${ADMINCMD}
 else
-    ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}"
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
 fi
 
 echo "Group startup has completed"
@@ -229,15 +236,15 @@ if [ "${CMD}" = "stop" ]; then
        if [ $DIST = false ]; then
            ${ADMINCMD}
        else
-           ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}"
+           ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
        fi
-       echo "sleeping 20 seconds"
-       sleep 20
+       echo "sleeping 15 seconds"
+       sleep 15
        echo "Restarting ${INSTANCE_EFFECTED}"
        if [ $DIST = false ]; then
            ${EFFECTED_MEMBERSTARTCMD}
        else
-           ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
+           ${EXECUTE_REMOTE_CONNECT} ${EFFECTED_MEMBER_MACHINE_NAME} "cd ${EFFECTED_MEMBER_WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
        fi
        count=1
        CMD_OK=false
@@ -247,7 +254,7 @@ if [ "${CMD}" = "stop" ]; then
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
-             TMP=`${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}" `
+             TMP=`${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}" `
          fi
          #echo $TMP
          _TMP=`echo ${TMP} | grep "WAS SUCCESSFUL"`
@@ -272,23 +279,15 @@ elif [ "${CMD}" = "kill" ]; then
        if [ $DIST = false ]; then
            ${ADMINCMD}
        else
-           ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}"
+           ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
        fi
-       echo "sleeping 20 seconds"
-       sleep 20
-elif [ "${CMD}" = "rejoin" ]; then
-       echo "Killing ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
-       if [ $DIST = false ]; then
-           ${ADMINCMD}
-       else
-           ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}"
-       fi
+       echo "sleeping 15 seconds"
+       sleep 15
        echo "Restarting ${INSTANCE_EFFECTED}"
        if [ $DIST = false ]; then
            ${EFFECTED_MEMBERSTARTCMD}
        else
-           ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
+           ${EXECUTE_REMOTE_CONNECT} ${EFFECTED_MEMBER_MACHINE_NAME} "cd ${EFFECTED_MEMBER_WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
        fi
        count=1
        CMD_OK=false
@@ -298,7 +297,48 @@ elif [ "${CMD}" = "rejoin" ]; then
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
-             TMP=`${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}" `
+             TMP=`${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}" `
+         fi
+         #echo $TMP
+         _TMP=`echo ${TMP} | grep "WAS SUCCESSFUL"`
+         if [ ! -z "${_TMP}" ];then
+            CMD_OK=true
+            break;
+         fi
+         count=`expr ${count} + 1`
+         if [ ${count} -gt 10 ]; then
+            break
+         fi
+         sleep 1
+       done
+       if [ ${CMD_OK} = true ]; then
+            echo "Instance ${INSTANCE_EFFECTED} has restarted"
+       else
+            echo "ERROR: Instance ${INSTANCE_EFFECTED} DID NOT restarted"
+       fi
+elif [ "${CMD}" = "rejoin" ]; then
+       echo "Killing ${INSTANCE_EFFECTED}"
+       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       if [ $DIST = false ]; then
+           ${ADMINCMD}
+       else
+           ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
+       fi
+       echo "Restarting ${INSTANCE_EFFECTED}"
+       if [ $DIST = false ]; then
+           ${EFFECTED_MEMBERSTARTCMD}
+       else
+           ${EXECUTE_REMOTE_CONNECT} ${EFFECTED_MEMBER_MACHINE_NAME} "cd ${EFFECTED_MEMBER_WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
+       fi
+       count=1
+       CMD_OK=false
+       while [ true ]
+       do
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         if [ $DIST = false ]; then
+             TMP=`${ADMINCMD}`
+         else
+             TMP=`${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}" `
          fi
          _TMP=`echo ${TMP} | grep "WAS SUCCESSFUL"`
          if [ ! -z "${_TMP}" ];then
@@ -316,6 +356,9 @@ elif [ "${CMD}" = "rejoin" ]; then
        else
             echo "ERROR: Instance ${INSTANCE_EFFECTED} DID NOT restarted"
        fi
+       # do a quick little sleep just to make sure everything gets started
+       # since everyone might not notice the instance went down and up quickly
+       sleep 5
 fi
 
 echo "Shutting down group [${GROUPNAME}]"
@@ -324,6 +367,6 @@ ADMINCMD="./gms_admin.sh stopc ${GROUPNAME} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMI
 if [ $DIST = false ]; then
     ${ADMINCMD}
 else
-    ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; ${ADMINCMD}"
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
 fi
 
