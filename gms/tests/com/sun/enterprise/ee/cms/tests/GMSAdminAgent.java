@@ -527,6 +527,7 @@ public class GMSAdminAgent implements CallBack {
     }
 
     public class ReplyToIsStartupCompleteThread extends Thread {
+
         private String name = "ReplyToIsStartupCompleteThread";
         private Thread thread;
         private String from;
@@ -557,19 +558,24 @@ public class GMSAdminAgent implements CallBack {
                     } catch (InterruptedException ie) {
                     }
                 }
-                try {
-                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                        myLogger.log(TESTDEFAULTLOGLEVEL, "Sending isstartupcomplete reply to :" + from);
-                    }
-                    gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.ISSTARTUPCOMPLETEREPLY.getBytes());
-                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                        myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending isstartupcomplete reply to :" + from);
-                    }
-
-                } catch (GMSException ge1) {
-                    myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.ISSTARTUPCOMPLETEREPLY + " to " + from + ge1, ge1);
+            } else {
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Startup has been completed, sending reply");
                 }
             }
+            try {
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Sending isstartupcomplete reply to :" + from);
+                }
+                gms.getGroupHandle().sendMessage(from, GMSAdminConstants.ADMINCLI, GMSAdminConstants.ISSTARTUPCOMPLETEREPLY.getBytes());
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Done sending isstartupcomplete reply to :" + from);
+                }
+
+            } catch (GMSException ge1) {
+                myLogger.log(Level.SEVERE, "Exception occurred while sending reply message: " + GMSAdminConstants.ISSTARTUPCOMPLETEREPLY + " to " + from + ge1, ge1);
+            }
+
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Stopping " + threadName + " thread");
             }
