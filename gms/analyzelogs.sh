@@ -1,11 +1,10 @@
 #!/bin/sh +x
 
 usage () {
- echo "usage: [-h] [-l logdir] [-c stop|kill|rejoin|default is normal)]  [numberOfMembers(10 is default)] "
+ echo "usage: [-h] [-l logrootdir] [-c stop|kill|rejoin|default is normal)]"
  exit 1
 }
 
-NUMOFMEMBERS=10
 CMD=normal
 LOG_DIR_ROOT=LOGS
 while [ $# -ne 0 ]
@@ -42,35 +41,14 @@ do
          fi
        ;;
        *)
-         NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
-         shift
-         if [ "${NUMOFMEMBERS}" != "" ]; then
-            if [ ${NUMOFMEMBERS} -le 0 ];then
-               echo "ERROR: Invalid number of members specified"
-               usage
-            fi
-         else
-            echo "ERROR: Invalid number of members specified"
+
+            echo "ERROR: Invalid argument"
             usage
-         fi
+         
        ;;
      esac
 done
 
-
-if [ $# -gt 0 ]; then
-   NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
-   shift
-   if [ "${NUMOFMEMBERS}" != "" ]; then
-       if [ ${NUMOFMEMBERS} -le 0 ];then
-          echo "ERROR: Invalid number of members specified"
-          usage
-       fi
-   else
-       echo "ERROR: Invalid number of members specified"
-       usage
-   fi
-fi
 
 APPLICATIONADMIN=admincli
 if [ "${CMD}" = "stop" ]; then
@@ -84,6 +62,17 @@ else
 fi
 SERVERLOG=${LOGS_DIR}/server.log
 ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "[server.log|instance*.log]"`
+
+NUMOFMEMBERS=`ls ${LOGS_DIR}/inst*log | wc -l`
+
+PASS_TOTAL=0
+FAIL_TOTAL=0
+
+if [ ${NUMOFMEMBERS} -le 0 ]; then
+   echo "ERROR: No logs were found"
+   usage
+fi
+
 
 echo "Report for simulation "
 grep "Running using Shoal with transport" ${SERVERLOG}
@@ -99,7 +88,15 @@ elif [ "${CMD}" = "rejoin" ]; then
 else
    EXPECTED=${NUMOFMEMBERS}
 fi
-echo "Check for JOIN in DAS log. Expect ${EXPECTED}.      Found: ${TMP}"
+
+if [ ${TMP} -eq ${EXPECTED} ];then
+   echo "Check for JOIN in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Check for JOIN in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+fi
+
 
 echo
 TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
@@ -112,7 +109,13 @@ elif [ "${CMD}" = "rejoin" ]; then
 else
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 fi
-echo "Check for JOINED_AND_READY_EVENT in DAS log. Expect ${EXPECTED}.  Found: ${TMP}"
+if [ ${TMP} -eq ${EXPECTED} ];then
+   echo "Check for JOINED_AND_READY_EVENT in DAS log. Expect: ${EXPECTED},  Found: ${TMP}  [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Check for JOINED_AND_READY_EVENT in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+fi
 
 echo
 TMP=`grep "Received PlannedShutdownEvent"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
@@ -125,7 +128,14 @@ elif [ "${CMD}" = "rejoin" ]; then
 else
    EXPECTED=${NUMOFMEMBERS}
 fi
-echo "PlannedShutdownEvent in DAS log. Expect ${EXPECTED}. Found: ${TMP}"
+
+if [ ${TMP} -eq ${EXPECTED} ];then
+   echo "PlannedShutdownEvent in DAS log. Expect: ${EXPECTED},   Found: ${TMP}  [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "PlannedShutdownEvent in DAS log. Expect: ${EXPECTED},   Found: ${TMP} [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+fi
 
 echo
 TMP=`grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
@@ -138,7 +148,13 @@ elif [ "${CMD}" = "rejoin" ]; then
 else
    EXPECTED=2
 fi
-echo "Check for GroupLeadershipNotifications in DAS log. Expect ${EXPECTED} from server. Found: ${TMP}"
+if [ ${TMP} -eq ${EXPECTED} ];then
+   echo "Check for GroupLeadershipNotifications in DAS log. Expect: ${EXPECTED},   from server. Found: ${TMP}  [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Check for GroupLeadershipNotifications in DAS log. Expect: ${EXPECTED},   from server. Found: ${TMP} [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+fi
 
 echo "Check for issues in any members sending a GroupLeadershipNotification to server for this scenario"
 grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | grep -v server
@@ -156,7 +172,7 @@ elif [ "${CMD}" = "rejoin" ]; then
 else
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS}`
 fi
-echo "Check for Join members over all logs.  Expect ${EXPECTED}.  Found: ${TMP}"
+echo "Check for Join members over all logs.  Expect: ${EXPECTED},   Found: ${TMP}"
 
 TMP=`grep "Adding Join member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}  | wc -l`
 echo "Join in server    : ${TMP}"
@@ -175,8 +191,6 @@ do
     count=`expr ${count} + 1`
 done
 
-
-
 echo
 TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
@@ -188,7 +202,14 @@ elif [ "${CMD}" = "rejoin" ]; then
 else
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + ${NUMOFMEMBERS} + 1`
 fi
-echo "Check for JOINED_AND_READY_EVENT over all logs. Expect ${EXPECTED}. Found: ${TMP}"
+if [ ${TMP} -eq ${EXPECTED} ];then
+   echo "Check for JOINED_AND_READY_EVENT over all logs. Expect ${EXPECTED},   Found: ${TMP}  [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Check for JOINED_AND_READY_EVENT over all logs. Expect ${EXPECTED},   Found: ${TMP} [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+fi
+
 
 TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
 echo "JoinAndReady in server    : ${TMP}"
@@ -211,7 +232,13 @@ done
 echo
 echo "*****************************************"
 TMP=`grep "|SEVERE|" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN} | wc -l`
-echo "Number of Severe :  ${TMP}"
+if [ ${TMP} -eq 0 ];then
+   echo "Number of Severe :  ${TMP}  [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Number of Severe :  ${TMP}  [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + ${TMP} `
+fi
 
 if [ "${CMD}" = "stop" ]; then
     TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
@@ -223,6 +250,13 @@ else
     TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 fi
 echo "Number of Warnings: ${TMP}"
+echo
+echo "**************************"
+echo "TEST SUMMARY"
+echo "--------------------------"
+echo "PASSED: ${PASS_TOTAL}"
+echo "FAILED: ${FAIL_TOTAL}"
+echo "**************************"
 echo
 echo
 echo SEVERE events
