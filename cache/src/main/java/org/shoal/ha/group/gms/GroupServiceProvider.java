@@ -66,6 +66,7 @@ public class GroupServiceProvider
                     switch (states[i]) {
                         case STARTING:
                         case ALIVE:
+                            break;
                         case READY:
                         case ALIVEANDREADY:
                             for (GroupMemberEventListener listener : listeners) {
