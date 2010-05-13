@@ -1,0 +1,18 @@
+INSTANCE_NAME=server
+CLUSTER_NAME=samplesgroup
+MACHINE_NAME=@MACHINENAME@
+WORKSPACE_HOME=@WORKSPACEHOME@
+
+# true for das false for core members
+IS_BOOTSTRAPPING_NODE=true
+
+# specify network interface to use on a multihomed machine
+#BIND_INTERFACE_ADDRESS=
+
+# CORE or SPECTATOR
+MEMBER_TYPE=SPECTATOR
+
+# mutually exclusive port range used by grizzly transport
+# required when more than one shoal instance is running on a one machine
+#TCPSTARTPORT=9121
+#TCPENDPORT=9220
