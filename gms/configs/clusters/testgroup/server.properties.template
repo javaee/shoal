@@ -1,17 +1,16 @@
-INSTANCE_NAME=instance04
+INSTANCE_NAME=server
 CLUSTER_NAME=testgroup
-MACHINE_NAME=gf-ha-dev-5.sfbay.sun.com
-WORKSPACE_HOME=/export/hatester/shoal/gms
+MACHINE_NAME=@MACHINENAME@
+WORKSPACE_HOME=@WORKSPACEHOME@
 
 # true for das false for core members
-IS_BOOTSTRAPPING_NODE=false
+IS_BOOTSTRAPPING_NODE=true
 
 # specify network interface to use on a multihomed machine
-#BIND_INTERFACE_ADDRESS=192.168.31.102
-#BIND_INTERFACE_ADDRESS=gf-ha-dev-sb6-2-n1
+#BIND_INTERFACE_ADDRESS=
 
 # CORE or SPECTATOR
-MEMBER_TYPE=CORE
+MEMBER_TYPE=SPECTATOR
 
 # mutually exclusive port range used by grizzly transport
 # required when more than one shoal instance is running on a one machine
