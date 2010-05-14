@@ -1,12 +1,12 @@
 #!/bin/sh +x
 
 usage () {
- echo "usage: [-h] [-l logrootdir] [-c stop|kill|rejoin|default is normal)]"
+ echo "usage: [-h] [-l logdir] [-c stop|kill|rejoin|default is normal)]"
  exit 1
 }
 
 CMD=normal
-LOG_DIR_ROOT=LOGS
+LOGS_DIR=LOGS/simulateCluster
 while [ $# -ne 0 ]
 do
      case ${1} in
@@ -29,10 +29,10 @@ do
        ;;
        -l)
          shift
-         LOG_DIR_ROOT=${1}
+         LOGS_DIR=${1}
          shift
-         if [ ! -z "${LOG_DIR_ROOT}" ] ;then
-             if [ ! -d "${LOG_DIR_ROOT}" ] ;then
+         if [ ! -z "${LOGS_DIR}" ] ;then
+             if [ ! -d "${LOGS_DIR}" ] ;then
                 echo "ERROR: The log dir specified does not exist"
              fi
          else
@@ -41,25 +41,15 @@ do
          fi
        ;;
        *)
-
-            echo "ERROR: Invalid argument"
-            usage
-         
+         echo "ERROR: Invalid argument"
+         usage         
        ;;
      esac
 done
 
 
 APPLICATIONADMIN=admincli
-if [ "${CMD}" = "stop" ]; then
-    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster_stop
-elif [ "${CMD}" = "kill" ]; then
-    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster_kill
-elif [ "${CMD}" = "rejoin" ]; then
-    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster_rejoin
-else
-    LOGS_DIR=${LOG_DIR_ROOT}/simulateCluster
-fi
+
 SERVERLOG=${LOGS_DIR}/server.log
 ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "[server.log|instance*.log]"`
 
