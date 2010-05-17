@@ -32,7 +32,7 @@
 # Each core member acts as an instance in the cluster which replicates(sends messages)
 # to the instance that is one greater than itself. The last instance replicates
 # to the first instance in the cluster. The names of the instances are instance101,
-# instance102, etc... The master node is called master. Based on the arguments
+# instance102, etc... The master node is called server. Based on the arguments
 # passed into the program the instances will send M objects*N messages to the replica.
 # The replica saves the messages and verifies that the number of objects/messages
 # were received and that the content was correct. Once each instance is done
@@ -83,7 +83,7 @@ fi
 if [ ! -d ${LOGDIR} ] ; then
     mkdir ${LOGDIR}
 else
-    rm -rf ${LOGDIR}/instance*.log ${LOGDIR}/master.log
+    rm -rf ${LOGDIR}/instance*.log ${LOGDIR}/server.log
 fi
 
 
@@ -116,7 +116,7 @@ fi
 \$ECHO "Arg8=\${8}"
 \$ECHO "Arg9=\${9}"
 
-if [ "\${1}" == "master" ] ; then
+if [ "\${1}" == "server" ] ; then
 java -Dcom.sun.management.jmxremote -D${SHOAL_GROUP_COMMUNICATION_PROVIDER} -DTCPSTARTPORT=\$4 -DTCPENDPORT=\$5 -DLOG_LEVEL=\$6 -cp ${JARS} $MAINCLASS \$1 \$2 \$3
 else
 java -Dcom.sun.management.jmxremote -D${SHOAL_GROUP_COMMUNICATION_PROVIDER} -DTCPSTARTPORT=\$7 -DTCPENDPORT=\$8 -DLOG_LEVEL=\$9 -cp ${JARS} $MAINCLASS \$1 \$2 \$3 \$4 \$5 \$6
@@ -134,13 +134,13 @@ cat << ENDSCRIPT > ${TMPDIR}/script2
 ECHO=\`which echo\`
 num=\$1
 phrase="Testing Complete"
-count=\`grep "\${phrase}" ${LOGDIR}/master.log | wc -l | sed -e 's/ //g' \`
+count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
 \$ECHO "Waiting for the master and (\$num) instances to complete testing"
 \$ECHO -n "\$count"
 while [ \$count -lt 1 ]
 do
 \$ECHO -n ",\$count"
-count=\`grep "\${phrase}" ${LOGDIR}/master.log | wc -l | sed -e 's/ //g' \`
+count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
 sleep 5
 done
 
@@ -160,12 +160,12 @@ grep "FAILED" ${LOGDIR}/*log
 \$ECHO  "The following are EXCEPTIONS found in the logs:"
 \$ECHO  "==============="
 grep "Exception" ${LOGDIR}/i*log
-grep "Exception" ${LOGDIR}/master.log
+grep "Exception" ${LOGDIR}/server.log
 \$ECHO  "==============="
 \$ECHO  "The following are SEVERE messages found in the logs:"
 \$ECHO  "==============="
 grep "SEVERE" ${LOGDIR}/i*log
-grep "SEVERE" ${LOGDIR}/master.log
+grep "SEVERE" ${LOGDIR}/server.log
 \$ECHO  "==============="
 
 exit 0
@@ -183,13 +183,13 @@ cat << ENDSCRIPT > ${TMPDIR}/script3
 ECHO=\`which echo\`
 num=\$1
 phrase="numberOfJoinAndReady received so far is: \$num"
-count=\`grep "\${phrase}" ${LOGDIR}/master.log | wc -l | sed -e 's/ //g' \`
+count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
 \$ECHO "Waiting for the (\$num) instances to join group"
 \$ECHO -n "\$count"
 while [ \$count -lt 1 ]
 do
 \$ECHO -n ",\$count"
-count=\`grep "\${phrase}" ${LOGDIR}/master.log | wc -l | sed -e 's/ //g' \`
+count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
 sleep 5
 done
 \$ECHO  ", \$count"
@@ -247,11 +247,11 @@ fi
 if [ "$1" != "-dist" ]; then
     # non-distributed environment
 
-    $ECHO "Starting DAS"
+    $ECHO "Starting SERVER"
     sdtcp=${STARTTCPPORT}
     edtcp=`expr ${sdtcp} + 30`
-    ${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFMEMBERS} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/master.log &
-    #${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/master.log &
+    ${TMPDIR}/script1 server ${GROUPNAME} ${NUMOFMEMBERS} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/server.log &
+    #${TMPDIR}/script1 server ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/server.log &
 
     # give time for the DAS to start
     sleep 5
@@ -294,7 +294,7 @@ else
    # $ECHO "Starting DAS"
    # sdtcp=${STARTTCPPORT}
    # edtcp=`expr ${sdtcp} + 30`
-   # ${TMPDIR}/script1 master ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/master.log &
+   # ${TMPDIR}/script1 server ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/server.log &
 
     # give time for the DAS to start
    # sleep 5
