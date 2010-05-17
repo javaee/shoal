@@ -26,9 +26,9 @@
 #
 #
 if [ -z "${1}" ] ;then
-   PID=`jps -mlVv | grep ApplicationServer | awk '{print $1}'`
+   PID=`jps -mlVv | grep "com.sun.enterprise.shoal" | awk '{print $1}'`
 else
-   PID=`jps -mlVv | grep ApplicationServer | grep ${1} | awk '{print $1}'`
+   PID=`jps -mlVv | grep "com.sun.enterprise.shoal" | grep ${1} | awk '{print $1}'`
 fi
 if [ ! -z "$PID" ]; then
    echo "Killing instance PID(s) :|$PID|"
