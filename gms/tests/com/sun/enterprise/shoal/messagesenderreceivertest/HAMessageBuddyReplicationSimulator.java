@@ -36,7 +36,7 @@
 
 /*
  *
- * This program creates a cluster conprised of a master and N number of core members.
+ * This program creates a cluster comprised of a master and N number of core members.
  * Each core member acts as an instance in the cluster which replicates(sends messages)
  * to the instance that is one greater than itself. The last instance replicates
  * to the first instance in the cluster. The names of the instances are instance101,
@@ -80,7 +80,8 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.ErrorManager;
 
 public class HAMessageBuddyReplicationSimulator {
-   static final int SENDDELAY = 10;  // in milliseconds
+
+    static final int SENDDELAY = 10;  // in milliseconds
     static final int EXCEEDTIMEOUTLIMIT = 5;  // in minutes
     private GroupManagementService gms = null;
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
@@ -113,8 +114,9 @@ public class HAMessageBuddyReplicationSimulator {
     public static int payloadErrors = 0;
     public static boolean validateAllPayloads = true;
     public static int validatedMessages = 0;
-   public static void main(String[] args) {
-       // this configures the formatting of the gms log output
+
+    public static void main(String[] args) {
+        // this configures the formatting of the gms log output
         Utility.setLogger(gmsLogger);
         Utility.setupLogHandler();
         // this sets the grizzly log level
@@ -125,24 +127,24 @@ public class HAMessageBuddyReplicationSimulator {
             gmsLogger.setLevel(GMSDEFAULTLOGLEVEL);
         }
         gmsLogger.info("GMS Logging using log level of:" + gmsLogger.getLevel());
-       try {
+        try {
             myLogger.setLevel(Level.parse(System.getProperty("TEST_LOG_LEVEL", TESTDEFAULTLOGLEVEL.toString())));
             setupLogHandler(myLogger.getLevel());
         } catch (Exception e) {
             myLogger.setLevel(TESTDEFAULTLOGLEVEL);
         }
         myLogger.info("Test Logging using log level of:" + myLogger.getLevel());
-       if (args[0].equalsIgnoreCase("-h")) {
+        if (args[0].equalsIgnoreCase("-h")) {
             usage();
         }
-       if (args[0].equalsIgnoreCase("server")) {
+        if (args[0].equalsIgnoreCase("server")) {
             if (args.length != 3) {
                 usage();
             }
             memberID = args[0];
             groupName = args[1];
             numberOfInstances = Integer.parseInt(args[2]);
-           if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "memberID=" + memberID);
                 myLogger.log(TESTDEFAULTLOGLEVEL, "GroupName=" + groupName);
                 myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfInstances=" + numberOfInstances);
@@ -168,7 +170,7 @@ public class HAMessageBuddyReplicationSimulator {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfMsgsPerObject=" + numberOfMsgsPerObject);
                     myLogger.log(TESTDEFAULTLOGLEVEL, "payloadSize=" + payloadSize);
                 }
-               /* header format is:
+                /* header format is:
                  *  long objectID
                 long msgID
                 int to
@@ -176,13 +178,13 @@ public class HAMessageBuddyReplicationSimulator {
                  */
                 int tmpSize = payloadSize - (8 + 8 + 4 + 4);
                 expectedPayload = new String(createPayload(tmpSize));
-           } else {
+            } else {
                 usage();
             }
         } else {
             usage();
         }
-       /*
+        /*
         replica = (int) ((numberOfInstances * Math.random()) + 101);
         if (replica == memberIDNum) {
         replica++;
@@ -192,7 +194,7 @@ public class HAMessageBuddyReplicationSimulator {
         replica = minInstanceNum;
         }
         }
-        */
+         */
         replica = memberIDNum + 1;
         if (replica > ((minInstanceNum + numberOfInstances) - 1)) {
             replica = minInstanceNum;
@@ -200,19 +202,19 @@ public class HAMessageBuddyReplicationSimulator {
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Replica= instance" + replica);
         }
-       HAMessageBuddyReplicationSimulator sender = new HAMessageBuddyReplicationSimulator();
-       sender.test();
-       sender.waitTillDone();
-       // only do verification for INSTANCES
+        HAMessageBuddyReplicationSimulator sender = new HAMessageBuddyReplicationSimulator();
+        sender.test();
+        sender.waitTillDone();
+        // only do verification for INSTANCES
         if (!memberID.equalsIgnoreCase("server")) {
             System.out.println("Checking to see if correct number of messages (Objects:" + numberOfObjects + ", NumberOfMsg:" + numberOfMsgsPerObject + " = [" + (numberOfObjects * numberOfMsgsPerObject) + "])  were received from each instance");
-           System.out.println("================================================================");
+            System.out.println("================================================================");
             Enumeration eNum = msgIDs_received.keys();
             while (eNum.hasMoreElements()) {
                 Integer instanceNum = (Integer) eNum.nextElement();
                 System.out.println("checking instance [" + instanceNum + "] in msgIDs_received");
-               int droppedMessages = 0;
-               ConcurrentHashMap<String, String> msgIDs = msgIDs_received.get(instanceNum);
+                int droppedMessages = 0;
+                ConcurrentHashMap<String, String> msgIDs = msgIDs_received.get(instanceNum);
                 //System.out.println("msgIDs=" + msgIDs.toString());
                 String key = null;
                 if ((msgIDs != null) && !msgIDs.isEmpty()) {
@@ -237,8 +239,8 @@ public class HAMessageBuddyReplicationSimulator {
                     System.out.println(instanceNum + ": FAILED. Confirmed (" + droppedMessages + ") messages were dropped");
                 }
                 System.out.println("================================================================");
-               ConcurrentHashMap<Long, String> payLoads = payloads_received.get(instanceNum);
-               for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
+                ConcurrentHashMap<Long, String> payLoads = payloads_received.get(instanceNum);
+                for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
                     if (!payLoads.containsKey(objectNum)) {
                         payloadErrors++;
                         System.out.println("INTERNAL ERROR: objectId:" + objectNum + " from:" + instanceNum + " missing from payload structure");
@@ -246,7 +248,7 @@ public class HAMessageBuddyReplicationSimulator {
                         String payLoad = payLoads.get(objectNum);
                         if (payLoad.equals(expectedPayload)) {
                             if (!validateAllPayloads) {
-                               // avoid double counting when validation enabled in message receive processing.
+                                // avoid double counting when validation enabled in message receive processing.
                                 validatedMessages++;
                             }
                         } else {
@@ -255,15 +257,15 @@ public class HAMessageBuddyReplicationSimulator {
                             System.out.println("Payload did not match for objectId:" + objectNum + ", from:" + instanceNum);
                         }
                     }
-               }
+                }
                 System.out.println("---------------------------------------------------------------");
-               if (payloadErrors == 0) {
+                if (payloadErrors == 0) {
                     System.out.println(instanceNum + ": PASS.  No payload errors. Confirmed valid " + validatedMessages + " payloads");
                 } else {
                     System.out.println(instanceNum + ": FAILED. Confirmed (" + payloadErrors + ") payload errors. Confirmed valid " + validatedMessages + " payloads.");
                 }
                 System.out.println("================================================================");
-           }
+            }
             long timeDelta = 0;
             long remainder = 0;
             long msgPerSec = 0;
@@ -292,56 +294,58 @@ public class HAMessageBuddyReplicationSimulator {
                 System.out.println("\nReceiving Messages Time data: Start[" + receiveStartTime.getTime() + "], End[" + receiveEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "], MsgSize[" + payloadSize + "]\n");
             }
         }
-       System.out.println("================================================================");
+        System.out.println("================================================================");
         System.out.println("Testing Complete");
-   }
-   public static void usage() {
-       System.out.println(" For server:");
+    }
+
+    public static void usage() {
+        System.out.println(" For server:");
         System.out.println("    <memberid(server)> <groupName> <number_of_instances>");
         System.out.println(" For instances:");
         System.out.println("    <memberid(instancexxx)> <groupName> <number_of_instances> <number_of_objects> <number_of_msgs_per_object> <payloads_receivedize>");
         System.exit(0);
     }
-   private void test() {
-       System.out.println("Testing Started");
-       //initialize Group Management Service and register for Group Events
-       if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+
+    private void test() {
+        System.out.println("Testing Started");
+        //initialize Group Management Service and register for Group Events
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Registering for group event notifications");
         }
         if (memberID.equalsIgnoreCase("server")) {
             gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.SPECTATOR);
             gms.addActionFactory(new PlannedShutdownActionFactoryImpl(new PlannedShutdownNotificationCallBack()));
-       } else {
+        } else {
             gms = initializeGMS(memberID, groupName, GroupManagementService.MemberType.CORE);
         }
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(new JoinAndReadyNotificationCallBack(memberID)));
         gms.addActionFactory(new MessageActionFactoryImpl(new MessageCallBack(memberID)), "TestComponent");
-       if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Joining Group " + groupName);
         }
-       try {
+        try {
             gms.join();
         } catch (GMSException e) {
             myLogger.log(Level.SEVERE, "Exception occured :" + e, e);
             System.exit(1);
         }
-       sleep(5000);
-       gms.reportJoinedAndReadyState(groupName);
+        sleep(5000);
+        gms.reportJoinedAndReadyState(groupName);
         sleep(5000);
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for all members to joined the group:" + groupName);
         }
-       if (!memberID.equalsIgnoreCase("server")) {
+        if (!memberID.equalsIgnoreCase("server")) {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for all members to report joined and ready for the group:" + groupName);
             }
             while (true) {
-               sleep(2000);
-               if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                sleep(2000);
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfJoinAndReady=" + numberOfJoinAndReady.get());
                     myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfInstances=" + numberOfInstances);
                 }
-               if (numberOfJoinAndReady.get() == numberOfInstances) {
+                if (numberOfJoinAndReady.get() == numberOfInstances) {
                     members = gms.getGroupHandle().getCurrentCoreMembers();
                     if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                         myLogger.log(TESTDEFAULTLOGLEVEL, "All members are joined and ready in the group:" + groupName);
@@ -355,13 +359,13 @@ public class HAMessageBuddyReplicationSimulator {
                     }
                     break;
                 }
-           }
-           if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+            }
+            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Starting Testing");
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Sending Messages to:" + replica);
             }
-           byte[] msg = new byte[1];
-           sendStartTime = new GregorianCalendar();
+            byte[] msg = new byte[1];
+            sendStartTime = new GregorianCalendar();
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Send start time: " + sendStartTime);
             }
@@ -373,9 +377,9 @@ public class HAMessageBuddyReplicationSimulator {
                     // create a unique objectnum
                     //String sObject = Integer.toString(memberIDNum) + Long.toString(objectNum);
                     //long _objectNum = Long.parseLong(sObject);
-                   // create the message to be sent
+                    // create the message to be sent
                     msg = createMsg(objectNum, msgNum, replica, memberIDNum, payloadSize);
-                   if (myLogger.isLoggable(Level.FINE)) {
+                    if (myLogger.isLoggable(Level.FINE)) {
                         myLogger.log(Level.FINE, "Sending Message:" + displayMsg(msg));
                     }
                     try {
@@ -387,22 +391,26 @@ public class HAMessageBuddyReplicationSimulator {
                             }
                         } else {
                             //retry the send up to 3 times
-                            for (int i = 1; i <= 3; i++) {
+                            int retryCount = 1;
+                            for (; retryCount <= 3; retryCount++) {
                                 try {
                                     if (myLogger.isLoggable(Level.WARNING)) {
                                         myLogger.log(Level.WARNING, "Sleeping 10 seconds");
                                     }
                                     sleep(SENDDELAY);
                                     if (myLogger.isLoggable(Level.WARNING)) {
-                                        myLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + ")");
+                                        myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + ")");
                                     }
-                                   gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
+                                    gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
                                     break; // if successful
                                 } catch (GMSException ge1) {
                                     if (myLogger.isLoggable(Level.WARNING)) {
-                                        myLogger.log(Level.WARNING, "Exception occurred during send message retry (" + i + ") for (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge1, ge1);
+                                        myLogger.log(Level.WARNING, "Exception occurred during send message retry (" + retryCount + ") for (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge1, ge1);
                                     }
                                 }
+                            }
+                            if (retryCount > 3) {
+                                myLogger.log(Level.SEVERE, "Retry count exceeded 3 times while trying to send the message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica);
                             }
                         }
                     }
@@ -410,8 +418,8 @@ public class HAMessageBuddyReplicationSimulator {
                         sleep(SENDDELAY);
                     }
                 }
-           }
-           sendEndTime = new GregorianCalendar();
+            }
+            sendEndTime = new GregorianCalendar();
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Send end time: " + sendEndTime);
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Finished Sending Messages to:" + replica);
@@ -421,39 +429,44 @@ public class HAMessageBuddyReplicationSimulator {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Sending DONE message to replica[" + replica + "]:" + doneMsg);
             }
-           try {
+            try {
                 gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", doneMsg.getBytes());
             } catch (GMSException e) {
                 if (myLogger.isLoggable(Level.WARNING)) {
                     myLogger.log(Level.WARNING, "Exception occured sending DONE message to replica" + e, e);
                 }
                 //retry the send up to 3 times
-                for (int i = 1; i <= 3; i++) {
+                int retryCount = 1;
+                for (; retryCount <= 3; retryCount++) {
                     try {
                         if (myLogger.isLoggable(Level.WARNING)) {
                             myLogger.log(Level.WARNING, "Sleeping 10 seconds");
                         }
                         sleep(SENDDELAY);
                         if (myLogger.isLoggable(Level.WARNING)) {
-                            myLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (" + doneMsg + ")");
+                            myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + doneMsg + ")");
                         }
                         gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", doneMsg.getBytes());
                         break; // if successful
                     } catch (GMSException ge1) {
                         if (myLogger.isLoggable(Level.WARNING)) {
-                            myLogger.log(Level.WARNING, "Exception occurred while resending DONE message retry (" + i + ") for (" + doneMsg + ") to replica:" + replica + " : " + ge1, ge1);
+                            myLogger.log(Level.WARNING, "Exception occurred while resending DONE message retry (" + retryCount + ") for (" + doneMsg + ") to replica:" + replica + " : " + ge1, ge1);
                         }
+                    }
+                    if (retryCount > 3) {
+                        myLogger.log(Level.SEVERE, "Retry count exceeded 3 times while trying to resend the DONE message (" + doneMsg + ") to replica:" + replica);
                     }
                 }
             }
-       }
-   }
-   public void waitTillDone() {
+        }
+    }
+
+    public void waitTillDone() {
         long waitForStartTime = 0;
         long exceedTimeout = 0;
         boolean firstTime = true;
         long currentTime = 0;
-       if (memberID.equalsIgnoreCase("server")) {
+        if (memberID.equalsIgnoreCase("server")) {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for all CORE members to send DONE messages");
                 myLogger.log(TESTDEFAULTLOGLEVEL, "exceed timeout limit=" + EXCEEDTIMEOUTLIMIT);
@@ -482,20 +495,24 @@ public class HAMessageBuddyReplicationSimulator {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "Received DONE from: " + receivedDoneMsgFrom.toString() + "[" + receivedDoneMsgFrom.size() + "] so far");
                 }
                 sleep(10000); // 10 seconds
-           }
+            }
             gms.announceGroupShutdown(groupName, GMSConstants.shutdownState.INITIATED);
             synchronized (numberOfPlannedShutdown) {
                 try {
                     numberOfPlannedShutdown.wait(20000); // wait till all members shutdown OR twenty seconds
                 } catch (InterruptedException ie) {
                 }
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Notified of " + numberOfPlannedShutdown.get() + " members shutting down out of " + numberOfInstances);
+                if (numberOfPlannedShutdown.get() == numberOfInstances) {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Notified of " + numberOfPlannedShutdown.get() + " members shutting down out of " + numberOfInstances);
+                    }
+                } else {
+                    myLogger.log(Level.SEVERE, "Notified of " + numberOfPlannedShutdown.get() + " members shutting down out of " + numberOfInstances);
                 }
             }
             gms.announceGroupShutdown(groupName, GMSConstants.shutdownState.COMPLETED);
         } else {
-           // instance
+            // instance
             while (!gms.isGroupBeingShutdown(groupName)) {
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for group shutdown...");
@@ -508,7 +525,8 @@ public class HAMessageBuddyReplicationSimulator {
         }
         leaveGroupAndShutdown(memberID, gms);
     }
-   private GroupManagementService initializeGMS(String memberID, String groupName, GroupManagementService.MemberType mType) {
+
+    private GroupManagementService initializeGMS(String memberID, String groupName, GroupManagementService.MemberType mType) {
         gmsLogger.log(Level.INFO, "Initializing Shoal for member: " + memberID + " group:" + groupName);
         Properties configProps = new Properties();
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
@@ -533,22 +551,27 @@ public class HAMessageBuddyReplicationSimulator {
         if (bindInterfaceAddress != null) {
             configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
         }
-       return (GroupManagementService) GMSFactory.startGMSModule(
+        return (GroupManagementService) GMSFactory.startGMSModule(
                 memberID,
                 groupName,
                 mType,
                 configProps);
     }
-   private void leaveGroupAndShutdown(String memberID, GroupManagementService gms) {
+
+    private void leaveGroupAndShutdown(String memberID, GroupManagementService gms) {
         gmsLogger.log(Level.INFO, "Shutting down gms " + gms + "for member: " + memberID);
         gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
     }
-   private class JoinAndReadyNotificationCallBack implements CallBack {
-       private String memberID;
-       public JoinAndReadyNotificationCallBack(String memberID) {
+
+    private class JoinAndReadyNotificationCallBack implements CallBack {
+
+        private String memberID;
+
+        public JoinAndReadyNotificationCallBack(String memberID) {
             this.memberID = memberID;
         }
-       public void processNotification(Signal notification) {
+
+        public void processNotification(Signal notification) {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "***JoinAndReadyNotification received from: " + notification.getMemberToken());
             }
@@ -558,7 +581,7 @@ public class HAMessageBuddyReplicationSimulator {
                 }
             } else {
                 if (!notification.getMemberToken().equals("server")) {
-                   // determine how many core members are ready to begin testing
+                    // determine how many core members are ready to begin testing
                     JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
                     List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
                     numberOfJoinAndReady.set(0);
@@ -571,15 +594,17 @@ public class HAMessageBuddyReplicationSimulator {
                             default:
                         }
                     }
-                   if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                         myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfJoinAndReady received so far is: " + numberOfJoinAndReady.get());
                     }
                 }
             }
         }
     }
-   private class PlannedShutdownNotificationCallBack implements CallBack {
-       public void processNotification(Signal notification) {
+
+    private class PlannedShutdownNotificationCallBack implements CallBack {
+
+        public void processNotification(Signal notification) {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "***PlannedShutdown received from: " + notification.getMemberToken());
             }
@@ -600,12 +625,16 @@ public class HAMessageBuddyReplicationSimulator {
             }
         }
     }
-   private class MessageCallBack implements CallBack {
-       private String memberID;
-       public MessageCallBack(String memberID) {
+
+    private class MessageCallBack implements CallBack {
+
+        private String memberID;
+
+        public MessageCallBack(String memberID) {
             this.memberID = memberID;
         }
-       public void processNotification(Signal notification) {
+
+        public void processNotification(Signal notification) {
             // gmsLogger.log(Level.INFO, "***Message received from: " + notification.getMemberToken());
             if (!(notification instanceof MessageSignal)) {
                 myLogger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
@@ -626,38 +655,43 @@ public class HAMessageBuddyReplicationSimulator {
                             // get who it is from
                             int index = msgString.indexOf(":");
                             String from = msgString.substring(index + 1);
-                           if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                                 myLogger.log(TESTDEFAULTLOGLEVEL, "Received DONE message from: " + from);
-                               // forward this message onto the server
+                                // forward this message onto the server
                                 myLogger.log(TESTDEFAULTLOGLEVEL, "Forward DONE message to server:" + msgString);
-                           }
+                            }
                             try {
                                 gms.getGroupHandle().sendMessage("server", "TestComponent", messageSignal.getMessage());
                             } catch (GMSException e) {
                                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                                     myLogger.log(TESTDEFAULTLOGLEVEL, "Exception occured while forwording DONE message to server" + e, e);
                                 }
-                               //retry the send up to 3 times
-                                for (int i = 1; i <= 3; i++) {
+                                //retry the send up to 3 times
+                                int retryCount = 1;
+                                for (; retryCount <= 3; retryCount++) {
                                     try {
                                         if (myLogger.isLoggable(Level.WARNING)) {
                                             myLogger.log(Level.WARNING, "Sleeping 10 seconds");
                                         }
                                         sleep(SENDDELAY);
                                         if (myLogger.isLoggable(Level.WARNING)) {
-                                            myLogger.log(Level.WARNING, "Retry [" + i + "] time(s) to send message (" + msgString + ")");
+                                            myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + msgString + ")");
                                         }
-                                       gms.getGroupHandle().sendMessage("server", "TestComponent", messageSignal.getMessage());
+                                        gms.getGroupHandle().sendMessage("server", "TestComponent", messageSignal.getMessage());
                                         break; // if successful
                                     } catch (GMSException ge1) {
-                                        myLogger.log(Level.SEVERE, "Exception occured while forwording DONE message: retry (" + i + ") for (" + msgString + ") to server" + ge1, ge1);
+                                        myLogger.log(Level.WARNING, "Exception occured while forwording DONE message: retry (" + retryCount + ") for (" + msgString + ") to server" + ge1, ge1);
                                     }
                                 }
+                                if (retryCount > 3) {
+                                    myLogger.log(Level.SEVERE, "Retry count exceeded 3 times while trying to forword the DONE message (" + msgString + ") to server");
+
+                                }
                             }
-                           if (!receivedDoneMsgFrom.contains(from)) {
+                            if (!receivedDoneMsgFrom.contains(from)) {
                                 receivedDoneMsgFrom.add(from);
                             }
-                           // if we have received a DONE message for each of the instances
+                            // if we have received a DONE message for each of the instances
                             // that are sending to us then stop timing
                             if ((receivedDoneMsgFrom.size() == msgIDs_received.size())) {
                                 receiveEndTime = new GregorianCalendar();
@@ -674,15 +708,15 @@ public class HAMessageBuddyReplicationSimulator {
                             int to = buf.getInt(16);
                             int from = buf.getInt(20);
                             String payload = new String(msg, 24, msg.length - 24);
-                           String shortPayLoad = payload;
+                            String shortPayLoad = payload;
                             if (shortPayLoad.length() > 10) {
                                 shortPayLoad = shortPayLoad.substring(0, 10) + "..." + shortPayLoad.substring(shortPayLoad.length() - 10, shortPayLoad.length());
                             }
                             if (myLogger.isLoggable(Level.FINE)) {
                                 myLogger.log(Level.FINE, memberID + " Received msg:" + displayMsg(msg));
                             }
-                           if (msgID > 0) {
-                               // keep track of the objectIDs
+                            if (msgID > 0) {
+                                // keep track of the objectIDs
                                 // if the INSTANCE does not exist in the map, create it.
                                 ConcurrentHashMap<Long, String> object = payloads_received.get(from);
                                 if (object == null) {
@@ -690,7 +724,7 @@ public class HAMessageBuddyReplicationSimulator {
                                 }
                                 object.put(objectID, payload);
                                 payloads_received.put(from, object);
-                               if (validateAllPayloads) {
+                                if (validateAllPayloads) {
                                     if (payload.equals(expectedPayload)) {
                                         validatedMessages++;
                                     } else {
@@ -698,22 +732,22 @@ public class HAMessageBuddyReplicationSimulator {
                                         payloadErrors++;
                                     }
                                 }
-                               // keep track of the msgIDs
+                                // keep track of the msgIDs
                                 // if the INSTANCE does not exist in the map, create it.
                                 ConcurrentHashMap<String, String> object_MsgIDs = msgIDs_received.get(from);
                                 if (object_MsgIDs == null) {
                                     object_MsgIDs = new ConcurrentHashMap<String, String>();
                                 }
-                               object_MsgIDs.put(objectID + ":" + msgID, "");
+                                object_MsgIDs.put(objectID + ":" + msgID, "");
                                 msgIDs_received.put(from, object_MsgIDs);
                             }
                         }
-                   } else {
+                    } else {
                         try {
                             // this is the server
                             notification.acquire();
                             MessageSignal messageSignal = (MessageSignal) notification;
-                           String msgString = new String(messageSignal.getMessage());
+                            String msgString = new String(messageSignal.getMessage());
                             if (msgString.contains("DONE")) {
                                 int index = msgString.indexOf(":");
                                 String from = msgString.substring(index + 1);
@@ -726,7 +760,7 @@ public class HAMessageBuddyReplicationSimulator {
                                     receivedDoneMsgFrom.add(from);
                                 }
                             }
-                       } catch (SignalAcquireException e) {
+                        } catch (SignalAcquireException e) {
                             e.printStackTrace();
                         } catch (Throwable t) {
                             t.printStackTrace();
@@ -741,29 +775,32 @@ public class HAMessageBuddyReplicationSimulator {
             }
         }
     }
-   public static byte[] long2bytearray(long l) {
+
+    public static byte[] long2bytearray(long l) {
         byte b[] = new byte[8];
         ByteBuffer buf = ByteBuffer.wrap(b);
         buf.putLong(l);
         return b;
     }
-   public static byte[] int2bytearray(int i) {
+
+    public static byte[] int2bytearray(int i) {
         byte b[] = new byte[4];
         ByteBuffer buf = ByteBuffer.wrap(b);
         buf.putInt(i);
         return b;
     }
-   public static byte[] createMsg(long objectID, long msgID, int to, int from, int payloads_receivedize) {
-       // create the message to be sent
+
+    public static byte[] createMsg(long objectID, long msgID, int to, int from, int payloads_receivedize) {
+        // create the message to be sent
         byte[] b1 = long2bytearray(objectID);
         byte[] b2 = long2bytearray(msgID);
         byte[] b3 = int2bytearray(to);
         byte[] b4 = int2bytearray(from);
         byte[] b5 = new byte[1];
-       int pls = payloads_receivedize - (b1.length + b2.length + b3.length + b4.length);
+        int pls = payloads_receivedize - (b1.length + b2.length + b3.length + b4.length);
         b5 = createPayload(pls);
-       int msgSize = b1.length + b2.length + b3.length + b4.length + b5.length;
-       byte[] msg = new byte[(int) msgSize];
+        int msgSize = b1.length + b2.length + b3.length + b4.length + b5.length;
+        byte[] msg = new byte[(int) msgSize];
         int j = 0;
         for (int i = 0; i < b1.length; i++) {
             msg[j++] = b1[i];
@@ -782,7 +819,8 @@ public class HAMessageBuddyReplicationSimulator {
         }
         return msg;
     }
-   public static String displayMsg(byte[] msg) {
+
+    public static String displayMsg(byte[] msg) {
         StringBuffer sb = new StringBuffer(60);
         ByteBuffer buf = ByteBuffer.wrap(msg);
         /*
@@ -807,26 +845,29 @@ public class HAMessageBuddyReplicationSimulator {
             sb.append(" payload:").append(payload);
         }
         sb.append("]");
-       return sb.toString();
+        return sb.toString();
     }
-   public static byte[] createPayload(int size) {
+
+    public static byte[] createPayload(int size) {
         byte[] b = new byte[1];
-       b = new byte[size];
+        b = new byte[size];
         b[0] = 'a';
         int k = 1;
         for (; k < size - 1; k++) {
             b[k] = 'X';
         }
         b[k] = 'z';
-       return b;
+        return b;
     }
-   public static void sleep(long i) {
+
+    public static void sleep(long i) {
         try {
             Thread.sleep(i);
         } catch (InterruptedException ex) {
         }
     }
-   public static void setupLogHandler(Level l) {
+
+    public static void setupLogHandler(Level l) {
         final ConsoleHandler consoleHandler = new ConsoleHandler();
         try {
             consoleHandler.setLevel(Level.ALL);
@@ -841,6 +882,6 @@ public class HAMessageBuddyReplicationSimulator {
         //final String level = System.getProperty("LOG_LEVEL", "INFO");
         //myLogger.setLevel(Level.parse(level));
         myLogger.setLevel(l);
-   }
+    }
 }
 
