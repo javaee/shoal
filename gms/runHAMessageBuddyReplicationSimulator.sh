@@ -1,319 +1,386 @@
 #!/bin/sh +x
 
 #
-# Copyright 2004-2005 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
- #
- # The contents of this file are subject to the terms
- # of the Common Development and Distribution License
- # (the License).  You may not use this file except in
- # compliance with the License.
- #
- # You can obtain a copy of the license at
- # https://shoal.dev.java.net/public/CDDLv1.0.html
- #
- # See the License for the specific language governing
- # permissions and limitations under the License.
- #
- # When distributing Covered Code, include this CDDL
- # Header Notice in each file and include the License file
- # at
- # If applicable, add the following below the CDDL Header,
- # with the fields enclosed by brackets [] replaced by
- # you own identifying information:
- # "Portions Copyrighted [year] [name of copyright owner]"
- #
- # Copyright 2006 Sun Microsystems, Inc. All rights reserved.
- #
-#-----------------------------------------------------
+# The contents of this file are subject to the terms
+# of the Common Development and Distribution License
+# (the License).  You may not use this file except in
+# compliance with the License.
+#
+# You can obtain a copy of the license at
+# https://shoal.dev.java.net/public/CDDLv1.0.html
+#
+# See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL
+# Header Notice in each file and include the License file
+# at
+# If applicable, add the following below the CDDL Header,
+# with the fields enclosed by brackets [] replaced by
+# you own identifying information:
+# "Portions Copyrighted [year] [name of copyright owner]"
+#
 
-# This program creates a cluster conprised of a master and N number of core members.
-# Each core member acts as an instance in the cluster which replicates(sends messages)
-# to the instance that is one greater than itself. The last instance replicates
-# to the first instance in the cluster. The names of the instances are instance101,
-# instance102, etc... The master node is called server. Based on the arguments
-# passed into the program the instances will send M objects*N messages to the replica.
-# The replica saves the messages and verifies that the number of objects/messages
-# were received and that the content was correct. Once each instance is done
-# sending their messages a final message (DONE) is sent to the replica. The replica
-# upon receiving the message forwards this message to the master. Once the master
-# has received a DONE message from each instance, it calls group shutdown on the cluster.
+EXECUTE_REMOTE_CONNECT=rsh
 
-#-----------------------------------------------------
-# VERIFY THE CONTENTS CONTAINED WITHIN
+ADMINCLI_LOG_LEVEL=WARNING
+ADMINCLI_SHOALGMS_LOG_LEVEL=WARNING
 
-SHOALWORKSPACE=`pwd`
-TMPDIR=$SHOALWORKSPACE/tmp
-LOGDIR=$SHOALWORKSPACE/LOGS/hamessagebuddyreplicasimulator
+TEST_LOG_LEVEL=INFO
+SHOALGMS_LOG_LEVEL=INFO
+
+CLUSTER_CONFIGS="./configs/clusters"
+if [ -f "./configs/clusters" ]; then
+   echo "ERROR: the configs/clusters directory is missing"
+   exit 1
+fi
+
+LOGS_DIR=LOGS/hamessagebuddyreplicasimulator
+COLLECT_LOGS_DIR=""
+
+TRANSPORT=grizzly
+CMD=normal
 NUMOFMEMBERS=10
-NUMOFOBJECTS=100
-NUMOFOBJECTS=10
-NUMOFMSGSPEROBJECT=500
-#NUMOFMSGSPEROBJECT=100
-MSGSIZE=4096
-#MSGSIZE=6700
-STARTINSTANCENUM=101
-STARTTCPPORT=9130
-LOGLEVEL=INFO
-PUBLISH_HOME=$SHOALWORKSPACE/dist
-LIB_HOME=$SHOALWORKSPACE/lib
-JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/jxta.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
-SHOAL_GROUP_COMMUNICATION_PROVIDER="SHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly"
-#
-# if members are distributed across machines, the GROUPNAME
-# must be set to a unique value so that all members join the
-# same group
-#
-# COMMENTED OUT technique of generating unique groupname.  Use different MULTICASTADDRESS and/or MULTICASTPORT per group/cluster to avoid collisions.
-#GROUPNAME="TestGroup_`uname -n`"
-#if [ "${GROUPNAME}" == "" ]; then
-    GROUPNAME="TestGroup"
-#fi
+
+GROUPNAME=habuddygroup
+MULTICASTADDRESS=229.9.1.`./randomNumber.sh`
+MULTICASTPORT=2299
+
+PUBLISH_HOME=./dist
+LIB_HOME=./lib
+
 MAINCLASS="com.sun.enterprise.shoal.messagesenderreceivertest.HAMessageBuddyReplicationSimulator"
 
-#-----------------------------------------------------
-
-ECHO=`which echo`
-if [ ! -d ${TMPDIR} ] ; then
-    mkdir ${TMPDIR}
-else
-    rm -rf ${TMPDIR}/script*
-fi
-if [ ! -d ${LOGDIR} ] ; then
-    mkdir ${LOGDIR}
-else
-    rm -rf ${LOGDIR}/instance*.log ${LOGDIR}/server.log
-fi
+GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+JXTA_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar:${LIB_HOME}/jxta.jar
+JARS=${GRIZZLY_JARS}
 
 
-#########################################
-# Create the scripts used to run the test
-#########################################
-
-#===============================================
-# Create the script that actually runs the test
-#===============================================
-cat << ENDSCRIPT > ${TMPDIR}/script1
-#!/bin/sh +x
-
-ECHO=\`which echo\`
-
-
-
-if [ "\${1}" == "-h" ] ; then
-    java -Dcom.sun.management.jmxremote -cp ${JARS} $MAINCLASS \$1
-    exit 0
-fi
-
-\$ECHO "Arg1=\${1}"
-\$ECHO "Arg2=\${2}"
-\$ECHO "Arg3=\${3}"
-\$ECHO "Arg4=\${4}"
-\$ECHO "Arg5=\${5}"
-\$ECHO "Arg6=\${6}"
-\$ECHO "Arg7=\${7}"
-\$ECHO "Arg8=\${8}"
-\$ECHO "Arg9=\${9}"
-
-if [ "\${1}" == "server" ] ; then
-java -Dcom.sun.management.jmxremote -D${SHOAL_GROUP_COMMUNICATION_PROVIDER} -DTCPSTARTPORT=\$4 -DTCPENDPORT=\$5 -DLOG_LEVEL=\$6 -cp ${JARS} $MAINCLASS \$1 \$2 \$3
-else
-java -Dcom.sun.management.jmxremote -D${SHOAL_GROUP_COMMUNICATION_PROVIDER} -DTCPSTARTPORT=\$7 -DTCPENDPORT=\$8 -DLOG_LEVEL=\$9 -cp ${JARS} $MAINCLASS \$1 \$2 \$3 \$4 \$5 \$6
-fi
-
-ENDSCRIPT
-#===============================================
-
-#=====================================================================
-# Create the script that monitors when testing is complete
-#=====================================================================
-cat << ENDSCRIPT > ${TMPDIR}/script2
-#!/bin/sh +x
-
-ECHO=\`which echo\`
-num=\$1
-phrase="Testing Complete"
-count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
-\$ECHO "Waiting for the master and (\$num) instances to complete testing"
-\$ECHO -n "\$count"
-while [ \$count -lt 1 ]
-do
-\$ECHO -n ",\$count"
-count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
-sleep 5
-done
-
-\$ECHO  ", \$count"
-sleep 5
-\$ECHO  "==============="
-\$ECHO  "The following are the time results for sending messages:"
-grep "Sending Messages Time data" ${LOGDIR}/*log
-\$ECHO  "==============="
-\$ECHO  "The following are the time results for receiving messages:"
-grep "Receiving Messages Time data" ${LOGDIR}/*log
-\$ECHO  "==============="
-\$ECHO  "The following logs contain failures:"
-\$ECHO  "==============="
-grep "FAILED" ${LOGDIR}/*log
-\$ECHO  "==============="
-\$ECHO  "The following are EXCEPTIONS found in the logs:"
-\$ECHO  "==============="
-grep "Exception" ${LOGDIR}/i*log
-grep "Exception" ${LOGDIR}/server.log
-\$ECHO  "==============="
-\$ECHO  "The following are SEVERE messages found in the logs:"
-\$ECHO  "==============="
-grep "SEVERE" ${LOGDIR}/i*log
-grep "SEVERE" ${LOGDIR}/server.log
-\$ECHO  "==============="
-
-exit 0
-
-ENDSCRIPT
-#=====================================================================
-
-#=====================================================================
-# Create the script monitors that monitors when  testing is complete
-#=====================================================================
-cat << ENDSCRIPT > ${TMPDIR}/script3
-#!/bin/sh +x
-
-
-ECHO=\`which echo\`
-num=\$1
-phrase="numberOfJoinAndReady received so far is: \$num"
-count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
-\$ECHO "Waiting for the (\$num) instances to join group"
-\$ECHO -n "\$count"
-while [ \$count -lt 1 ]
-do
-\$ECHO -n ",\$count"
-count=\`grep "\${phrase}" ${LOGDIR}/server.log | wc -l | sed -e 's/ //g' \`
-sleep 5
-done
-\$ECHO  ", \$count"
-\$ECHO "All (\$num) instances have joined the group, testing will now begin"
-
-exit 0
-
-ENDSCRIPT
-#=====================================================================
-
-############################################
-# This is where test execution really begins
-############################################
-
-chmod 755 ${TMPDIR}/script1
-chmod 755 ${TMPDIR}/script2
-chmod 755 ${TMPDIR}/script3
+DIST=false
 
 usage () {
-    cat << USAGE
-Usage: $0
-`${TMPDIR}/script1 [-h|-dist] [numberofmembers(default of 10)]`
-USAGE
-exit 1
+ echo "usage:"
+ echo "--------------------------------------------------------------------------------------------"
+ echo "single machine:"
+ echo "  [-h] [-t transport] [-g groupname] [-noo num] [-nom num] [-ms num] [-n numberOfMembers] [-tll level] [-sll level]"
+ echo "     -t :  Transport type grizzly|jxta|jxtanew (default is grizzly)"
+ echo "     -g :  group name  (default is habuddygroup)"
+ echo "     -noo :  Number of Objects(default is 10)"
+ echo "     -nom :  Number of messages Per Object (default is 500)"
+ echo "     -ms :  Message size (default is 4096)"
+ echo "     -n : Number of CORE members in the group (default is 10)"
+ echo "     -tll :  Test log level (default is INFO)"
+ echo "     -sll :  ShoalGMS log level (default is INFO)"
+ echo "--------------------------------------------------------------------------------------------"
+ echo "   distributed environment manditory args:"
+ echo "  -d  <-g groupname> <-cl collectlogdir>"
+ echo "     -d :  Indicates this is test is run distributed"
+ echo "     -g :  group name  (default is habuddygroup)"
+ echo "     -cl :  log directory where logs are copied to and analyzed"
+ echo "--------------------------------------------------------------------------------------------"
+ echo " "
+ echo " Examples:"
+ echo "     runHAMessageBuddyReplicationSimulator.sh"
+ echo "     runHAMessageBuddyReplicationSimulator.sh -noo 5 -mnom 256 -ms 1024 -n 5 "
+ echo "     runHAMessageBuddyReplicationSimulator.sh -d -g testgroup -l /net/machine1/test"
+ echo "     runHAMessageBuddyReplicationSimulator.sh -d -g testgroup -l /net/machine1/test -noo 5 -mnom 256 -ms 1024"
+ exit 1
 }
 
-if [ "$1" == "-h" ]; then
-    usage
+
+
+analyzeLogs(){
+    echo  "The following logs contain failures:"
+    echo  "==============="
+    grep -a "FAILED" ${LOGS_DIR}/instance*log
+    echo  "==============="
+    echo  "The following are the time results for SENDING messages:"
+    grep -a "Sending Messages Time data" ${LOGS_DIR}/instance*log
+    echo  "==============="
+    echo  "The following are the time results for RECEIVING messages:"
+    grep -a "Receiving Messages Time data" ${LOGS_DIR}/instance*log
+    echo  "==============="
+    echo  "The following are EXCEPTIONS found in the logs:"
+    echo  "==============="
+    grep -a "Exception" ${LOGS_DIR}/instance*log
+    grep -a "Exception" ${LOGS_DIR}/server.log
+    echo  "==============="
+    echo  "The following are SEVERE messages found in the logs:"
+    echo  "==============="
+    grep -a "SEVERE" ${LOGS_DIR}/instance*log
+    grep -a "SEVERE" ${LOGS_DIR}/server.log
+    echo  "==============="
+}
+
+NUMOFOBJECTS=10
+NUMOFMSGSPEROBJECT=100
+MSGSIZE=4096
+
+while [ $# -ne 0 ]
+do
+     case ${1} in
+       -h)
+         usage
+       ;;
+       -d)
+         shift
+         DIST=true
+       ;;
+       -cl)
+         shift
+         COLLECT_LOGS_DIR="${1}"
+         shift
+         if [ ! -d ${COLLECT_LOGS_DIR} ];then
+            echo "ERROR: Collect Log directory does not exist"
+            usage
+         fi
+       ;;
+       -g)
+         shift
+         GROUPNAME=${1}
+         shift
+         if [ -z "${GROUPNAME}" ] ;then
+            echo "ERROR: Missing group name value"
+            usage
+         fi
+       ;;
+       -noo)
+         shift
+         NUMOFOBJECTS=`echo "${1}" | egrep "^[0-9]+$" `
+         shift
+         if [ "${NUMOFOBJECTS}" != "" ]; then
+            if [ ${NUMOFOBJECTS} -le 0 ];then
+               echo "ERROR: Invalid number of objects specified"
+               usage
+            fi
+         else
+            echo "ERROR: Invalid number of objects specified"
+            usage
+         fi
+       ;;
+       -nom)
+         shift
+         NUMOFMSGSPEROBJECT=`echo "${1}" | egrep "^[0-9]+$" `
+         shift
+         if [ "${NUMOFMSGSPEROBJECT}" != "" ]; then
+            if [ ${NUMOFMSGSPEROBJECT} -le 0 ];then
+               echo "ERROR: Invalid number of messages specified"
+               usage
+            fi
+         else
+            echo "ERROR: Invalid number of messages specified"
+            usage
+         fi
+       ;;
+       -ms)
+         shift
+         MSGSIZE=`echo "${1}" | egrep "^[0-9]+$" `
+         shift
+         if [ "${MSGSIZE}" != "" ]; then
+            if [ ${MSGSIZE} -le 0 ];then
+               echo "ERROR: Invalid messages size specified"
+               usage
+            fi
+         else
+            echo "ERROR: Invalid messages size specified"
+            usage
+         fi
+       ;;
+       -t)
+         shift
+         TRANSPORT=${1}
+         shift
+         if [ ! -z "${TRANSPORT}" ] ;then
+            if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" -a "${TRANSPORT}" != "jxtanew" ]; then
+               echo "ERROR: Invalid transport specified"
+               usage
+            fi
+         else
+            echo "ERROR: Missing transport value"
+            usage
+         fi
+       ;;
+       -tll)
+         shift
+         TEST_LOG_LEVEL="${1}"
+         shift
+       ;;
+       -sll)
+         shift
+         SHOALGMS_LOG_LEVEL="${1}"
+         shift
+       ;;
+       -n)
+         shift
+         NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
+         shift
+         if [ "${NUMOFMEMBERS}" != "" ]; then
+            if [ ${NUMOFMEMBERS} -le 0 ];then
+               echo "ERROR: Invalid number of members specified"
+               usage
+            fi
+         else
+            echo "ERROR: Invalid number of members specified"
+            usage
+         fi
+       ;;
+       *)
+         echo "ERROR: Invalid argument specified [${1}]"
+         usage
+       ;;
+     esac
+done
+
+
+echo ${MULTICASTADDRESS} > ./currentMulticastAddress.txt
+
+echo Transport: ${TRANSPORT}
+if [ $TRANSPORT != "grizzly" ]; then
+    JARS=${JXTA_JARS}
 fi
 
-
-$ECHO "Number of members=${NUMOFMEMBERS}"
-$ECHO "GroupName=${GROUPNAME}"
-$ECHO "Number of Objects=${NUMOFOBJECTS}"
-$ECHO "Number of messages Per Object=${NUMOFMSGSPEROBJECT}"
-$ECHO "Message size=${MSGSIZE}"
-$ECHO "Log Directory=${LOGDIR}"
-
-
-if [ ! -z "${1}" ]; then
-    NUMOFMEMBERS=`echo "${1}" | egrep "^[0-9]+$" `
-    if [ "${NUMOFMEMBERS}" != "" ]; then
-       if [ ${NUMOFMEMBERS} -le 0 ];then
-          echo "ERROR: Invalid number of members specified"
-          usage
-       fi
-    else
-       echo "ERROR: Invalid number of members specified"
+if [ $DIST = true ]; then
+    NUMOFMEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties | sort | wc -w`
+    if [ -z "${COLLECT_LOGS_DIR}" ];then
+       echo "ERROR: When using distributed mode, you must specified the -l option so logs can be saved and analyzed"
        usage
     fi
-    shift
+    touch ${COLLECT_LOGS_DIR}/test
+    if [ ! -f "${COLLECT_LOGS_DIR}/test" ];then
+       echo "ERROR: Unable to write to the directory specified by -l [${COLLECT_LOGS_DIR}]"
+       usage
+    fi
+    rm -rf ${COLLECT_LOGS_DIR}/test
+fi
+echo "NumberOfMembers: ${NUMOFMEMBERS}"
+echo "LOGS_DIRS=${LOGS_DIR}"
+echo "Killing any existing members and cleaning out old logs"
+if [ $DIST = false ]; then
+   killmembers.sh
+   rm -rf ${LOGS_DIR}/*.log
+else
+    if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
+       MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties"  `
+       for member in ${MEMBERS}
+       do
+          TMP=`egrep "^MACHINE_NAME" ${member}`
+          MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^INSTANCE_NAME" ${member}`
+          INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^WORKSPACE_HOME" ${member}`
+          WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+          echo "killing ${INSTANCE_NAME} on ${MACHINE_NAME}"
+          ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh;rm -rf ${LOGS_DIR}/*.log"
+       done
+    else
+       echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
+       exit 1
+    fi
+
 fi
 
+#--------------------------
+# STARTING OF THE MASTER
+if [ $DIST = false ]; then
+    mkdir -p ${LOGS_DIR}
+    echo "Removing old logs"
+    rm -f ${LOGS_DIR}/*.log
+    echo "Starting server"
+    _HAMessageBuddyReplicationSimulator.sh server SPECTATOR ${NUMOFMEMBERS} ${SHOALGMS_LOG_LEVEL} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} >& ${LOGS_DIR}/server.log &
+else
+    if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
+       TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+       TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+       echo "Starting server on ${MACHINE_NAME}"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; mkdir -p ${LOGS_DIR};./_HAMessageBuddyReplicationSimulator.sh server SPECTATOR ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+    else
+       echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
+       exit 1
+    fi
+fi
 
-if [ "$1" != "-dist" ]; then
-    # non-distributed environment
+#--------------------------
+# Give time for the server to startup before starting the other members
+sleep 5
 
-    $ECHO "Starting SERVER"
-    sdtcp=${STARTTCPPORT}
-    edtcp=`expr ${sdtcp} + 30`
-    ${TMPDIR}/script1 server ${GROUPNAME} ${NUMOFMEMBERS} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/server.log &
-    #${TMPDIR}/script1 server ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/server.log &
-
-    # give time for the DAS to start
-    sleep 5
-    $ECHO "Starting ${NUMOFMEMBERS} members"
-    sin=${STARTINSTANCENUM}
-    sdtcp=`expr ${edtcp} + 1`
-    edtcp=`expr ${sdtcp} + 30`
+sdtcp=9161
+edtcp=`expr ${sdtcp} + 30`
+if [ $DIST = false ]; then
+    # single machine startup
+    echo "Starting ${NUMOFMEMBERS} CORE members"
     count=1
     while [ $count -le ${NUMOFMEMBERS} ]
     do
-         ${TMPDIR}/script1 instance${sin} ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} ${sdtcp} ${edtcp} ${LOGLEVEL} >& ${LOGDIR}/instance${sin}.log &
-         sin=`expr ${sin} + 1`
-         sdtcp=`expr ${edtcp} + 1`
-         edtcp=`expr ${sdtcp} + 30`
+        INSTANCE_NAME="instance`expr ${count} + 100 `"
+        echo "Starting ${INSTANCE_NAME}"
+        MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR}"
+        ${MEMBERSTARTCMD}
+
+        sdtcp=`expr ${edtcp} + 1`
+        edtcp=`expr ${sdtcp} + 30`
         count=`expr ${count} + 1`
     done
+else 
+   # distributed environment startup
+   echo "Starting CORE members in the distributed environment"
 
-    #${TMPDIR}/script1 instance101 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9161 9191 INFO >& ${LOGDIR}/instance101.log &
-    #${TMPDIR}/script1 instance102 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9192 9222 INFO >& ${LOGDIR}/instance102.log &
-    #${TMPDIR}/script1 instance103 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9223 9253 INFO >& ${LOGDIR}/instance103.log &
-    #${TMPDIR}/script1 instance104 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9254 9284 INFO >& ${LOGDIR}/instance104.log &
-    #${TMPDIR}/script1 instance105 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9285 9315 INFO >& ${LOGDIR}/instance105.log &
-    #${TMPDIR}/script1 instance106 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9316 9346 INFO >& ${LOGDIR}/instance106.log &
-    #${TMPDIR}/script1 instance107 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9347 9377 INFO >& ${LOGDIR}/instance107.log &
-    #${TMPDIR}/script1 instance108 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9378 9408 INFO >& ${LOGDIR}/instance108.log &
-    #${TMPDIR}/script1 instance109 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9409 9439 INFO >& ${LOGDIR}/instance109.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9440 9470 INFO >& ${LOGDIR}/instance110.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFMSGSPEROBJECT} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9471 9500 INFO >& ${LOGDIR}/instance110.log &
-    $ECHO "Finished starting ${NUMOFMEMBERS} members"
+   MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties  `
+   for member in ${MEMBERS}
+   do
+      TMP=`egrep "^MACHINE_NAME" ${member}`
+      MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^INSTANCE_NAME" ${member}`
+      INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^WORKSPACE_HOME" ${member}`
+      WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
 
-    # give time for the instances to start
-    sleep 3
-    # monitor for the testing to begin
-    ${TMPDIR}/script3 ${NUMOFMEMBERS}
-    # monitor when the testing is complete
-    ${TMPDIR}/script2 ${NUMOFMEMBERS}
-
-else
-    # distributed environment
-   # $ECHO "Starting DAS"
-   # sdtcp=${STARTTCPPORT}
-   # edtcp=`expr ${sdtcp} + 30`
-   # ${TMPDIR}/script1 server ${GROUPNAME} ${NUMOFMEMBERS} 9130 9160 ${LOGLEVEL} >& ${LOGDIR}/server.log &
-
-    # give time for the DAS to start
-   # sleep 5
-    $ECHO "YOU NEED TO START THE members ON THE REMOTE MACHINES"
-
-    #${TMPDIR}/script1 instance101 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9161 9191 INFO >& ${LOGDIR}/instance101.log &
-    #${TMPDIR}/script1 instance102 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9192 9222 INFO >& ${LOGDIR}/instance102.log &
-    #${TMPDIR}/script1 instance103 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9223 9253 INFO >& ${LOGDIR}/instance103.log &
-    #${TMPDIR}/script1 instance104 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9254 9284 INFO >& ${LOGDIR}/instance104.log &
-    #${TMPDIR}/script1 instance105 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9285 9315 INFO >& ${LOGDIR}/instance105.log &
-    #${TMPDIR}/script1 instance106 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9316 9346 INFO >& ${LOGDIR}/instance106.log &
-    #${TMPDIR}/script1 instance107 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9347 9377 INFO >& ${LOGDIR}/instance107.log &
-    #${TMPDIR}/script1 instance108 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9378 9408 INFO >& ${LOGDIR}/instance108.log &
-    #${TMPDIR}/script1 instance109 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9409 9439 INFO >& ${LOGDIR}/instance109.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9440 9470 INFO >& ${LOGDIR}/instance110.log &
-    #${TMPDIR}/script1 instance110 ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} 9471 9500 INFO >& ${LOGDIR}/instance110.log &
-
+      MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
+   done
 fi
 
+echo "Waiting for testing to complete"
+if [ $DIST = false ]; then
+    _HAMessageBuddyReplicationSimulator.sh -wait ${NUMOFMEMBERS} -g ${GROUPNAME} -l ${LOGS_DIR}
+    analyzeLogs
+else
+    # we are running in a dist mode and we want to wait until all the instances are done and the server.log contains Testing Complete
+    if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
+       TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+       TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+       echo "Waiting for server on ${MACHINE_NAME} to complete testing"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};_HAMessageBuddyReplicationSimulator.sh -wait ${NUMOFMEMBERS} -g ${GROUPNAME} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
 
+       echo "Collecting logs from all machines"
+       # remove any existing files before doing copy
+       rm -rf ${COLLECT_LOGS_DIR}/*
 
+       MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties"  `
+       for member in ${MEMBERS}
+       do
+          TMP=`egrep "^MACHINE_NAME" ${member}`
+          MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^INSTANCE_NAME" ${member}`
+          INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^WORKSPACE_HOME" ${member}`
+          WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+          echo "Collecting logs from ${INSTANCE_NAME} on ${MACHINE_NAME}"
 
+         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; cp -r ${LOGS_DIR}/* ${COLLECT_LOGS_DIR}"
+      done
+      LOGS_DIR=${COLLECT_LOGS_DIR}
+      analyzeLogs
+    else
+       echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
+       exit 1
+    fi
+fi
+echo "Testing Complete"
