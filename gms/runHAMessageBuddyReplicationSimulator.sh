@@ -65,7 +65,7 @@ usage () {
  echo "usage:"
  echo "--------------------------------------------------------------------------------------------"
  echo "single machine:"
- echo "  [-h] [-t transport] [-g groupname] [-noo num] [-nom num] [-ms num] [-n numberOfMembers] [-tll level] [-sll level]"
+ echo "  [-h] [-t transport] [-g groupname] [-noo num] [-nom num] [-ms num] [-bia address] [-n numberOfMembers] [-tll level] [-sll level]"
  echo "     -t :  Transport type grizzly|jxta|jxtanew (default is grizzly)"
  echo "     -g :  group name  (default is habuddygroup)"
  echo "     -noo :  Number of Objects(default is 10)"
@@ -74,6 +74,7 @@ usage () {
  echo "     -n : Number of CORE members in the group (default is 10)"
  echo "     -tll :  Test log level (default is INFO)"
  echo "     -sll :  ShoalGMS log level (default is INFO)"
+ echo "     -bia :  Bind Interface Address, used on a multihome machine"
  echo "--------------------------------------------------------------------------------------------"
  echo "   distributed environment manditory args:"
  echo "  -d  <-g groupname> <-cl collectlogdir>"
@@ -146,6 +147,16 @@ do
             echo "ERROR: Missing group name value"
             usage
          fi
+       ;;
+       -bia)
+         shift
+         BIND_INTERFACE_ADDRESS="${1}"
+         shift
+         if [ -z "${BIND_INTERFACE_ADDRESS}" ]; then
+            echo "ERROR: Missing bind interface address value"
+            usage
+         fi
+         BIND_INTERFACE_ADDRESS="-bia ${BIND_INTERFACE_ADDRESS}"
        ;;
        -noo)
          shift
@@ -289,15 +300,20 @@ if [ $DIST = false ]; then
     echo "Removing old logs"
     rm -f ${LOGS_DIR}/*.log
     echo "Starting server"
-    _HAMessageBuddyReplicationSimulator.sh server SPECTATOR ${NUMOFMEMBERS} ${SHOALGMS_LOG_LEVEL} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} >& ${LOGS_DIR}/server.log &
+    _HAMessageBuddyReplicationSimulator.sh server SPECTATOR ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} >& ${LOGS_DIR}/server.log &
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
        TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
        TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+       BIND_INTERFACE_ADDRESS=`echo $TMP | awk -F= '{print $2}' `
+       if [ ! -z ${BIND_INTERFACE_ADDRESS} ];then
+          BIND_INTERFACE_ADDRESS="-bia ${BIND_INTERFACE_ADDRESS}"
+       fi
        echo "Starting server on ${MACHINE_NAME}"
-       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; mkdir -p ${LOGS_DIR};./_HAMessageBuddyReplicationSimulator.sh server SPECTATOR ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; mkdir -p ${LOGS_DIR};./_HAMessageBuddyReplicationSimulator.sh server SPECTATOR ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
     else
        echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
        exit 1
@@ -318,7 +334,7 @@ if [ $DIST = false ]; then
     do
         INSTANCE_NAME="instance`expr ${count} + 100 `"
         echo "Starting ${INSTANCE_NAME}"
-        MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR}"
+        MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${LOGS_DIR}"
         ${MEMBERSTARTCMD}
 
         sdtcp=`expr ${edtcp} + 1`
@@ -338,9 +354,14 @@ else
       INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
       TMP=`egrep "^WORKSPACE_HOME" ${member}`
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+      BIND_INTERFACE_ADDRESS=`echo $TMP | awk -F= '{print $2}' `
+      if [ ! -z ${BIND_INTERFACE_ADDRESS} ];then
+          BIND_INTERFACE_ADDRESS="-bia ${BIND_INTERFACE_ADDRESS}"
+      fi
       echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
 
-      MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+      MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
    done
 fi

@@ -33,7 +33,7 @@ usage () {
     echo "--------------------------------------------------------------------------------------------"
     echo "single machine:"
     echo "  [-h] [-t transport] [-g groupname] [-noo num] [-nom num] [-ms num] [-ts port] [-te port] "
-    echo "  [-ma address] [-mp port] [-tll level] [-sll level] [-l logdir] nodename membertype numberofmembers"
+    echo "  [-ma address] [-mp port] [-bia address] [-tll level] [-sll level] [-l logdir] nodename membertype numberofmembers"
     echo "     -t :  Transport type grizzly|jxta|jxtanew (default is grizzly)"
     echo "     -g :  group name  (default is habuddygroup)"
     echo "     -noo :  Number of Objects(default is 10)"
@@ -43,6 +43,7 @@ usage () {
     echo "     -te :  Message size (default is 4096)"
     echo "     -ma :  Multicast address (default is 229.9.1.2)"
     echo "     -mp :  Multicast port (default is 2299)"
+    echo "     -bia :  Bind Interface Address, used on a multihome machine"
     echo "     -tll :  Test log level (default is INFO)"
     echo "     -sll :  ShoalGMS log level (default is INFO)"
     echo "     -l :  location where output is saved (default is LOGS/hamessagebuddyreplicasimulator"
@@ -73,8 +74,10 @@ JXTA_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LI
 
 GROUPNAME=habuddygroup
 
-TCPSTARTPORT=""
-TCPENDPORT=""
+TCPSTARTPORT="-DTCPSTARTPORT=9130"
+TCPENDPORT="-DTCPENDPORT=9160"
+BIND_INTERFACE_ADDRESS=""
+
 MULTICASTADDRESS="-DMULTICASTADDRESS=229.9.1.2"
 MULTICASTPORT="-DMULTICASTPORT=2299"
 TRANSPORT=grizzly
@@ -141,6 +144,16 @@ do
             echo "ERROR: Missing group name value"
             usage
          fi
+       ;;
+       -bia)
+         shift
+         BIND_INTERFACE_ADDRESS="${1}"
+         shift
+         if [ -z "${BIND_INTERFACE_ADDRESS}" ]; then
+            echo "ERROR: Missing bind interface address value"
+            usage
+         fi
+         BIND_INTERFACE_ADDRESS="-DBIND_INTERFACE_ADDRESS=${BIND_INTERFACE_ADDRESS}"
        ;;
        -tll)
        shift
@@ -288,9 +301,9 @@ if [ $WAIT = false ];then
 
      CMD=""
      if [ "${NODENAME}" = "server" ] ; then
-        CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=9130 -DTCPENDPORT=9160 -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS}"
+        CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS}"
      else
-        CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=9130 -DTCPENDPORT=9160 -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE}"
+        CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE}"
      fi
 
 
