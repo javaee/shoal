@@ -1,3 +1,4 @@
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -123,14 +124,12 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     private void configure( final Map properties ) {
+        Logger shoalLogger = getLogger();
         GrizzlyUtil.setLogger(LOG);
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
         int tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
         int tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
         tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
-        if (LOG.isLoggable(Level.CONFIG)) {
-            LOG.config("GrizzlyNetworkManager: TCPSTARTPORT=" + tcpStartPort + " TCPENDPORT=" + tcpEndPort + " tcpport=" + tcpPort);
-        }
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), "230.30.1.1", properties );
         networkInterfaceName = Utility.getStringProperty( BIND_INTERFACE_NAME.toString(), null, properties );
@@ -147,6 +146,25 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
         virtualUriList = Utility.getStringProperty( VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties );
+        if (shoalLogger.isLoggable(Level.CONFIG)) {
+            StringBuffer buf = new StringBuffer(256);
+            buf.append("\nGrizzlyNetworkManager Configuration\n");
+            buf.append("BIND_INTERFACE_ADDRESS:").append(host).append('\n');
+            buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append(" tcpPort:").append(tcpPort).append('\n');
+            buf.append("MULTICAST_ADDRESS:MULTICAST_PORT:").append(multicastAddress).append(':').append(multicastPort)
+                     .append(" MULTICAST_PACKET_SIZE:").append(multicastPacketSize).append('\n');
+            buf.append("FAILURE_DETECT_TCP_RETRANSMIT_TIMEOUT(ms):").append(failTcpTimeout).append('\n');
+            buf.append("ThreadPool CORE_POOLSIZE:").append(corePoolSize).
+                    append(" MAX_POOLSIZE:").append(maxPoolSize).
+                    append(" POOL_QUEUE_SIZE:").append(poolQueueSize).
+                    append(" KEEP_ALIVE_TIME(ms):").append(keepAliveTime).append('\n');
+            buf.append("HIGH_WATER_MARK:").append(highWaterMark).append(" NUMBER_TO_RECLAIM:").append(numberToReclaim)
+                .append(" MAX_PARALLEL:").append(maxParallel).append('\n');
+            buf.append("START_TIMEOUT(ms):").append(startTimeout).append(" WRITE_TIMEOUT(ms):").append(writeTimeout).append('\n');
+            buf.append("MAX_WRITE_SELECTOR_POOL_SIZE:").append(writeSelectorPoolSize).append('\n');
+            buf.append("VIRTUAL_MULTICAST_URI_LIST:").append(virtualUriList).append('\n');
+            shoalLogger.log(Level.CONFIG, buf.toString());
+        }
     }
 
     @SuppressWarnings( "unchecked" )
