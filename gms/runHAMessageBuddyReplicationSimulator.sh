@@ -118,8 +118,8 @@ analyzeLogs(){
     MPSMIN=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
     MPSMAX=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
     #BytesPerSecond
-    BPSMIN=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
-    BPSMAX=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
+    BPSMIN=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*KBytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    BPSMAX=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*KBytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
     #MsgSize
     MSGSIZE=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgSize | sed -e 's/^.*MsgSize//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
     echo "send     ${DELTAMIN}-${DELTAMAX}     ${MPSMIN}-${MPSMAX}      ${BPSMIN}-${BPSMAX}      ${MSGSIZE}         ${NUMOFOBJECTS}           ${NUMOFMSGSPEROBJECT}"
@@ -136,8 +136,8 @@ analyzeLogs(){
     MPSMIN=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
     MPSMAX=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
     #BytesPerSecond
-    BPSMIN=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
-    BPSMAX=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
+    BPSMIN=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*KBytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    BPSMAX=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*KBytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
     #MsgSize
     MSGSIZE=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgSize | sed -e 's/^.*MsgSize//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
     echo "receive  ${DELTAMIN}-${DELTAMAX}     ${MPSMIN}-${MPSMAX}      ${BPSMIN}-${BPSMAX}      ${MSGSIZE}         ${NUMOFOBJECTS}           ${NUMOFMSGSPEROBJECT}"
