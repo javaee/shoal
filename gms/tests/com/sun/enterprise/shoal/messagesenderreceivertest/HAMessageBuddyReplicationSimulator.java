@@ -81,7 +81,6 @@ import java.util.logging.ErrorManager;
 
 public class HAMessageBuddyReplicationSimulator {
 
-    static final int SENDDELAY = 10;  // in milliseconds
     static final int EXCEEDTIMEOUTLIMIT = 5;  // in minutes
     private GroupManagementService gms = null;
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
@@ -94,6 +93,7 @@ public class HAMessageBuddyReplicationSimulator {
     static Integer memberIDNum = new Integer(0);
     static int numberOfInstances = 0;
     static int payloadSize = 0;
+    static int thinktime = 10;  // in milliseconds
     static int numberOfObjects = 0;
     static int numberOfMsgsPerObject = 0;
     static AtomicInteger numberOfJoinAndReady = new AtomicInteger(0);
@@ -150,7 +150,7 @@ public class HAMessageBuddyReplicationSimulator {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfInstances=" + numberOfInstances);
             }
         } else if (args[0].contains("instance")) {
-            if (args.length == 6) {
+            if (args.length == 7) {
                 memberID = args[0];
                 if (!memberID.startsWith("instance")) {
                     System.err.println("ERROR: The member name must be in the format 'instancexxx'");
@@ -162,6 +162,7 @@ public class HAMessageBuddyReplicationSimulator {
                 numberOfObjects = Integer.parseInt(args[3]);
                 numberOfMsgsPerObject = Integer.parseInt(args[4]);
                 payloadSize = Integer.parseInt(args[5]);
+                thinktime = Integer.parseInt(args[6]);
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "memberID=" + memberID);
                     myLogger.log(TESTDEFAULTLOGLEVEL, "GroupName=" + groupName);
@@ -169,6 +170,7 @@ public class HAMessageBuddyReplicationSimulator {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfObjects=" + numberOfObjects);
                     myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfMsgsPerObject=" + numberOfMsgsPerObject);
                     myLogger.log(TESTDEFAULTLOGLEVEL, "payloadSize=" + payloadSize);
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "thinktime=" + thinktime);
                 }
                 /* header format is:
                  *  long objectID
@@ -195,9 +197,12 @@ public class HAMessageBuddyReplicationSimulator {
         }
         }
          */
-        replica = memberIDNum + 1;
-        if (replica > ((minInstanceNum + numberOfInstances) - 1)) {
-            replica = minInstanceNum;
+        // repllica is only used for instances
+        if (!memberID.equalsIgnoreCase("server")) {
+            replica = memberIDNum + 1;
+            if (replica > ((minInstanceNum + numberOfInstances) - 1)) {
+                replica = minInstanceNum;
+            }
         }
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Replica= instance" + replica);
@@ -269,6 +274,8 @@ public class HAMessageBuddyReplicationSimulator {
             long timeDelta = 0;
             long remainder = 0;
             long msgPerSec = 0;
+            long bytespersec = 0;
+            long kbytespersec = 0;
             // NOTE
             // The receive time could be quicker than the send time since we might be a little
             // slower at sending than we are receiving the message and the other members in the
@@ -276,22 +283,26 @@ public class HAMessageBuddyReplicationSimulator {
             if (sendEndTime != null && sendStartTime != null) {
                 timeDelta = (sendEndTime.getTimeInMillis() - sendStartTime.getTimeInMillis()) / 1000;
                 remainder = (sendEndTime.getTimeInMillis() - sendStartTime.getTimeInMillis()) % 1000;
-                if (timeDelta == 0) {
-                    msgPerSec = 0;
-                } else {
-                    msgPerSec = (numberOfObjects * numberOfMsgsPerObject * numberOfInstances) / timeDelta;
+                if (timeDelta != 0) {
+                    msgPerSec = (numberOfObjects * numberOfMsgsPerObject) / timeDelta;
+                    bytespersec = ((long) numberOfObjects * (long) numberOfMsgsPerObject * (long) payloadSize) / timeDelta;
+                    kbytespersec= bytespersec / 1000L;
                 }
-                System.out.println("\nSending Messages Time data: Start[" + sendStartTime.getTime() + "], End[" + sendEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "], MsgSize[" + payloadSize + "]\n");
+                System.out.println("\nSending Messages Time data: Start[" + sendStartTime.getTime() + "], End[" + sendEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "], KBytesPerSecond[" + kbytespersec + "], MsgSize[" + payloadSize + "]\n");
+
             }
+            bytespersec = 0;
+            kbytespersec = 0;
             if (receiveEndTime != null && receiveStartTime != null) {
                 timeDelta = (receiveEndTime.getTimeInMillis() - receiveStartTime.getTimeInMillis()) / 1000;
                 remainder = (receiveEndTime.getTimeInMillis() - receiveStartTime.getTimeInMillis()) % 1000;
-                if (timeDelta == 0) {
-                    msgPerSec = 0;
-                } else {
-                    msgPerSec = (numberOfObjects * numberOfMsgsPerObject * numberOfInstances) / timeDelta;
+                msgPerSec = 0;
+                if (timeDelta != 0) {
+                    msgPerSec = (numberOfObjects * numberOfMsgsPerObject) / timeDelta;
+                    bytespersec = ((long) numberOfObjects * (long) numberOfMsgsPerObject * (long) payloadSize) / timeDelta;
+                    kbytespersec= bytespersec / 1000L;
                 }
-                System.out.println("\nReceiving Messages Time data: Start[" + receiveStartTime.getTime() + "], End[" + receiveEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "], MsgSize[" + payloadSize + "]\n");
+                System.out.println("\nReceiving Messages Time data: Start[" + receiveStartTime.getTime() + "], End[" + receiveEndTime.getTime() + "], Delta[" + timeDelta + "." + remainder + "] secs, MsgsPerSec[" + msgPerSec + "], KBytesPerSecond[" + kbytespersec + "], MsgSize[" + payloadSize + "]\n");
             }
         }
         System.out.println("================================================================");
@@ -369,6 +380,7 @@ public class HAMessageBuddyReplicationSimulator {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Send start time: " + sendStartTime);
             }
+            long sentmsg=0;
             for (long msgNum = 1; msgNum <= numberOfMsgsPerObject; msgNum++) {
                 for (long objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
                     if (myLogger.isLoggable(Level.FINE)) {
@@ -386,27 +398,20 @@ public class HAMessageBuddyReplicationSimulator {
                         gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
                     } catch (GMSException ge) {
                         if (!ge.getMessage().contains("Client is busy or timed out")) {
-                            if (myLogger.isLoggable(Level.WARNING)) {
-                                myLogger.log(Level.WARNING, "Exception occured sending message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge, ge);
-                            }
+                            myLogger.log(Level.WARNING, "Exception occured sending message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge, ge);
+
                         } else {
                             //retry the send up to 3 times
                             int retryCount = 1;
                             for (; retryCount <= 3; retryCount++) {
                                 try {
-                                    if (myLogger.isLoggable(Level.WARNING)) {
-                                        myLogger.log(Level.WARNING, "Sleeping 10 seconds");
-                                    }
-                                    sleep(SENDDELAY);
-                                    if (myLogger.isLoggable(Level.WARNING)) {
-                                        myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + ")");
-                                    }
+                                    myLogger.log(Level.WARNING, "Need to retry, sleeping 10 seconds");
+                                    sleep(thinktime);
+                                    myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + ")");
                                     gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", msg);
                                     break; // if successful
                                 } catch (GMSException ge1) {
-                                    if (myLogger.isLoggable(Level.WARNING)) {
-                                        myLogger.log(Level.WARNING, "Exception occurred during send message retry (" + retryCount + ") for (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge1, ge1);
-                                    }
+                                    myLogger.log(Level.WARNING, "Exception occurred during send message retry (" + retryCount + ") for (object:" + objectNum + ",MsgID:" + msgNum + " to :instance" + replica + "):" + ge1, ge1);
                                 }
                             }
                             if (retryCount > 3) {
@@ -414,8 +419,9 @@ public class HAMessageBuddyReplicationSimulator {
                             }
                         }
                     }
-                    if ((objectNum % 5) == 0) {
-                        sleep(SENDDELAY);
+                    sentmsg++;
+                    if ((sentmsg % 100L) == 0L) {
+                        sleep(thinktime);
                     }
                 }
             }
@@ -432,26 +438,22 @@ public class HAMessageBuddyReplicationSimulator {
             try {
                 gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", doneMsg.getBytes());
             } catch (GMSException e) {
-                if (myLogger.isLoggable(Level.WARNING)) {
-                    myLogger.log(Level.WARNING, "Exception occured sending DONE message to replica" + e, e);
-                }
+                myLogger.log(Level.WARNING, "Exception occured sending DONE message to replica" + e, e);
+
                 //retry the send up to 3 times
                 int retryCount = 1;
                 for (; retryCount <= 3; retryCount++) {
                     try {
-                        if (myLogger.isLoggable(Level.WARNING)) {
-                            myLogger.log(Level.WARNING, "Sleeping 10 seconds");
-                        }
-                        sleep(SENDDELAY);
-                        if (myLogger.isLoggable(Level.WARNING)) {
-                            myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + doneMsg + ")");
-                        }
+                        myLogger.log(Level.WARNING, "Sleeping 10 seconds");
+
+                        sleep(thinktime);
+                        myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + doneMsg + ")");
+
                         gms.getGroupHandle().sendMessage("instance" + replica, "TestComponent", doneMsg.getBytes());
                         break; // if successful
                     } catch (GMSException ge1) {
-                        if (myLogger.isLoggable(Level.WARNING)) {
-                            myLogger.log(Level.WARNING, "Exception occurred while resending DONE message retry (" + retryCount + ") for (" + doneMsg + ") to replica:" + replica + " : " + ge1, ge1);
-                        }
+                        myLogger.log(Level.WARNING, "Exception occurred while resending DONE message retry (" + retryCount + ") for (" + doneMsg + ") to replica:" + replica + " : " + ge1, ge1);
+
                     }
                     if (retryCount > 3) {
                         myLogger.log(Level.SEVERE, "Retry count exceeded 3 times while trying to resend the DONE message (" + doneMsg + ") to replica:" + replica);
@@ -670,13 +672,11 @@ public class HAMessageBuddyReplicationSimulator {
                                 int retryCount = 1;
                                 for (; retryCount <= 3; retryCount++) {
                                     try {
-                                        if (myLogger.isLoggable(Level.WARNING)) {
-                                            myLogger.log(Level.WARNING, "Sleeping 10 seconds");
-                                        }
-                                        sleep(SENDDELAY);
-                                        if (myLogger.isLoggable(Level.WARNING)) {
-                                            myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + msgString + ")");
-                                        }
+                                        myLogger.log(Level.WARNING, "Sleeping 10 seconds");
+
+                                        sleep(thinktime);
+                                        myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + msgString + ")");
+
                                         gms.getGroupHandle().sendMessage("server", "TestComponent", messageSignal.getMessage());
                                         break; // if successful
                                     } catch (GMSException ge1) {
