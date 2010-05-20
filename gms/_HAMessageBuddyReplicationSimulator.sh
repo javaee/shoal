@@ -86,8 +86,11 @@ SHOALGMS_LOG_LEVEL=INFO
 TEST_LOG_LEVEL=INFO
 
 NUMOFOBJECTS=10
-NUMOFMSGSPEROBJECT=500
+NUMOFMSGSPEROBJECT=100
 MSGSIZE=4096
+
+# in milliseconds
+THINKTIME=10
 
 NUMOFMEMBERS=10
 LOGS_DIR=LOGS/hamessagebuddyreplicasimulator
@@ -258,6 +261,20 @@ do
             usage
          fi
        ;;
+       -tt)
+         shift
+         THINKTIME=`echo "${1}" | egrep "^[0-9]+$" `
+         shift
+         if [ "${THINKTIME}" != "" ]; then
+            if [ ${THINKTIME} -le 0 ];then
+               echo "ERROR: Invalid think time specified"
+               usage
+            fi
+         else
+            echo "ERROR: Invalid think time specified"
+            usage
+         fi
+       ;;
        *)
        if [ ${DONEREQUIRED} = false ]; then
            NODENAME="${1}"
@@ -303,7 +320,7 @@ if [ $WAIT = false ];then
      if [ "${NODENAME}" = "server" ] ; then
         CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS}"
      else
-        CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE}"
+        CMD="java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} ${TCPSTARTPORT} ${TCPENDPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -cp ${JARS} ${MAINCLASS} ${NODENAME} ${GROUPNAME} ${NUMOFMEMBERS} ${NUMOFOBJECTS} ${NUMOFMSGSPEROBJECT} ${MSGSIZE} ${THINKTIME}"
      fi
 
 

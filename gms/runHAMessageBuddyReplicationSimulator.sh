@@ -45,9 +45,16 @@ TRANSPORT=grizzly
 CMD=normal
 NUMOFMEMBERS=10
 
+NUMOFOBJECTS=10
+NUMOFMSGSPEROBJECT=100
+MSGSIZE=4096
+
 GROUPNAME=habuddygroup
 MULTICASTADDRESS=229.9.1.`./randomNumber.sh`
 MULTICASTPORT=2299
+
+# in milliseconds
+THINKTIME=10
 
 PUBLISH_HOME=./dist
 LIB_HOME=./lib
@@ -65,16 +72,18 @@ usage () {
  echo "usage:"
  echo "--------------------------------------------------------------------------------------------"
  echo "single machine:"
- echo "  [-h] [-t transport] [-g groupname] [-noo num] [-nom num] [-ms num] [-bia address] [-n numberOfMembers] [-tll level] [-sll level]"
+ echo "  [-h] [-t transport] [-g groupname] [-noo num] [-nom num] [-ms num] [-bia address] [-n numberOfMembers] [-tll level] [-sll level] [-tt num]"
  echo "     -t :  Transport type grizzly|jxta|jxtanew (default is grizzly)"
  echo "     -g :  group name  (default is habuddygroup)"
  echo "     -noo :  Number of Objects(default is 10)"
- echo "     -nom :  Number of messages Per Object (default is 500)"
+ echo "     -nom :  Number of messages Per Object (default is 100)"
  echo "     -ms :  Message size (default is 4096)"
  echo "     -n : Number of CORE members in the group (default is 10)"
  echo "     -tll :  Test log level (default is INFO)"
  echo "     -sll :  ShoalGMS log level (default is INFO)"
  echo "     -bia :  Bind Interface Address, used on a multihome machine"
+ echo "     -tt :  Think time during sending in milliseconds"
+
  echo "--------------------------------------------------------------------------------------------"
  echo "   distributed environment manditory args:"
  echo "  -d  <-g groupname> <-cl collectlogdir>"
@@ -98,11 +107,40 @@ analyzeLogs(){
     echo  "==============="
     grep -a "FAILED" ${LOGS_DIR}/instance*log
     echo  "==============="
-    echo  "The following are the time results for SENDING messages:"
-    grep -a "Sending Messages Time data" ${LOGS_DIR}/instance*log
+    echo  "The following are the time results for SENDING messages:" | tee -a ${LOGS_DIR}/timingdata.out
+    grep -a "Sending Messages Time data" ${LOGS_DIR}/instance*log | tee -a ${LOGS_DIR}/timingdata.out
+    echo  "---------------"
+    echo "          Time Delta          MsgsPerSec  BytesPerSecond        Messagesize    numofobjects  Number of messages Per Object"
+    #Delta
+    DELTAMIN=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep Delta | sed -e 's/^.*Delta//' | sed -e 's/sec.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 | sed -e 's/ //' `
+    DELTAMAX=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep Delta | sed -e 's/^.*Delta//' | sed -e 's/sec.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 | sed -e 's/ //' `
+    #MsgsPerSec
+    MPSMIN=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    MPSMAX=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
+    #BytesPerSecond
+    BPSMIN=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    BPSMAX=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
+    #MsgSize
+    MSGSIZE=`grep "Sending Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgSize | sed -e 's/^.*MsgSize//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    echo "send     ${DELTAMIN}-${DELTAMAX}     ${MPSMIN}-${MPSMAX}      ${BPSMIN}-${BPSMAX}      ${MSGSIZE}         ${NUMOFOBJECTS}           ${NUMOFMSGSPEROBJECT}"
+
     echo  "==============="
-    echo  "The following are the time results for RECEIVING messages:"
-    grep -a "Receiving Messages Time data" ${LOGS_DIR}/instance*log
+    echo  "The following are the time results for RECEIVING messages:" | tee -a ${LOGS_DIR}/timingdata.out
+    grep -a "Receiving Messages Time data" ${LOGS_DIR}/instance*log | tee -a ${LOGS_DIR}/timingdata.out
+    echo  "---------------"
+    echo "          Time Delta          MsgsPerSec  BytesPerSecond        Messagesize    numofobjects  Number of messages Per Object"
+    #Delta
+    DELTAMIN=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep Delta | sed -e 's/^.*Delta//' | sed -e 's/sec.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 | sed -e 's/ //' `
+    DELTAMAX=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep Delta | sed -e 's/^.*Delta//' | sed -e 's/sec.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 | sed -e 's/ //' `
+    #MsgsPerSec
+    MPSMIN=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    MPSMAX=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgsPerSec | sed -e 's/^.*MsgsPerSec//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
+    #BytesPerSecond
+    BPSMIN=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    BPSMAX=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep BytesPerSecond | sed -e 's/^.*BytesPerSecond//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | tail -n 1 `
+    #MsgSize
+    MSGSIZE=`grep "Receiving Messages Time data" ${LOGS_DIR}/timingdata.out | grep MsgSize | sed -e 's/^.*MsgSize//' | sed -e 's/,.*$//' | sed -e 's/\[//' | sed -e 's/]//' | sort -n | head -n 1 `
+    echo "receive  ${DELTAMIN}-${DELTAMAX}     ${MPSMIN}-${MPSMAX}      ${BPSMIN}-${BPSMAX}      ${MSGSIZE}         ${NUMOFOBJECTS}           ${NUMOFMSGSPEROBJECT}"
     echo  "==============="
     echo  "The following are EXCEPTIONS found in the logs:"
     echo  "==============="
@@ -116,9 +154,7 @@ analyzeLogs(){
     echo  "==============="
 }
 
-NUMOFOBJECTS=10
-NUMOFMSGSPEROBJECT=100
-MSGSIZE=4096
+
 
 while [ $# -ne 0 ]
 do
@@ -238,6 +274,20 @@ do
             usage
          fi
        ;;
+       -tt)
+         shift
+         THINKTIME=`echo "${1}" | egrep "^[0-9]+$" `
+         shift
+         if [ "${THINKTIME}" != "" ]; then
+            if [ ${THINKTIME} -le 0 ];then
+               echo "ERROR: Invalid think time specified"
+               usage
+            fi
+         else
+            echo "ERROR: Invalid think time specified"
+            usage
+         fi
+       ;;
        *)
          echo "ERROR: Invalid argument specified [${1}]"
          usage
@@ -256,7 +306,7 @@ fi
 if [ $DIST = true ]; then
     NUMOFMEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties | sort | wc -w`
     if [ -z "${COLLECT_LOGS_DIR}" ];then
-       echo "ERROR: When using distributed mode, you must specified the -l option so logs can be saved and analyzed"
+       echo "ERROR: When using distributed mode, you must specified the -cl option so logs can be saved and analyzed"
        usage
     fi
     touch ${COLLECT_LOGS_DIR}/test
@@ -307,7 +357,7 @@ else
        MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
        TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
-       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        BIND_INTERFACE_ADDRESS=`echo $TMP | awk -F= '{print $2}' `
        if [ ! -z ${BIND_INTERFACE_ADDRESS} ];then
           BIND_INTERFACE_ADDRESS="-bia ${BIND_INTERFACE_ADDRESS}"
@@ -334,7 +384,7 @@ if [ $DIST = false ]; then
     do
         INSTANCE_NAME="instance`expr ${count} + 100 `"
         echo "Starting ${INSTANCE_NAME}"
-        MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${LOGS_DIR}"
+        MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -noo ${NUMOFOBJECTS} -nom ${NUMOFMSGSPEROBJECT} -ms ${MSGSIZE} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${LOGS_DIR} -tt ${THINKTIME}"
         ${MEMBERSTARTCMD}
 
         sdtcp=`expr ${edtcp} + 1`
@@ -361,7 +411,7 @@ else
       fi
       echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
 
-      MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+      MEMBERSTARTCMD="./_HAMessageBuddyReplicationSimulator.sh ${INSTANCE_NAME} CORE ${NUMOFMEMBERS} -noo ${NUMOFOBJECTS} -nom ${NUMOFMSGSPEROBJECT} -ms ${MSGSIZE} -g ${GROUPNAME} -tll ${TEST_LOG_LEVEL} -sll ${SHOALGMS_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} -l ${WORKSPACE_HOME}/${LOGS_DIR} -tt ${THINKTIME}"
       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
    done
 fi
