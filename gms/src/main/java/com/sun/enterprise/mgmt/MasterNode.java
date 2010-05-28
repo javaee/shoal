@@ -887,7 +887,9 @@ class MasterNode implements MessageListener, Runnable {
                 outstandingMasterNodeMessages.notify();
             }
             if (added) {
-                LOG.config("receiveMessageEvent: added master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("receiveMessageEvent: added master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
+                }
             } else {
                 LOG.warning("receiveMessageEvent: ignored duplicate master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
             }
@@ -1464,7 +1466,7 @@ class MasterNode implements MessageListener, Runnable {
                     }
                 } catch (InterruptedException ie) {
                 } catch (Throwable t) {
-                    LOG.log(Level.CONFIG, "MasterNode.ProcessOutstandingMessages.run: ignoring exception " + t.getLocalizedMessage(), t);
+                    LOG.log(Level.WARNING, "MasterNode.ProcessOutstandingMessages.run: ignoring exception " + t.getLocalizedMessage(), t);
                 }
             }
             LOG.config("Completed processing outstanding master node messages for member:" + manager.getInstanceName() + " group:" + manager.getGroupName() +
