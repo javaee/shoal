@@ -79,16 +79,19 @@ public class Router {
             new Vector<GroupLeadershipNotificationActionFactory>();
 
     private final BlockingQueue<SignalPacket> queue;
+    private AtomicInteger queueHighWaterMark = new AtomicInteger(0);
     private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private final ExecutorService actionPool;
     private long startupTime;
-    private static final int GROUP_WARMUP_TIME = 30000;
-    private static final int BUFSIZE = 100;
+    private static final int GROUP_WARMUP_TIME = 30000;    // join notification remains in queue for this amount of time when there is no Join handler registered yet.
+    private final int MAX_QUEUE_SIZE;                      // used to be 100, now it is set relative to size of msg queue.
     final private Thread signalHandlerThread;
     private SignalHandler signalHandler;
 
-    public Router() {
-        queue = new ArrayBlockingQueue<SignalPacket>(BUFSIZE);
+    public Router(int queueSize) {
+        MAX_QUEUE_SIZE = queueSize;
+        queue = new ArrayBlockingQueue<SignalPacket>(MAX_QUEUE_SIZE);
         signalHandler = new SignalHandler(queue, this);
         //todo: there's no lifecycle handling here.  it would be good to add it deal with a graceful shutdown
         signalHandlerThread = new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread");
@@ -261,11 +264,19 @@ public class Router {
      * @param signalPacket the signal packet
      */
     public void queueSignals(final SignalPacket signalPacket) {
-        try {
-            queue.put(signalPacket);
-        } catch (InterruptedException e) {
+        queueSignal(signalPacket);
+    }
+
+    private void recordQueueHighWaterMark() {
+        if (monitorLogger.isLoggable(Level.FINE)) {
+            int currentQueueSize = queue.size();
+            int localHighWater = queueHighWaterMark.get();
+            if (currentQueueSize > localHighWater) {
+                queueHighWaterMark.compareAndSet(localHighWater, currentQueueSize);
+            }
         }
     }
+
 
     /**
      * Adds a single signal to the queue.
@@ -274,7 +285,22 @@ public class Router {
      */
     public void queueSignal(final SignalPacket signalPacket) {
         try {
-            queue.put(signalPacket);
+            boolean result = queue.offer(signalPacket);
+            if (result == false) {
+
+                // blocking queue is full.  log how long we were blocked.
+                int fullcapacity = queue.size();
+                long starttime = System.currentTimeMillis();
+                try {
+                    queue.put(signalPacket);
+                } finally {
+                    long duration = System.currentTimeMillis() - starttime;
+                    if (duration > 0) {
+                        monitorLogger.info("signal processing blocked due to signal queue being full for " + duration + " ms. Router signal queue capacity: " + fullcapacity);
+                    }
+                }
+            }
+            recordQueueHighWaterMark();
         } catch (InterruptedException e) {
         }
     }
@@ -425,10 +451,7 @@ public class Router {
             // 30 secs since start time. we give 30 secs for join notif
             // registrations to happen until which time, the signals are
             // available in queue.
-            try {
-                queue.put(new SignalPacket(signal));
-            } catch (InterruptedException e) {
-            }
+            queueSignal(new SignalPacket(signal));
         }
     }
 
@@ -581,6 +604,10 @@ public class Router {
         undocketAllDestinations();
         if( signalHandlerThread != null ) {
             signalHandler.stop(signalHandlerThread);
+        }
+        if (monitorLogger.isLoggable(Level.FINE)) {
+            monitorLogger.log(Level.FINE, "router signal queue high water mark:" + queueHighWaterMark.get()
+                                        + " signal queue capacity:" + MAX_QUEUE_SIZE);
         }
         if( queue != null ) {
             int unprocessedEventSize = queue.size();

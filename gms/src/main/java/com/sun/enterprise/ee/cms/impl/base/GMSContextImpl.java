@@ -36,12 +36,9 @@
 
 package com.sun.enterprise.ee.cms.impl.base;
 
-import com.sun.enterprise.ee.cms.core.DistributedStateCache;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GroupHandle;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
+import com.sun.enterprise.ee.cms.impl.common.Router;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
@@ -64,7 +61,8 @@ public class GMSContextImpl extends GMSContextBase {
     private ArrayBlockingQueue<EventPacket> viewQueue;
     private static final int MAX_VIEWS_IN_QUEUE = 200;
     private ArrayBlockingQueue<MessagePacket> messageQueue;
-    private static final int MAX_MSGS_IN_QUEUE = 500;
+    private static final int DEFAULT_INCOMING_MSG_QUEUE_SIZE = 500;
+    private static int MAX_MSGS_IN_QUEUE = DEFAULT_INCOMING_MSG_QUEUE_SIZE;
     private ViewWindowImpl viewWindow;
     private GroupCommunicationProvider groupCommunicationProvider;
     private DistributedStateCache distributedStateCache;
@@ -79,6 +77,12 @@ public class GMSContextImpl extends GMSContextBase {
                       final GroupManagementService.MemberType memberType,
                       final Properties configProperties) {
         super(serverToken, groupName, memberType);
+        MAX_MSGS_IN_QUEUE = Utility.getIntProperty(ServiceProviderConfigurationKeys.INCOMING_MESSAGE_QUEUE_SIZE.toString(), DEFAULT_INCOMING_MSG_QUEUE_SIZE, configProperties);
+        if (MAX_MSGS_IN_QUEUE != DEFAULT_INCOMING_MSG_QUEUE_SIZE && logger.isLoggable(Level.CONFIG)) {
+            logger.config("INCOMING_MESSAGE_QUEUE_SIZE: " + MAX_MSGS_IN_QUEUE + " overrides default value of " + DEFAULT_INCOMING_MSG_QUEUE_SIZE);
+        }
+        router = new Router(MAX_MSGS_IN_QUEUE + 100);
+
         this.configProperties = configProperties;
         groupCommunicationProvider =
                 new GroupCommunicationProviderImpl(groupName);

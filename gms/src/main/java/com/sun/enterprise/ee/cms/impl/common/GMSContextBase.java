@@ -72,7 +72,6 @@ public abstract class GMSContextBase implements GMSContext {
         gmsMember = new GMSMember(serverToken, this.memberType, groupName,
                 startTime);
         suspectList = new ArrayList<String>();
-        router = new Router();
         shutdownHelper = new ShutdownHelper();
     }
 

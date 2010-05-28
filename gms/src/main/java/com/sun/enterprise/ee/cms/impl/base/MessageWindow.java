@@ -45,6 +45,7 @@ import com.sun.enterprise.ee.cms.spi.GMSMessage;
 
 import java.text.MessageFormat;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Iterator;
@@ -61,8 +62,10 @@ import java.util.Iterator;
  */
 public class MessageWindow implements Runnable {
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private GMSContext ctx;
     private ArrayBlockingQueue<MessagePacket> messageQueue;
+    private AtomicInteger messageQueueHighWaterMark = new AtomicInteger(0);
     private final String groupName;
 
     public MessageWindow(final String groupName, final ArrayBlockingQueue<MessagePacket> messageQueue) {
@@ -77,9 +80,20 @@ public class MessageWindow implements Runnable {
         return ctx;
     }
 
+    private void recordMessageQueueHighWaterMark() {
+        if (monitorLogger.isLoggable(Level.FINE)) {
+            int currentQueueSize = messageQueue.size();
+            int localHighWater = messageQueueHighWaterMark.get();
+            if (currentQueueSize > localHighWater) {
+                messageQueueHighWaterMark.compareAndSet(localHighWater, currentQueueSize);
+            }
+        }
+    }
+
     public void run() {
         while (!getGMSContext().isShuttingDown()) {
             try {
+                recordMessageQueueHighWaterMark();
                 final MessagePacket packet = messageQueue.take();
                 if (packet != null) {
                     logger.log(Level.FINER, "Processing received message .... "+ packet.getMessage());
@@ -88,6 +102,11 @@ public class MessageWindow implements Runnable {
             } catch (InterruptedException e) {
                 logger.log(Level.FINEST, e.getLocalizedMessage());
             }
+        }
+        if (monitorLogger.isLoggable(Level.FINE)) {
+            int msgQueueCapacity =  (messageQueue == null ? 0 : messageQueue.remainingCapacity());
+            monitorLogger.log(Level.FINE, "message queue high water mark:" + messageQueueHighWaterMark.get() +
+                                           " msg queue remaining capacity:" + msgQueueCapacity);
         }
         if (messageQueue != null && messageQueue.size() > 0) {
             int messageQueueSize = messageQueue.size();

@@ -75,6 +75,8 @@ public class GroupCommunicationProviderImpl implements
     private final String groupName;
     private GMSContextImpl ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
+
     // TBD:  Reintroduce this in future. Comment out unused field for now.
     // private final ExecutorService msgSendPool;
     private Map<PeerID, CallableMessageSend> instanceCache = new Hashtable<PeerID, CallableMessageSend>();
@@ -377,11 +379,35 @@ public class GroupCommunicationProviderImpl implements
         return clusterManager.getClusterViewManager().getMaster().getName();
     }
 
+    private ArrayBlockingQueue<MessagePacket> msgQueue = null;
+
+    private ArrayBlockingQueue<MessagePacket> getMsgQueue() {
+        if (msgQueue == null) {
+            msgQueue = getGMSContext().getMessageQueue();
+        }
+        return msgQueue;
+    }
+
     public void handleClusterMessage(final SystemAdvertisement adv,
                                      final Object message) {
+        MessagePacket msgPkt = new MessagePacket(adv, message);
         try {
             //logger.log(Level.FINE, "Received AppMessage Notification, placing in message queue = " + new String(((GMSMessage)message).getMessage()));
-            getGMSContext().getMessageQueue().put(new MessagePacket(adv, message));
+            boolean result = getMsgQueue().offer(msgPkt);
+            if (result == false) {
+
+                // blocking queue is full.  log how long we were blocked.
+                int fullcapacity = getMsgQueue().size();
+                long starttime = System.currentTimeMillis();
+                try {
+                    getMsgQueue().put(msgPkt);
+                } finally {
+                    long duration = System.currentTimeMillis() - starttime;
+                    if (duration > 0) {
+                        monitorLogger.info("remote message reception blocked due to incoming message queue being full for " + duration + " ms. Message queue capacity: " + fullcapacity);
+                    }
+                }
+            }
         } catch (InterruptedException e) {
             logger.log(Level.WARNING,
                     MessageFormat.format("Interrupted Exception occured while adding message to Shoal MessageQueue :{0}",
