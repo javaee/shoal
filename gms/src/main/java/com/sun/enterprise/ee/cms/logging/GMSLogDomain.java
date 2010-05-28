@@ -50,6 +50,7 @@ import java.util.logging.Logger;
  */
 public class GMSLogDomain  {
     public static final String GMS_LOGGER = "ShoalLogger";
+    public static final String GMS_MONITOR_LOGGER = GMS_LOGGER + ".monitor";
     public static final String RESOURCE_BUNDLE = "LogStrings";     
     public static final String LOG_STRINGS = "com.sun.enterprise.ee.cms.logging." + RESOURCE_BUNDLE;
     
@@ -60,5 +61,9 @@ public class GMSLogDomain  {
             gmsLogger =  Logger.getLogger( loggerName,  LOG_STRINGS);
         }
         return gmsLogger;
+    }
+
+    public static Logger getMonitorLogger() {
+        return Logger.getLogger(GMS_MONITOR_LOGGER, LOG_STRINGS);
     }
 }

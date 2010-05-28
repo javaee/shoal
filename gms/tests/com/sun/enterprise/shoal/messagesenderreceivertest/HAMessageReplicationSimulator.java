@@ -88,7 +88,7 @@ public class HAMessageReplicationSimulator {
     static final int RETRYSLEEP = 5000;  // 5 seconds
     private GroupManagementService gms = null;
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private static final Logger gmsStatsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER + ".monitorstats");
+    private static final Logger gmsMonitorLogger = GMSLogDomain.getMonitorLogger();
     private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
     private static final Logger myLogger = java.util.logging.Logger.getLogger("HAMessageReplicationSimulator");
     private static final Level TESTDEFAULTLOGLEVEL = Level.INFO;
@@ -145,7 +145,7 @@ public class HAMessageReplicationSimulator {
             gmsLogger.setLevel(GMSDEFAULTLOGLEVEL);
         }
         gmsLogger.info("GMS Logging using log level of:" + gmsLogger.getLevel());
-        gmsStatsLogger.setLevel(Level.FINE);
+        gmsMonitorLogger.setLevel(Level.FINE);
         try {
             myLogger.setLevel(Level.parse(System.getProperty("TEST_LOG_LEVEL", TESTDEFAULTLOGLEVEL.toString())));
             setupLogHandler(myLogger.getLevel());
