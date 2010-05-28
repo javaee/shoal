@@ -156,5 +156,10 @@ public enum ServiceProviderConfigurationKeys {
      * <p>OPTIONAL: not a meaningful option for all implementations.
      * Specify the max number of threads allocated to run handlers for incoming multicast messages.
      */
-    MULTICAST_POOLSIZE
+    MULTICAST_POOLSIZE,
+
+    /**
+     * <p>Enable setting how large fixed incoming message queue is.
+     */
+    INCOMING_MESSAGE_QUEUE_SIZE
 }
