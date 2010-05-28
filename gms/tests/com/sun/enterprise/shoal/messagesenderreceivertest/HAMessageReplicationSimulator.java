@@ -90,7 +90,7 @@ public class HAMessageReplicationSimulator {
     private static final Logger gmsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final Logger gmsStatsLogger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER + ".monitorstats");
     private static final Level GMSDEFAULTLOGLEVEL = Level.WARNING;
-    private static final Logger myLogger = java.util.logging.Logger.getLogger("BuddyReplicationSimulator");
+    private static final Logger myLogger = java.util.logging.Logger.getLogger("HAMessageReplicationSimulator");
     private static final Level TESTDEFAULTLOGLEVEL = Level.INFO;
     //static ConcurrentHashMap<String, String> msgIDs_received = new ConcurrentHashMap<String, String>();
     static ConcurrentHashMap<Integer, ConcurrentHashMap<Long, String>> payloads_received = new ConcurrentHashMap<Integer, ConcurrentHashMap<Long, String>>();
