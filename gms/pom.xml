@@ -2,31 +2,38 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <!-- needs maven 2.0.9 -->
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.sun.enterprise</groupId>
-    <artifactId>shoal</artifactId>
+
+    <parent>
+        <groupId>org.shoal</groupId>
+        <artifactId>shoal</artifactId>
+        <version>1.5-SNAPSHOT</version>
+    </parent>
+    
+    <artifactId>shoal-gms</artifactId>
     <packaging>bundle</packaging>
-    <name>shoal</name>
-    <version>1.5-SNAPSHOT</version>
+    <name>shoal-gms</name>
     <url>http://maven.apache.org</url>
+
     <properties>
         <shoal.home>${basedir}</shoal.home>
     </properties>
+    
     <dependencies>
         <dependency>
-            <groupId>junit</groupId>
+            <groupId>${junit.group.id}</groupId>
             <artifactId>junit</artifactId>
-            <version>4.8.1</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.sun.grizzly</groupId>
-            <version>1.9.19-beta1</version>
+            <groupId>${grizzly.group.id}</groupId>
+            <version>${grizzly.version}</version>
             <artifactId>grizzly-utils</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.sun.grizzly</groupId>
-            <version>1.9.19-beta1</version>
+            <groupId>${grizzly.group.id}</groupId>
+            <version>${grizzly.version}</version>
             <artifactId>grizzly-framework</artifactId>
             <optional>true</optional>
         </dependency>

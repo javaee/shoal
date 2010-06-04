@@ -2,11 +2,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.shoal.cache</groupId>
-    <artifactId>shoal-cache</artifactId>
+    
+    <groupId>org.shoal</groupId>
+    <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
-    <name>SHOAL-CACHE</name>
+    <version>1.5-SNAPSHOT</version>
+    <name>shoal</name>
     <url>http://maven.apache.org</url>
 
     <developers>
@@ -24,18 +25,22 @@
 
     <properties>
         <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
-        <junit.group.id>junit</junit.group.id>
-
         <grizzly.version>1.9.19-beta1</grizzly.version>
+
+        <junit.group.id>junit</junit.group.id>
         <junit.version>3.8.1</junit.version>
 
         <ha.api.version>3.1-SNAPSHOT</ha.api.version>
-        <hk2.version>1.0.9</hk2.version>
+
+        <hk2.version>1.0.19</hk2.version>
+
+        <shoal.version>1.5-SNAPSHOT</shoal.version>
     </properties>
 
     <modules>
+        <module>gms</module>
         <module>cache</module>
-        <module>backing-store</module>
+        <!--<module>backing-store</module>-->
     </modules>
 
     <build>
