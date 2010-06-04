@@ -34,6 +34,7 @@
 
         <hk2.version>1.0.19</hk2.version>
 
+        <shoal.groupId>org.shoal</shoal.groupId>
         <shoal.version>1.5-SNAPSHOT</shoal.version>
     </properties>
 

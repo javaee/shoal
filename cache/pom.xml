@@ -15,7 +15,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.sun.enterprise</groupId>
+            <groupId>${shoal.groupId}</groupId>
             <artifactId>shoal-gms</artifactId>
             <version>${shoal.version}</version>
         </dependency>
