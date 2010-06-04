@@ -177,10 +177,10 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
      */
     @Override
     protected void onConnectOp( Context ctx,
-                                SelectionKeyOP.ConnectSelectionKeyOP selectionKeyOp ) throws IOException {
-        DatagramChannel newDatagramChannel = (DatagramChannel)selectionKeyOp.getChannel();
-        SocketAddress remoteAddress = selectionKeyOp.getRemoteAddress();
-        CallbackHandler callbackHandler = selectionKeyOp.getCallbackHandler();
+                                TCPSelectorHandler.ConnectChannelOperation connectChannelOp ) throws IOException {
+        DatagramChannel newDatagramChannel = (DatagramChannel)connectChannelOp.getChannel();
+        SocketAddress remoteAddress = connectChannelOp.getRemoteAddress();
+        CallbackHandler callbackHandler = connectChannelOp.getCallbackHandler();
 
         CallbackHandlerSelectionKeyAttachment attachment = new CallbackHandlerSelectionKeyAttachment( callbackHandler );
 
