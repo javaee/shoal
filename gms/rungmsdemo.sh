@@ -34,7 +34,7 @@ usage () {
     cat << USAGE 
 Usage: $0 <parameters...> 
 The required parameters are :
- <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxtanew,jxta} <-l logdir> <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport>
+ <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxta} <-l logdir> <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport>
 
 Life in milliseconds should be either 0 or at least 60000 to demo failure fencing.
 
@@ -137,7 +137,7 @@ if [ "${MEMBERTYPE}" != "CORE" -a "${MEMBERTYPE}" != "SPECTATOR" -a "${MEMBERTYP
     echo "ERROR: Invalid membertype specified"
     usage;
 fi
-if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" -a "${TRANSPORT}" != "jxtanew" ]; then
+if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" ]; then
     echo "ERROR: Invalid transport specified"
     usage;
 fi

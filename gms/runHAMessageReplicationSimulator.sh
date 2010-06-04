@@ -70,7 +70,7 @@ usage () {
  echo "--------------------------------------------------------------------------------------------"
  echo "single machine:"
  echo "  [-h] [-r type] [-t transport] [-g groupname] [-noo num] [-mpo num] [-ms num] [-bia address] [-n numberOfMembers] [-tll level] [-sll level] [-tt num]"
- echo "     -t :  Transport type grizzly|jxta|jxtanew (default is grizzly)"
+ echo "     -t :  Transport type grizzly|jxta(default is grizzly)"
  echo "     -g :  group name  (default is ${GROUPNAME})"
  echo "     -noo :  Number of Objects(default is 10)"
  echo "     -mpo :  Messages Per Object (default is 100)"
@@ -253,7 +253,7 @@ do
          TRANSPORT=${1}
          shift
          if [ ! -z "${TRANSPORT}" ] ;then
-            if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" -a "${TRANSPORT}" != "jxtanew" ]; then
+            if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" ]; then
                echo "ERROR: Invalid transport specified"
                usage
             fi

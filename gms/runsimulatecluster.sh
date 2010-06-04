@@ -26,9 +26,9 @@ DIST=false
 usage () {
  echo "usage:"
  echo "   single machine:"
- echo "      [-h] [-t grizzly|jxta|jxtanew] [-c stop|kill|rejoin|default is normal)] [numberOfMembers(10 is default)] "
+ echo "      [-h] [-t grizzly|jxta] [-c stop|kill|rejoin|default is normal)] [numberOfMembers(10 is default)] "
  echo "   distributed environment:"
- echo "      -d <-g groupname> [-t grizzly|jxta|jxtanew] [-c stop|kill|rejoin|default is normal)]"
+ echo "      -d <-g groupname> [-t grizzly|jxta] [-c stop|kill|rejoin|default is normal)]"
  echo " "
  echo " Examples:"
  echo "     runsimulatecluster.sh"
@@ -77,7 +77,7 @@ do
          TRANSPORT=${1}
          shift
          if [ ! -z "${TRANSPORT}" ] ;then
-            if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" -a "${TRANSPORT}" != "jxtanew" ]; then
+            if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" ]; then
                echo "ERROR: Invalid transport specified"
                usage
             fi

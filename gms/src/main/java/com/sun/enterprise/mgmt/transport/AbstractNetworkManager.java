@@ -168,7 +168,12 @@ public abstract class AbstractNetworkManager implements NetworkManager {
             try {
                 networkManager = iter.next().getClass().newInstance();
                 if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
-                    if (networkManager.getClass().getName().contains("grizzly")) {
+                    if (networkManager.getClass().getName().contains("Grizzly")) {
+                        // found service that matches group communication provider.
+                        break;
+                    }
+                } else if (transport.compareToIgnoreCase(GMSConstants.JXTA_GROUP_COMMUNICATION_PROVIDER) == 0) {
+                    if (networkManager.getClass().getName().contains("Jxta")) {
                         // found service that matches group communication provider.
                         break;
                     }

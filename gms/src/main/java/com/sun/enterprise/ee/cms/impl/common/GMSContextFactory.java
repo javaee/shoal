@@ -72,30 +72,7 @@ public class GMSContextFactory {
                                                                      GMSConstants.GROUP_COMMUNICATION_PROVIDER,
                                                                      properties );
         if((ctx = ctxCache.get( groupName )) ==  null){
-            if( gmsContextProvider.equalsIgnoreCase( GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER ) ||
-                       gmsContextProvider.equalsIgnoreCase( GMSConstants.JXTA_NEW_GROUP_COMMUNICATION_PROVIDER ) ) {
-                ctx = new com.sun.enterprise.ee.cms.impl.base.GMSContextImpl( serverToken, groupName, memberType, properties );
-            } else {
-                //if it is  GMSConstants.DEFAULT_GROUP_COMMUNICATION_PROVIDER or any other case,
-                //use the old JXTA provider
-                try {
-                    Class clz = Class.forName("com.sun.enterprise.ee.cms.impl.jxta.GMSContext") ;
-                    Constructor construct = clz.getConstructor(new Class[]{String.class, String.class, GroupManagementService.MemberType.class, Properties.class});
-                    ctx = (GMSContext)construct.newInstance(new Object[] {serverToken, groupName, memberType, properties});
-                    //new com.sun.enterprise.ee.cms.impl.jxta.GMSContext( serverToken, groupName, memberType, properties );
-                } catch (ClassNotFoundException ce) {
-                    logger.severe("Could not load class com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + ce.getMessage());
-                } catch (IllegalAccessException ie) {
-                    logger.severe("Could not load class com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + ie.getMessage());
-                } catch (InstantiationException le) {
-                    logger.severe("Could not load class com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + le.getMessage());
-                } catch (NoSuchMethodException e) {
-                    logger.severe("Issue with creating new object of com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + e.getMessage());
-                } catch (InvocationTargetException ite) {
-                    logger.severe("Issue with creating new object of com.sun.enterprise.ee.cms.impl.jxta.GMSContext. " + ite.getMessage());
-                }
-            }
-
+            ctx = new com.sun.enterprise.ee.cms.impl.base.GMSContextImpl( serverToken, groupName, memberType, properties );
             ctxCache.put(groupName, ctx);
         }
         return ctx;

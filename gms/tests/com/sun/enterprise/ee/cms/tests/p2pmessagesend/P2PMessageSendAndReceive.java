@@ -15,7 +15,7 @@ package com.sun.enterprise.ee.cms.tests.p2pmessagesend;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
-import com.sun.enterprise.ee.cms.impl.jxta.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 import java.text.MessageFormat;
