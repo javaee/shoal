@@ -46,7 +46,16 @@
     <packaging>pom</packaging>
     <version>1.5-SNAPSHOT</version>
     <name>shoal</name>
-    <url>http://maven.apache.org</url>
+    <url>http://shoal.dev.java.net/</url>
+
+    <scm>
+        <connection>scm:svn:https://shoal.dev.java.net/svn/shoal/branches/SHOAL_1_1_ABSTRACTING_TRANSPORT</connection>
+    </scm>
+
+    <issueManagement>
+        <system>IssueTracker</system>
+        <url>https://glassfish.dev.java.net/servlets/ProjectIssues</url>
+    </issueManagement>
 
     <developers>
         <developer>
@@ -56,6 +65,24 @@
             <organization>Oracle Inc.</organization>
             <roles>
                 <role>lead (For shoal cache)</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>jfialli</id>
+            <name>Joe Fialli</name>
+            <organization>Oracle Inc.</organization>
+            <roles>
+                <role>lead (For Shoal GMS)</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>bbissett</id>
+            <name>Bobby Bissett</name>
+            <url>http://blogs.sun.com/bobby</url>
+            <organization>Oracle Inc.</organization>
+            <roles>
                 <role>developer</role>
             </roles>
         </developer>
@@ -120,5 +147,13 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <distributionManagement>
+        <repository>       <!-- internal repository to publish to -->
+            <uniqueVersion>false</uniqueVersion>
+            <id>rator.sfbay</id>
+            <url>dav:http://rator.sfbay.sun.com/maven/repositories/glassfish/</url>
+        </repository>
+    </distributionManagement>
 
 </project>

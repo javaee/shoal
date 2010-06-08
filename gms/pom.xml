@@ -50,7 +50,6 @@
     <artifactId>shoal-gms</artifactId>
     <packaging>bundle</packaging>
     <name>shoal-gms</name>
-    <url>http://maven.apache.org</url>
 
     <properties>
         <shoal.home>${basedir}</shoal.home>
