@@ -152,7 +152,7 @@
         <repository>       <!-- internal repository to publish to -->
             <uniqueVersion>false</uniqueVersion>
             <id>rator.sfbay</id>
-            <url>dav:http://rator.sfbay.sun.com/maven/repositories/glassfish/</url>
+            <url>dav:http://rator.sfbay.sun.com/maven/repositories/glassfish</url>
         </repository>
     </distributionManagement>
 
