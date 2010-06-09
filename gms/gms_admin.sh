@@ -37,8 +37,10 @@ SHOALGMS_LOG_LEVEL=WARNING
 SHOAL_WORKSPACE_HOME=`pwd`
 PUBLISH_HOME=${SHOAL_WORKSPACE_HOME}/dist
 LIB_HOME=${SHOAL_WORKSPACE_HOME}/lib
-JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
-COMMUNICATION_PROVIDER=grizzly
+GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+JXTA_JARS=${LIB_HOME}/jxta.jar:${GRIZZLY_JARS}
+JARS=${GRIZZLY_JARS}
+TRANSPORT=grizzly
 
 MAINCLASS=com.sun.enterprise.ee.cms.tests.GMSAdminCLI
 
@@ -61,8 +63,9 @@ usage() {
     echo "    state groupName gmsmemberstate  - list member(s) in the specific state"
     echo
     echo " optional arguments:"
-    echo "      [<-resend> <-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      [<-resend> [-t grizzly|jxta] <-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
     echo "      -resend - if reply is not received, try 2 additional times"
+    echo "      -t  - transport type (defaults to grizzly"
     echo "      -tl - test log level"
     echo "      -sl - shoal log level"
     echo "      -ts - tcp start port"
@@ -127,6 +130,20 @@ do
        SHOALGMS_LOG_LEVEL="${1}"
        shift
        ;;
+       -t)
+         shift
+         TRANSPORT=${1}
+         shift
+         if [ ! -z "${TRANSPORT}" ] ;then
+            if [ "${TRANSPORT}" != "grizzly" -a "${TRANSPORT}" != "jxta" ]; then
+               echo "ERROR: Invalid transport specified"
+               usage
+            fi
+         else
+            echo "ERROR: Missing transport value"
+            usage
+         fi
+       ;;
        *)
        if [ $DONEREQUIRED = false ]; then
            COMMAND="${1}"
@@ -146,9 +163,12 @@ OPTARGS=""
 if [ ! -z "${_OPTARGS}" ];then
    OPTARGS="-DOPTARGS=${_OPTARGS}"
 fi
+if [ $TRANSPORT != "grizzly" ]; then
+    JARS=${JXTA_JARS}
+fi
 
-# echo java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
-java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${COMMUNICATION_PROVIDER} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+# echo java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
 
 
 

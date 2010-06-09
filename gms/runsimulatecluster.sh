@@ -220,7 +220,7 @@ MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
 
 echo "Waiting for group [${GROUPNAME}] to complete startup"
 # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
-ADMINCMD="./gms_admin.sh waits ${GROUPNAME} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+ADMINCMD="./gms_admin.sh waits ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
 if [ $DIST = false ]; then
     ${ADMINCMD}
 else
@@ -231,7 +231,7 @@ echo "Group startup has completed"
 
 if [ "${CMD}" = "stop" ]; then
        echo "Stopping ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh stopm ${GROUPNAME} ${INSTANCE_EFFECTED} -resend -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       ADMINCMD="./gms_admin.sh stopm ${GROUPNAME} ${INSTANCE_EFFECTED} -resend -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
 
        if [ $DIST = false ]; then
            ${ADMINCMD}
@@ -250,7 +250,7 @@ if [ "${CMD}" = "stop" ]; then
        CMD_OK=false
        while [ true ]
        do
-         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
@@ -275,7 +275,7 @@ if [ "${CMD}" = "stop" ]; then
        fi
 elif [ "${CMD}" = "kill" ]; then
        echo "Killing ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
        if [ $DIST = false ]; then
            ${ADMINCMD}
        else
@@ -293,7 +293,7 @@ elif [ "${CMD}" = "kill" ]; then
        CMD_OK=false
        while [ true ]
        do
-         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
@@ -318,7 +318,7 @@ elif [ "${CMD}" = "kill" ]; then
        fi
 elif [ "${CMD}" = "rejoin" ]; then
        echo "Killing ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
        if [ $DIST = false ]; then
            ${ADMINCMD}
        else
@@ -334,7 +334,7 @@ elif [ "${CMD}" = "rejoin" ]; then
        CMD_OK=false
        while [ true ]
        do
-         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
@@ -363,7 +363,7 @@ fi
 
 echo "Shutting down group [${GROUPNAME}]"
    # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
-ADMINCMD="./gms_admin.sh stopc ${GROUPNAME} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+ADMINCMD="./gms_admin.sh stopc ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
 if [ $DIST = false ]; then
     ${ADMINCMD}
 else
