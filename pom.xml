@@ -36,20 +36,19 @@
 */ 
 --> 
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
     
     <groupId>org.shoal</groupId>
     <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.5</version>
     <name>shoal</name>
     <url>http://shoal.dev.java.net/</url>
 
     <scm>
-        <connection>scm:svn:https://shoal.dev.java.net/svn/shoal/branches/SHOAL_1_1_ABSTRACTING_TRANSPORT</connection>
+        <connection>scm:svn:https://shoal.dev.java.net/svn/shoal/tags/shoal-1.5</connection>
     </scm>
 
     <issueManagement>
