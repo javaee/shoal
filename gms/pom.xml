@@ -44,6 +44,7 @@
         <groupId>org.shoal</groupId>
         <artifactId>shoal</artifactId>
         <version>1.5.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     
     <artifactId>shoal-gms</artifactId>
