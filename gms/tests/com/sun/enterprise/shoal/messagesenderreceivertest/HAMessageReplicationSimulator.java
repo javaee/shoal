@@ -455,7 +455,7 @@ public class HAMessageReplicationSimulator {
                         }
                     }
                     if (retryCount > MAXRETRYCOUNT) {
-                        myLogger.log(Level.SEVERE, "Retry count exceeded " + MAXRETRYCOUNT + " times while trying to send the message (" + _msg + ")");                        
+                        myLogger.log(Level.SEVERE, "Retry count exceeded " + MAXRETRYCOUNT + " times while trying to send the message (" + _msg + ")");
                     }
                 }
             }
@@ -527,7 +527,7 @@ public class HAMessageReplicationSimulator {
                                     }
                                 }
                                 if (retryCount > MAXRETRYCOUNT) {
-                                    myLogger.log(Level.SEVERE, "Retry count exceeded " + MAXRETRYCOUNT + " times while trying to send the message (" + displayMsg(msg) + ")");                                    
+                                    myLogger.log(Level.SEVERE, "Retry count exceeded " + MAXRETRYCOUNT + " times while trying to send the message (" + displayMsg(msg) + ")");
                                 }
                             }
                         }
@@ -757,23 +757,21 @@ public class HAMessageReplicationSimulator {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
                 }
             } else {
-                if (!notification.getMemberToken().equals("server")) {
-                    // determine how many core members are ready to begin testing
-                    JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
-                    List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
-                    numberOfJoinAndReady.set(0);
-                    for (String instanceName : currentCoreMembers) {
-                        MemberStates state = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
-                        switch (state) {
-                            case READY:
-                            case ALIVEANDREADY:
-                                numberOfJoinAndReady.getAndIncrement();
-                            default:
-                        }
+                // determine how many core members are ready to begin testing
+                JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
+                List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
+                numberOfJoinAndReady.set(0);
+                for (String instanceName : currentCoreMembers) {
+                    MemberStates state = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
+                    switch (state) {
+                        case READY:
+                        case ALIVEANDREADY:
+                            numberOfJoinAndReady.getAndIncrement();
+                        default:
                     }
-                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                        myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfJoinAndReady received so far is: " + numberOfJoinAndReady.get());
-                    }
+                }
+                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfJoinAndReady received so far is: " + numberOfJoinAndReady.get());
                 }
             }
         }
