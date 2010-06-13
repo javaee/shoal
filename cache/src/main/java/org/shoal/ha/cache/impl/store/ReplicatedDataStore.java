@@ -38,6 +38,7 @@ package org.shoal.ha.cache.impl.store;
 
 import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
 import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
+import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
@@ -66,6 +67,17 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreContext<K, V> dsc;
 
+    private DataStoreConfigurator<K, V> conf;
+
+    public ReplicatedDataStore(DataStoreConfigurator<K, V> conf, GroupService gs) {
+        this.conf = conf;
+        this.storeName = conf.getStoreName();
+        this.gs = gs;
+        this.instanceName = gs.getMemberName();
+        this.groupName = gs.getGroupName();
+        initialize(conf.getClassLoader(), conf.getDataStoreEntryHelper(), conf.getDataStoreKeyHelper(), conf.getKeyMapper());
+    }
+
     public ReplicatedDataStore(String storeName, GroupService gs, ClassLoader loader,
                                DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
                                KeyMapper keyMapper) {
@@ -93,13 +105,22 @@ public class ReplicatedDataStore<K, V>
         cm.registerCommand(new RemoveCommand<K, V>());
         cm.registerCommand(new TouchCommand<K, V>());
 
+        if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
+            for (String member : gs.getCurrentCoreMembers()) {
+                ((DefaultKeyMapper) keyMapper).registerInstance(member);
+                System.out.println(">>Notifying DefaultKeyMapper about instance " + member);
+            }
+        }
+        
         gs.registerGroupMessageReceiver(storeName, cm);
     }
 
     @Override
-    public void put(K k, V v) {
+    public String put(K k, V v) {
         SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
         cm.execute(cmd);
+
+        return cmd.getTargetName();
     }
 
     @Override
@@ -147,8 +168,8 @@ public class ReplicatedDataStore<K, V>
     }
 
     @Override
-    public void removeIdleEntries(long idleFor) {
-        //To change body of implemented methods use File | Settings | File Templates.
+    public int removeIdleEntries(long idleFor) {
+        return 0;
     }
 
     @Override

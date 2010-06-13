@@ -53,7 +53,7 @@ public interface DataStore<K, V> {
      * @param v The value. The value must be either serializable of the DataStoreEntryHelper
      *  that is associated with this cache must be able to transform this into a serializable.
      */
-    public void put(K k, V v);
+    public String put(K k, V v);
 
     /**
      * Returns the value to which the specified key is mapped in this cache.
@@ -119,7 +119,7 @@ public interface DataStore<K, V> {
      *
      * @param idleFor Time in milli seconds
      */
-    public void removeIdleEntries(long idleFor);
+    public int removeIdleEntries(long idleFor);
 
     /**
      * Close this datastore. This causes all data to be removed(?)

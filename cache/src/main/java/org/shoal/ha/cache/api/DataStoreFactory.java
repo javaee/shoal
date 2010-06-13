@@ -64,7 +64,7 @@ public class DataStoreFactory {
     public static <K, V> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader) {
         DataStoreEntryHelper<K, V> helper =
-                new DefaultDataStoreEntryHelper<K, V>(Thread.currentThread().getContextClassLoader());
+                new DefaultDataStoreEntryHelper<K, V>(vClazz.getClassLoader());
         DataStoreKeyHelper<K> keyHelper = new ObjectKeyHelper(loader);
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
         
@@ -76,13 +76,27 @@ public class DataStoreFactory {
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader,
                                                   DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
                                                   KeyMapper keyMapper) {
-        GroupService gs = GroupServiceFactory.getInstance().getGroupService(instanceName, groupName);
+        GroupService gs = GroupServiceFactory.getInstance().getGroupService(instanceName, groupName, true);
         if (keyMapper instanceof GroupMemberEventListener) {
             GroupMemberEventListener groupListener = (GroupMemberEventListener) keyMapper;
             gs.registerGroupMemberEventListener(groupListener);
         }
 
         return new ReplicatedDataStore<K, V>(storeName, gs, loader, helper, keyHelper, keyMapper);
+    }
+
+    public static <K, V> DataStore<K, V> createDataStore(DataStoreConfigurator<K, V> conf) {
+        GroupService gs = GroupServiceFactory.getInstance().getGroupService(conf.getInstanceName(), conf.getGroupName(), conf.isStartGMS());
+        if (conf.getKeyMapper() instanceof GroupMemberEventListener) {
+            GroupMemberEventListener groupListener = (GroupMemberEventListener) conf.getKeyMapper();
+            gs.registerGroupMemberEventListener(groupListener);
+        }
+
+        if (conf.getKeyMapper() == null) {
+            conf.setKeyMapper(new DefaultKeyMapper(conf.getInstanceName(), conf.getGroupName()));
+        }
+        return new ReplicatedDataStore<K, V>(conf.getStoreName(), gs, conf.getClassLoader(),
+                conf.getDataStoreEntryHelper(), conf.getDataStoreKeyHelper(), conf.getKeyMapper());
     }
 
 }

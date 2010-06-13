@@ -43,54 +43,116 @@ import org.shoal.ha.mapper.KeyMapper;
  */
 public class DataStoreConfigurator<K, V> {
 
-    private K kClazz;
+    private String instanceName;
 
-    private V vClazz;
+    private String groupName;
+
+    private String storeName;
+
+    private K keyClazz;
+
+    private V valueClazz;
 
     private KeyMapper keyMapper;
 
     private DataStoreKeyHelper<K> dataStoreKeyHelper;
 
+    private boolean startGMS;
+
+    private ClassLoader clazzLoader;
+
     private DataStoreEntryHelper<K, V> dataStoreEntryHelper;
 
-    public K getkClazz() {
-        return kClazz;
+
+    public String getInstanceName() {
+        return instanceName;
     }
 
-    public void setkClazz(K kClazz) {
-        this.kClazz = kClazz;
+    public DataStoreConfigurator<K, V> setInstanceName(String instanceName) {
+        this.instanceName = instanceName;
+        return this;
     }
 
-    public V getvClazz() {
-        return vClazz;
+    public String getGroupName() {
+        return groupName;
     }
 
-    public void setvClazz(V vClazz) {
-        this.vClazz = vClazz;
+    public DataStoreConfigurator<K, V> setGroupName(String groupName) {
+        this.groupName = groupName;
+        return this;
+    }
+
+    public String getStoreName() {
+        return storeName;
+    }
+
+    public DataStoreConfigurator<K, V> setStoreName(String storeName) {
+        this.storeName = storeName;
+        return this;
+    }
+
+    public K getKeyClazz() {
+        return keyClazz;
+    }
+
+    public DataStoreConfigurator<K, V> setKeyClazz(K kClazz) {
+        this.keyClazz = kClazz;
+        return this;
+    }
+
+    public V getValueClazz() {
+        return valueClazz;
+    }
+
+    public DataStoreConfigurator<K, V> setValueClazz(V vClazz) {
+        this.valueClazz = vClazz;
+        return this;
     }
 
     public KeyMapper getKeyMapper() {
         return keyMapper;
     }
 
-    public void setKeyMapper(KeyMapper keyMapper) {
+    public DataStoreConfigurator<K, V> setKeyMapper(KeyMapper keyMapper) {
         this.keyMapper = keyMapper;
+        return this;
     }
 
     public DataStoreKeyHelper<K> getDataStoreKeyHelper() {
         return dataStoreKeyHelper;
     }
 
-    public void setDataStoreKeyHelper(DataStoreKeyHelper<K> dataStoreKeyHelper) {
+    public DataStoreConfigurator<K, V> setDataStoreKeyHelper(DataStoreKeyHelper<K> dataStoreKeyHelper) {
         this.dataStoreKeyHelper = dataStoreKeyHelper;
+        return this;
     }
 
     public DataStoreEntryHelper<K, V> getDataStoreEntryHelper() {
         return dataStoreEntryHelper;
     }
 
-    public void setDataStoreEntryHelper(DataStoreEntryHelper<K, V> dataStoreEntryHelper) {
+    public DataStoreConfigurator<K, V> setDataStoreEntryHelper(DataStoreEntryHelper<K, V> dataStoreEntryHelper) {
         this.dataStoreEntryHelper = dataStoreEntryHelper;
+        return this;
     }
-    
+
+    public boolean isStartGMS() {
+        return startGMS;
+    }
+
+    public DataStoreConfigurator<K, V> setStartGMS(boolean startGMS) {
+        this.startGMS = startGMS;
+        return this;
+    }
+
+    public ClassLoader getClassLoader() {
+        return clazzLoader;
+    }
+
+    public DataStoreConfigurator<K, V> setClassLoader(ClassLoader clazzLoader) {
+        this.clazzLoader = clazzLoader;
+        return this;
+    }
+
+
 }
