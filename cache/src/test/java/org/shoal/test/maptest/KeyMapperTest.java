@@ -112,6 +112,9 @@ public class KeyMapperTest
         assert (mappedInstance != null);
         assert (replicaInstance != null);
         assert (mappedInstance.equals(replicaInstance));
+
+        System.out.println("* Test[testEmptyMapTest] => " +
+        (mappedInstance != null) + "; " + (replicaInstance != null) + "; " + (mappedInstance.equals(replicaInstance)));
     }
 
     public void testRegisterAndTest() {

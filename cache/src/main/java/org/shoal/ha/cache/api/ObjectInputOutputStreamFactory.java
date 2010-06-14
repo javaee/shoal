@@ -42,8 +42,8 @@ import java.io.*;
 /**
  * @author Mahesh Kannan
  */
-public interface ObjectInputOutputStreamFactory
-{
+public interface ObjectInputOutputStreamFactory {
+
     ObjectInputStream createObjectInputStream(InputStream in, ClassLoader loader) throws IOException;
     
     ObjectOutputStream createObjectOutputStream(OutputStream out) throws IOException;

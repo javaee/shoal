@@ -45,26 +45,13 @@ import java.io.*;
 public class DefaultObjectInputOutputStreamFactory
         implements ObjectInputOutputStreamFactory {
 
-    public ObjectInputStream createObjectInputStream(InputStream in, ClassLoader loader)
-            throws IOException
-    {
+    @Override
+    public ObjectInputStream createObjectInputStream(InputStream in, ClassLoader loader) throws IOException {
         return new ObjectInputStreamWithLoader(in, loader);
     }
 
-    public ObjectOutputStream createObjectOutputStream(OutputStream out)
-            throws IOException
-    {
+    @Override
+    public ObjectOutputStream createObjectOutputStream(OutputStream out) throws IOException {
         return new ObjectOutputStream(out);
-    }
-
-    public Class<?> resolveClass(ObjectInputStream in, ObjectStreamClass desc)
-            throws IOException, ClassNotFoundException
-    {        
-        return null;
-    }
-
-    public void annotateClass(ObjectOutputStream out, Class<?> cl) throws IOException
-    {
-        //No-op;
     }
 }

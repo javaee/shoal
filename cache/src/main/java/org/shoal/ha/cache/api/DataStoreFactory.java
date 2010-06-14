@@ -45,44 +45,77 @@ import org.shoal.ha.group.GroupServiceFactory;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
 
+import java.io.Serializable;
+
 /**
  * @author Mahesh Kannan
  */
 public class DataStoreFactory {
 
-    public static DataStore<String, Object> createDataStore(String storeName, String instanceName, String groupName) {
-        DataStoreEntryHelper<String, Object> helper =
-                new DefaultDataStoreEntryHelper<String, Object>(Thread.currentThread().getContextClassLoader());
+    public static DataStore<String, Serializable> createDataStore(String storeName, String instanceName, String groupName) {
+        DataStoreEntryHelper<String, Serializable> helper =
+                new DefaultDataStoreEntryHelper<String, Serializable>(Thread.currentThread().getContextClassLoader());
         DataStoreKeyHelper<String> keyHelper = new StringKeyHelper();
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
 
-        return DataStoreFactory.createDataStore(storeName, instanceName, groupName,
-                String.class, Object.class, Thread.currentThread().getContextClassLoader(),
-                helper, keyHelper, keyMapper);
+        Class<Serializable> vClazz = Serializable.class;
+        DataStoreConfigurator<String, Serializable> conf = new DataStoreConfigurator<String, Serializable>();
+        conf.setStartGMS(true);
+        conf.setStoreName(storeName)
+                .setInstanceName(instanceName)
+                .setGroupName(groupName)
+                .setKeyClazz(String.class)
+                .setValueClazz(vClazz)
+                .setClassLoader(vClazz.getClassLoader())
+                .setDataStoreEntryHelper(helper)
+                .setDataStoreKeyHelper(keyHelper)
+                .setKeyMapper(keyMapper)
+                .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
+
+        return createDataStore(conf);
     }
 
     public static <K, V> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader) {
+
         DataStoreEntryHelper<K, V> helper =
                 new DefaultDataStoreEntryHelper<K, V>(vClazz.getClassLoader());
         DataStoreKeyHelper<K> keyHelper = new ObjectKeyHelper(loader);
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
         
-        return DataStoreFactory.createDataStore(storeName, instanceName, groupName, keyClazz, vClazz,
-                loader, helper, keyHelper, keyMapper);
+        DataStoreConfigurator<K, V> conf = new DataStoreConfigurator<K, V>();
+        conf.setStartGMS(true);
+        conf.setStoreName(storeName)
+                .setInstanceName(instanceName)
+                .setGroupName(groupName)
+                .setKeyClazz(keyClazz)
+                .setValueClazz(vClazz)
+                .setClassLoader(loader)
+                .setDataStoreEntryHelper(helper)
+                .setDataStoreKeyHelper(keyHelper)
+                .setKeyMapper(keyMapper)
+                .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
+
+        return createDataStore(conf);
     }
 
     public static <K, V> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader,
                                                   DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
                                                   KeyMapper keyMapper) {
-        GroupService gs = GroupServiceFactory.getInstance().getGroupService(instanceName, groupName, true);
-        if (keyMapper instanceof GroupMemberEventListener) {
-            GroupMemberEventListener groupListener = (GroupMemberEventListener) keyMapper;
-            gs.registerGroupMemberEventListener(groupListener);
-        }
+        DataStoreConfigurator<K, V> conf = new DataStoreConfigurator<K, V>();
+        conf.setStoreName(storeName)
+                .setInstanceName(instanceName)
+                .setGroupName(groupName)
+                .setKeyClazz(keyClazz)
+                .setValueClazz(vClazz)
+                .setClassLoader(loader)
+                .setDataStoreEntryHelper(helper)
+                .setDataStoreKeyHelper(keyHelper)
+                .setKeyMapper(keyMapper)
+                .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
-        return new ReplicatedDataStore<K, V>(storeName, gs, loader, helper, keyHelper, keyMapper);
+        return createDataStore(conf);
     }
 
     public static <K, V> DataStore<K, V> createDataStore(DataStoreConfigurator<K, V> conf) {

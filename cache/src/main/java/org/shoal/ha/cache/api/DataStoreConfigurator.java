@@ -49,9 +49,9 @@ public class DataStoreConfigurator<K, V> {
 
     private String storeName;
 
-    private K keyClazz;
+    private Class<K> keyClazz;
 
-    private V valueClazz;
+    private Class<V> valueClazz;
 
     private KeyMapper keyMapper;
 
@@ -63,6 +63,7 @@ public class DataStoreConfigurator<K, V> {
 
     private DataStoreEntryHelper<K, V> dataStoreEntryHelper;
 
+    private ObjectInputOutputStreamFactory objectInputOutputStreamFactory;
 
     public String getInstanceName() {
         return instanceName;
@@ -91,20 +92,20 @@ public class DataStoreConfigurator<K, V> {
         return this;
     }
 
-    public K getKeyClazz() {
+    public Class<K> getKeyClazz() {
         return keyClazz;
     }
 
-    public DataStoreConfigurator<K, V> setKeyClazz(K kClazz) {
+    public DataStoreConfigurator<K, V> setKeyClazz(Class<K> kClazz) {
         this.keyClazz = kClazz;
         return this;
     }
 
-    public V getValueClazz() {
+    public Class<V> getValueClazz() {
         return valueClazz;
     }
 
-    public DataStoreConfigurator<K, V> setValueClazz(V vClazz) {
+    public DataStoreConfigurator<K, V> setValueClazz(Class<V> vClazz) {
         this.valueClazz = vClazz;
         return this;
     }
@@ -154,5 +155,11 @@ public class DataStoreConfigurator<K, V> {
         return this;
     }
 
+    public ObjectInputOutputStreamFactory getObjectInputOutputStreamFactory() {
+        return objectInputOutputStreamFactory;
+    }
 
+    public void setObjectInputOutputStreamFactory(ObjectInputOutputStreamFactory objectInputOutputStreamFactory) {
+        this.objectInputOutputStreamFactory = objectInputOutputStreamFactory;
+    }
 }
