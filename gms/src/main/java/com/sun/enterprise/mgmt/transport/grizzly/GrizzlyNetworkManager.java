@@ -169,6 +169,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     @SuppressWarnings( "unchecked" )
     public synchronized void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException {
+        super.initialize(groupName, instanceName, properties);
         configure( properties );
         if( localPeerID == null ) {
             String uniqueHost = host;

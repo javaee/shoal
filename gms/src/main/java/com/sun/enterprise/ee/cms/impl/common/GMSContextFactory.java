@@ -68,9 +68,6 @@ public class GMSContextFactory {
                             final GroupManagementService.MemberType memberType,
                             final Properties properties){
         GMSContext ctx;
-        final String gmsContextProvider = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
-                                                                     GMSConstants.GROUP_COMMUNICATION_PROVIDER,
-                                                                     properties );
         if((ctx = ctxCache.get( groupName )) ==  null){
             ctx = new com.sun.enterprise.ee.cms.impl.base.GMSContextImpl( serverToken, groupName, memberType, properties );
             ctxCache.put(groupName, ctx);

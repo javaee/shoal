@@ -212,7 +212,7 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
                 }
             }
             if(message != null && messageLength > 0 ) {
-                if( messageLength + MessageImpl.HEADER_LENGTH > MessageImpl.MAX_TOTAL_MESSAGE_LENGTH ){
+                if( messageLength + MessageImpl.HEADER_LENGTH > MessageImpl.getMaxMessageLength() ){
                     throw new Exception( "too large message" );
                 }
                 int totalMsgLength = MessageImpl.HEADER_LENGTH + messageLength;

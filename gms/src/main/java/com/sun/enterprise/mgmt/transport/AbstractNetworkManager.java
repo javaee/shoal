@@ -37,7 +37,9 @@
 package com.sun.enterprise.mgmt.transport;
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -237,5 +239,15 @@ public abstract class AbstractNetworkManager implements NetworkManager {
 
     static protected Logger getLogger() {
         return LOG;
+    }
+
+    public synchronized void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException  {
+        int maxMsgLength =  Utility.getIntProperty( ServiceProviderConfigurationKeys.MAX_MESSAGE_LENGTH.toString(),
+                                                    MessageImpl.DEFAULT_MAX_TOTAL_MESSAGE_LENGTH,
+                                                    properties );
+        MessageImpl.setMaxMessageLength(maxMsgLength);
+        if (LOG.isLoggable(Level.CONFIG))  {
+            LOG.config("GMS MAX_MESSAGE_LENGTH=" + maxMsgLength);
+        }
     }
 }

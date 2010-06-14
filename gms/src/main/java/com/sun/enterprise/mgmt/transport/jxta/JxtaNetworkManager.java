@@ -38,6 +38,8 @@ package com.sun.enterprise.mgmt.transport.jxta;
 
 import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.jxta.JxtaConfigConstants.*;
+import static com.sun.enterprise.mgmt.transport.jxta.JxtaUtil.*;
+
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
 import com.sun.enterprise.mgmt.transport.MessageSender;
@@ -178,8 +180,9 @@ public class JxtaNetworkManager extends AbstractNetworkManager implements Rendez
      *                     keys in this object must correspond to the constants specified in the
      *                     JxtaConfigConstants enum.
      */
-    public void initialize( final String groupName, final String instanceName, final Map properties ) {
-        JxtaUtil.configureJxtaLogging();
+    public void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException {
+        super.initialize(groupName, instanceName, properties);
+        configureJxtaLogging();
         this.groupName = groupName;
         this.instanceName = instanceName;
 

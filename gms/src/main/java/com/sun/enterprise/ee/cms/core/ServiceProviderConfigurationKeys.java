@@ -161,5 +161,11 @@ public enum ServiceProviderConfigurationKeys {
     /**
      * <p>Enable setting how large fixed incoming message queue is.
      */
-    INCOMING_MESSAGE_QUEUE_SIZE
+    INCOMING_MESSAGE_QUEUE_SIZE ,
+
+    /**
+     * Max message length.  This length is not just application payload but includes message overhead (such as headers)
+     * that is implementation and transport dependent.
+     */
+    MAX_MESSAGE_LENGTH
 }

@@ -123,7 +123,6 @@ public class ClusterManager implements MessageListener {
         //TODO: ability to specify additional rendezvous and also bootstrap a default rendezvous
         //TODO: revisit and document auto composition of transports
 
-        // todo carryel, let's use the factory
         gmsContextProviderTransport = Utility.getStringProperty( "SHOAL_GROUP_COMMUNICATION_PROVIDER",
                                                                  GMSConstants.GROUP_COMMUNICATION_PROVIDER,
                                                                  props );

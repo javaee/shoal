@@ -74,7 +74,8 @@ public class MessageImpl implements Message {
 
     private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
 
-    public static final int MAX_TOTAL_MESSAGE_LENGTH = 128 * 1024;
+    public static final int DEFAULT_MAX_TOTAL_MESSAGE_LENGTH = 128 * 1024 + (2 * 1024);
+    private static int maxTotalMessageLength = DEFAULT_MAX_TOTAL_MESSAGE_LENGTH;
     public static final int UNSPECIFIED_MESSAGE_LENGTH = -1;
 
     private static final int MAGIC_NUMBER = 770303;
@@ -93,6 +94,14 @@ public class MessageImpl implements Message {
     private final ReentrantLock messageLock = new ReentrantLock();
     private transient ByteBuffer byteBuffer;
     private boolean modified;
+
+    public static int getMaxMessageLength() {
+        return maxTotalMessageLength;
+    }
+
+    public static void setMaxMessageLength(int maxMsgLength) {
+        maxTotalMessageLength = maxMsgLength;
+    }
 
     public MessageImpl() {
     }
@@ -201,10 +210,10 @@ public class MessageImpl implements Message {
 
         if( length > 0 ) {
             int msgSize = HEADER_LENGTH + length;
-            if( msgSize > MAX_TOTAL_MESSAGE_LENGTH ) {
+            if( msgSize > maxTotalMessageLength ) {
                 if( LOG.isLoggable( Level.WARNING ) )
                     LOG.log( Level.WARNING,
-                             "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+                             "total message size is too big: size = " + msgSize + ", max size = " + maxTotalMessageLength );
     }
 
             if (bytes.length - offset < length) {
@@ -235,10 +244,10 @@ public class MessageImpl implements Message {
             throw new IllegalArgumentException( "length is too small" );
         if( length > 0 ) {
             int msgSize = HEADER_LENGTH + length;
-            if( msgSize > MAX_TOTAL_MESSAGE_LENGTH ) {
+            if( msgSize > maxTotalMessageLength ) {
                 if( LOG.isLoggable( Level.WARNING ) )
                     LOG.log( Level.WARNING,
-                             "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+                             "total message size is too big: size = " + msgSize + ", max size = " + maxTotalMessageLength );
             }
             int restorePosition = buffer.position();
             int restoreLimit = buffer.limit();
@@ -361,12 +370,12 @@ public class MessageImpl implements Message {
             else
                 messageLen = 0;
             int msgSize = HEADER_LENGTH + messageLen;
-            if( msgSize > MAX_TOTAL_MESSAGE_LENGTH ) {
+            if( msgSize > maxTotalMessageLength ) {
                 if( LOG.isLoggable( Level.WARNING ) ) { 
                     LOG.log( Level.WARNING,
-                             "total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH );
+                             "total message size is too big: size = " + msgSize + ", max size = " + maxTotalMessageLength );
                 }
-                throw new MessageIOException("total message size is too big: size = " + msgSize + ", max size = " + MAX_TOTAL_MESSAGE_LENGTH +
+                throw new MessageIOException("total message size is too big: size = " + msgSize + ", max size = " + maxTotalMessageLength +
                 toString());
             }
             byteBuffer = ByteBuffer.allocate( HEADER_LENGTH + messageLen );
