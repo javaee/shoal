@@ -223,7 +223,7 @@ public class MessageImplTest extends TestCase {
     public void testAddLargeAppMessage() {
                 mySetUp();
 
-        message.addMessageElement("APPMESSAGE", new byte[MessageImpl.MAX_TOTAL_MESSAGE_LENGTH+1]);
+        message.addMessageElement("APPMESSAGE", new byte[MessageImpl.getMaxMessageLength()+1]);
         try {
             byte[] plainByteBuffer = message.getPlainByteBuffer().array();
             Message message6 = new MessageImpl();
