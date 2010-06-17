@@ -26,15 +26,15 @@ DIST=false
 usage () {
  echo "usage:"
  echo "   single machine:"
- echo "      [-h] [-t grizzly|jxta] [-c stop|kill|rejoin|default is normal)] [numberOfMembers(10 is default)] "
+ echo "      [-h] [-t grizzly|jxta] [stop|kill|rejoin|default is normal)] [numberOfMembers(10 is default)] "
  echo "   distributed environment:"
- echo "      -d <-g groupname> [-t grizzly|jxta] [-c stop|kill|rejoin|default is normal)]"
+ echo "      -d <-g groupname> [-t grizzly|jxta] [stop|kill|rejoin|default is normal)]"
  echo " "
  echo " Examples:"
  echo "     runsimulatecluster.sh"
- echo "     runsimulatecluster.sh 5 -c rejoin"
+ echo "     runsimulatecluster.sh 5 rejoin"
  echo "     runsimulatecluster.sh -d -g testgroup"
- echo "     runsimulatecluster.sh -d -g testgroup -c rejoin"
+ echo "     runsimulatecluster.sh -d -g testgroup rejoin"
  exit 1
 }
 
@@ -45,8 +45,7 @@ do
        -h)
          usage
        ;;
-       -c)
-         shift
+       stop|kill|rejoin)
          CMD=${1}
          shift
          if [ ! -z "${CMD}" ] ;then
@@ -210,13 +209,14 @@ else
            EFFECTED_MEMBER_WORKSPACE_HOME=${WORKSPACE_HOME}
       fi
    done
+   TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+   MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+   TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+   MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
 fi
 
 
-TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
-TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+
 
 echo "Waiting for group [${GROUPNAME}] to complete startup"
 # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
