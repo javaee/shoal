@@ -40,12 +40,8 @@ import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.util.StringKeyHelper;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.util.Properties;
 
 /**
  * @author Mahesh Kannan
@@ -62,8 +58,14 @@ public class InMemoryBackingStore<K extends Serializable, V extends Serializable
         super.initialize(conf);
         DataStoreConfigurator<K, V> dsConf = new DataStoreConfigurator<K, V>();
         dsConf.setInstanceName(conf.getInstanceName())
-                .setGroupName(conf.getClusterName());
+                .setGroupName(conf.getClusterName())
+                .setStoreName(conf.getStoreName())
+                .setKeyClazz(conf.getKeyClazz())
+                .setValueClazz(conf.getValueClazz())
+                .setClassLoader(conf.getClassLoader())
+                .setStartGMS(conf.getStartGroupService());
 
+        dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
         dataStore = DataStoreFactory.createDataStore(dsConf);
     }
 

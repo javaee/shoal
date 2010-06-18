@@ -9,30 +9,20 @@
     </parent>
 
     <artifactId>shoal-backing-store</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>shoal-backing-store</name>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>com.sun.enterprise</groupId>
-                <artifactId>hk2-maven-plugin</artifactId>
-                <version>${hk2.version}</version>
-                <extensions>true</extensions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Export-Package>org.shoal.adapter.store</Export-Package>
-                    </instructions>
-                </configuration>
+              <artifactId>maven-jar-plugin</artifactId>
+              <configuration>
+                <archive>
+                  <manifestFile>${basedir}/src/main/resources/META-INF/MANIFEST.MF</manifestFile>
+                </archive>
+              </configuration>
             </plugin>
         </plugins>
-
     </build>
 
     <developers>

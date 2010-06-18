@@ -37,14 +37,12 @@
 package org.shoal.adapter.store;
 
 import org.glassfish.ha.store.api.*;
-import org.jvnet.hk2.annotations.Service;
 
 import java.io.Serializable;
 
 /**
  * @author Mahesh Kannan
  */
-@Service
 public class ReplicationBackingStoreFactory
     implements BackingStoreFactory {
 
@@ -54,6 +52,7 @@ public class ReplicationBackingStoreFactory
 
         InMemoryBackingStore<K, V> bStore = new InMemoryBackingStore<K, V>();
         bStore.initialize(conf);
+        System.out.println("ReplicationBackingStoreFactory:: CREATED an instance of: " + bStore.getClass().getName());
         return bStore;
     }
 
