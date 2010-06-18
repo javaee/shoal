@@ -96,8 +96,6 @@
 
         <ha.api.version>3.1-SNAPSHOT</ha.api.version>
 
-        <hk2.version>1.0.19</hk2.version>
-
         <shoal.groupId>org.shoal</shoal.groupId>
         <shoal.version>1.5.1-SNAPSHOT</shoal.version>
     </properties>
@@ -105,7 +103,7 @@
     <modules>
         <module>gms</module>
         <module>cache</module>
-        <!--<module>backing-store</module>-->
+        <module>backing-store</module>
     </modules>
 
     <build>
