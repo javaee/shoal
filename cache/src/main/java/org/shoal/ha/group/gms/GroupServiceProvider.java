@@ -37,10 +37,7 @@
 package org.shoal.ha.group.gms;
 
 import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.client.FailureNotificationActionFactoryImpl;
-import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
-import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
-import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
@@ -83,73 +80,66 @@ public class GroupServiceProvider
 
     public void processNotification(Signal notification) {
         MemberStates[] states;
-//        logger.info("[$$$Received notification] => " + notification.getMemberToken() + " ==> "
-//            + gms.getGroupHandle().getMemberState(notification.getMemberToken()));
-        if ((notification instanceof JoinedAndReadyNotificationSignal)
-                || (notification instanceof JoinNotificationSignal)
-                || (notification instanceof FailureNotificationSignal)
-                || (notification instanceof FailureSuspectedSignal)) {
-            // getMemberState constraint check for member being added.
-            MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());
-
-            if (state == MemberStates.ALIVEANDREADY || state == MemberStates.READY) {
-                JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
-                List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
-                states = new MemberStates[currentCoreMembers.size()];
-                int i = 0;
-                for (String instanceName : currentCoreMembers) {
-                    states[i] = gms.getGroupHandle().getMemberState(instanceName, 6000, 3000);
-                    switch (states[i]) {
-                        case STARTING:
-                        case ALIVE:
-                            break;
-                        case READY:
-                        case ALIVEANDREADY:
-                            for (GroupMemberEventListener listener : listeners) {
-                                if (aliveInstances.putIfAbsent(instanceName, instanceName) == null) {
-                                    listener.memberReady(instanceName, groupName);
-                                }
-                            }
-                            notifyOnMemberReady();
-                            break;
-                    }
+        if (notification instanceof JoinedAndReadyNotificationSignal) {
+            //TODO: By milestone 3, handle rejoin sub event
+            
+            JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
+            String aliveInstanceName = readySignal.getMemberToken();
+            if (aliveInstances.putIfAbsent(aliveInstanceName, aliveInstanceName) == null) {
+                notifyOnMemberReady(aliveInstanceName);
+            }
+            List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
+            states = new MemberStates[currentCoreMembers.size()];
+            int i = 0;
+            for (String instanceName : currentCoreMembers) {
+                states[i] = gms.getGroupHandle().getMemberState(instanceName, 6000, 0);
+                switch (states[i]) {
+                    case READY:
+                    case ALIVEANDREADY:
+                        if (aliveInstances.putIfAbsent(aliveInstanceName, aliveInstanceName) == null) {
+                            notifyOnMemberReady(aliveInstanceName);
+                        }
+                        break;
                 }
-            } else if (state == MemberStates.STOPPED ||
-                    state == MemberStates.CLUSTERSTOPPING ||
-                    state == MemberStates.UNKNOWN) {
-
-                String instance = notification.getMemberToken();
-                aliveInstances.remove(instance);
-                if (!myName.equals(instance)) {
-                    for (GroupMemberEventListener listener : listeners) {
-                        listener.memberLeft(instance, groupName, (state == MemberStates.CLUSTERSTOPPING));
-                    }
+            }
+        } else if (notification instanceof FailureNotificationSignal) {
+            String instanceName = notification.getMemberToken();
+            aliveInstances.remove(instanceName);
+            if (!myName.equals(instanceName)) {
+                for (GroupMemberEventListener listener : listeners) {
+                    listener.memberLeft(instanceName, groupName, false);
+                }
+            }
+        } else if (notification instanceof PlannedShutdownSignal) {
+            String instanceName = notification.getMemberToken();
+            PlannedShutdownSignal pss = (PlannedShutdownSignal) notification;
+            GMSConstants.shutdownType shutType = pss.getEventSubType();
+            aliveInstances.remove(instanceName);
+            if (!myName.equals(instanceName)) {
+                for (GroupMemberEventListener listener : listeners) {
+                    listener.memberLeft(instanceName, groupName, shutType == GMSConstants.shutdownType.GROUP_SHUTDOWN);
                 }
             }
         }
     }
 
-    private void notifyOnMemberReady() {
-        List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
-        List<GMSMember> prevGMSMembers = gms.getGroupHandle().getPreviousView();
-        List<String> prevMembers = null;
-        for (GMSMember member : prevGMSMembers) {
-            prevMembers.add(member.getMemberToken());
-        }
-        for (String instanceName : members) {
-            for (GroupMemberEventListener listener : listeners) {
-                listener.memberReady(instanceName, groupName);
-            }
+    private void notifyOnMemberReady(String eventCausedBy) {
+        for (GroupMemberEventListener listener : listeners) {
+            listener.memberReady(eventCausedBy, groupName);
         }
     }
 
     private void notifyCurrentAliveMembers() {
-        System.out.println("notifyCurrentAliveMembers ==> Notifying...");
         List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
         for (String instanceName : members) {
-            for (GroupMemberEventListener listener : listeners) {
-                aliveInstances.putIfAbsent(instanceName, instanceName);
-                listener.memberReady(instanceName, groupName);
+            MemberStates state = gms.getGroupHandle().getMemberState(instanceName, 6000, 0);
+            switch (state) {
+                case READY:
+                case ALIVEANDREADY:
+                    if (aliveInstances.putIfAbsent(instanceName, instanceName) == null) {
+                        notifyOnMemberReady(instanceName);
+                    }
+                    break;
             }
         }
     }
@@ -157,14 +147,13 @@ public class GroupServiceProvider
     private void init(String myName, String groupName, boolean startGMS) {
         try {
             gms = GMSFactory.getGMSModule(groupName);
-            logger.config("GroupServiceProvider found gms module for group:" + groupName);
         } catch (Exception e) {
             logger.severe("GMS module for group " + groupName + " not enabled");
         }
 
         if (gms == null) {
             if (startGMS) {
-                logger.config("GroupServiceProvider creating gms module for group " + groupName);
+                logger.info("GroupServiceProvider *CREATING* gms module for group " + groupName);
                 GroupManagementService.MemberType memberType = myName.equals("DAS") ? GroupManagementService.MemberType.SPECTATOR
                         : GroupManagementService.MemberType.CORE;
 
@@ -193,19 +182,27 @@ public class GroupServiceProvider
                         myName, groupName, memberType, configProps);
 
                 createdAndJoinedGMSGroup = true;
-
-
-                this.groupHandle = gms.getGroupHandle();
-                this.myName = myName;
-                this.groupName = groupName;
-
-                gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
-                gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
-                gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
-
             } else {
-                throw new IllegalStateException("GMS has not been started yet for group name: " + groupName);
+                logger.severe("**GroupServiceProvider:: Will not start GMS module for group " + groupName + ". It should have been started by now. But GMS: " + gms);
             }
+        } else {
+            logger.severe("**GroupServiceProvider:: GMS module for group " + groupName + " should have been started by now GMS: " + gms);
+        }
+
+        if (gms != null) {
+            this.groupHandle = gms.getGroupHandle();
+            this.myName = myName;
+            this.groupName = groupName;
+
+            gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
+            gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
+            gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
+            gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
+
+            logger.info("**GroupServiceProvider:: REGISTERED member event listeners for <group, instance> => <" + groupName + ", " + myName + ">");
+
+        } else {
+            throw new IllegalStateException("GMS has not been started yet for group name: " + groupName);
         }
 
         if (createdAndJoinedGMSGroup) {
@@ -251,6 +248,7 @@ public class GroupServiceProvider
 
     @Override
     public void registerGroupMessageReceiver(String messageToken, MessageReceiver receiver) {
+        logger.fine("[GroupServiceProvider]:  REGISTERED A MESSAGE LISTENER: " + receiver + "; for token: " + messageToken);
         gms.addActionFactory(new MessageActionFactoryImpl(receiver), messageToken);
     }
 

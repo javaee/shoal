@@ -47,22 +47,23 @@ import java.io.*;
 public class ObjectKeyHelper<K>
         implements DataStoreKeyHelper<K> {
 
+    private ObjectInputOutputStreamFactory factory;
+
     private ClassLoader loader;
 
-    public ObjectKeyHelper(ClassLoader loader) {
+    public ObjectKeyHelper(ClassLoader loader, ObjectInputOutputStreamFactory factory) {
         this.loader = loader;
+        this.factory = factory;
     }
 
     @Override
     public void writeKey(ReplicationOutputStream ros, K k) throws IOException {
-        ObjectInputOutputStreamFactory oiosFactory =
-                ObjectInputOutputStreamFactoryRegistry.getObjectInputOutputStreamFactory();
         byte[] data = null;
         ByteArrayOutputStream bos = null;
         ObjectOutputStream oos = null;
         try {
             bos = new ByteArrayOutputStream();
-            oos = oiosFactory.createObjectOutputStream(bos);
+            oos = factory.createObjectOutputStream(bos);
             oos.writeObject(k);
             oos.flush();
             data = bos.toByteArray();
@@ -92,13 +93,11 @@ public class ObjectKeyHelper<K>
     public K readKey(byte[] data, int index)
             throws DataStoreException {
 
-        ObjectInputOutputStreamFactory oiosFactory =
-                ObjectInputOutputStreamFactoryRegistry.getObjectInputOutputStreamFactory();
         int len = Utility.bytesToInt(data, index);
-        ByteArrayInputStream bis = new ByteArrayInputStream(data, index, len);
+        ByteArrayInputStream bis = new ByteArrayInputStream(data, index+4, len);
         ObjectInputStream ois = null;
         try {
-            ois = oiosFactory.createObjectInputStream(bis, loader);
+            ois = factory.createObjectInputStream(bis, loader);
             return (K) ois.readObject();
         } catch (Exception ex) {
             throw new DataStoreException("Exception during readKey", ex);

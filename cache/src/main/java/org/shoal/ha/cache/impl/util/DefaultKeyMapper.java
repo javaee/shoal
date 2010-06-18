@@ -219,7 +219,7 @@ public class DefaultKeyMapper
                     currentViewMinusMe = currentMemberSetMinusMe.toArray(new String[0]);
                 }
             }
-            //printMemberStates();
+            printMemberStates();
         } finally {
             wLock.unlock();
         }
@@ -230,15 +230,17 @@ public class DefaultKeyMapper
     }
 
     public void printMemberStates() {
-        System.out.print("DefaultKeyMapper:: Members[");
+        StringBuilder sbuf = new StringBuilder("**DefaultKeyMapper:: Members[");
         for (String st : currentView) {
-            System.out.print("<" + st + "> ");
+            sbuf.append("<" + st + "> ");
         }
-        System.out.println("]");        System.out.print("DefaultKeyMapper:: PreviousMembers[");
+        sbuf.append("];  PreviousMembers[");
         for (String st : previousView) {
-            System.out.print("<" + st + "> ");
+            sbuf.append("<" + st + "> ");
         }
-        System.out.println("];  currentViewCausedBy: " + currentViewCausedBy);
+        sbuf.append("];  currentViewCausedBy: " + currentViewCausedBy);
+
+        System.out.println(sbuf.toString());
     }
 
     private static class ReplicaState

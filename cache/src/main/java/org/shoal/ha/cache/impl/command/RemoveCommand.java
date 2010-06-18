@@ -69,6 +69,7 @@ public class RemoveCommand<K, V>
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
+        //System.out.println("RemoveCommand[" + getDataStoreContext().getServiceName() + "]: attempting to transmit(" + key + ") to: " + getTargetName());
     }
 
     @Override
@@ -85,6 +86,8 @@ public class RemoveCommand<K, V>
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
         ctx.getReplicaStore().remove(key);
+//        System.out.println("RemoveCommand[" + getDataStoreContext().getServiceName() + "]: REMOVED ==> " + key
+//        + "; after removing size: " + ctx.getReplicaStore().size());
     }
 
 }

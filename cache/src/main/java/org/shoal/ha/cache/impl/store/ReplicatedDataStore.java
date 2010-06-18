@@ -81,6 +81,9 @@ public class ReplicatedDataStore<K, V>
     public ReplicatedDataStore(String storeName, GroupService gs, ClassLoader loader,
                                DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
                                KeyMapper keyMapper) {
+        DataStoreConfigurator<K, V> conf = new DataStoreConfigurator<K, V>();
+        conf.setStoreName(storeName)
+                .setClassLoader(loader);
         this.storeName = storeName;
         this.gs = gs;
         this.instanceName = gs.getMemberName();
@@ -106,9 +109,9 @@ public class ReplicatedDataStore<K, V>
         cm.registerCommand(new TouchCommand<K, V>());
 
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
+            gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
             for (String member : gs.getCurrentCoreMembers()) {
                 ((DefaultKeyMapper) keyMapper).registerInstance(member);
-                System.out.println(">>Notifying DefaultKeyMapper about instance " + member);
             }
         }
         

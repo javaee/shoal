@@ -78,6 +78,7 @@ public class SaveCommand<K, V>
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), k));
+//        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: attempting to transmit(" + k + ") to: " + getTargetName());
     }
 
     @Override
@@ -102,6 +103,7 @@ public class SaveCommand<K, V>
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
         ctx.getReplicaStore().put(k, v);
+//        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: saved(" + k + ")");
     }
 
 }

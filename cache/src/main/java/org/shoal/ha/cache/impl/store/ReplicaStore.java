@@ -82,4 +82,8 @@ public class ReplicaStore<K, V> {
             e.setVersion(version);
         }
     }
+
+    public int size() {
+        return map.size();
+    }
 }
