@@ -59,26 +59,21 @@
         <dependency>
             <groupId>${junit.group.id}</groupId>
             <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${grizzly.group.id}</groupId>
-            <version>${grizzly.version}</version>
             <artifactId>grizzly-utils</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>${grizzly.group.id}</groupId>
-            <version>${grizzly.version}</version>
             <artifactId>grizzly-framework</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
-            <!--Needed to have a bundle activator-->
             <groupId>org.osgi</groupId>
             <artifactId>osgi_R4_core</artifactId>
-            <version>1.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

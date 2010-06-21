@@ -52,22 +52,20 @@
 
     <dependencies>
         <dependency>
-            <groupId>${shoal.groupId}</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>shoal-gms</artifactId>
-            <version>${shoal.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Test -->
 
         <dependency>
             <groupId>${grizzly.group.id}</groupId>
-            <version>${grizzly.version}</version>
             <artifactId>grizzly-utils</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${grizzly.group.id}</groupId>
-            <version>${grizzly.version}</version>
             <artifactId>grizzly-framework</artifactId>
             <scope>test</scope>
         </dependency>
@@ -75,7 +73,6 @@
         <dependency>
             <groupId>${junit.group.id}</groupId>
             <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

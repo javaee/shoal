@@ -94,16 +94,13 @@
         <junit.group.id>junit</junit.group.id>
         <junit.version>3.8.1</junit.version>
 
-        <ha.api.version>3.1-SNAPSHOT</ha.api.version>
-
-        <shoal.groupId>org.shoal</shoal.groupId>
-        <shoal.version>1.5.1-SNAPSHOT</shoal.version>
+        <ha.api.version>3.1-b05</ha.api.version>
     </properties>
 
     <modules>
         <module>gms</module>
         <module>cache</module>
-        <module>backing-store</module>
+        <!--<module>backing-store</module>-->
     </modules>
 
     <build>
@@ -141,6 +138,17 @@
                 <groupId>${junit.group.id}</groupId>
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.ha</groupId>
+                <artifactId>ha-api</artifactId>
+                <version>${ha.api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>osgi_R4_core</artifactId>
+                <version>1.0</version>
+                <scope>provided</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

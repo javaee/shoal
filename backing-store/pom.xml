@@ -40,14 +40,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>${shoal.groupId}</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>shoal-cache</artifactId>
-            <version>${shoal.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.glassfish.ha</groupId>
             <artifactId>ha-api</artifactId>
-            <version>${ha.api.version}</version>
         </dependency>
     </dependencies>
 
