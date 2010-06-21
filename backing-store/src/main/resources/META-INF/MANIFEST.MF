@@ -10,9 +10,8 @@ Bundle-Name: shoal-backing-store
 Bundle-ManifestVersion: 2
 Created-By: Apache Maven Bundle Plugin
 Extension-Name: shoal-backing-store
-Import-Package: org.glassfish.ha.store.api;version="3.1",org.jvnet.hk2
- .annotations;version="1.0",org.shoal.adapter.store,org.shoal.ha.cache
- .api
+Import-Package: org.glassfish.ha.store.api;version="3.1",
+ org.shoal.adapter.store,org.shoal.ha.cache.api
 Bundle-SymbolicName: org.shoal.backing-store
 HK2-Class-Path-Id: org.shoal:shoal-cache:jar:1.5.1-SNAPSHOT org.shoal:
  shoal-gms:jar:1.5.1-SNAPSHOT org.glassfish.ha:ha-api:jar:3.1-SNAPSHOT
