@@ -162,4 +162,21 @@ public class DataStoreConfigurator<K, V> {
     public void setObjectInputOutputStreamFactory(ObjectInputOutputStreamFactory objectInputOutputStreamFactory) {
         this.objectInputOutputStreamFactory = objectInputOutputStreamFactory;
     }
+
+    @Override
+    public String toString() {
+        return "DataStoreConfigurator{" +
+                "instanceName='" + instanceName + '\'' +
+                ", groupName='" + groupName + '\'' +
+                ", storeName='" + storeName + '\'' +
+                ", keyClazz=" + keyClazz +
+                ", valueClazz=" + valueClazz +
+                ", keyMapper=" + keyMapper +
+                ", dataStoreKeyHelper=" + dataStoreKeyHelper +
+                ", startGMS=" + startGMS +
+                ", clazzLoader=" + clazzLoader +
+                ", dataStoreEntryHelper=" + dataStoreEntryHelper +
+                ", objectInputOutputStreamFactory=" + objectInputOutputStreamFactory +
+                '}';
+    }
 }
