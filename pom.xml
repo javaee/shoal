@@ -119,6 +119,15 @@
                 </configuration>
             </plugin>
         </plugins>
+        <!-- explicitly define this extension to resolve invalid checksums -->
+        <!-- See:  http://jira.codehaus.org/browse/MNG-4301 -->
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav</artifactId>
+                <version>1.0-beta-2</version>                                                               
+           </extension>              
+        </extensions>
     </build>
 
     <dependencyManagement>
