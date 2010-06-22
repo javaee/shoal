@@ -42,28 +42,48 @@ import org.glassfish.ha.store.api.BackingStoreException;
 import org.shoal.ha.cache.api.*;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * @author Mahesh Kannan
- *
  */
 public class InMemoryBackingStore<K extends Serializable, V extends Serializable>
-    extends BackingStore<K, V> {
+        extends BackingStore<K, V> {
 
     DataStore<K, V> dataStore;
 
     @Override
     protected void initialize(BackingStoreConfiguration<K, V> conf)
-        throws BackingStoreException {
+            throws BackingStoreException {
         super.initialize(conf);
         DataStoreConfigurator<K, V> dsConf = new DataStoreConfigurator<K, V>();
         dsConf.setInstanceName(conf.getInstanceName())
                 .setGroupName(conf.getClusterName())
                 .setStoreName(conf.getStoreName())
                 .setKeyClazz(conf.getKeyClazz())
-                .setValueClazz(conf.getValueClazz())
-                .setClassLoader(conf.getClassLoader())
-                .setStartGMS(conf.getStartGroupService());
+                .setValueClazz(conf.getValueClazz());
+        Map<String, Object> vendorSpecificMap = conf.getVendorSpecificSettings();
+
+        Object stGMS = vendorSpecificMap.get("start.gms");
+        boolean startGMS = false;
+        if (stGMS != null) {
+            if (stGMS instanceof String) {
+                try {
+                    startGMS = Boolean.valueOf((String) stGMS);
+                } catch (Throwable th) {
+                    //Ignore
+                }
+            } else if (stGMS instanceof Boolean) {
+                startGMS = (Boolean) stGMS;
+            }
+        }
+
+        ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
+        if (cl == null) {
+            cl = conf.getValueClazz().getClassLoader();
+        }
+        dsConf.setClassLoader(cl)
+                .setStartGMS(startGMS);
 
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
         dataStore = DataStoreFactory.createDataStore(dsConf);
@@ -103,5 +123,5 @@ public class InMemoryBackingStore<K extends Serializable, V extends Serializable
     public void updateTimestamp(K key, long time) throws BackingStoreException {
         dataStore.touch(key, time);
     }
-    
+
 }

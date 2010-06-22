@@ -100,7 +100,7 @@
     <modules>
         <module>gms</module>
         <module>cache</module>
-        <!--<module>backing-store</module>-->
+        <module>backing-store</module>
     </modules>
 
     <build>
