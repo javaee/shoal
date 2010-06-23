@@ -102,8 +102,17 @@ public final class GroupHandleImpl implements GroupHandle {
      * @param message       Payload in byte array to be delivered to the destination.
      */
     public void sendMessage(final String componentName, final byte[] message) throws GMSException {
-        final GMSMessage gMsg = new GMSMessage(componentName, message, groupName, getGMSContext().getStartTime());
-        getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, true);
+        try {
+            final GMSMessage gMsg = new GMSMessage(componentName, message, groupName, getGMSContext().getStartTime());
+            getGMSContext().getGroupCommunicationProvider().sendMessage(null, gMsg, true);
+        } catch (Throwable t) {
+            if (t instanceof GMSException) {
+                throw (GMSException)t;
+            } else {
+                throw new GMSException("failed to brodcast message to group " + groupName +
+                                           " to target component:" + componentName, t);
+            }
+        }
     }
 
     /**
@@ -122,13 +131,24 @@ public final class GroupHandleImpl implements GroupHandle {
     public void sendMessage(final String targetServerToken,
                             final String targetComponentName,
                             final byte[] message) throws GMSException {
-        final GMSMessage gMsg = new GMSMessage(targetComponentName, message,
-                groupName,
-                getGMSContext().getStartTime());
-        getGMSContext().getGroupCommunicationProvider().sendMessage(targetServerToken, gMsg, false);
+        try {
+            final GMSMessage gMsg = new GMSMessage(targetComponentName, message,
+                    groupName,
+                    getGMSContext().getStartTime());
+            getGMSContext().getGroupCommunicationProvider().sendMessage(targetServerToken, gMsg, false);
+        } catch (Throwable t) {
+            if (t instanceof GMSException) {
+                throw (GMSException)t;
+            } else {
+                throw new GMSException("failed to send message to target server:" + targetServerToken +
+                                       " target component:" + targetComponentName, t);
+            }
+        }
     }
 
     public void sendMessage(List<String> targetServerTokens, String targetComponentName, byte[] message) throws GMSException {
+        Throwable lastThrowable = null;
+        String failedSendToken = null;
         final GMSMessage gMsg = new GMSMessage(targetComponentName, message, groupName, getGMSContext().getStartTime());
         if(targetServerTokens.isEmpty()){
             getGMSContext().getGroupCommunicationProvider().sendMessage(null,gMsg, true  );
@@ -137,8 +157,18 @@ public final class GroupHandleImpl implements GroupHandle {
                 try {
                     getGMSContext().getGroupCommunicationProvider().sendMessage(token, gMsg, false  );
                 } catch (Throwable t) {
+                    lastThrowable = t;
+                    failedSendToken = token;
                     logger.warning("GroupHandleImpl.sendMesage: could not send message " + message + " for component " + targetComponentName + " to member " + token + " exception:" + t.getMessage());
                 }
+            }
+        }
+        if (lastThrowable != null) {
+            if (lastThrowable instanceof GMSException) {
+                throw (GMSException) lastThrowable;
+            } else {
+                throw new GMSException("failed to send message to target server:" + failedSendToken + " target component=" + targetComponentName,
+                        lastThrowable);
             }
         }
     }
