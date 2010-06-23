@@ -462,6 +462,7 @@ public class NetworkUtility {
             }
             return portInRange;
         }
+        LOG.severe("Fatal error. No available ports exist for " + host + " in range " + tcpStartPort + " to " + tcpEndPort);
         throw new IllegalStateException("Fatal error. No available ports exist for " + host + " in range " + tcpStartPort + " to " + tcpEndPort);
     }
 

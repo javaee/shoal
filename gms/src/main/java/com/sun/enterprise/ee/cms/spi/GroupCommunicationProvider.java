@@ -76,7 +76,7 @@ public interface GroupCommunicationProvider {
             String memberName,
             String groupName,
             Map<String, String> identityMap,
-            Map configProperties );
+            Map configProperties ) throws GMSException;
 
     /**
      * Joins the group using semantics specified by the underlying GCP system

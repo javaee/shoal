@@ -35,6 +35,7 @@
  */
 package com.sun.enterprise.mgmt;
 
+import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,7 +81,7 @@ public class ClusterManagerTest extends TestCase  {
     }
 
 
-    public void mySetUp() {
+    public void mySetUp() throws GMSException {
         props = getPropsForTest();
         idMap = getIdMap(name, groupName);
         vListeners =
@@ -119,7 +120,7 @@ public class ClusterManagerTest extends TestCase  {
      * 
      */
 
-    public void testStartRunStopClusterManager() {
+    public void testStartRunStopClusterManager() throws GMSException {
         mySetUp();
 
         assertFalse(manager.isGroupStartup());
@@ -141,7 +142,7 @@ public class ClusterManagerTest extends TestCase  {
      *
      */
 
-    public void testisWatchdogFalse() {
+    public void testisWatchdogFalse() throws GMSException  {
                 mySetUp();
 
         assertFalse(manager.isWatchdog());
@@ -151,7 +152,7 @@ public class ClusterManagerTest extends TestCase  {
      *
      */
 
-    public void testisWatchdogTrue() {
+    public void testisWatchdogTrue() throws GMSException {
                 mySetUp();
 
         watchdogManager = new ClusterManager(groupName,

@@ -62,6 +62,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.CountDownLatch;
@@ -255,13 +256,18 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         SelectorFactory.setMaxSelectors( writeSelectorPoolSize );
     }
 
+    private final CountDownLatch controllerGate = new CountDownLatch( 1 );
+    private boolean controllerGateIsReady = false;
+    private Throwable controllerGateStartupException = null;
+
+
     @Override
     @SuppressWarnings( "unchecked" )
     public synchronized void start() throws IOException {
         if( running )
             return;
         super.start();
-        final CountDownLatch controllerGate = new CountDownLatch( 1 );
+
         ControllerStateListener controllerStateListener = new ControllerStateListener() {
 
             public void onStarted() {
@@ -270,6 +276,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             public void onReady() {
                 if( LOG.isLoggable( Level.FINER ) )
                     LOG.log( Level.FINER, "GrizzlyNetworkManager is ready" );
+                controllerGateIsReady = true;
                 controllerGate.countDown();
             }
 
@@ -277,16 +284,41 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                 controllerGate.countDown();
             }
 
-            public void onException( Throwable throwable ) {
-                controllerGate.countDown();
+            @Override
+            public void onException(Throwable e) {
+                if (controllerGate.getCount() > 0) {
+                    getLogger().log(Level.SEVERE, "Exception during " +
+                            "starting the controller", e);
+                    controllerGate.countDown();
+                    controllerGateStartupException = e;
+                } else {
+                    getLogger().log(Level.SEVERE, "Exception during " +
+                            "controller processing", e);
+                }
             }
         };
         controller.addStateListener( controllerStateListener );
         new Thread( controller ).start();
+        long controllerStartTime = System.currentTimeMillis();
         try {
             controllerGate.await( startTimeout, TimeUnit.MILLISECONDS );
         } catch( InterruptedException e ) {
             e.printStackTrace();
+        }
+        long durationInMillis = System.currentTimeMillis() - controllerStartTime;
+
+        // do not continue if controller did not start.
+        if (!controller.isStarted()  ||  ! controllerGateIsReady) {
+            if (controllerGateStartupException != null ) {
+                throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms",
+                        controllerGateStartupException);
+            } else {
+                throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms");
+
+            }
+        } else if (controllerGateIsReady) {
+            // todo: make this FINE in future.
+            getLogger().config("Grizzly controller started and is ready in " + durationInMillis + " ms");
         }
         tcpSender = new GrizzlyTCPConnectorWrapper( controller, writeTimeout, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,

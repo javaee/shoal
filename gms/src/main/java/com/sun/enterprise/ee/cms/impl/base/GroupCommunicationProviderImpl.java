@@ -143,7 +143,7 @@ public class GroupCommunicationProviderImpl implements
     public void initializeGroupCommunicationProvider(final String memberName,
                                                      final String groupName,
                                                      final Map<String, String> identityMap,
-                                                     final Map configProperties) {
+                                                     final Map configProperties) throws GMSException {
         final List<ClusterViewEventListener> cvListeners =
                 new ArrayList<ClusterViewEventListener>();
         if (! getGMSContext().isWatchdog()) {
@@ -159,6 +159,7 @@ public class GroupCommunicationProviderImpl implements
                 configProperties,
                 cvListeners,//View Listener
                 cmListeners);//MessageListener
+
     }
 
     /**

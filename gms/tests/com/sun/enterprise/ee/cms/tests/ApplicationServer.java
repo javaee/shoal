@@ -168,12 +168,15 @@ public class ApplicationServer implements Runnable, CallBack {
 
     public void startGMS() {
         logger.log(Level.FINE, "ApplicationServer: Starting GMS service");
-        try{
-            gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
-            gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
+        gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
+        gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
+        try {
             gms.join();
-        } catch (GMSException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+            logger.info("joined group " + gms.getGroupName()  + " groupLeader: " + gms.getGroupHandle().getGroupLeader());
+            
+        } catch (GMSException ge) {
+            logger.severe("failed to join gms group " + gms.getGroupName());
+            throw new IllegalStateException("failed to join gms group" + gms.getGroupName());
         }
     }
 

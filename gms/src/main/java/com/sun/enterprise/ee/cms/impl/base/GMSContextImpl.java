@@ -146,9 +146,16 @@ public class GMSContextImpl extends GMSContextBase {
         idMap.put(CustomTagNames.GROUP_NAME.toString(), groupName);
         idMap.put(CustomTagNames.START_TIME.toString(), startTime.toString());
 
-        groupCommunicationProvider.initializeGroupCommunicationProvider(
-                serverToken, groupName, idMap, configProperties);
-        groupCommunicationProvider.join();
+        try {
+            groupCommunicationProvider.initializeGroupCommunicationProvider(
+                    serverToken, groupName, idMap, configProperties);
+            groupCommunicationProvider.join();
+        } catch (Throwable t) {
+
+            // transport can throw IllegalStateException if not able to start up correctly.
+            GMSException ge = new GMSException("failed to join group " + groupName, t);
+            throw ge;
+        }
     }
 
     public void leave(final GMSConstants.shutdownType shutdownType) {

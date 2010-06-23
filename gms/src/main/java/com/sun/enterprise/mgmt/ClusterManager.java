@@ -36,6 +36,7 @@
 
 package com.sun.enterprise.mgmt;
 
+import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
@@ -115,7 +116,7 @@ public class ClusterManager implements MessageListener {
                           final Map<String, String> identityMap,
                           final Map props,
                           final List<ClusterViewEventListener> viewListeners,
-                          final List<ClusterMessageListener> messageListeners) {
+                          final List<ClusterMessageListener> messageListeners) throws GMSException {
         this.memberType = (String)identityMap.get( CustomTagNames.MEMBER_TYPE.toString());
         this.groupName = groupName;
         this.instanceName = instanceName;
@@ -134,7 +135,9 @@ public class ClusterManager implements MessageListener {
             netManager.initialize( groupName, instanceName, props);
             netManager.start();
         } catch (IOException ioe) {
-            LOG.log(Level.SEVERE, ioe.getLocalizedMessage());
+            throw new GMSException("initialization failure", ioe);
+        } catch (IllegalStateException ise) {
+            throw new GMSException("initialization failure", ise);
         }
         //NetworkManagerRegistry.add(groupName, netManager);
         if(props !=null && !props.isEmpty()){
@@ -257,7 +260,7 @@ public class ClusterManager implements MessageListener {
     /**
      * @param argv none defined
      */
-    public static void main(final String[] argv) {
+    public static void main(final String[] argv) throws GMSException {
         LOG.setLevel(Level.FINEST);
         final String name = System.getProperty("INAME", "instanceName");
         final String groupName = System.getProperty("GNAME", "groupName");
