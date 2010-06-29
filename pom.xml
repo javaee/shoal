@@ -98,14 +98,12 @@
     </properties>
 
     <modules>
-        <module>gms-api</module>
-        <module>gms-impl</module>
+        <module>gms</module>
         <module>cache</module>
         <module>backing-store</module>
     </modules>
 
     <build>
-        <!-- needed to build with JDK 1.5 or higher -->
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
