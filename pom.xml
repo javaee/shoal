@@ -98,7 +98,8 @@
     </properties>
 
     <modules>
-        <module>gms</module>
+        <module>gms-api</module>
+        <module>gms-impl</module>
         <module>cache</module>
         <module>backing-store</module>
     </modules>

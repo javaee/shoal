@@ -38,6 +38,7 @@ package com.sun.enterprise.ee.cms.core;
 
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 
+import com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType;
 import java.util.*;
 
 /**
@@ -123,7 +124,7 @@ public class GMSFactory {
             throw new RuntimeException("Server Token was not specified and cannot be null");
         if ( groupName == null )
             throw new RuntimeException("Group Name was not specified and cannot be null");
-        Runnable gms;
+        Runnable gms = null;
         //if this method is called, GMS is enabled. It is assumed that
         //calling code made checks in configurations about the enablement
         //The recommended way for calling code for this purpose is to call the
