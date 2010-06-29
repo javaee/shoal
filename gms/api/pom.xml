@@ -42,7 +42,7 @@
 
     <parent>
         <groupId>org.shoal</groupId>
-        <artifactId>shoal</artifactId>
+        <artifactId>shoal-gms</artifactId>
         <version>1.5.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -57,21 +57,6 @@
     
     <dependencies>
         <dependency>
-            <groupId>${junit.group.id}</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-utils</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-framework</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi_R4_core</artifactId>
             <scope>provided</scope>
@@ -79,7 +64,6 @@
     </dependencies>
 
     <build>
-        <!-- needed to build with JDK 1.5 or higher -->
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
