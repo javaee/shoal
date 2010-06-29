@@ -87,7 +87,23 @@
     <target name="compile" depends="init"
             description="Compile ${component.name} sources">
 
-        <javac srcdir="${src.dir}"
+        <javac srcdir="${api.src.dir}"
+               destdir="${component.classes.dir}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}"
+               source="${javac.source}"
+               target="${javac.source}"
+               deprecation="${javac.deprecation}"
+               failonerror="true"
+               includes="**/*.java"
+               excludes="com/sun/enterprise/osgi/ShoalActivator.java,**/${junit_src_dir}/**"
+               >
+            <compilerarg value="-Xlint:unchecked"/>
+            <classpath>
+                <path refid="compile.classpath"/>
+            </classpath>
+        </javac>
+        <javac srcdir="${impl.src.dir}"
                destdir="${component.classes.dir}"
                debug="${javac.debug}"
                optimize="${javac.optimize}"
@@ -137,7 +153,11 @@
 
     <target name="assemblejar" description="create ${shoal-gms.jar}" >
         <copy todir="${component.classes.dir}">
-            <fileset dir="${src.dir}"
+            <fileset dir="${api.src.dir}"
+                     includes="**/*.properties"/>
+        </copy>
+        <copy todir="${component.classes.dir}">
+            <fileset dir="${impl.src.dir}"
                      includes="**/*.properties"/>
         </copy>
 
@@ -147,7 +167,11 @@
                 <include name="**/*.class"/>
                 <include name="**/*.properties"/>
             </fileset>
-            <fileset dir="${src.dir}">
+            <fileset dir="${api.src.dir}">
+                <include name="**/*.dtd"/>
+                <include name="**/*.xml"/>
+            </fileset>
+            <fileset dir="${impl.src.dir}">
                 <include name="**/*.dtd"/>
                 <include name="**/*.xml"/>
             </fileset>
@@ -163,7 +187,12 @@
         <delete  dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}"/>
         <copy todir="${component.classes.dir}">
-            <fileset dir="${src.dir}"
+            <fileset dir="${api.src.dir}"
+                     includes="**/*.properties"/>
+            <fileset dir="${tests.dir}"/>
+        </copy>
+        <copy todir="${component.classes.dir}">
+            <fileset dir="${impl.src.dir}"
                      includes="**/*.properties"/>
             <fileset dir="${tests.dir}"/>
         </copy>
@@ -176,7 +205,11 @@
                 <exclude name="**/jxta/*.class"/>
                 <exclude name="**/jxtamgmt/*.class"/>
             </fileset>
-            <fileset dir="${src.dir}">
+            <fileset dir="${api.src.dir}">
+                <include name="**/*.dtd"/>
+                <include name="**/*.xml"/>
+            </fileset>
+            <fileset dir="${impl.src.dir}">
                 <include name="**/*.dtd"/>
                 <include name="**/*.xml"/>
             </fileset>
@@ -204,7 +237,7 @@
     <!-- javadoc -->
     <target name="gms-javadocs">
         <javadoc packagenames="com.sun.enterprise.ee.cms.*"
-                 sourcepath="${src.dir}:${tests.dir}"
+                 sourcepath="${api.src.dir}:${impl.src.dir}:${tests.dir}"
                  destdir="${javadocs.dir}"
                  version="true"
                  use="true"
@@ -246,7 +279,10 @@
             <fileset dir="${javadocs.dir}"/>
         </copy>
         <copy todir="${bundle.gms.sources}">
-            <fileset dir="${src.dir}"/>
+            <fileset dir="${api.src.dir}"/>
+        </copy>
+        <copy todir="${bundle.gms.sources}">
+            <fileset dir="${impl.src.dir}"/>
         </copy>
         <copy todir="${bundle.gms.lib}">
             <fileset file="${jxta.jar}"/>
