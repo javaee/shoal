@@ -48,73 +48,16 @@
     </parent>
     
     <artifactId>shoal-gms</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>pom</packaging>
     <name>shoal-gms</name>
 
     <properties>
         <shoal.home>${basedir}</shoal.home>
     </properties>
     
-    <dependencies>
-        <dependency>
-            <groupId>${junit.group.id}</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-utils</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-framework</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi_R4_core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
+    <modules>
+        <module>api</module>
+        <module>impl</module>
+    </modules>
 
-    <build>
-        <!-- needed to build with JDK 1.5 or higher -->
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                    <!--exclude the Shoal classes that internally call JXTA specific classes-->
-                    <excludes>
-                        <exclude>**/com/sun/enterprise/ee/cms/impl/jxta/*.java</exclude>
-                        <exclude>**/com/sun/enterprise/jxtamgmt/**/*.java</exclude>
-                        <exclude>**/com/sun/enterprise/mgmt/transport/jxta/*.java</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-Activator>com.sun.enterprise.osgi.ShoalActivator</Bundle-Activator>
-                        <Export-Package>com.sun.enterprise.*</Export-Package>
-                    </instructions>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>bundle-manifest</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>manifest</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>
