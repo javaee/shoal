@@ -71,12 +71,6 @@
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
-                    <!--exclude the Shoal classes that internally call JXTA specific classes-->
-                    <excludes>
-                        <exclude>**/com/sun/enterprise/ee/cms/impl/jxta/*.java</exclude>
-                        <exclude>**/com/sun/enterprise/jxtamgmt/**/*.java</exclude>
-                        <exclude>**/com/sun/enterprise/mgmt/transport/jxta/*.java</exclude>
-                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
@@ -86,7 +80,7 @@
                 <configuration>
                     <instructions>
                         <Bundle-Activator>com.sun.enterprise.osgi.ShoalActivator</Bundle-Activator>
-                        <Export-Package>com.sun.enterprise.*</Export-Package>
+                        <Export-Package>com.sun.enterprise.ee.cms.core;com.sun.enterprise.ee.cms.spi</Export-Package>
                     </instructions>
                 </configuration>
                 <executions>
