@@ -63,12 +63,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GroupManagementServiceImpl implements GroupManagementService, Runnable {
-    private final GMSContext ctx;
+    private GMSContext ctx;
     private Router router;
+
+    private AtomicBoolean initialized = new AtomicBoolean(false);
+
 
     //Logging related stuff
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
@@ -86,8 +90,20 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     public GroupManagementServiceImpl(final String serverToken, final String groupName,
                                       final GroupManagementService.MemberType membertype,
                                       final Properties properties) {
-        ctx = GMSContextFactory.produceGMSContext(serverToken, groupName, membertype, properties);
-        router = ctx.getRouter();
+        initialize(serverToken, groupName, membertype, properties);
+    }
+
+    public GroupManagementServiceImpl() {
+
+    }
+
+    public void initialize(final String serverToken, final String groupName,
+                                      final GroupManagementService.MemberType membertype,
+                                      final Properties properties){
+        if (initialized.compareAndSet(false, true)) {
+            ctx = GMSContextFactory.produceGMSContext(serverToken, groupName, membertype, properties);
+            router = ctx.getRouter();
+        }
     }
 
     public void run() {

@@ -36,10 +36,11 @@
 
 package com.sun.enterprise.ee.cms.core;
 
-import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 
 import com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType;
 import java.util.*;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * <p>This is the entry point to GMS for the parent application that is
@@ -78,8 +79,10 @@ import java.util.*;
   */
  
 public class GMSFactory {
-    private static Hashtable<String, Runnable> groups =
-            new Hashtable<String, Runnable>();
+    static private Logger LOG = Logger.getLogger("ShoalLogger");
+
+    private static Hashtable<String, GroupManagementService> groups =
+            new Hashtable<String, GroupManagementService>();
     private static Map<String, Boolean> gmsEnabledMap =
             new HashMap<String, Boolean>();
     private static String memberToken;
@@ -124,7 +127,7 @@ public class GMSFactory {
             throw new RuntimeException("Server Token was not specified and cannot be null");
         if ( groupName == null )
             throw new RuntimeException("Group Name was not specified and cannot be null");
-        Runnable gms = null;
+        GroupManagementService gms = null;
         //if this method is called, GMS is enabled. It is assumed that
         //calling code made checks in configurations about the enablement
         //The recommended way for calling code for this purpose is to call the
@@ -132,13 +135,14 @@ public class GMSFactory {
         gmsEnabledMap.put(groupName, Boolean.TRUE);
         try { //sanity check: if this group instance is
             // already created return that instance
-            gms = (Runnable) getGMSModule(groupName);
+            gms = getGMSModule(groupName);
         } catch (GMSException e) {
-            gms = new GroupManagementServiceImpl(serverToken, groupName, memberType, properties) ;
+            gms = getGroupManagementServiceInstance();
+            gms.initialize(serverToken, groupName, memberType, properties) ;
             memberToken = serverToken;
             groups.put(getCompositeKey(groupName), gms );
         }
-        return gms;
+        return (Runnable)gms;
     }
 
     /**
@@ -159,7 +163,7 @@ public class GMSFactory {
         }
         final String key = getCompositeKey(groupName);
         if(groups.containsKey(key))
-            return (GroupManagementService)groups.get(key);
+            return groups.get(key);
         else if(!isGMSEnabled(groupName)){
             throw new GMSNotEnabledException(
                             new StringBuffer()
@@ -243,4 +247,61 @@ public class GMSFactory {
             }
         }
     }
+
+    private static GroupManagementService findByServiceLoader() {
+           GroupManagementService groupManagementService = null;
+           ServiceLoader<GroupManagementService> loader = ServiceLoader.load(GroupManagementService.class);
+           Iterator<GroupManagementService> iter = loader.iterator();
+
+           if (iter.hasNext())  {
+               try {
+                   groupManagementService = iter.next().getClass().newInstance();
+               } catch (Throwable t) {
+                   LOG.log(Level.WARNING, "error instantiating GroupManagementService service", t);
+               }
+           }
+           if (groupManagementService == null) {
+                LOG.log(Level.SEVERE, "fatal error, no GroupManagementService implementations found");
+           } else {
+               if (LOG.isLoggable(Level.CONFIG)) {
+                   LOG.log(Level.CONFIG, "findByServiceLoader() loaded service " + groupManagementService.getClass().getName());
+               }
+           }
+           return groupManagementService;
+       }
+
+    private static GroupManagementService findByClassLoader(String classname) {
+        GroupManagementService gmsImpl = null;
+        // for jdk 5.  just use class loader.
+        try {
+            Class GmsImplClass = Class.forName(classname);
+            gmsImpl = (GroupManagementService) GmsImplClass.newInstance();
+            if (gmsImpl == null) {
+                LOG.log(Level.SEVERE, "fatal error, no GroupManagementService implementations found");
+            } else {
+                if (LOG.isLoggable(Level.CONFIG)) {
+                    LOG.log(Level.CONFIG, "findByClassLoader() loaded service " + gmsImpl.getClass().getName());
+                }
+            }
+            } catch(Throwable x){
+                LOG.log(Level.SEVERE, "fatal error instantiating GroupManagementService service", x);
+            }
+            return gmsImpl;
+        }
+
+       public static GroupManagementService getGroupManagementServiceInstance() {
+           GroupManagementService gmsImpl = null;
+           try {
+               gmsImpl = findByServiceLoader();
+           } catch (Throwable t) {
+               // jdk 5 will end up here.
+           }
+           if (gmsImpl == null) {
+               String classname = null;
+               classname = "com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl";
+               gmsImpl = findByClassLoader(classname);
+           }
+           return gmsImpl;
+       }
+
 }

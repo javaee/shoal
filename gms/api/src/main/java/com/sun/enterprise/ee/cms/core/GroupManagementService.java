@@ -39,6 +39,7 @@ package com.sun.enterprise.ee.cms.core;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * Provides API for joining, and leaving the group and to register Action Factories of
@@ -390,5 +391,10 @@ public interface GroupManagementService {
      * @return the Instance name for this context
      */
     public String getInstanceName();
+
+
+    public void initialize(final String serverToken, final String groupName,
+                           final GroupManagementService.MemberType membertype,
+                           final Properties properties);
 
 }
