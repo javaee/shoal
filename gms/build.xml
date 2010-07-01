@@ -83,6 +83,29 @@
         <pathelement location="${grizzly-utils.jar}"/>
     </path>
 
+    <!--  <target name="getlastgrizzlyjars" -->
+    <target name="updategrizzlyjars"
+            description="Getting lastest grizzly jars from maven repository">
+        <xmlproperty file="../pom.xml"/>
+        <pathconvert property="grizzlygroupid" description="Replace '.' with '/' and assign value to new property">
+            <path path="${project.properties.grizzly.group.id}"/>
+            <!--Pathconvert will try to add the root directory to the "path", so replace with empty string -->
+            <map from="${basedir}" to="" />
+            <filtermapper>
+                <replacestring from="." to="${file.separator}"/>
+            </filtermapper>
+        </pathconvert>
+        <echo message="Updating grizzly-utils.jar from maven repository" />
+        <property name="grizzlyutiljar" value="${maven.repository}${grizzlygroupid}${file.separator}grizzly-utils${file.separator}${project.properties.grizzly.version}${file.separator}grizzly-utils-${project.properties.grizzly.version}.jar"/>
+        <delete file="lib${file.separator}grizzly-utils.jar"/>
+        <copy file="${grizzlyutiljar}" tofile="lib${file.separator}grizzly-utils.jar"/>
+        <echo message="Updating grizzly-framework.jar from maven repository" />
+        <property name="grizzlyframeworkjar" value="${maven.repository}${grizzlygroupid}${file.separator}grizzly-framework${file.separator}${project.properties.grizzly.version}${file.separator}grizzly-framework-${project.properties.grizzly.version}.jar"/>
+        <delete file="lib${file.separator}grizzly-framework.jar"/>
+        <copy file="${grizzlyframeworkjar}" tofile="lib${file.separator}grizzly-framework.jar"/>
+    </target>
+
+
     <!-- compile: compile the sources -->
     <target name="compile" depends="init"
             description="Compile ${component.name} sources">
