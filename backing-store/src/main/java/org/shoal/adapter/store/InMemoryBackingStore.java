@@ -91,17 +91,29 @@ public class InMemoryBackingStore<K extends Serializable, V extends Serializable
 
     @Override
     public V load(K key, String version) throws BackingStoreException {
-        return dataStore.get(key);
+        try {
+            return dataStore.get(key);
+        } catch (DataStoreException dsEx) {
+            throw new BackingStoreException("Error during load: " + key, dsEx);
+        }
     }
 
     @Override
     public String save(K key, V value, boolean isNew) throws BackingStoreException {
-        return dataStore.put(key, value);
+        try {
+            return dataStore.put(key, value);
+        } catch (DataStoreException dsEx) {
+            throw new BackingStoreException("Error during save: " + key, dsEx);
+        }
     }
 
     @Override
     public void remove(K key) throws BackingStoreException {
-        dataStore.remove(key);
+        try {
+            dataStore.remove(key);
+        } catch (DataStoreException dsEx) {
+            throw new BackingStoreException("Error during remove: " + key, dsEx);
+        }
     }
 
     @Override
@@ -121,7 +133,11 @@ public class InMemoryBackingStore<K extends Serializable, V extends Serializable
 
     @Override
     public void updateTimestamp(K key, long time) throws BackingStoreException {
-        dataStore.touch(key, time);
+        try {
+            dataStore.touch(key, Long.MAX_VALUE - 1, time, 30 * 60 * 1000);
+        } catch (DataStoreException dsEx) {
+            throw new BackingStoreException("Error during load: " + key, dsEx);
+        }
     }
 
 }
