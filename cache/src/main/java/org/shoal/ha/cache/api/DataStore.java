@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
+import java.io.Serializable;
 import java.util.Collection;
 
 /**
@@ -53,7 +54,8 @@ public interface DataStore<K, V> {
      * @param v The value. The value must be either serializable of the DataStoreEntryHelper
      *  that is associated with this cache must be able to transform this into a serializable.
      */
-    public String put(K k, V v);
+    public String put(K k, V v)
+            throws DataStoreException;
 
     /**
      * Returns the value to which the specified key is mapped in this cache.
@@ -61,34 +63,37 @@ public interface DataStore<K, V> {
      * @param k  The key
      * @return The value if the association exists or null.
      */
-    public V get(K k);
+    public V get(K k)
+            throws DataStoreException;
 
     /**
      * Removes the mapping between the key and the object.
      *
      * @param k The key
      */
-    public void remove(K k);
+    public void remove(K k)
+            throws DataStoreException;
 
     /**
      * Updates the timestamp associated with this entry. see #{removeIdleEntries}
      *
      * @param k The key
      */
-    public void touch(K k, long ttl);
+    public String touch(K k, long version, long timeStamp, long ttl)
+            throws DataStoreException;
 
     /**
      * Performs an incremental update of the value associated with this key. The
-     *  DataStore's DataStoreEntryHelper.updateDelta() method will be called with the key,
+     *  DataStore's DataStoreEntryHelper.updateState() method will be called with the key,
      *  the DataStoreEnrty and the delta. If no value is associated with K, then a
-     *  hollow DataStoreEntry will be passed to DataStoreEntryHelper.updateDelta().
+     *  hollow DataStoreEntry will be passed to DataStoreEntryHelper.updateState().
      *
      * @param k The key
      * @param delta The object whose eval() method will be called.
      *
      * @see #{DataStoreEntryEvaluator.eval}
      */
-    public void updateDelta(K k, Object delta);
+    public String updateDelta(K k, Serializable delta);
 
     /**
      * Finds / Retrieves values that satisfy a criteria as dictated by the evaluator.

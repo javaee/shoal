@@ -36,25 +36,25 @@
 
 package org.shoal.ha.cache.impl.util;
 
+import org.shoal.ha.cache.api.HashableKey;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.mapper.KeyMapper;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author Mahesh Kannan
  */
-public class DefaultKeyMapper
-        implements KeyMapper, GroupMemberEventListener {
+public class DefaultKeyMapper<K>
+        implements KeyMapper<K>, GroupMemberEventListener {
 
     private String myName;
 
     private String groupName;
-
-    private boolean includeMe;
-
-    private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private ReentrantReadWriteLock.ReadLock rLock;
 
@@ -62,95 +62,39 @@ public class DefaultKeyMapper
 
     private volatile TreeSet<String> currentMemberSet = new TreeSet<String>();
 
-    private volatile TreeSet<String> currentMemberSetMinusMe = new TreeSet<String>();
+    private volatile String[] members = new String[0];
 
-    private volatile String[] currentView = new String[0];
-
-    private volatile String[] previousView = new String[0];
-
-    private volatile String[] currentViewMinusMe = new String[0];
-
-    private volatile String currentViewCausedBy = "";
-
-    private static final String UNMAPPED = "UNMAPPED__" + DefaultKeyMapper.class.getName();
-
-    private boolean debug;
 
     public DefaultKeyMapper(String myName, String groupName) {
         this.myName = myName;
         this.groupName = groupName;
-        this.currentViewCausedBy = myName;
+        ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+        
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
-
-        registerInstance(myName);
     }
 
     @Override
-    public String getMappedInstance(String groupName, Object key1) {
-        rLock.lock();
+    public String getMappedInstance(String groupName, K key1) {
+        int hc = key1.hashCode();
+        if (key1 instanceof HashableKey) {
+            HashableKey k = (HashableKey) key1;
+            hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
+        }
+        hc = Math.abs(hc);
+
         try {
-            if (currentView.length == 0) {
-                return UNMAPPED;
-            }
-            int hc = Math.abs(getHashCode(key1));
-            String mappedInstance = currentView[hc % (currentView.length)];
-
-            //If the mapped instance is the current instance, then
-            // both active and replica lives in the same instance!!
-
-            if (mappedInstance.equals(myName)) {
-                if (currentViewMinusMe.length == 0) {
-                    return UNMAPPED;
-                }
-                mappedInstance = currentViewMinusMe[hc % currentViewMinusMe.length];
-                //System.out.println("Mapping(*) Key: " + key1 + " => " + hc + ";   " + mappedInstance);
-            } else {
-                //System.out.println("Mapping Key: " + key1 + " => " + hc + ";   " + mappedInstance);
-            }
-
-            return mappedInstance;
+            rLock.lock();
+            return members.length == 0 ? null : members[hc % (members.length)];
         } finally {
             rLock.unlock();
         }
     }
 
-    public String findReplicaInstance(String groupName, Object key1) {
-        rLock.lock();
-        try {
-            if (currentViewCausedBy.equals(myName)) {
-                return getMappedInstance(groupName, key1);
-            }
-            if (previousView.length == 0) {
-                return UNMAPPED;
-            }
-            int hc = Math.abs(getHashCode(key1));
-            String mappedInstance = previousView[hc % (previousView.length)];
-
-            if (debug) {
-                printMemberStates();
-            }
-            if (mappedInstance.equals(currentViewCausedBy)) {
-                mappedInstance = currentView[hc % currentView.length];
-                if (debug) {
-                    System.out.println("REPLICA(*) Key: " + key1 + " => " + hc + ";   " + mappedInstance);
-                }
-            } else {
-                if (debug) {
-                    System.out.println("REPLICA Key: " + key1 + " => " + hc + ";   " + mappedInstance);
-                }
-            }
-
-            return mappedInstance;
-        } finally {
-            rLock.unlock();
-        }
+    @Override
+    public String findReplicaInstance(String groupName, K key) {
+        return getMappedInstance(groupName, key);
     }
-
-//    @Override
-//    public String[] getMappedInstances(String groupName, K key, int count) {
-//        return new String[]{getMappedInstance(groupName, key)};
-//    }
 
     @Override
     public void memberReady(String instanceName, String groupName) {
@@ -161,14 +105,13 @@ public class DefaultKeyMapper
 
     @Override
     public void memberLeft(String instanceName, String groupName, boolean isShutdown) {
-        if (this.groupName.equals(groupName)) {
+        if (this.groupName.equals(groupName) && (!instanceName.equals(myName))) {
             removeInstance(instanceName);
         }
     }
 
-    private int getHashCode(Object val) {
+    private static int getDigestHashCode(String val) {
         int hc = val.hashCode();
-        /*
         try {
             String hcStr = "_" + val.hashCode() + "_";
             MessageDigest dig = MessageDigest.getInstance("MD5");
@@ -181,95 +124,67 @@ public class DefaultKeyMapper
         } catch (NoSuchAlgorithmException nsaEx) {
             hc = val.hashCode();
         }
-        */
+
         return hc;
     }
 
     public void registerInstance(String inst) {
-        wLock.lock();
-        try {
-            if (!currentMemberSet.contains(inst)) {
-                previousView = currentView;
+        if ((!currentMemberSet.contains(inst)) && (!inst.equals(myName))) {
+            try {
+                wLock.lock();
                 currentMemberSet.add(inst);
-                currentView = currentMemberSet.toArray(new String[0]);
-                currentViewCausedBy = inst;
 
-                if ((!currentMemberSetMinusMe.contains(inst)) && (!inst.equals(myName))) {
-                    currentMemberSetMinusMe.add(inst);
-                    currentViewMinusMe = currentMemberSetMinusMe.toArray(new String[0]);
-                }
+                members = currentMemberSet.toArray(new String[0]);
+                printMemberStates();
+            } finally {
+                wLock.unlock();
             }
-            printMemberStates();
-        } finally {
-            wLock.unlock();
         }
     }
 
     public synchronized void removeInstance(String inst) {
         wLock.lock();
         try {
-            if (currentMemberSet.contains(inst)) {
-                previousView = currentView;
-                currentViewCausedBy = inst;
-                currentMemberSet.remove(inst);
-                currentView = currentMemberSet.toArray(new String[0]);
-
-                if ((currentMemberSetMinusMe.contains(inst)) && (!inst.equals(myName))) {
-                    currentMemberSetMinusMe.remove(inst);
-                    currentViewMinusMe = currentMemberSetMinusMe.toArray(new String[0]);
-                }
-            }
+            currentMemberSet.remove(inst);
+            members = currentMemberSet.toArray(new String[0]);
             printMemberStates();
         } finally {
             wLock.unlock();
         }
     }
 
-    public void setDebug(boolean val) {
-        debug = val;
-    }
-
     public void printMemberStates() {
-        StringBuilder sbuf = new StringBuilder("**DefaultKeyMapper:: Members[");
-        for (String st : currentView) {
-            sbuf.append("<" + st + "> ");
+        System.out.print("DefaultKeyMapper:: Members[");
+        for (String st : members) {
+            System.out.print("<" + st + "> ");
         }
-        sbuf.append("];  PreviousMembers[");
-        for (String st : previousView) {
-            sbuf.append("<" + st + "> ");
-        }
-        sbuf.append("];  currentViewCausedBy: " + currentViewCausedBy);
-
-        System.out.println(sbuf.toString());
+        System.out.println("]");
     }
 
-    private static class ReplicaState
-            implements Comparable<ReplicaState> {
-        String name;
-        boolean active;
+    private static void mapTest(DefaultKeyMapper km) {
+        String[] keys = new String[]{"Key0", "Key1", "Key2"};
 
-        ReplicaState(String name, boolean b) {
-            this.name = name;
-            active = b;
+        for (String key : keys) {
+            System.out.println("\t" + key + " => " + km.getMappedInstance("g1", key));
         }
 
-        @Override
-        public int compareTo(ReplicaState s) {
-            return name.compareTo(s.name);
-        }
+        System.out.println();
+    }
 
-        public int hashCode() {
-            return name.hashCode();
-        }
+    public static void main(String[] args) {
+        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
-        public boolean equals(Object other) {
-            ReplicaState st = (ReplicaState) other;
-            return st.name.equals(name);
-        }
+        km.registerInstance("n0");
+        km.registerInstance("n1");
+        mapTest(km);
 
-        public String toString() {
-            return "<" + name + ":" + active + ">";
-        }
+        km.registerInstance("inst0");
+        km.registerInstance("inst1");
+        km.registerInstance("instancen0");
+        km.registerInstance("instancen1");
+        mapTest(km);
+
+        km.printMemberStates();
     }
 
 }

@@ -42,6 +42,9 @@ import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.impl.command.CommandManager;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author Mahesh Kannan
  */
@@ -66,6 +69,8 @@ public class DataStoreContext<K, V> {
     private GroupService groupService;
 
     private ReplicaStore<K, V> replica;
+
+    private boolean cacheLocally;
 
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
         this.serviceName = serviceName;
@@ -128,5 +133,13 @@ public class DataStoreContext<K, V> {
 
     public ReplicaStore<K, V> getReplicaStore() {
         return replica;
+    }
+
+    public boolean isCacheLocally() {
+        return cacheLocally;
+    }
+
+    public void setCacheLocally(boolean cacheLocally) {
+        this.cacheLocally = cacheLocally;
     }
 }

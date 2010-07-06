@@ -36,7 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
-import org.shoal.ha.cache.impl.store.DefaultDataStoreEntryHelper;
+import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
 import org.shoal.ha.cache.impl.util.StringKeyHelper;
 import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
 import org.shoal.ha.group.GroupMemberEventListener;
@@ -53,12 +53,14 @@ import java.io.Serializable;
 public class DataStoreFactory {
 
     public static DataStore<String, Serializable> createDataStore(String storeName, String instanceName, String groupName) {
-        DataStoreEntryHelper<String, Serializable> helper =
-                new DefaultDataStoreEntryHelper<String, Serializable>(Thread.currentThread().getContextClassLoader());
         DataStoreKeyHelper<String> keyHelper = new StringKeyHelper();
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
 
         Class<Serializable> vClazz = Serializable.class;
+        ClassLoader loader = vClazz.getClassLoader();
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
+        }
         DataStoreConfigurator<String, Serializable> conf = new DataStoreConfigurator<String, Serializable>();
         conf.setStartGMS(true);
         conf.setStoreName(storeName)
@@ -66,10 +68,10 @@ public class DataStoreFactory {
                 .setGroupName(groupName)
                 .setKeyClazz(String.class)
                 .setValueClazz(vClazz)
-                .setClassLoader(vClazz.getClassLoader())
-                .setDataStoreEntryHelper(helper)
+                .setClassLoader(loader)
                 .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
+                .setCacheLocally(true)
                 .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         return createDataStore(conf);
@@ -79,8 +81,6 @@ public class DataStoreFactory {
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader) {
 
         DefaultObjectInputOutputStreamFactory factory = new DefaultObjectInputOutputStreamFactory();
-        DataStoreEntryHelper<K, V> helper =
-                new DefaultDataStoreEntryHelper<K, V>(vClazz.getClassLoader());
         DataStoreKeyHelper<K> keyHelper = new ObjectKeyHelper(loader, factory);
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
         
@@ -92,7 +92,6 @@ public class DataStoreFactory {
                 .setKeyClazz(keyClazz)
                 .setValueClazz(vClazz)
                 .setClassLoader(loader)
-                .setDataStoreEntryHelper(helper)
                 .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
                 .setObjectInputOutputStreamFactory(factory);
@@ -122,7 +121,8 @@ public class DataStoreFactory {
 
     public static <K, V> DataStore<K, V> createDataStore(DataStoreConfigurator<K, V> conf) {
         GroupService gs = GroupServiceFactory.getInstance().getGroupService(conf.getInstanceName(), conf.getGroupName(), conf.isStartGMS());
-        
+
+        System.out.println("*** BEFORE: " + conf);
         if (conf.getKeyMapper() == null) {
             conf.setKeyMapper(new DefaultKeyMapper(conf.getInstanceName(), conf.getGroupName()));
         }
@@ -132,22 +132,26 @@ public class DataStoreFactory {
             gs.registerGroupMemberEventListener(groupListener);
         }
 
-        if (conf.getDataStoreEntryHelper() == null) {
-            conf.setDataStoreEntryHelper(
-                new DefaultDataStoreEntryHelper<K, V>(conf.getClassLoader()));
-        }
-
         if (conf.getObjectInputOutputStreamFactory() == null) {
             conf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
+        }
+
+        if (conf.getDataStoreEntryHelper() == null) {
+            conf.setDataStoreEntryHelper(
+                new DefaultDataStoreEntryHelper<K, V>(conf.getObjectInputOutputStreamFactory(),
+                        conf.getClassLoader(), 10 * 60 * 1000));
         }
 
         if (conf.getDataStoreKeyHelper() == null) {
             conf.setDataStoreKeyHelper(new ObjectKeyHelper<K>(
                     conf.getClassLoader(), conf.getObjectInputOutputStreamFactory()));
         }
-        
-        return new ReplicatedDataStore<K, V>(conf.getStoreName(), gs, conf.getClassLoader(),
-                conf.getDataStoreEntryHelper(), conf.getDataStoreKeyHelper(), conf.getKeyMapper());
+
+        System.out.println("*** AFTER: " + conf);
+
+        DataStore<K, V> ds = new ReplicatedDataStore<K, V>(conf, gs);
+
+        return ds;
     }
 
 }

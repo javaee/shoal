@@ -55,4 +55,6 @@ public class ReplicationCommandOpcode {
 
     public static final byte REPLICATION_FRAME_PAYLOAD = 51;
 
+    public static final byte REMOVE_EXPIRED = 39;
+
 }

@@ -143,4 +143,8 @@ public abstract class Command<K, V> {
 
     public abstract void execute(DataStoreContext<K, V> ctx);
 
+    public void postTransmit(String target, boolean status) {
+
+    }
+
 }

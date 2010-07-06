@@ -124,6 +124,7 @@ public class LoadRequestCommand<K, V>
 
     @Override
     public void execute(DataStoreContext<K, V> ctx) {
+        try {
         DataStoreEntry<K, V> e = ctx.getReplicaStore().get(key);
         if (!originatingInstance.equals(ctx.getInstanceName())) {
             LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
@@ -133,12 +134,21 @@ public class LoadRequestCommand<K, V>
         } else {
             resp.setResult(e);
         }
+        } catch (DataStoreException dsEx) {
+            resp.setException(dsEx);
+        }
     }
 
     public DataStoreEntry<K, V> getResult()
             throws DataStoreException {
         try {
-            return (DataStoreEntry<K, V>) future.get(15000, TimeUnit.MILLISECONDS);
+            Object result = future.get(15000, TimeUnit.MILLISECONDS);
+            if (result instanceof Exception) {
+                throw new DataStoreException((Exception) result);
+            }
+            return (DataStoreEntry<K, V>) result;
+        } catch (DataStoreException dsEx) {
+            throw dsEx;
         } catch (InterruptedException inEx) {
             System.out.println("Error: InterruptedException while waiting for result");
             throw new DataStoreException(inEx);

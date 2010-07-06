@@ -34,70 +34,48 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.interceptor;
+package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.command.CommandManager;
+import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
+import java.io.IOException;
 
 /**
  * @author Mahesh Kannan
- *
  */
-public abstract class ExecutionInterceptor<K, V> {
+public class DirectedRemoveCommand<K, V>
+    extends RemoveCommand<K, V> {
 
-    private DataStoreContext<K, V> dsc;
-    
-    private CommandManager<K, V> cm;
-    
-    private ExecutionInterceptor<K, V> next;
-  
-    private ExecutionInterceptor<K, V> prev;
-    
-    public final void initialize(DataStoreContext<K, V> dsc) {
-        this.dsc = dsc;
-        this.cm = dsc.getCommandManager();
+    private String targetName;
+
+    public DirectedRemoveCommand() {
+        super();
     }
 
-    public final DataStoreContext<K, V> getDataStoreContext() {
-        return dsc;
+    public String getTargetName() {
+        return targetName;
     }
 
-    public CommandManager getCm() {
-        return cm;
+    public void setTargetName(String targetName) {
+        this.targetName = targetName;
     }
 
-    public final void setNext(ExecutionInterceptor<K, V> next) {
-        this.next = next;
+    @Override
+    protected DirectedRemoveCommand<K, V> createNewInstance() {
+        return new DirectedRemoveCommand<K, V>();
     }
 
-    public final void setPrev(ExecutionInterceptor<K, V> prev) {
-        this.prev = prev;
+    @Override
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(targetName);
+        System.out.println("DirectedRemoveCommand[" + getDataStoreContext().getServiceName() + "]: attempting to transmit(" + getKey() + ") to: " + getTargetName());
     }
 
-    public final ExecutionInterceptor<K, V> getNext() {
-        return next;    
-    }
-    
-    public final ExecutionInterceptor<K, V> getPrev() {
-        return prev;
-    }
-
-    public void onTransmit(Command<K, V> cmd) {
-        ExecutionInterceptor n = getNext();
-        if (n != null) {
-            n.onTransmit(cmd);
-        }
-    }
-
-    public void onReceive(Command<K, V> cmd) {
-        ExecutionInterceptor<K, V> p = getPrev();
-        if (p != null) {
-            p.onReceive(cmd);
-        }  else {
-            cmd.execute(dsc);
-        }
+    @Override
+    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
+        trans.getDataStoreKeyHelper().writeKey(ros, getKey());
     }
 
 }

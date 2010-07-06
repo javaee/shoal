@@ -106,4 +106,9 @@ public class SaveCommand<K, V>
 //        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: saved(" + k + ")");
     }
 
+    @Override
+    public void postTransmit(String target, boolean status) {
+        super.postTransmit(target, status);
+        
+    }
 }

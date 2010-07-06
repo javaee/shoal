@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Mahesh Kannan
  */
 public class CommandMonitorInterceptor<K, V>
-    extends ExecutionInterceptor<K, V> {
+    extends AbstractCommandInterceptor<K, V> {
 
     private AtomicInteger transCount = new AtomicInteger();
 

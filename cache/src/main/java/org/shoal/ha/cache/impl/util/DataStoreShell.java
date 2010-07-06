@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.util;
 
 import org.shoal.ha.cache.api.DataStore;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.DataStoreFactory;
 
 import java.io.BufferedReader;
@@ -49,8 +50,7 @@ import java.util.StringTokenizer;
 /**
  * @author Mahesh Kannan
  */
-public class
-        DataStoreShell {
+public class DataStoreShell {
 
     DataStore ds;
 
@@ -95,7 +95,8 @@ public class
         System.out.flush();
     }
 
-    private void execute(String command, String[] params) {
+    private void execute(String command, String[] params)
+        throws DataStoreException {
 
         if ("put".equalsIgnoreCase(command)) {
             ds.put(params[0], params[1]);

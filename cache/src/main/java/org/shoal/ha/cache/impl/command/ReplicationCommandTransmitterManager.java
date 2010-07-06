@@ -38,7 +38,7 @@ package org.shoal.ha.cache.impl.command;
 
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.interceptor.ExecutionInterceptor;
+import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.util.Arrays;
@@ -52,7 +52,7 @@ import java.util.logging.Logger;
  *
  */
 public class ReplicationCommandTransmitterManager<K, V>
-        extends ExecutionInterceptor<K, V> {
+        extends AbstractCommandInterceptor<K, V> {
 
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 

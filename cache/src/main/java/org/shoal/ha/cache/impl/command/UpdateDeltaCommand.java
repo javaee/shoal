@@ -39,8 +39,10 @@ package org.shoal.ha.cache.impl.command;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * @author Mahesh Kannan
@@ -48,14 +50,23 @@ import java.io.IOException;
 public class UpdateDeltaCommand<K, V>
     extends Command<K, V> {
 
-    private Object obj;
+    private K k;
 
-    public UpdateDeltaCommand() {
+    private Serializable obj;
+
+    UpdateDeltaCommand() {
         super(ReplicationCommandOpcode.SAVE_WITH_DSEE);
     }
 
-    public void setObject(Object obj) {
+    public UpdateDeltaCommand(K k, Serializable obj) {
+        super(ReplicationCommandOpcode.SAVE_WITH_DSEE);
+        this.k = k;
         this.obj = obj;
+    }
+
+    @Override
+    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), k));
     }
 
     @Override
@@ -64,15 +75,21 @@ public class UpdateDeltaCommand<K, V>
     }
 
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros)
-        throws IOException {
-        trans.getDataStoreEntryHelper().writeObject(ros, obj);
+    public void writeCommandPayload(DataStoreContext<K, V> ctx, ReplicationOutputStream ros)
+        throws IOException {int keyLenMark = ros.mark();
+        ros.write(Utility.intToBytes(0));
+        ctx.getDataStoreKeyHelper().writeKey(ros, k);
+        int valueOffset = ros.mark() - keyLenMark;
+        ros.reWrite(keyLenMark, Utility.intToBytes(valueOffset));
+        ctx.getDataStoreEntryHelper().writeObject(ros, obj);
     }
 
     @Override
-    public void readCommandPayload(DataStoreContext<K,V> trans, byte[] data, int offset)
+    public void readCommandPayload(DataStoreContext<K,V> ctx, byte[] data, int offset)
         throws DataStoreException {
-        trans.getDataStoreEntryHelper().readObject(data, offset);
+        int valueOffset = Utility.bytesToInt(data, offset);
+        k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
+        obj = (Serializable) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
     }
 
     @Override

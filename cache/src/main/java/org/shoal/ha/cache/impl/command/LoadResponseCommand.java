@@ -107,7 +107,7 @@ public class LoadResponseCommand<K, V>
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset + 12 + instOffset);
         byte flag = data[offset + vOffset];
         if (flag != 0) {
-            entry = trans.getDataStoreEntryHelper().createDataStoreEntry();
+            entry = new DataStoreEntry<K, V>();
             entry.readDataStoreEntry(trans, data, offset + vOffset + 1);
         }
     }

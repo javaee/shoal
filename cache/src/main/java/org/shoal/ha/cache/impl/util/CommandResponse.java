@@ -80,6 +80,10 @@ public class CommandResponse
         future.run(); //Which calls our call()
     }
 
+    public void setException(Exception ex) {
+        setResult(ex);
+    }
+
     public Object call() {
         return result;
     }

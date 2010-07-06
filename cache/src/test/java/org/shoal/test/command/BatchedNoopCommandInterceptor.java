@@ -37,7 +37,7 @@
 package org.shoal.test.command;
 
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.interceptor.ExecutionInterceptor;
+import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Mahesh Kannan
  */
 public class BatchedNoopCommandInterceptor<K, V>
-        extends ExecutionInterceptor<K, V> {
+        extends AbstractCommandInterceptor<K, V> {
 
     private AtomicInteger batchedTransCount = new AtomicInteger();
 

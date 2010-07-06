@@ -39,15 +39,12 @@ package org.shoal.ha.cache.api;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * @author Mahesh Kannan
  */
 public interface DataStoreEntryHelper<K, V> {
-
-    public DataStoreEntry<K, V> createDataStoreEntry();
-
-    public DataStoreEntry<K, V> createDataStoreEntry(K k, V v);
 
     public V getV(DataStoreEntry<K, V> entry)
             throws DataStoreException;
@@ -58,6 +55,8 @@ public interface DataStoreEntryHelper<K, V> {
     public Object readObject(byte[] delta, int offset)
         throws DataStoreException;
 
-    public void updateDelta(K k, DataStoreEntry<K, V> entry, Object obj);
+    public void updateState(K k, DataStoreEntry<K, V> entry, Object obj);
+
+    public void updateMetadata(K k, DataStoreEntry<K, V> entry, Object obj);
 
 }

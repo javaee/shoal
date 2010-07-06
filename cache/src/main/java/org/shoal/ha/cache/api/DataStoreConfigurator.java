@@ -65,6 +65,9 @@ public class DataStoreConfigurator<K, V> {
 
     private ObjectInputOutputStreamFactory objectInputOutputStreamFactory;
 
+    private boolean cacheLocally;
+
+
     public String getInstanceName() {
         return instanceName;
     }
@@ -150,8 +153,8 @@ public class DataStoreConfigurator<K, V> {
         return clazzLoader;
     }
 
-    public DataStoreConfigurator<K, V> setClassLoader(ClassLoader clazzLoader) {
-        this.clazzLoader = clazzLoader;
+    public DataStoreConfigurator<K, V> setClassLoader(ClassLoader loader) {
+        this.clazzLoader = loader;
         return this;
     }
 
@@ -161,6 +164,15 @@ public class DataStoreConfigurator<K, V> {
 
     public void setObjectInputOutputStreamFactory(ObjectInputOutputStreamFactory objectInputOutputStreamFactory) {
         this.objectInputOutputStreamFactory = objectInputOutputStreamFactory;
+    }
+
+    public boolean isCacheLocally() {
+        return cacheLocally;
+    }
+
+    public DataStoreConfigurator<K, V> setCacheLocally(boolean cacheLocally) {
+        this.cacheLocally = cacheLocally;
+        return this;
     }
 
     @Override
@@ -174,6 +186,7 @@ public class DataStoreConfigurator<K, V> {
                 ", keyMapper=" + keyMapper +
                 ", dataStoreKeyHelper=" + dataStoreKeyHelper +
                 ", startGMS=" + startGMS +
+                ", cacheLocally= " + cacheLocally +
                 ", clazzLoader=" + clazzLoader +
                 ", dataStoreEntryHelper=" + dataStoreEntryHelper +
                 ", objectInputOutputStreamFactory=" + objectInputOutputStreamFactory +

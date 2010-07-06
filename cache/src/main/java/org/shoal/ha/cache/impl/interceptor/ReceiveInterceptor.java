@@ -44,7 +44,7 @@ import org.shoal.ha.cache.impl.command.Command;
  *
  */
 public final class ReceiveInterceptor
-    extends ExecutionInterceptor {
+    extends AbstractCommandInterceptor {
 
     public void onTransmit(Command cmd) {
         //Noop

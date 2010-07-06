@@ -37,13 +37,11 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.impl.interceptor.ExecutionInterceptor;
+import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
-import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
-import java.util.logging.Logger;
 
 
 /**
@@ -52,27 +50,20 @@ import java.util.logging.Logger;
 public class CommandManager<K, V>
         extends MessageReceiver {
 
-    private final static Logger logger = Logger.getLogger("ReplicationLogger");
-
     private String myName;
-
-    private String groupName;
 
     private DataStoreContext<K, V> dsc;
 
     private Command<K, V>[] commands = (Command<K, V>[]) Array.newInstance(Command.class, 256);
 
-    private int interceptorSz = 0;
+    private volatile AbstractCommandInterceptor<K, V> head;
 
-    private volatile ExecutionInterceptor<K, V> head;
-
-    private volatile ExecutionInterceptor<K, V> tail;
+    private volatile AbstractCommandInterceptor<K, V> tail;
 
     public CommandManager(DataStoreContext<K, V> dsc) {
         super(dsc.getServiceName());
         this.dsc = dsc;
         this.myName = dsc.getInstanceName();
-        this.groupName = dsc.getGroupName();
 
         //dsc.getGroupService().registerGroupMessageReceiver(dsc.getServiceName(), this);
     }
@@ -82,11 +73,7 @@ public class CommandManager<K, V>
         command.initialize(dsc);
     }
 
-    public void unregisterCommand(byte opcode) {
-        commands[opcode] = null;
-    }
-
-    public synchronized void registerExecutionInterceptor(ExecutionInterceptor<K, V> interceptor) {
+    public synchronized void registerExecutionInterceptor(AbstractCommandInterceptor<K, V> interceptor) {
         interceptor.initialize(dsc);
         if (head == null) {
             head = interceptor;
@@ -96,11 +83,6 @@ public class CommandManager<K, V>
         interceptor.setPrev(tail);
         interceptor.setNext(null);
         tail = interceptor;
-        interceptorSz++;
-    }
-
-    public Command getCommand(byte opcode) {
-        return commands[opcode];
     }
 
     //Initiated to transmit
@@ -110,14 +92,13 @@ public class CommandManager<K, V>
     }
 
     //Initiated to transmit
-
     public void execute(Command<K, V> cmd, boolean forward, String initiator) {
         cmd.initialize(dsc);
         if (head != null) {
             if (forward) {
                 cmd.prepareToTransmit(dsc);
                 if (! cmd.getTargetName().equals(myName)) {
-                head.onTransmit(cmd);
+                    head.onTransmit(cmd);
                 } else {
                     cmd.execute(dsc);
                 }
@@ -138,14 +119,6 @@ public class CommandManager<K, V>
         }
 
         return cmd;
-    }
-
-    public void transmit(Command<K, V> cmd) {
-
-    }
-
-    public ResponseMediator getResponseMediator() {
-        return dsc.getResponseMediator();
     }
 
     @Override

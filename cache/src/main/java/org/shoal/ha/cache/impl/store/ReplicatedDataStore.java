@@ -44,8 +44,8 @@ import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.*;
 
+import java.io.Serializable;
 import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mahesh Kannan
@@ -67,7 +67,10 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreContext<K, V> dsc;
 
+
     private DataStoreConfigurator<K, V> conf;
+
+    private ReplicaLocationHolder<K, V> localDS;
 
     public ReplicatedDataStore(DataStoreConfigurator<K, V> conf, GroupService gs) {
         this.conf = conf;
@@ -75,29 +78,18 @@ public class ReplicatedDataStore<K, V>
         this.gs = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
-        initialize(conf.getClassLoader(), conf.getDataStoreEntryHelper(), conf.getDataStoreKeyHelper(), conf.getKeyMapper());
+        
+        initialize(conf);
     }
 
-    public ReplicatedDataStore(String storeName, GroupService gs, ClassLoader loader,
-                               DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
-                               KeyMapper keyMapper) {
-        DataStoreConfigurator<K, V> conf = new DataStoreConfigurator<K, V>();
-        conf.setStoreName(storeName)
-                .setClassLoader(loader);
-        this.storeName = storeName;
-        this.gs = gs;
-        this.instanceName = gs.getMemberName();
-        this.groupName = gs.getGroupName();
-        initialize(loader, helper, keyHelper, keyMapper);
-    }
+    private void initialize(DataStoreConfigurator<K, V> conf) {
+        this.dsc = new DataStoreContext<K, V>(
+                storeName, gs, conf.getClassLoader());
 
-    private void initialize(ClassLoader loader, DataStoreEntryHelper<K, V> helper,
-                            DataStoreKeyHelper<K> keyHelper, KeyMapper keyMapper) {
-        this.dsc = new DataStoreContext<K, V>(storeName, gs, loader);
-        this.transformer = helper;
-        dsc.setDataStoreEntryHelper(helper);
-        dsc.setDataStoreKeyHelper(keyHelper);
-        dsc.setKeyMapper(keyMapper);
+        this.transformer = conf.getDataStoreEntryHelper();
+        dsc.setDataStoreEntryHelper(transformer);
+        dsc.setDataStoreKeyHelper(conf.getDataStoreKeyHelper());
+        dsc.setKeyMapper(conf.getKeyMapper());
         cm = dsc.getCommandManager();
         cm.registerExecutionInterceptor(new CommandMonitorInterceptor<K, V>());
         cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
@@ -108,66 +100,88 @@ public class ReplicatedDataStore<K, V>
         cm.registerCommand(new RemoveCommand<K, V>());
         cm.registerCommand(new TouchCommand<K, V>());
 
+        KeyMapper<K> keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
             for (String member : gs.getCurrentCoreMembers()) {
                 ((DefaultKeyMapper) keyMapper).registerInstance(member);
             }
         }
-        
+
         gs.registerGroupMessageReceiver(storeName, cm);
+
+        localDS = new ReplicaLocationHolder<K, V>(conf, dsc);
+    }
+
+    public DataStoreContext<K, V> getDataStoreContext() {
+        return dsc;
     }
 
     @Override
-    public String put(K k, V v) {
+    public String put(K k, V v)
+            throws DataStoreException {
         SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
+        cm.execute(cmd);
+
+        String newLocation = cmd.getTargetName();
+        localDS.put(k, v, newLocation);
+
+        return newLocation;
+    }
+
+    @Override
+    public String updateDelta(K k, Serializable obj) {
+        UpdateDeltaCommand<K, V> cmd = new UpdateDeltaCommand<K, V>(k, obj);
         cm.execute(cmd);
 
         return cmd.getTargetName();
     }
 
     @Override
-    public void updateDelta(K k, Object obj) {
-        UpdateDeltaCommand<K, V> cmd = new UpdateDeltaCommand<K, V>();
-        cmd.setObject(obj);
-        cm.execute(cmd);
-    }
+    public V get(K k)
+            throws DataStoreException {
 
-    @Override
-    public V get(K k) {
+        V v = localDS.get(k);
+        if (v == null) {
 
-        ReplicaStore<K, V> replicaStore = dsc.getReplicaStore();
-        DataStoreEntry<K, V> entry = replicaStore.get(k);
-        V v = null;
+            ReplicaStore<K, V> replicaStore = dsc.getReplicaStore();
+            DataStoreEntry<K, V> entry = replicaStore.get(k);
 
-        try {
-            if (entry == null) {
-                LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(k);
-                cm.execute(cmd);
+            try {
+                if (entry == null) {
+                    LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(k);
+                    cm.execute(cmd);
 
-                entry = cmd.getResult();
+                    entry = cmd.getResult();
+                }
+                if (entry != null) {
+                    v = transformer.getV(entry);
+                }
+            } catch (DataStoreException dseEx) {
+                throw dseEx;
             }
-            if (entry != null) {
-                v = transformer.getV(entry);
-            }
-        } catch (DataStoreException dseEx) {
-            dseEx.printStackTrace();
         }
-
         return v;
     }
 
     @Override
-    public void remove(K k) {
+    public void remove(K k)
+            throws DataStoreException {
+        localDS.remove(k);
+        
         RemoveCommand<K, V> cmd = new RemoveCommand<K, V>();
         cmd.setKey(k);
         cm.execute(cmd);
     }
 
     @Override
-    public void touch(K k, long ttl) {
-        //TODO pass the correct version and ts
-        TouchCommand<K, V> tc = new TouchCommand<K, V>(k, 0, 0, ttl);
+    public String touch(K k, long version, long ts, long ttl)
+            throws DataStoreException {
+        TouchCommand<K, V> tc = new TouchCommand<K, V>(k, version, ts, ttl);
+        String newLocation = tc.getTargetName();
+
+        localDS.touch(k, version, ts, ttl, newLocation);
+        return newLocation;
     }
 
     @Override

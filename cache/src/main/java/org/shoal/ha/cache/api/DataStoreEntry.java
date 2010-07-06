@@ -40,12 +40,13 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
  * @author Mahesh Kannan
  */
-public abstract class DataStoreEntry<K, V> {
+public class DataStoreEntry<K, V> {
 
     private K key;
 
@@ -54,6 +55,10 @@ public abstract class DataStoreEntry<K, V> {
     private long maxIdleTime;
 
     private long lastAccessedAt;
+
+    private Object state;
+
+    private String replicaInstanceName;
 
     public void setKey(K key) {
         this.key = key;
@@ -67,16 +72,16 @@ public abstract class DataStoreEntry<K, V> {
         return version;
     }
 
-    public void setVersion(long version) {
-        this.version = version;
+    public void setVersion(long v) {
+        this.version = v;
     }
 
     public long getMaxIdleTime() {
         return maxIdleTime;
     }
 
-    public void setMaxIdleTime(long maxIdleTime) {
-        this.maxIdleTime = maxIdleTime;
+    public void setMaxIdleTime(long t) {
+        this.maxIdleTime = t;
     }
 
     public long getLastAccessedAt() {
@@ -85,6 +90,22 @@ public abstract class DataStoreEntry<K, V> {
 
     public void setLastAccessedAt(long lastAccessedAt) {
         this.lastAccessedAt = lastAccessedAt;
+    }
+
+    public Object getState() {
+        return state;
+    }
+
+    public void setState(byte[] state) {
+        this.state = state;
+    }
+
+    public String getReplicaInstanceName() {
+        return replicaInstanceName;
+    }
+
+    public void setReplicaInstanceName(String replicaInstanceName) {
+        this.replicaInstanceName = replicaInstanceName;
     }
 
     public final void writeDataStoreEntry(DataStoreContext<K, V> ctx,
@@ -133,9 +154,14 @@ public abstract class DataStoreEntry<K, V> {
     protected void writePayloadState(DataStoreEntryHelper<K, V> helper,
                                      ReplicationOutputStream ros)
             throws IOException {
+        
+        helper.writeObject(ros, state);
     }
 
     protected void readPayloadState(DataStoreEntryHelper<K, V> helper,
-                                    byte[] data, int index) {
+                                    byte[] data, int index)
+        throws IOException {
+
+        helper.readObject(data, index);
     }
 }

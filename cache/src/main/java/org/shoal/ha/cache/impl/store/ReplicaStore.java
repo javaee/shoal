@@ -57,24 +57,34 @@ public class ReplicaStore<K, V> {
         this.ctx = ctx;
     }
 
-    public void put(K k, V v) {
+    public void put(K k, Object obj) {
+        DataStoreEntry<K, V> dse = map.get(k);
+        if (dse == null) {
+            dse = new DataStoreEntry<K, V>();
+            DataStoreEntry<K, V> oldDSE = map.putIfAbsent(k, dse);
+            if (oldDSE != null) {
+                dse = oldDSE;
+            }
+        }
         DataStoreEntryHelper<K, V> helper = ctx.getDataStoreEntryHelper();
-        DataStoreEntry<K, V> e = helper.createDataStoreEntry(k, v);
-        map.put(k, e);
-        System.out.println("** ReplicaStore::put("+k+", "+v);
-        //TODO Need to take care of out of order messages
+        helper.updateState(k, dse, obj);
+        System.out.println("** ReplicaStore::put("+k+", "+ obj);
     }
 
-    public DataStoreEntry<K, V> get(K k) {
-        return map.get(k);
+    public DataStoreEntry<K, V> get(K k)
+        throws DataStoreException {
+        DataStoreEntryHelper<K, V> helper = ctx.getDataStoreEntryHelper();
+        DataStoreEntry<K, V> dse = map.get(k);
+        return dse;
 
     }
 
     public void remove(K k) {
         map.remove(k);
+        System.out.println("** ReplicaStore::remove("+k);
     }
 
-    public void touch(K k, long ts, long version, long ttl) {
+    public void touch(K k, long version, long ts, long ttl) {
         DataStoreEntry<K, V> e = map.get(k);
         if (e != null) {
             e.setLastAccessedAt(ts);

@@ -49,7 +49,7 @@ import java.io.IOException;
  *
  */
 public final class TransmitInterceptor<K, V>
-    extends ExecutionInterceptor<K, V> {
+    extends AbstractCommandInterceptor<K, V> {
 
     public void onTransmit(Command<K, V> cmd) {
         DataStoreContext<K, V> ctx = getDataStoreContext();
@@ -58,12 +58,14 @@ public final class TransmitInterceptor<K, V>
         try {
             cmd.writeCommandState(ros);
             data = ros.toByteArray();
+
+            GroupService gs = ctx.getGroupService();
+            gs.sendMessage(cmd.getTargetName(),
+                    ctx.getServiceName(), data);
+            cmd.postTransmit(cmd.getTargetName(), true);
         } catch (IOException ioEx) {
             //TODO
         }
-        GroupService gs = ctx.getGroupService();
-        gs.sendMessage(cmd.getTargetName(),
-                ctx.getServiceName(), data);
     }
 
     public void onReceive(Command<K, V> cmd) {
