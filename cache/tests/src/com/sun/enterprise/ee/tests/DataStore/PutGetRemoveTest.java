@@ -412,8 +412,8 @@ public class PutGetRemoveTest implements CallBack {
             RemoveTest();
             // do not move the location of this test (id being the last test)
             AccessOnceExistedFromOtherMembersTest();
-            
-            
+
+
             SendTestingComplete();
         }
 
@@ -445,10 +445,12 @@ public class PutGetRemoveTest implements CallBack {
         private void CreateOnceExistedTest() {
             myLogger.log(Level.INFO, "Starting CreateOnceExistedTest");
             if (ds != null) {
-                myLogger.log(Level.INFO, "Persisting " + onceExistedId+","+ onceExistedValue);
-
-                ds.put(onceExistedId, onceExistedValue);
-               
+                myLogger.log(Level.INFO, "Persisting " + onceExistedId + "," + onceExistedValue);
+                try {
+                    ds.put(onceExistedId, onceExistedValue);
+                } catch (Exception e) {
+                    myLogger.log(Level.SEVERE, "Error occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                }
                 try {
                     myLogger.log(Level.INFO, "Accessing " + onceExistedId);
                     String tmp = (String) ds.get(onceExistedId);
@@ -463,7 +465,11 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "Error occurred while accessing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
                 myLogger.log(Level.INFO, "Removing " + onceExistedId);
-                ds.remove(onceExistedId);
+                try {
+                    ds.remove(onceExistedId);
+                } catch (Exception e) {
+                    myLogger.log(Level.SEVERE, "Error occurred while removing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                }
                 //
                 // this might need to be modified the wait until remove has been sucessfully accomplished before
                 // moving on
@@ -513,7 +519,11 @@ public class PutGetRemoveTest implements CallBack {
                 String id = memberID + "cmprt";
                 int value = 0;
                 for (; value <= 9; value++) {
-                    ds.put(id, value);
+                    try {
+                        ds.put(id, value);
+                    } catch (Exception e) {
+                        myLogger.log(Level.SEVERE, "Error occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                    }
                 }
                 value--;
                 //
@@ -534,7 +544,11 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "Error occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
                 }
                 myLogger.log(Level.INFO, "Removing " + id);
-                ds.remove(id);
+                try {
+                    ds.remove(id);
+                } catch (Exception e) {
+                    myLogger.log(Level.SEVERE, "Error occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
+                }
                 try {
                     myLogger.log(Level.INFO, "Trying to access " + id + " after remove");
                     String tmp = (String) ds.get(id);
@@ -553,25 +567,30 @@ public class PutGetRemoveTest implements CallBack {
             myLogger.log(Level.INFO, "Starting ObjectsTest");
             if (ds != null) {
                 myLogger.log(Level.INFO, "Persisting Data");
-                ds.put(memberID + ":TRUE", Boolean.valueOf(true));
-                ds.put(memberID + ":FALSE", Boolean.valueOf(false));
-                ds.put(memberID + ":STRING", "String");
                 Date _date = new Date();
-                ds.put(memberID + ":DATE", _date);
-                ds.put(memberID + ":Character_MIN", Character.MIN_VALUE);
-                ds.put(memberID + ":Character_MAX", Character.MAX_VALUE);
-                ds.put(memberID + ":BYTE_MIN", Byte.MIN_VALUE);
-                ds.put(memberID + ":BYTE_MAX", Byte.MAX_VALUE);
-                ds.put(memberID + ":SHORT_MIN", Short.MIN_VALUE);
-                ds.put(memberID + ":SHORT_MAX", Short.MAX_VALUE);
-                ds.put(memberID + ":INTEGER_MIN", Integer.MIN_VALUE);
-                ds.put(memberID + ":INTEGER_MAX", Integer.MAX_VALUE);
-                ds.put(memberID + ":LONG_MIN", Long.MIN_VALUE);
-                ds.put(memberID + ":LONG_MAX", Long.MAX_VALUE);
-                ds.put(memberID + ":FLOAT_MIN", Float.MIN_VALUE);
-                ds.put(memberID + ":FLOAT_MAX", Float.MAX_VALUE);
-                ds.put(memberID + ":DOUBLE_MIN", Double.MIN_VALUE);
-                ds.put(memberID + ":DOUBLE_MAX", Double.MAX_VALUE);
+
+                try {
+                    ds.put(memberID + ":TRUE", Boolean.valueOf(true));
+                    ds.put(memberID + ":FALSE", Boolean.valueOf(false));
+                    ds.put(memberID + ":STRING", "String");
+                    ds.put(memberID + ":DATE", _date);
+                    ds.put(memberID + ":Character_MIN", Character.MIN_VALUE);
+                    ds.put(memberID + ":Character_MAX", Character.MAX_VALUE);
+                    ds.put(memberID + ":BYTE_MIN", Byte.MIN_VALUE);
+                    ds.put(memberID + ":BYTE_MAX", Byte.MAX_VALUE);
+                    ds.put(memberID + ":SHORT_MIN", Short.MIN_VALUE);
+                    ds.put(memberID + ":SHORT_MAX", Short.MAX_VALUE);
+                    ds.put(memberID + ":INTEGER_MIN", Integer.MIN_VALUE);
+                    ds.put(memberID + ":INTEGER_MAX", Integer.MAX_VALUE);
+                    ds.put(memberID + ":LONG_MIN", Long.MIN_VALUE);
+                    ds.put(memberID + ":LONG_MAX", Long.MAX_VALUE);
+                    ds.put(memberID + ":FLOAT_MIN", Float.MIN_VALUE);
+                    ds.put(memberID + ":FLOAT_MAX", Float.MAX_VALUE);
+                    ds.put(memberID + ":DOUBLE_MIN", Double.MIN_VALUE);
+                    ds.put(memberID + ":DOUBLE_MAX", Double.MAX_VALUE);
+                } catch (Exception e) {
+                    myLogger.log(Level.SEVERE, "Error occurred while accessing saving [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
+                }
                 // do this to ensure that last item has persisted until we go forward.
                 // this is only temporary
               /*  while (true) {
@@ -820,24 +839,28 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "Error occurred while accessing [DOUBLE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 myLogger.log(Level.INFO, "Removing persisted data");
-                ds.remove(memberID + ":TRUE");
-                ds.remove(memberID + ":FALSE");
-                ds.remove(memberID + ":STRING");
-                ds.remove(memberID + ":DATE");
-                ds.remove(memberID + ":Character_MIN");
-                ds.remove(memberID + ":Character_MAX");
-                ds.remove(memberID + ":BYTE_MIN");
-                ds.remove(memberID + ":BYTE_MAX");
-                ds.remove(memberID + ":SHORT_MIN");
-                ds.remove(memberID + ":SHORT_MAX");
-                ds.remove(memberID + ":INTEGER_MIN");
-                ds.remove(memberID + ":INTEGER_MAX");
-                ds.remove(memberID + ":LONG_MIN");
-                ds.remove(memberID + ":LONG_MAX");
-                ds.remove(memberID + ":FLOAT_MIN");
-                ds.remove(memberID + ":FLOAT_MAX");
-                ds.remove(memberID + ":DOUBLE_MIN");
-                ds.remove(memberID + ":DOUBLE_MAX");
+                try {
+                    ds.remove(memberID + ":TRUE");
+                    ds.remove(memberID + ":FALSE");
+                    ds.remove(memberID + ":STRING");
+                    ds.remove(memberID + ":DATE");
+                    ds.remove(memberID + ":Character_MIN");
+                    ds.remove(memberID + ":Character_MAX");
+                    ds.remove(memberID + ":BYTE_MIN");
+                    ds.remove(memberID + ":BYTE_MAX");
+                    ds.remove(memberID + ":SHORT_MIN");
+                    ds.remove(memberID + ":SHORT_MAX");
+                    ds.remove(memberID + ":INTEGER_MIN");
+                    ds.remove(memberID + ":INTEGER_MAX");
+                    ds.remove(memberID + ":LONG_MIN");
+                    ds.remove(memberID + ":LONG_MAX");
+                    ds.remove(memberID + ":FLOAT_MIN");
+                    ds.remove(memberID + ":FLOAT_MAX");
+                    ds.remove(memberID + ":DOUBLE_MIN");
+                    ds.remove(memberID + ":DOUBLE_MAX");
+                } catch (Exception e) {
+                    myLogger.log(Level.SEVERE, "Error occurred while removing  [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
+                }
                 myLogger.log(Level.INFO, "Verify removed data");
                 try {
                     myLogger.log(Level.INFO, "Accessing TRUE");
@@ -1020,7 +1043,11 @@ public class PutGetRemoveTest implements CallBack {
                     if (count > 9) {
                         count = 0;
                     }
-                    ds.put(id, persistedData[num]);
+                    try {
+                        ds.put(id, persistedData[num]);
+                    } catch (Exception e) {
+                        myLogger.log(Level.SEVERE, "Error occurred while saving [" + id + "] - " + e.getLocalizedMessage(), e);
+                    }
                 }
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 for (int num = 0; num < numberOfObjects; num++) {
@@ -1121,7 +1148,11 @@ public class PutGetRemoveTest implements CallBack {
                 for (int num = 0; num < numberOfObjects; num++) {
                     String id = memberID + ":" + num;
                     myLogger.log(Level.INFO, "Removing Object:" + id);
-                    ds.remove(id);
+                    try {
+                        ds.remove(id);
+                    } catch (Exception e) {
+                        myLogger.log(Level.SEVERE, "Error occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
+                    }
                 }
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 for (int num = 0; num < numberOfObjects; num++) {
