@@ -59,11 +59,15 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     private List<String> allCurrentMembers;
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
     private GMSContext ctx;
-    final private GMSConstants.startupType startupKind;
+    private GMSConstants.startupType startupKind;
 
     //Logging related stuff
     protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private long startTime;
+
+    void setStartupKind(GMSConstants.startupType startupKind) {
+        this.startupKind = startupKind;
+    }
 
     public JoinedAndReadyNotificationSignalImpl(final String memberToken,
                                       final List<String> currentCoreMembers,
@@ -76,7 +80,11 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
         this.groupName = groupName;
         this.startTime=startTime;
         ctx = GMSContextFactory.getGMSContext( groupName );
-        this.startupKind = ctx.isGroupStartup() ? GMSConstants.startupType.GROUP_STARTUP : GMSConstants.startupType.INSTANCE_STARTUP;
+        if (ctx == null) {
+            this.startupKind = GMSConstants.startupType.INSTANCE_STARTUP;
+        } else {
+            this.startupKind = ctx.isGroupStartup() ? GMSConstants.startupType.GROUP_STARTUP : GMSConstants.startupType.INSTANCE_STARTUP;
+        }
         if (logger.isLoggable(Level.FINE)) {
             logger.fine("JoinAndReadyNotificationSignalImpl ctor: member=" + memberToken + " group=" + groupName +  " startupKind=" + startupKind.toString());
         }

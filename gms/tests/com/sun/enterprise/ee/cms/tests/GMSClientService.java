@@ -188,6 +188,8 @@ public class GMSClientService implements Runnable, CallBack{
             serverToken =
                     notification.getMemberToken();
             logger.info("Received "+ notification.toString() +" for member "+serverToken);
+            logger.info("JoinedAndReady for member:" + serverToken + "getPreviousAliveAndReadyCoreView()=" + gms.getGroupHandle().getPreviousAliveAndReadyCoreView());
+            logger.info("JoinedAndReady for member:" + serverToken + "getCurrentAliveAndReadyCoreView()=" + gms.getGroupHandle().getCurrentAliveAndReadyCoreView());
             extractMemberDetails( notification, serverToken );
 
         }
@@ -196,6 +198,9 @@ public class GMSClientService implements Runnable, CallBack{
                     notification instanceof FailureSuspectedSignal) {
             serverToken = notification.getMemberToken();
             logger.info("Received "+ notification.toString() +" for member "+serverToken);
+            logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken + "getPreviousAliveAndReadCoreViewy()=" + gms.getGroupHandle().getPreviousAliveAndReadyCoreView());
+            logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken + "getCurrentAliveAndReadyCoreView()=" + gms.getGroupHandle().getCurrentAliveAndReadyCoreView());
+            extractMemberDetails( notification, serverToken );
         }
     }
 

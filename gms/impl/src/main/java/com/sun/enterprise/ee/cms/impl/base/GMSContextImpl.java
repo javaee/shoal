@@ -37,6 +37,7 @@
 package com.sun.enterprise.ee.cms.impl.base;
 
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.common.AliveAndReadyViewWindow;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
 import com.sun.enterprise.ee.cms.impl.common.Router;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
@@ -72,6 +73,7 @@ public class GMSContextImpl extends GMSContextBase {
     private boolean isGroupStartup = false;
     private Thread viewWindowThread = null;
     private Thread messageWindowThread = null;
+    private AliveAndReadyViewWindow aliveAndReadyViewWindow = null;
 
     public GMSContextImpl(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -102,6 +104,7 @@ public class GMSContextImpl extends GMSContextBase {
         // It should be driven independent of GMSContext through a factory as
         // other impls of this interface can exist
         createDistributedStateCache();
+        aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
         logger.log(Level.FINE,  "gms.init");
     }
 
@@ -283,5 +286,21 @@ public class GMSContextImpl extends GMSContextBase {
     }
     public int outstandingNotifications() {
         return viewQueue.size();
+    }
+
+    public AliveAndReadyView getPreviousAliveAndReadyView() {
+        if (aliveAndReadyViewWindow != null) {
+            return aliveAndReadyViewWindow.getPreviousView();
+        } else {
+            return null;
+        }
+    }
+
+    public AliveAndReadyView getCurrentAliveAndReadyView() {
+        if (aliveAndReadyViewWindow != null) {
+            return aliveAndReadyViewWindow.getCurrentView();
+        } else {
+            return null;
+        }
     }
 }

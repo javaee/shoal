@@ -525,4 +525,12 @@ public final class GroupHandleImpl implements GroupHandle {
     public List<GMSMember> getPreviousView() {
         return ctx.getViewWindow().getPreviousView();
     }
+
+    public AliveAndReadyView getPreviousAliveAndReadyCoreView() {
+        return ctx.getPreviousAliveAndReadyView();
+    }
+
+    public AliveAndReadyView getCurrentAliveAndReadyCoreView() {
+        return ctx.getCurrentAliveAndReadyView();
+    }
 }

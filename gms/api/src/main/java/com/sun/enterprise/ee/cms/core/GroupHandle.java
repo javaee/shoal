@@ -306,5 +306,25 @@ public interface GroupHandle {
      * @return members from previous view
      */
     List<GMSMember> getPreviousView();
+
+    /**
+     * This snapshot was terminated by AliveAndReadyView.getSignal(), a GMS notification of
+     * either JoinedAndReadyNotificationSignal, FailureNotificationSignal or PlannedShutdownSignal.
+     * Can return null during group startup. Behavior is not well defined during cluster shutdown.
+     *
+     * @return the previous AliveAndReady Core member snapshot
+     */
+    AliveAndReadyView getPreviousAliveAndReadyCoreView();
+
+    /**
+     * Get a current snapshot of the AliveAndReady Core members.
+     * AliveAndReadyView.getSignal() returns null to signify that
+     * the view is still the current view and no GMS notification signal
+     * has terminated this current view yet.
+     * Can return null during group startup.  
+     *
+     * @return current view of AliveAndReady Core members
+     */
+    AliveAndReadyView getCurrentAliveAndReadyCoreView();
 }
 

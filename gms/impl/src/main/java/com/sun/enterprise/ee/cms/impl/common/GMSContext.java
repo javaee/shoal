@@ -128,4 +128,8 @@ public interface GMSContext {
     public GroupManagementService.MemberType getMemberType();
 
     public boolean isWatchdog();
+
+    public AliveAndReadyView getPreviousAliveAndReadyView();
+
+    public AliveAndReadyView getCurrentAliveAndReadyView();
 }
