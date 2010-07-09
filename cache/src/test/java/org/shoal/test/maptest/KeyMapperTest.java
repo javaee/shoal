@@ -111,10 +111,10 @@ public class KeyMapperTest
         System.out.println("test[testEmptyMapTest] => " + mappedInstance + " : " +
                 replicaInstance);
         assert (mappedInstance == null);
-        assert (replicaInstance == null);
+        assert (replicaInstance != null);
 
         System.out.println("* Test[testEmptyMapTest] => " +
-        mappedInstance + "; " + replicaInstance + "; ");
+                mappedInstance + "; " + replicaInstance + "; ");
     }
 
     public void testRegisterAndTest() {
@@ -156,135 +156,96 @@ public class KeyMapperTest
         assert (result);
     }
 
-    /*
+
     public void testReplicaUponFailure() {
-        DefaultKeyMapper km = new DefaultKeyMapper("n2", "g1");
+        DefaultKeyMapper<String> km1 = new DefaultKeyMapper<String>("n2", "g1");
+        DefaultKeyMapper<String> km4 = new DefaultKeyMapper<String>("n4", "g1");
 
-        km.registerInstance("n0");
-        km.registerInstance("n1");
-        km.registerInstance("n2");
-        km.registerInstance("n3");
-        km.registerInstance("n4");
-        km.registerInstance("n5");
+        km1.registerInstance("n0");
+        km1.registerInstance("n1");
+        km1.registerInstance("n2");
+        km1.registerInstance("n3");
+        km1.registerInstance("n4");
+        km1.registerInstance("n5");
 
-        Integer[] keys = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-        String[] expectedReplica = new String[]{
-                "n1", "n1", "n2", "n3", "n4", "n5",
-                "n2", "n1", "n2", "n3", "n4", "n5",
-                "n3", "n1", "n2"};
+        km4.registerInstance("n0");
+        km4.registerInstance("n1");
+        km4.registerInstance("n2");
+        km4.registerInstance("n3");
+        km4.registerInstance("n4");
+        km4.registerInstance("n5");
 
-        km.removeInstance("n0");
+        String[] keys = new String[16];
+        String[] replicaInstanceNames = new String[16];
+
+        int count = keys.length;
+
+        for (int i = 0; i < count; i++) {
+            keys[i] = "Key-" + Math.random();
+            replicaInstanceNames[i] = km1.getMappedInstance("g1", keys[i]);
+        }
+
+        km4.removeInstance("n2");
         boolean result = true;
         for (int i = 0; i < keys.length; i++) {
-            if (!km.findReplicaInstance("g1", keys[i]).equals(expectedReplica[i])) {
+            String mappedInstanceName = km4.findReplicaInstance("g1", keys[i]);
+            if (!mappedInstanceName.equals(replicaInstanceNames[i])) {
                 result = false;
-                System.err.println("For key: " + keys[i] + " exptected Replica was: " + expectedReplica[i] +
-                        " but got mapped to: " + km.findReplicaInstance("g1", keys[i]));
+                System.err.println("For key: " + keys[i] + " exptected Replica was: " + replicaInstanceNames[i] +
+                        " but got mapped to: " + mappedInstanceName);
+            } else {
+                System.out.println("**KeyMapperTest:testReplicaUponFailure; expected: "
+                        + replicaInstanceNames[i] + " and got: " + mappedInstanceName);
             }
         }
         System.out.println("* Test[testReplicaUponFailure] => " + result);
         assert (result);
     }
 
-    public void testReplicaUponFailureFromMultipleNodes() {
-        DefaultKeyMapper km2 = new DefaultKeyMapper("n2", "g1");
-
-        km2.registerInstance("n0");
-        km2.registerInstance("n1");
-        km2.registerInstance("n2");
-        km2.registerInstance("n3");
-        km2.registerInstance("n4");
-        km2.registerInstance("n5");
-
-        DefaultKeyMapper km5 = new DefaultKeyMapper("n5", "g1");
-
-        km5.registerInstance("n0");
-        km5.registerInstance("n1");
-        km5.registerInstance("n2");
-        km5.registerInstance("n3");
-        km5.registerInstance("n4");
-        km5.registerInstance("n5");
-
-        Integer[] keys = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-        String[] expectedReplica = new String[]{
-                "n0", "n1", "n2", "n4", "n4", "n5",
-                "n0", "n1", "n2", "n5", "n4", "n5",
-                "n0", "n1", "n2"};
-
-        km2.removeInstance("n3");
-        km5.removeInstance("n3");
-        boolean result = true;
-        for (int i = 0; i < keys.length; i++) {
-            if (!km2.findReplicaInstance("g1", keys[i]).equals(expectedReplica[i])) {
-                result = false;
-                System.err.println("For key: " + keys[i] + " exptected Replica was: " + expectedReplica[i] +
-                        " but got mapped to: " + km2.findReplicaInstance("g1", keys[i]));
-            }
-        }
-        for (int i = 0; i < keys.length; i++) {
-            if (!km5.findReplicaInstance("g1", keys[i]).equals(expectedReplica[i])) {
-                result = false;
-                System.err.println("For key: " + keys[i] + " exptected Replica was: " + expectedReplica[i] +
-                        " but got mapped to: " + km5.findReplicaInstance("g1", keys[i]));
-            }
-        }
-        for (int i = 0; i < keys.length; i++) {
-            if (!km2.findReplicaInstance("g1", keys[i]).equals(km5.findReplicaInstance("g1", keys[i]))) {
-                result = false;
-                System.err.println("For key: " + keys[i] + " km2 : " + expectedReplica[i] +
-                        " but km2 replied: " + km2.findReplicaInstance("g1", keys[i]) +
-                        " AND km5 replied: " + km5.findReplicaInstance("g1", keys[i]));
-            }
-        }
-
-        System.out.println("* Test[testReplicaUponFailureFromMultipleNodes] => " + result);
-        assert (result);
-    }
-
     public void testReplicaUponFailureFromAllOtherNodes() {
-        String[] survivingNodes = new String[]{"n0", "n1", "n2", "n4", "n5"};
-        DefaultKeyMapper[] mappers = new DefaultKeyMapper[5];
-        for (int i = 0; i < mappers.length; i++) {
-            mappers[i] = new DefaultKeyMapper(survivingNodes[i], "g1");
+
+        int sz = 10;
+        DefaultKeyMapper<String>[] mappers = new DefaultKeyMapper[sz];
+        for (int i = 0; i < sz; i++) {
+            mappers[i] = new DefaultKeyMapper("n"+i, "g1");
+            for (int j = 0; j < sz; j++) {
+                mappers[i].registerInstance("n" + j);
+            }
         }
 
-        for (int i = 0; i < mappers.length; i++) {
-            DefaultKeyMapper mapper = mappers[i];
+        String[] keys = new String[16];
+        String[] replicaInstanceNames = new String[16];
 
-            mapper.registerInstance("n0");
-            mapper.registerInstance("n1");
-            mapper.registerInstance("n2");
-            mapper.registerInstance("n3");
-            mapper.registerInstance("n4");
-            mapper.registerInstance("n5");
+        int count = keys.length;
 
-            mapper.removeInstance("n3");
+        for (int i = 0; i < count; i++) {
+            keys[i] = "Key-" + Math.random();
+            replicaInstanceNames[i] = mappers[0].getMappedInstance("g1", keys[i]);
         }
 
-
-        Integer[] keys = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-        String[] expectedReplica = new String[]{
-                "n0", "n1", "n2", "n4", "n4", "n5",
-                "n0", "n1", "n2", "n5", "n4", "n5",
-                "n0", "n1", "n2"};
+        for (int i = 0; i < sz; i++) {
+            mappers[i].removeInstance("n0");
+        }
 
         boolean result = true;
-        for (int j = 0; j < mappers.length; j++) {
-            DefaultKeyMapper mapper = mappers[j];
-
+        for (int id = 1; id < sz; id++) {
             for (int i = 0; i < keys.length; i++) {
-                if (!mapper.findReplicaInstance("g1", keys[i]).equals(expectedReplica[i])) {
+                String mappedInstanceName = mappers[id].findReplicaInstance("g1", keys[i]);
+                if (!mappedInstanceName.equals(replicaInstanceNames[i])) {
                     result = false;
-                    System.err.println("Mapper["+j+"] For key: " + keys[i] + " exptected Replica was: " + expectedReplica[i] +
-                            " but got mapped to: " + mapper.findReplicaInstance("g1", keys[i]));
+                    System.err.println("For key: " + keys[i] + " exptected Replica was: " + replicaInstanceNames[i] +
+                            " but got mapped to: " + mappedInstanceName);
+                } else {
+                    System.out.println("**KeyMapperTest:testReplicaUponFailure; Mapper[" + id + "]: expected: "
+                            + replicaInstanceNames[i] + " and got: " + mappedInstanceName);
                 }
             }
         }
-
-        System.out.println("* Test[testReplicaUponFailureFromAllOtherNodes] => " + result);
+        System.out.println("* Test[testReplicaUponFailure] => " + result);
         assert (result);
     }
 
+    /*
     public void testReplicaUponRestart() {
         Integer[] keys = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
         String[] expectedReplica = new String[]{
@@ -318,5 +279,5 @@ public class KeyMapperTest
         assert (result);
     }
     */
-    
+
 }

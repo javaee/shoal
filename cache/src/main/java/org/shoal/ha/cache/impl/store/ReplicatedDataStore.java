@@ -104,6 +104,7 @@ public class ReplicatedDataStore<K, V>
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
             for (String member : gs.getCurrentCoreMembers()) {
+                System.out.println("***ReplicatedDataStore notifying DefaultKeyMapper with A&R: " + member);
                 ((DefaultKeyMapper) keyMapper).registerInstance(member);
             }
         }

@@ -62,7 +62,11 @@ public class DefaultKeyMapper<K>
 
     private volatile TreeSet<String> currentMemberSet = new TreeSet<String>();
 
+    private volatile TreeSet<String> currentMemberSetIncludingMe = new TreeSet<String>();
+
     private volatile String[] members = new String[0];
+
+    private volatile String[] membersIncludingMe = new String[0];
 
 
     public DefaultKeyMapper(String myName, String groupName) {
@@ -72,6 +76,8 @@ public class DefaultKeyMapper<K>
         
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
+
+        registerInstance(myName);
     }
 
     @Override
@@ -85,15 +91,31 @@ public class DefaultKeyMapper<K>
 
         try {
             rLock.lock();
-            return members.length == 0 ? null : members[hc % (members.length)];
+            return members.length == 0
+                    ? null
+                    : members[hc % (members.length)];
         } finally {
             rLock.unlock();
         }
     }
 
     @Override
-    public String findReplicaInstance(String groupName, K key) {
-        return getMappedInstance(groupName, key);
+    public String findReplicaInstance(String groupName, K key1) {
+        int hc = key1.hashCode();
+        if (key1 instanceof HashableKey) {
+            HashableKey k = (HashableKey) key1;
+            hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
+        }
+        hc = Math.abs(hc);
+
+        try {
+            rLock.lock();
+            return membersIncludingMe.length == 0
+                    ? null
+                    : membersIncludingMe[hc % (membersIncludingMe.length)];
+        } finally {
+            rLock.unlock();
+        }
     }
 
     @Override
@@ -105,7 +127,7 @@ public class DefaultKeyMapper<K>
 
     @Override
     public void memberLeft(String instanceName, String groupName, boolean isShutdown) {
-        if (this.groupName.equals(groupName) && (!instanceName.equals(myName))) {
+        if (this.groupName.equals(groupName)) {
             removeInstance(instanceName);
         }
     }
@@ -129,16 +151,18 @@ public class DefaultKeyMapper<K>
     }
 
     public void registerInstance(String inst) {
-        if ((!currentMemberSet.contains(inst)) && (!inst.equals(myName))) {
-            try {
-                wLock.lock();
+        try {
+            wLock.lock();
+            if (!inst.equals(myName)) {
                 currentMemberSet.add(inst);
-
-                members = currentMemberSet.toArray(new String[0]);
-                printMemberStates();
-            } finally {
-                wLock.unlock();
             }
+            currentMemberSetIncludingMe.add(inst);
+
+            members = currentMemberSet.toArray(new String[0]);
+            membersIncludingMe = currentMemberSetIncludingMe.toArray(new String[0]);
+            printMemberStates();
+        } finally {
+            wLock.unlock();
         }
     }
 
@@ -146,7 +170,12 @@ public class DefaultKeyMapper<K>
         wLock.lock();
         try {
             currentMemberSet.remove(inst);
+            if (! inst.equals(myName)) {
+                currentMemberSetIncludingMe.remove(inst);
+            }
+
             members = currentMemberSet.toArray(new String[0]);
+            membersIncludingMe = currentMemberSetIncludingMe.toArray(new String[0]);
             printMemberStates();
         } finally {
             wLock.unlock();
@@ -154,37 +183,17 @@ public class DefaultKeyMapper<K>
     }
 
     public void printMemberStates() {
-        System.out.print("DefaultKeyMapper:: Members[");
+        System.out.print("DefaultKeyMapper<" + myName + ">:: Members[");
         for (String st : members) {
             System.out.print("<" + st + "> ");
         }
         System.out.println("]");
-    }
 
-    private static void mapTest(DefaultKeyMapper km) {
-        String[] keys = new String[]{"Key0", "Key1", "Key2"};
-
-        for (String key : keys) {
-            System.out.println("\t" + key + " => " + km.getMappedInstance("g1", key));
+        System.out.print("DefaultKeyMapper<" + myName + ">:: MembersIncludingMe[");
+        for (String st : membersIncludingMe) {
+            System.out.print("<" + st + "> ");
         }
-
-        System.out.println();
-    }
-
-    public static void main(String[] args) {
-        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
-
-        km.registerInstance("n0");
-        km.registerInstance("n1");
-        mapTest(km);
-
-        km.registerInstance("inst0");
-        km.registerInstance("inst1");
-        km.registerInstance("instancen0");
-        km.registerInstance("instancen1");
-        mapTest(km);
-
-        km.printMemberStates();
+        System.out.println("]");
     }
 
 }

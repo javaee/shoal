@@ -69,6 +69,10 @@ public class DefaultDataStoreEntryHelper<K, V>
     public V getV(DataStoreEntry<K, V> replicationEntry)
             throws DataStoreException {
         byte[] data = (byte[]) replicationEntry.getState();
+        if (data == null) {
+            return null;
+        }
+        
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
         ObjectInputStream ois = null;
         V v = null;
