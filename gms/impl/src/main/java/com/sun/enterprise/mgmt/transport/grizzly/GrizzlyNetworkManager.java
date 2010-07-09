@@ -76,6 +76,9 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.SelectionKey;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.net.NetworkInterface;
 
 /**
  * @author Bongjae Chang
@@ -133,7 +136,20 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), "230.30.1.1", properties );
-        networkInterfaceName = Utility.getStringProperty( BIND_INTERFACE_NAME.toString(), null, properties );
+        if (host != null) {
+            try {
+                InetAddress inetAddr = InetAddress.getByName(host);
+                NetworkInterface ni;
+                ni = NetworkInterface.getByInetAddress(inetAddr);
+                if (ni != null) {
+                    networkInterfaceName = ni.getName();
+                }
+            } catch (SocketException ex) {
+                shoalLogger.log(Level.WARNING, "GrizzlyNetworkManager.configure: unable to configure NetworkInterfaceName due to ", ex.getLocalizedMessage());
+            } catch (UnknownHostException ex) {
+                shoalLogger.log(Level.WARNING, "GrizzlyNetworkManager.configure: unable to configure NetworkInterfaceName due to ", ex.getLocalizedMessage());
+            }
+        }
         failTcpTimeout = Utility.getLongProperty( FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString(), 10 * 1000, properties );
         maxPoolSize = Utility.getIntProperty( MAX_POOLSIZE.toString(), 50, properties );
         corePoolSize = Utility.getIntProperty( CORE_POOLSIZE.toString(), 20, properties );
@@ -150,7 +166,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if (shoalLogger.isLoggable(Level.CONFIG)) {
             StringBuffer buf = new StringBuffer(256);
             buf.append("\nGrizzlyNetworkManager Configuration\n");
-            buf.append("BIND_INTERFACE_ADDRESS:").append(host).append('\n');
+            buf.append("BIND_INTERFACE_ADDRESS:").append(host).append("  NetworkInterfaceName:").append(networkInterfaceName).append('\n');
             buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append(" tcpPort:").append(tcpPort).append('\n');
             buf.append("MULTICAST_ADDRESS:MULTICAST_PORT:").append(multicastAddress).append(':').append(multicastPort)
                      .append(" MULTICAST_PACKET_SIZE:").append(multicastPacketSize).append('\n');
