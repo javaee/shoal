@@ -48,20 +48,16 @@
         <property name="grizzlyutilsjar" value="${grizzly-path}/grizzly-utils.jar" />
     </target>
     <target name="getshoalgmsjars">
-        <xmlproperty prefix="shoalgmsapijar" file="${shoal-gms-api-path}/../pom.xml"/>
-        <property name="shoalgmsapijar" value="${shoal-gms-api-path}/shoal-gms-api-${shoalgmsapijar.project.parent.version}.jar" />
-        <xmlproperty prefix="shoalgmsimpljar" file="${shoal-gms-impl-path}/../pom.xml"/>
-        <property name="shoalgmsimpljar" value="${shoal-gms-impl-path}/shoal-gms-impl-${shoalgmsimpljar.project.parent.version}.jar" />
+        <property name="shoalgmsapijar" value="${shoal-gms-api-path}/shoal-gms-api.jar" />
+        <property name="shoalgmsimpljar" value="${shoal-gms-impl-path}/shoal-gms-impl.jar" />
         <property name="shoalgmstestsjar" value="${shoal-gms-tests-path}/shoal-gms-tests.jar" />
 
     </target>
     <target name="getshoalcachejars">
-        <xmlproperty prefix="shoalcachejar" file="${shoal-cache-path}/../pom.xml"/>
-        <property name="shoalcachejar" value="${shoal-cache-path}/shoal-cache-${shoalcachejar.project.parent.version}.jar" />
+        <property name="shoalcachejar" value="${shoal-cache-path}/shoal-cache.jar" />
     </target>
     <target name="getbackingstorejars">
-        <xmlproperty prefix="shoalbackingstorejar" file="${shoal-backing-store-path}/../pom.xml"/>
-        <property name="shoalbackingstorejar" value="${shoal-backing-store-path}/shoal-backing-store-${shoalbackingstorejar.project.parent.version}.jar" />
+        <property name="shoalbackingstorejar" value="${shoal-backing-store-path}/shoal-backing-store.jar" />
     </target>
     <target name="gethaapijars">
         <xmlproperty prefix="haapijar" file="${basedir}/../../pom.xml"/>

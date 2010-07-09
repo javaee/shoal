@@ -252,6 +252,9 @@
             <fileset dir="." includes="**/*.jar" excludes="**/${shoal-gms-tests.jar}" />
             <fileset dir="." includes="**/*.sh"/>
         </jar>
+        <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
+            <fileset dir="." includes="**/configs/**" />
+        </jar>
     </target>
 
 

@@ -45,7 +45,7 @@
     <property file="${basedir}/build.properties"/>
     <xmlproperty file="${basedir}/../../pom.xml"/>
 
-    <property name="shoalcachejar" value="${basedir}/../target/shoal-cache-${project.version}.jar"/>
+    <property name="shoalcachejar" value="${basedir}/../target/shoal-cache.jar"/>
     <!-- all -->
     <target name="all" depends="clean, build"
             description="Build entire ${component.name}">

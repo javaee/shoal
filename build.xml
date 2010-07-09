@@ -72,5 +72,8 @@
             <fileset dir="." includes="**/*.jar"/>
             <fileset dir="." includes="**/*.sh"/>
         </jar>
+        <jar jarfile="dist/shoal-test.jar" update="yes">
+            <fileset dir="." includes="**/configs/**" />
+        </jar>
     </target>
 </project>
