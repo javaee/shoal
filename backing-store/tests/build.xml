@@ -41,7 +41,6 @@
 <project name="backing store tests" default="all" basedir=".">
 
     <!-- ========== Initialize Properties =================================== -->
-
     <property file="./build.properties"/>
 
     <target name="getgrizzlyjars">
@@ -65,7 +64,7 @@
         <property name="shoalbackingstorejar" value="${shoal-backing-store-path}/shoal-backing-store-${shoalbackingstorejar.project.parent.version}.jar" />
     </target>
     <target name="gethaapijars">
-        <xmlproperty prefix="haapijar" file="../../pom.xml"/>
+        <xmlproperty prefix="haapijar" file="${basedir}/../../pom.xml"/>
 
         <echo message="Updating ha-api.jar from maven repository" />
         <!--<xmlproperty file="../pom.xml"/> -->
@@ -77,15 +76,15 @@
             <!--Pathconvert will try to add the root directory to the "path", so replace with empty string -->
             <map from="${basedir}" to="" />
             <filtermapper>
-                <replacestring from="." to="${file.separator}"/>
+                <replacestring from="." to="/"/>
             </filtermapper>
         </pathconvert>
         <property name="haapiversion" value="${haapijar.project.properties.ha.api.version}"/>
-        <property name="mavenhaapijar" value="${maven.repository}${hagroupid}${file.separator}ha-api${file.separator}${haapiversion}${file.separator}ha-api-${haapiversion}.jar"/>
+        <property name="mavenhaapijar" value="${maven.repository}${hagroupid}/ha-api/${haapiversion}/ha-api-${haapiversion}.jar"/>
         <echo message="mavenhaapijar=${mavenhaapijar}"/>
         <mkdir dir="${ha-api-path}"/>
-        <delete file="${ha-api-path}${file.separator}ha-api.jar"/>
-        <copy file="${mavenhaapijar}" tofile="${ha-api-path}${file.separator}ha-api.jar"/>
+        <delete file="${ha-api-path}/ha-api.jar"/>
+        <copy file="${mavenhaapijar}" tofile="${ha-api-path}/ha-api.jar"/>
         <property name="haapijar" value="${ha-api-path}/ha-api.jar" />
     </target>
 
@@ -133,12 +132,12 @@
     </target>
 
     <!-- all -->
-    <target name="all" depends="clean, compile, assemble"
+    <target name="all" depends="clean, build"
             description="Build entire ${component.name}">
     </target>
 
     <!-- build -->
-    <target name="build" depends="compile, assemble"
+    <target name="build" depends="compile, assembletestjar"
             description="Build entire ${component.name}">
     </target>
 
@@ -175,13 +174,18 @@
 
     </target>
 
-    <target name="assemble" description="create ${tests.jar}" >
+    <target name="assembletestjar" description="create ${shoalbackingstoretestjar}" >
         <!-- create test jar -->
-        <jar jarfile="${shoalbackingstoretestjar}" update="yes">
+        <jar jarfile="${dist.dir}/${shoalbackingstoretestjar}" update="yes">
             <fileset dir="${classes.dir}" includes="**/*.class"/>
         </jar>
-        <jar jarfile="${shoalbackingstoretestjar}" update="yes">
+        <jar jarfile="${dist.dir}/${shoalbackingstoretestjar}" update="yes">
             <fileset dir="${src.dir}" includes="**/*.java"/>
+        </jar>
+
+        <jar jarfile="${dist.dir}/${shoalbackingstoretestjar}" update="yes">
+            <fileset dir=".." includes="**/*.jar" excludes="**/${shoalbackingstoretestjar}" />
+            <fileset dir=".." includes="**/*.sh"/>
         </jar>
     </target>
 

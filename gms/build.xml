@@ -46,8 +46,8 @@
 
     <!-- ========== Initialize Properties =================================== -->
 
-    <property file="./project.properties"/>
-    <property file="./build.properties"/>
+    <property file="${basedir}/project.properties"/>
+    <property file="${basedir}/build.properties"/>
 
     <!--
         See if we have the GroupLayout class to build the test UI
@@ -58,7 +58,7 @@
     </condition>
 
     <!-- all -->
-    <target name="all" depends="clean, compile, assemble"
+    <target name="all" depends="clean, build"
             description="Build entire ${component.name}">
     </target>
 
@@ -246,6 +246,11 @@
         <!-- create test jar -->
         <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
             <fileset dir="${component.classes.dir}" includes="**/*test*/**, **/*Test*/**"/>
+        </jar>
+
+        <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
+            <fileset dir="." includes="**/*.jar" excludes="**/${shoal-gms-tests.jar}" />
+            <fileset dir="." includes="**/*.sh"/>
         </jar>
     </target>
 
@@ -449,4 +454,5 @@
             <report format="frames" todir="${junit_results_html}"/>
         </junitreport>
     </target>
+
 </project>

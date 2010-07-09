@@ -42,15 +42,17 @@
 
     <!-- ========== Initialize Properties =================================== -->
 
-    <property file="./build.properties"/>
+    <property file="${basedir}/build.properties"/>
+    <xmlproperty file="${basedir}/../../pom.xml"/>
 
+    <property name="shoalcachejar" value="${basedir}/../target/shoal-cache-${project.version}.jar"/>
     <!-- all -->
-    <target name="all" depends="clean, compile, assemble"
+    <target name="all" depends="clean, build"
             description="Build entire ${component.name}">
     </target>
 
     <!-- build -->
-    <target name="build" depends="compile, assemble"
+    <target name="build" depends="compile, assembletestjar"
             description="Build entire ${component.name}">
     </target>
 
@@ -69,7 +71,7 @@
         <pathelement location="${grizzly-utils.jar}"/>
         <pathelement location="${shoal-gms.jar}"/>
         <pathelement location="${shoal-gms-tests.jar}"/>
-        <pathelement location="${cache.jar}"/>
+        <pathelement location="${shoalcachejar}"/>
     </path>
 
     <!-- compile: compile the sources -->
@@ -94,7 +96,7 @@
 
     </target>
 
-    <target name="assemble" description="create ${tests.jar}" >
+    <target name="assembletestjar" description="create ${tests.jar}" >
         <!-- create test jar -->
         <jar jarfile="${dist.dir}/${tests.jar}" update="yes">
             <fileset dir="${classes.dir}" includes="**/*.class"/>
@@ -102,9 +104,12 @@
         <jar jarfile="${dist.dir}/${tests.jar}" update="yes">
             <fileset dir="${src.dir}" includes="**/*.java"/>
         </jar>
+
+        <jar jarfile="${dist.dir}/${tests.jar}" update="yes">
+            <fileset dir=".." includes="**/*.jar" excludes="**/${tests.jar}" />
+            <fileset dir=".." includes="**/*.sh"/>
+        </jar>
     </target>
-
-
 
     <!-- clean -->
     <target name="clean">
