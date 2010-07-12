@@ -246,15 +246,18 @@ public class AliveAndReadyViewWindow {
                                             break;
 
                                         case UNKNOWN:
+
                                             // member in the UNKNOWN state have either failed during start up,
                                             // just have not reached the ready state, may have a multicast broadcast issue.
-                                            LOG.info("aliveAndReadyView initialization: member " + member + " has an unknown state, query instance directly");
-                                            MemberStates stateQuery = gh.getMemberState(member, 10000, 2000);
-                                            if (stateQuery == MemberStates.ALIVEANDREADY ||  stateQuery == MemberStates.READY) {
-                                                aliveAndReadyMembers.add(member);
-                                            } else if (stateQuery == MemberStates.UNKNOWN) {
-                                                LOG.warning("aliveAndReadyView initialization: member " + member + " still unknown state after a direct query on state");
+                                            if (LOG.isLoggable(TRACE_LEVEL)) {
+                                                LOG.log(TRACE_LEVEL, "aliveAndReadyView initialization: member " + member + " has an UNKNOWN member state from 10 seconds of heartbeat state");
                                             }
+                                            // MemberStates stateQuery = gh.getMemberState(member, 10000, 2000);
+                                            // if (stateQuery == MemberStates.ALIVEANDREADY ||  stateQuery == MemberStates.READY) {
+                                            //    aliveAndReadyMembers.add(member);
+                                            // } else if (stateQuery == MemberStates.UNKNOWN) {
+                                            //    LOG.warning("aliveAndReadyView initialization: member " + member + " still unknown state after a direct query on state");
+                                            // }
                                             break;
                                         
                                         case ALIVE:
@@ -267,10 +270,13 @@ public class AliveAndReadyViewWindow {
                                 }
                             }
                             if (aliveAndReadyMembers.size() > 0) {
-                                if (jrns.getEventSubType() == GMSConstants.startupType.INSTANCE_STARTUP) {
-                                    isSimulatedStartCluster.compareAndSet(false, true);
-                                    simulatedStartClusterTime = System.currentTimeMillis();
-                                }
+
+                                // disabled simulated cluster.
+
+//                                if (jrns.getEventSubType() == GMSConstants.startupType.INSTANCE_STARTUP) {
+//                                    isSimulatedStartCluster.compareAndSet(false, true);
+//                                    simulatedStartClusterTime = System.currentTimeMillis();
+//                                }
                                 add(signal, aliveAndReadyMembers);
                             }
                         } else {

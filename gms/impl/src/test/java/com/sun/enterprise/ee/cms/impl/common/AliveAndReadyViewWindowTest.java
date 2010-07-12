@@ -204,11 +204,11 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         stopCluster();
     }
 
-    public void testSimulateStartClusterStopCluster() throws GMSException {
-        mySetup();
-        simulateStartCluster(10);
-        stopCluster();
-    }
+//    public void testSimulateStartClusterStopCluster() throws GMSException {
+//        mySetup();
+//        simulateStartCluster(10);
+//        stopCluster();
+//    }
 
 
     public void testStopInstance() throws GMSException {
@@ -320,33 +320,33 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
     // confirms that an instance started 10 seconds after cluster started will result in a previous view
     // that differs from current view.
-    public void testStartInstance() throws GMSException {
-           final long JUNIT_TEST_STARTCLUSTER_MAX_DURATION = 1000;
-           mySetup();
-           aliveAndReadyViewWindow.setStartClusterMaxDuration(JUNIT_TEST_STARTCLUSTER_MAX_DURATION);  // for unit testing only, set to 1 second.
-           simulateStartCluster(9); // do not start instance110.  Ensure that this results in current not equaling previous.
-           TreeSet<String> expectedMembers = new TreeSet<String>(coreClusterMembers);
-           String targetedInstance = "instance110";
-
-
-            try {
-                Thread.sleep(JUNIT_TEST_STARTCLUSTER_MAX_DURATION);
-            } catch(InterruptedException e) {}
-
-           // start instance after simulated start cluster completed.
-           JoinedAndReadyNotificationSignal jrSignal;
-           jrSignal = this.createJoinAndReadyNotificationSignal(targetedInstance, GROUP_NAME,  IS_CORE,
-                                                                START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
-           aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
-
-           // assert that the starting of this instance resulted in a new aliveAndReadyView, that it was not incorrectly
-           // folded into start-cluster.
-           assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
-           assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
-           expectedMembers.add(targetedInstance);
-           assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
-           stopCluster();
-       }
+//    public void testStartInstance() throws GMSException {
+//           final long JUNIT_TEST_STARTCLUSTER_MAX_DURATION = 1000;
+//           mySetup();
+//           aliveAndReadyViewWindow.setStartClusterMaxDuration(JUNIT_TEST_STARTCLUSTER_MAX_DURATION);  // for unit testing only, set to 1 second.
+//           simulateStartCluster(9); // do not start instance110.  Ensure that this results in current not equaling previous.
+//           TreeSet<String> expectedMembers = new TreeSet<String>(coreClusterMembers);
+//           String targetedInstance = "instance110";
+//
+//
+//            try {
+//                Thread.sleep(JUNIT_TEST_STARTCLUSTER_MAX_DURATION);
+//            } catch(InterruptedException e) {}
+//
+//           // start instance after simulated start cluster completed.
+//           JoinedAndReadyNotificationSignal jrSignal;
+//           jrSignal = this.createJoinAndReadyNotificationSignal(targetedInstance, GROUP_NAME,  IS_CORE,
+//                                                                START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
+//           aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+//
+//           // assert that the starting of this instance resulted in a new aliveAndReadyView, that it was not incorrectly
+//           // folded into start-cluster.
+//           assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
+//           assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
+//           expectedMembers.add(targetedInstance);
+//           assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+//           stopCluster();
+//       }
 
 
 
