@@ -54,7 +54,7 @@ public class AliveAndReadyViewWindow {
     protected static final Logger LOG = Logger.getLogger(GMSLogDomain.GMS_LOGGER + ".ready");
 
     static final long MIN_VIEW_DURATION = 1000;  // 1 second
-    private static final long MAX_CLUSTER_STARTTIME_DURATION_MS = 20000; // todo: revisit this constant of 20 seconds for cluster startup.
+    private long MAX_CLUSTER_STARTTIME_DURATION_MS = 10000; // todo: revisit this constant of 10 seconds for cluster startup.
 
     static final int MAX_ALIVE_AND_READY_VIEWS = 5;
     private final List<AliveAndReadyView> aliveAndReadyView = new LinkedList<AliveAndReadyView>();
@@ -92,6 +92,10 @@ public class AliveAndReadyViewWindow {
     AliveAndReadyViewWindow() {
         jrcallback = new JoinedAndReadyCallBack(null, aliveAndReadyView);
         leaveCallback = new LeaveCallBack(null, aliveAndReadyView);
+    }
+
+    public void setStartClusterMaxDuration(long durationInMs) {
+        MAX_CLUSTER_STARTTIME_DURATION_MS = durationInMs;
     }
 
     // junit testing only - only scope to package access
@@ -241,8 +245,18 @@ public class AliveAndReadyViewWindow {
                                             }
                                             break;
 
-                                        // members in the remaining states have either failed during start up,
-                                        // just have not reached the ready state, may have a multicast broadcast issue.
+                                        case UNKNOWN:
+                                            // member in the UNKNOWN state have either failed during start up,
+                                            // just have not reached the ready state, may have a multicast broadcast issue.
+                                            LOG.info("aliveAndReadyView initialization: member " + member + " has an unknown state, query instance directly");
+                                            MemberStates stateQuery = gh.getMemberState(member, 10000, 2000);
+                                            if (stateQuery == MemberStates.ALIVEANDREADY ||  stateQuery == MemberStates.READY) {
+                                                aliveAndReadyMembers.add(member);
+                                            } else if (stateQuery == MemberStates.UNKNOWN) {
+                                                LOG.warning("aliveAndReadyView initialization: member " + member + " still unknown state after a direct query on state");
+                                            }
+                                            break;
+                                        
                                         case ALIVE:
                                         default:
                                             if (LOG.isLoggable(TRACE_LEVEL)) {

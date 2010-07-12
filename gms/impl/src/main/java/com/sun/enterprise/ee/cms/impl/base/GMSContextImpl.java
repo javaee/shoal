@@ -104,7 +104,9 @@ public class GMSContextImpl extends GMSContextBase {
         // It should be driven independent of GMSContext through a factory as
         // other impls of this interface can exist
         createDistributedStateCache();
+        long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
         aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
+        aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
         logger.log(Level.FINE,  "gms.init");
     }
 
