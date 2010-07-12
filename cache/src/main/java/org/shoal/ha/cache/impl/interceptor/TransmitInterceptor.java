@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.group.GroupService;
@@ -62,13 +63,14 @@ public final class TransmitInterceptor<K, V>
             GroupService gs = ctx.getGroupService();
             gs.sendMessage(cmd.getTargetName(),
                     ctx.getServiceName(), data);
-            cmd.postTransmit(cmd.getTargetName(), true);
         } catch (IOException ioEx) {
-            //TODO
+            System.err.println("Error DURING transmit...");
+            ioEx.printStackTrace();
         }
     }
 
-    public void onReceive(Command<K, V> cmd) {
+    public void onReceive(Command<K, V> cmd)
+        throws DataStoreException {
         super.onReceive(cmd);
     }
 

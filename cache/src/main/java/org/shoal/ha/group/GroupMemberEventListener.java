@@ -36,14 +36,15 @@
 
 package org.shoal.ha.group;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * @author Mahesh Kannan
  *
  */
 public interface GroupMemberEventListener {
 
-    public void memberReady(String instanceName, String groupName);
-
-    public void memberLeft(String instanceName, String groupName, boolean isShutdown);
-
+    public void onViewChange(String memberName, Collection<String> currentAliveAndReadyMembers,
+                                    Collection<String> previousView, boolean isJoinEvent);
 }

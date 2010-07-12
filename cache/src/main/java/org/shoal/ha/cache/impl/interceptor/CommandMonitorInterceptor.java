@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.impl.interceptor;
 
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,13 +52,15 @@ public class CommandMonitorInterceptor<K, V>
     private AtomicInteger recevCount = new AtomicInteger();
 
     @Override
-    public void onTransmit(Command cmd) {
+    public void onTransmit(Command cmd)
+        throws DataStoreException {
         super.onTransmit(cmd);
         transCount.incrementAndGet();
     }
 
     @Override
-    public void onReceive(Command cmd) {
+    public void onReceive(Command cmd)
+        throws DataStoreException {
         recevCount.incrementAndGet();
         super.onReceive(cmd);
     }

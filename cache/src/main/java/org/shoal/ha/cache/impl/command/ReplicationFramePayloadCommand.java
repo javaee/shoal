@@ -79,7 +79,8 @@ public class ReplicationFramePayloadCommand<K, V>
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
+    public void execute(DataStoreContext<K, V> ctx)
+        throws DataStoreException {
 //        System.out.println("ReplicationFramePayloadCommand["+getDataStoreContext().getMyName()+"] received: " + frame);
         List<Command<K, V>> commands = frame.getCommands();
         for (Command<K, V> cmd : commands) {

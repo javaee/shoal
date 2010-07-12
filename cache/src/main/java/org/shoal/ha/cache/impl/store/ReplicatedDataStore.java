@@ -67,7 +67,6 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreContext<K, V> dsc;
 
-
     private DataStoreConfigurator<K, V> conf;
 
     private ReplicaLocationHolder<K, V> localDS;
@@ -103,10 +102,6 @@ public class ReplicatedDataStore<K, V>
         KeyMapper<K> keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
-            for (String member : gs.getCurrentCoreMembers()) {
-                System.out.println("***ReplicatedDataStore notifying DefaultKeyMapper with A&R: " + member);
-                ((DefaultKeyMapper) keyMapper).registerInstance(member);
-            }
         }
 
         gs.registerGroupMessageReceiver(storeName, cm);
@@ -131,7 +126,8 @@ public class ReplicatedDataStore<K, V>
     }
 
     @Override
-    public String updateDelta(K k, Serializable obj) {
+    public String updateDelta(K k, Serializable obj)
+        throws DataStoreException {
         UpdateDeltaCommand<K, V> cmd = new UpdateDeltaCommand<K, V>(k, obj);
         cm.execute(cmd);
 

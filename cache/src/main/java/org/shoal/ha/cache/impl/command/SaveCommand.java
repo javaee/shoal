@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
@@ -101,9 +102,10 @@ public class SaveCommand<K, V>
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
+    public void execute(DataStoreContext<K, V> ctx)
+        throws DataStoreException {
         ctx.getReplicaStore().put(k, v);
-//        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: saved(" + k + ")");
+        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: saved(" + k + ")");
     }
 
     @Override

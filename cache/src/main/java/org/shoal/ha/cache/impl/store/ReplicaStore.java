@@ -57,7 +57,8 @@ public class ReplicaStore<K, V> {
         this.ctx = ctx;
     }
 
-    public void put(K k, Object obj) {
+    public void put(K k, Object obj)
+        throws DataStoreException {
         DataStoreEntry<K, V> dse = map.get(k);
         if (dse == null) {
             dse = new DataStoreEntry<K, V>();

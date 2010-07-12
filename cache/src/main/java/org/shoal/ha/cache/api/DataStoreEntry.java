@@ -96,7 +96,7 @@ public class DataStoreEntry<K, V> {
         return state;
     }
 
-    public void setState(byte[] state) {
+    public void setState(Object state) {
         this.state = state;
     }
 
@@ -162,6 +162,6 @@ public class DataStoreEntry<K, V> {
                                     byte[] data, int index)
         throws IOException {
 
-        helper.readObject(data, index);
+        setState(helper.readObject(data, index));
     }
 }

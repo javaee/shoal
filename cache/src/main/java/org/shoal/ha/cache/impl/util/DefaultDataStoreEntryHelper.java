@@ -60,14 +60,15 @@ public class DefaultDataStoreEntryHelper<K, V>
         this.factory = factory;
         this.loader = loader;
         this.defaultMaxIdleTime = defaultMaxIdleTime;
-
-        System.out.println("**Created DefaultDataStoreEntryHelper:: " + loader);
-        (new Throwable("******* DefaultDataStoreEntryHelper ********")).printStackTrace();
     }
 
     @Override
     public V getV(DataStoreEntry<K, V> replicationEntry)
             throws DataStoreException {
+        if (replicationEntry == null) {
+            return null;
+        }
+        
         byte[] data = (byte[]) replicationEntry.getState();
         if (data == null) {
             return null;
@@ -146,7 +147,8 @@ public class DefaultDataStoreEntryHelper<K, V>
     }
 
     @Override
-    public void updateState(K k, DataStoreEntry<K, V> kvDataStoreEntry, Object obj) {
+    public void updateState(K k, DataStoreEntry<K, V> kvDataStoreEntry, Object obj)
+        throws DataStoreException {
         kvDataStoreEntry.setKey(k);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = null;
@@ -155,7 +157,7 @@ public class DefaultDataStoreEntryHelper<K, V>
             oos.writeObject(obj);
             oos.flush();
         } catch (IOException ioEx) {
-            //TODO
+            throw new DataStoreException("Error during updateState", ioEx);
         } finally {
             try {
                 oos.close();

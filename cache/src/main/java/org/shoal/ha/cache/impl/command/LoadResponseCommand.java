@@ -90,7 +90,7 @@ public class LoadResponseCommand<K, V>
         trans.getDataStoreKeyHelper().writeKey(ros, key);
         vOffset = ros.mark() - vOffset;
         ros.reWrite(vMark, Utility.intToBytes(vOffset));
-        ros.write(entry == null ? 0 : 1);
+        ros.write(Utility.intToBytes(entry == null ? 0 : 1));
         if (entry != null) {
             entry.writeDataStoreEntry(trans, ros);
         }
@@ -105,15 +105,16 @@ public class LoadResponseCommand<K, V>
                 ReplicationIOUtils.readLengthPrefixedString(data, offset + 12);
         int instOffset = 4 + ((originatingInstance == null) ? 0 : originatingInstance.length());
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset + 12 + instOffset);
-        byte flag = data[offset + vOffset];
+        int flag = Utility.bytesToInt(data, offset + vOffset);
         if (flag != 0) {
             entry = new DataStoreEntry<K, V>();
-            entry.readDataStoreEntry(trans, data, offset + vOffset + 1);
+            entry.readDataStoreEntry(trans, data, offset + vOffset + 4);
         }
     }
 
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+        System.out.println("**LoadResponseComand::prepareToTransmit(" + originatingInstance + ")");
         setTargetName(originatingInstance);
     }
 

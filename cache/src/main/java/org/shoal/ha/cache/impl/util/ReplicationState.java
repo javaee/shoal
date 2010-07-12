@@ -132,9 +132,9 @@ public final class ReplicationState<K, V>
     public String toString() {
         StringBuilder sb = new StringBuilder("ReplicationState: [");
         sb.append(super.toString())
-                .append("; ").append(attributes.size());
+                .append("; attrCount: ").append(attributes.size());
         for (String a : attributes.keySet()) {
-            sb.append("\n\t").append(a).append("; ").append(attributes.get(a).length).append("; ");
+            sb.append("\n\t attrName: ").append(a).append("; ").append(attributes.get(a).length).append("; ");
         }
 
         return sb.toString();

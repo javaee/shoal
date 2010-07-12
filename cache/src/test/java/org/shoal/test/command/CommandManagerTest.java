@@ -39,6 +39,7 @@ package org.shoal.test.command;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
 import org.shoal.test.common.DummyGroupService;
 import org.shoal.ha.cache.api.DataStoreContext;
@@ -81,8 +82,12 @@ public class CommandManagerTest
         DataStoreContext dsc = new DataStoreContext("test", gs, this.getClass().getClassLoader());
         CommandManager cm = new CommandManager(dsc);
         cm.registerCommand(new NoopCommand());
-        cm.execute(new NoopCommand());
-        assert (true);
+        try {
+            cm.execute(new NoopCommand());
+            assert (true);
+        } catch (DataStoreException dse) {
+            assert(false);
+        }
     }
 
     /*

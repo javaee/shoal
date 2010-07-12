@@ -141,7 +141,8 @@ public abstract class Command<K, V> {
     protected abstract void readCommandPayload(DataStoreContext<K, V> t, byte[] data, int offset)
             throws IOException, DataStoreException;
 
-    public abstract void execute(DataStoreContext<K, V> ctx);
+    public abstract void execute(DataStoreContext<K, V> ctx)
+            throws DataStoreException;
 
     public void postTransmit(String target, boolean status) {
 

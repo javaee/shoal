@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationFramePayloadCommand;
 
@@ -104,7 +105,8 @@ public class ReplicationCommandTransmitter<K, V>
         }
     }
 
-    private void transmitFramePayload(ReplicationFrame<K, V> frame) {
+    private void transmitFramePayload(ReplicationFrame<K, V> frame)
+        throws DataStoreException {
         frame.setSeqNo(outgoingSeqno.incrementAndGet());
         frame.setMinOutstandingPacketNumber(acknowledgedSeqno.get());
         frame.setTargetInstanceName(targetName);

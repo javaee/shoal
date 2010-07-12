@@ -71,7 +71,7 @@ public class DataStoreFactory {
                 .setClassLoader(loader)
                 .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
-                .setCacheLocally(true)
+                //.setCacheLocally(true)
                 .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         return createDataStore(conf);

@@ -175,7 +175,8 @@ public class ReplicaLocationHolder<K, V>
         }
     }
 
-    private void removeStaleData(K k, String staleLocation) {
+    private void removeStaleData(K k, String staleLocation)
+        throws DataStoreException {
         DirectedRemoveCommand<K, V> cmd = new DirectedRemoveCommand<K, V>();
         cmd.setTargetName(staleLocation);
         cmd.setKey(k);

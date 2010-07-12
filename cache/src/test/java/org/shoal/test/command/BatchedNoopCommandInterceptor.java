@@ -36,6 +36,7 @@
 
 package org.shoal.test.command;
 
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 
@@ -52,14 +53,16 @@ public class BatchedNoopCommandInterceptor<K, V>
     private AtomicInteger batchedRecvCount = new AtomicInteger();
 
     @Override
-    public void onTransmit(Command cmd) {
+    public void onTransmit(Command cmd)
+        throws DataStoreException {
         System.out.println("**** BatchedNoopCommandInterceptor.onTransmit() got: " + cmd.getClass().getName());
         batchedTransCount.incrementAndGet();
         super.onTransmit(cmd);
     }
 
     @Override
-    public void onReceive(Command cmd) {
+    public void onReceive(Command cmd)
+        throws DataStoreException {
         batchedRecvCount.incrementAndGet();
         super.onReceive(cmd);
     }

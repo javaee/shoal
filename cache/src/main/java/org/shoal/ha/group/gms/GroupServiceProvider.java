@@ -44,10 +44,9 @@ import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
 
-import java.util.Properties;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -74,74 +73,80 @@ public class GroupServiceProvider
 
     private boolean createdAndJoinedGMSGroup;
 
+    private AtomicLong previousViewId = new AtomicLong();
+
+    private volatile AliveAndReadyView arView;
+
     public GroupServiceProvider(String myName, String groupName, boolean startGMS) {
         init(myName, groupName, startGMS);
     }
 
     public void processNotification(Signal notification) {
-        MemberStates[] states;
-        if (notification instanceof JoinedAndReadyNotificationSignal) {
-            //TODO: By milestone 3, handle rejoin sub event
-            
-            JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal) notification;
-            String aliveInstanceName = readySignal.getMemberToken();
-            if (aliveInstances.putIfAbsent(aliveInstanceName, aliveInstanceName) == null) {
-                notifyOnMemberReady(aliveInstanceName);
-            }
-            List<String> currentCoreMembers = readySignal.getCurrentCoreMembers();
-            states = new MemberStates[currentCoreMembers.size()];
-            int i = 0;
-            for (String instanceName : currentCoreMembers) {
-                states[i] = gms.getGroupHandle().getMemberState(instanceName, 6000, 0);
-                switch (states[i]) {
-                    case READY:
-                    case ALIVEANDREADY:
-                        if (aliveInstances.putIfAbsent(aliveInstanceName, aliveInstanceName) == null) {
-                            notifyOnMemberReady(aliveInstanceName);
-                        }
-                        break;
-                }
-            }
-        } else if (notification instanceof FailureNotificationSignal) {
-            String instanceName = notification.getMemberToken();
-            aliveInstances.remove(instanceName);
-            if (!myName.equals(instanceName)) {
-                for (GroupMemberEventListener listener : listeners) {
-                    listener.memberLeft(instanceName, groupName, false);
-                }
-            }
-        } else if (notification instanceof PlannedShutdownSignal) {
-            String instanceName = notification.getMemberToken();
-            PlannedShutdownSignal pss = (PlannedShutdownSignal) notification;
-            GMSConstants.shutdownType shutType = pss.getEventSubType();
-            aliveInstances.remove(instanceName);
-            if (!myName.equals(instanceName)) {
-                for (GroupMemberEventListener listener : listeners) {
-                    listener.memberLeft(instanceName, groupName, shutType == GMSConstants.shutdownType.GROUP_SHUTDOWN);
-                }
-            }
+        boolean isJoin = true;
+        if ((notification instanceof JoinedAndReadyNotificationSignal)
+            || (notification instanceof FailureNotificationSignal)
+            || (notification instanceof PlannedShutdownSignal)) {
+
+            isJoin = notification instanceof JoinedAndReadyNotificationSignal;
+
+            checkAndNotifyAboutCurrentAndPreviousMembers(notification.getMemberToken(), isJoin);
         }
     }
 
-    private void notifyOnMemberReady(String eventCausedBy) {
+    private void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent) {
+
+        List<String> currentAliveAndReadyMembers = gms.getGroupHandle().getCurrentAliveOrReadyMembers();
+        AliveAndReadyView aView = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
+        SortedSet<String> previousAliveAndReadyMembers = new TreeSet<String>();
+
+        if (aView == null) { //Possible during unit tests when listeners are registered before GMS is started
+            return;
+        }
+
+        long arViewId = aView.getViewId();
+        long knownId = previousViewId.get();
+        Signal sig = aView.getSignal();
+
+//        System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: previous viewID: " + knownId
+//                + "; current viewID: " + arViewId + "; " + aView.getSignal());
+        if (knownId < arViewId) {
+            if (previousViewId.compareAndSet(knownId, arViewId)) {
+                this.arView = aView;
+                sig = this.arView.getSignal();
+                previousAliveAndReadyMembers = this.arView.getMembers();
+            }
+        } else {
+            previousAliveAndReadyMembers = this.arView.getMembers();
+        }
+
+        //Listeners must be notified even if view has not changed.
+        //This is because this method is called when a listener
+        //  is registered
         for (GroupMemberEventListener listener : listeners) {
-            listener.memberReady(eventCausedBy, groupName);
+            listener.onViewChange(memberName, currentAliveAndReadyMembers,
+                    previousAliveAndReadyMembers, isJoinEvent);
         }
-    }
 
-    private void notifyCurrentAliveMembers() {
-        List<String> members = gms.getGroupHandle().getCurrentCoreMembers();
-        for (String instanceName : members) {
-            MemberStates state = gms.getGroupHandle().getMemberState(instanceName, 6000, 0);
-            switch (state) {
-                case READY:
-                case ALIVEANDREADY:
-                    if (aliveInstances.putIfAbsent(instanceName, instanceName) == null) {
-                        notifyOnMemberReady(instanceName);
-                    }
-                    break;
-            }
+        StringBuilder sb = new StringBuilder("**VIEW: ");
+        sb.append("prevViewId: " + knownId).append("; curViewID: ").append(arViewId)
+                .append("; signal: ").append(sig).append(" ");
+        sb.append("[current: ");
+        String delim = "";
+        for (String member : currentAliveAndReadyMembers) {
+            sb.append(delim).append(member);
+            delim = ", ";
         }
+        sb.append("]  [previous: ");
+        delim = "";
+
+        for (String member : previousAliveAndReadyMembers) {
+            sb.append(delim).append(member);
+            delim = ", ";
+        }
+        sb.append("]");
+        System.out.println(sb.toString());
+        System.out.println("**********************************************************************");
+
     }
 
     private void init(String myName, String groupName, boolean startGMS) {
@@ -248,14 +253,15 @@ public class GroupServiceProvider
 
     @Override
     public void registerGroupMessageReceiver(String messageToken, MessageReceiver receiver) {
-        logger.fine("[GroupServiceProvider]:  REGISTERED A MESSAGE LISTENER: " + receiver + "; for token: " + messageToken);
+        logger.fine("[GroupServiceProvider]:  REGISTERED A MESSAGE LISTENER: "
+                + receiver + "; for token: " + messageToken);
         gms.addActionFactory(new MessageActionFactoryImpl(receiver), messageToken);
     }
 
     @Override
     public void registerGroupMemberEventListener(GroupMemberEventListener listener) {
         listeners.add(listener);
-        notifyCurrentAliveMembers();
+        checkAndNotifyAboutCurrentAndPreviousMembers(myName, true);
     }
 
     @Override

@@ -60,13 +60,9 @@ public class DefaultKeyMapper<K>
 
     private ReentrantReadWriteLock.WriteLock wLock;
 
-    private volatile TreeSet<String> currentMemberSet = new TreeSet<String>();
-
-    private volatile TreeSet<String> currentMemberSetIncludingMe = new TreeSet<String>();
-
     private volatile String[] members = new String[0];
 
-    private volatile String[] membersIncludingMe = new String[0];
+    private volatile String[] previuousAliveAndReadyMembers = new String[0];
 
 
     public DefaultKeyMapper(String myName, String groupName) {
@@ -77,7 +73,7 @@ public class DefaultKeyMapper<K>
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
 
-        registerInstance(myName);
+        previuousAliveAndReadyMembers = new String[] {myName};
     }
 
     @Override
@@ -110,25 +106,39 @@ public class DefaultKeyMapper<K>
 
         try {
             rLock.lock();
-            return membersIncludingMe.length == 0
+            return previuousAliveAndReadyMembers.length == 0
                     ? null
-                    : membersIncludingMe[hc % (membersIncludingMe.length)];
+                    : previuousAliveAndReadyMembers[hc % (previuousAliveAndReadyMembers.length)];
         } finally {
             rLock.unlock();
         }
     }
 
     @Override
-    public void memberReady(String instanceName, String groupName) {
-        if (this.groupName.equals(groupName)) {
-            registerInstance(instanceName);
-        }
-    }
+    public void onViewChange(String memberName,
+                             Collection<String> readOnlyCurrentAliveAndReadyMembers,
+                             Collection<String> readOnlyPreviousAliveAndReadyMembers,
+                             boolean isJoinEvent) {
+        try {
+            wLock.lock();
 
-    @Override
-    public void memberLeft(String instanceName, String groupName, boolean isShutdown) {
-        if (this.groupName.equals(groupName)) {
-            removeInstance(instanceName);
+
+            TreeSet<String> currentMemberSet = new TreeSet<String>();
+            currentMemberSet.addAll(readOnlyCurrentAliveAndReadyMembers);
+            currentMemberSet.remove(myName);
+            members = currentMemberSet.toArray(new String[0]);
+
+
+            TreeSet<String> previousView = new TreeSet<String>();
+            previousView.addAll(readOnlyPreviousAliveAndReadyMembers);
+            if (! isJoinEvent) {
+                previousView.remove(memberName);
+            }
+            previuousAliveAndReadyMembers = previousView.toArray(new String[0]);
+
+            printMemberStates("onViewChange");
+        } finally {
+            wLock.unlock();
         }
     }
 
@@ -150,47 +160,15 @@ public class DefaultKeyMapper<K>
         return hc;
     }
 
-    public void registerInstance(String inst) {
-        try {
-            wLock.lock();
-            if (!inst.equals(myName)) {
-                currentMemberSet.add(inst);
-            }
-            currentMemberSetIncludingMe.add(inst);
-
-            members = currentMemberSet.toArray(new String[0]);
-            membersIncludingMe = currentMemberSetIncludingMe.toArray(new String[0]);
-            printMemberStates();
-        } finally {
-            wLock.unlock();
-        }
-    }
-
-    public synchronized void removeInstance(String inst) {
-        wLock.lock();
-        try {
-            currentMemberSet.remove(inst);
-            if (! inst.equals(myName)) {
-                currentMemberSetIncludingMe.remove(inst);
-            }
-
-            members = currentMemberSet.toArray(new String[0]);
-            membersIncludingMe = currentMemberSetIncludingMe.toArray(new String[0]);
-            printMemberStates();
-        } finally {
-            wLock.unlock();
-        }
-    }
-
-    public void printMemberStates() {
-        System.out.print("DefaultKeyMapper<" + myName + ">:: Members[");
+    public void printMemberStates(String message) {
+        System.out.print(message + " DefaultKeyMapper<" + myName + "> [");
         for (String st : members) {
             System.out.print("<" + st + "> ");
         }
         System.out.println("]");
 
-        System.out.print("DefaultKeyMapper<" + myName + ">:: MembersIncludingMe[");
-        for (String st : membersIncludingMe) {
+        System.out.print("\t MembersIncludingMe[");
+        for (String st : previuousAliveAndReadyMembers) {
             System.out.print("<" + st + "> ");
         }
         System.out.println("]");

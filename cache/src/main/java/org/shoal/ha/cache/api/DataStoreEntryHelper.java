@@ -55,7 +55,8 @@ public interface DataStoreEntryHelper<K, V> {
     public Object readObject(byte[] delta, int offset)
         throws DataStoreException;
 
-    public void updateState(K k, DataStoreEntry<K, V> entry, Object obj);
+    public void updateState(K k, DataStoreEntry<K, V> entry, Object obj)
+            throws DataStoreException;
 
     public void updateMetadata(K k, DataStoreEntry<K, V> entry, Object obj);
 

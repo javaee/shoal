@@ -103,10 +103,12 @@ public class LoadRequestCommand<K, V>
         tokenId = Utility.bytesToLong(data, offset);
         ReplicationIOUtils.KeyInfo keyInfo = ReplicationIOUtils.readLengthPrefixedKey(
                 trans.getDataStoreKeyHelper(), data, offset + 8);
-//        System.out.println("**LoadRequestCommand.readCommandPayload: " + keyInfo.keyLen);
         key = (K) keyInfo.key;
+
         originatingInstance = ReplicationIOUtils.readLengthPrefixedString(
                 data, offset + 8 + 4 + keyInfo.keyLen);
+
+       System.out.println("**RECEIVED LoadRequestCommand: " + key + "; originatingInstance: " + originatingInstance);
     }
 
 
@@ -129,9 +131,14 @@ public class LoadRequestCommand<K, V>
         if (!originatingInstance.equals(ctx.getInstanceName())) {
             LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
             rsp.setOriginatingInstance(originatingInstance);
-            System.out.println("LoadRequestCommand.execute: key: " + key +  " from " + originatingInstance + "; tokenId: " + tokenId);
+            System.out.println("1. LoadRequestCommand.execute: about to send response for key: " + key
+                    +  " from " + originatingInstance + "; tokenId: " + tokenId
+                    + "; *response: " + ctx.getDataStoreEntryHelper().getV(e));
             getCommandManager().execute(rsp);
         } else {
+            System.out.println("2. LoadRequestCommand.execute: key: " + key
+                    +  " from " + originatingInstance + "; tokenId: " + tokenId
+                    + "; *response: " + ctx.getDataStoreEntryHelper().getV(e));
             resp.setResult(e);
         }
         } catch (DataStoreException dsEx) {

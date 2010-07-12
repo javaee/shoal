@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.command;
 
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
@@ -103,7 +104,8 @@ public class ReplicationCommandTransmitterManager<K, V>
         return new String[] {instances[index]};
     }
 
-    public void onTransmit(Command<K, V> cmd) {
+    public void onTransmit(Command<K, V> cmd)
+        throws DataStoreException {
         if (cmd.getOpcode() != ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD) {
             String target = cmd.getTargetName();
             System.out.println("** ReplicationCommandTransmitterManager: "

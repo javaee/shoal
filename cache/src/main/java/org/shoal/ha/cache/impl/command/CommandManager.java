@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
 
@@ -87,12 +88,14 @@ public class CommandManager<K, V>
 
     //Initiated to transmit
 
-    public void execute(Command<K, V> cmd) {
+    public void execute(Command<K, V> cmd)
+        throws DataStoreException {
         execute(cmd, true, myName);
     }
 
     //Initiated to transmit
-    public void execute(Command<K, V> cmd, boolean forward, String initiator) {
+    public void execute(Command<K, V> cmd, boolean forward, String initiator)
+        throws DataStoreException {
         cmd.initialize(dsc);
         if (head != null) {
             if (forward) {

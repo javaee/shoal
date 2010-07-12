@@ -41,6 +41,10 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Unit test for simple App.
  */
@@ -79,27 +83,36 @@ public class KeyMapperTest
     public void testRegisterOnly() {
         DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
-        km.registerInstance("n0");
-        km.registerInstance("n1");
+        String[] aliveInstances = new String[] {"n0", "n1"};
+        String[] previousView = new String[] {};
+        km.onViewChange("n0", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
+
         assert (true);
     }
 
     public void testUnregisterOnly() {
         DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
-
-        km.removeInstance("n0");
-        km.removeInstance("n1");
+        String[] aliveInstances = new String[] {};
+        String[] previousView = new String[] {"n0", "n1"};
+        km.onViewChange("n0", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), false);
+        
         assert (true);
     }
 
     public void testRegisterAndUnregister() {
         DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
-        km.registerInstance("n0");
-        km.registerInstance("n1");
+        String[] aliveInstances = new String[] {"n0", "n1"};
+        String[] previousView = new String[] {};
+        km.onViewChange("n0", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
+        aliveInstances = new String[] {};
+        previousView = new String[] {"n0", "n1"};
+        km.onViewChange("n1", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), false);
 
-        km.removeInstance("n0");
-        km.removeInstance("n1");
         assert (true);
     }
 
@@ -120,34 +133,37 @@ public class KeyMapperTest
     public void testRegisterAndTest() {
         DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
 
-        km.registerInstance("n0");
-        km.registerInstance("n1");
+        String[] aliveInstances = new String[] {"n0", "n1"};
+        String[] previousView = new String[] {};
+        km.onViewChange("n0", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
         mapStringKeyTest(km);
 
-        km.registerInstance("inst0");
-        km.registerInstance("inst1");
-        km.registerInstance("instancen0");
-        km.registerInstance("instancen1");
+        aliveInstances = new String[] {"n0", "n1", "n2", "inst1", "instance2", "someInstance"};
+        previousView = new String[] {};
+        km.onViewChange("**NON-EXISTENT-INSTANCE", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
         mapStringKeyTest(km);
 
         assert (true);
     }
 
     public void testMappedToMyself() {
-        DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
+        DefaultKeyMapper km = new DefaultKeyMapper("inst0", "g1");
 
-        km.registerInstance("n0");
-        km.registerInstance("n1");
-        km.registerInstance("n2");
-        km.registerInstance("n3");
-        km.registerInstance("n4");
-        km.registerInstance("n5");
+        String[] aliveInstances = new String[10];
+        for (int i=0; i<10; i++) {aliveInstances[i] = "inst"+i;}
 
-        Integer[] keys = new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+        String[] previousView = new String[] {};
+        km.onViewChange("inst0", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
+
+        Integer[] keys = new Integer[14];
+        for (int i=0; i<14; i++) {keys[i] = i;}
 
         boolean result = true;
         for (int i = 0; i < keys.length; i++) {
-            if (km.getMappedInstance("g1", keys[i]).equals("n0")) {
+            if (km.getMappedInstance("g1", keys[i]).equals("inst0")) {
                 result = false;
                 System.err.println("For key: " + keys[i] + " was mapped to me!!");
             }
@@ -156,36 +172,35 @@ public class KeyMapperTest
         assert (result);
     }
 
-
     public void testReplicaUponFailure() {
-        DefaultKeyMapper<String> km1 = new DefaultKeyMapper<String>("n2", "g1");
-        DefaultKeyMapper<String> km4 = new DefaultKeyMapper<String>("n4", "g1");
+        DefaultKeyMapper<String> km1 = new DefaultKeyMapper<String>("inst2", "g1");
 
-        km1.registerInstance("n0");
-        km1.registerInstance("n1");
-        km1.registerInstance("n2");
-        km1.registerInstance("n3");
-        km1.registerInstance("n4");
-        km1.registerInstance("n5");
+        String[] aliveInstances = new String[10];
+        for (int i=0; i<10; i++) {aliveInstances[i] = "inst"+i;}
 
-        km4.registerInstance("n0");
-        km4.registerInstance("n1");
-        km4.registerInstance("n2");
-        km4.registerInstance("n3");
-        km4.registerInstance("n4");
-        km4.registerInstance("n5");
+        String[] previousView = new String[] {};
+        km1.onViewChange("inst2", Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
 
         String[] keys = new String[16];
         String[] replicaInstanceNames = new String[16];
 
         int count = keys.length;
 
+        km1.printMemberStates("Before MAP");
         for (int i = 0; i < count; i++) {
             keys[i] = "Key-" + Math.random();
             replicaInstanceNames[i] = km1.getMappedInstance("g1", keys[i]);
         }
 
-        km4.removeInstance("n2");
+
+        DefaultKeyMapper<String> km4 = new DefaultKeyMapper<String>("inst4", "g1");
+        List<String> currentMembers = new ArrayList();
+        currentMembers.addAll(Arrays.asList(aliveInstances));
+        currentMembers.remove("inst2");
+        km4.onViewChange("inst2", currentMembers, Arrays.asList(aliveInstances), false);
+
+        km4.printMemberStates("!@#$#$#$%^%^%^%%&");
         boolean result = true;
         for (int i = 0; i < keys.length; i++) {
             String mappedInstanceName = km4.findReplicaInstance("g1", keys[i]);
@@ -202,15 +217,20 @@ public class KeyMapperTest
         assert (result);
     }
 
+    /*
     public void testReplicaUponFailureFromAllOtherNodes() {
+
+        String[] aliveInstances = new String[10];
+        for (int i=0; i<10; i++) {aliveInstances[i] = "inst"+i;}
+
+        String[] previousView = new String[] {};
 
         int sz = 10;
         DefaultKeyMapper<String>[] mappers = new DefaultKeyMapper[sz];
         for (int i = 0; i < sz; i++) {
             mappers[i] = new DefaultKeyMapper("n"+i, "g1");
-            for (int j = 0; j < sz; j++) {
-                mappers[i].registerInstance("n" + j);
-            }
+            mappers[i].onViewChange(Arrays.asList(aliveInstances),
+                Arrays.asList(previousView), true);
         }
 
         String[] keys = new String[16];
@@ -224,7 +244,10 @@ public class KeyMapperTest
         }
 
         for (int i = 0; i < sz; i++) {
-            mappers[i].removeInstance("n0");
+            List<String> currentMembers = new ArrayList();
+            currentMembers.addAll(Arrays.asList(aliveInstances));
+            currentMembers.remove("inst5");
+            mappers[i].onViewChange(currentMembers, Arrays.asList(aliveInstances), false);
         }
 
         boolean result = true;
@@ -236,14 +259,15 @@ public class KeyMapperTest
                     System.err.println("For key: " + keys[i] + " exptected Replica was: " + replicaInstanceNames[i] +
                             " but got mapped to: " + mappedInstanceName);
                 } else {
-                    System.out.println("**KeyMapperTest:testReplicaUponFailure; Mapper[" + id + "]: expected: "
-                            + replicaInstanceNames[i] + " and got: " + mappedInstanceName);
+//                    System.out.println("**KeyMapperTest:testReplicaUponFailure; Mapper[" + id + "]: expected: "
+//                            + replicaInstanceNames[i] + " and got: " + mappedInstanceName);
                 }
             }
         }
-        System.out.println("* Test[testReplicaUponFailure] => " + result);
+        System.out.println("* Test[testReplicaUponFailureFromAllOtherNodes] => " + result);
         assert (result);
     }
+    */
 
     /*
     public void testReplicaUponRestart() {
