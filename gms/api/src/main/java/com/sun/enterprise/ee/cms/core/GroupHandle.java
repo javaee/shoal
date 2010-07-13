@@ -310,7 +310,16 @@ public interface GroupHandle {
     /**
      * This snapshot was terminated by AliveAndReadyView.getSignal(), a GMS notification of
      * either JoinedAndReadyNotificationSignal, FailureNotificationSignal or PlannedShutdownSignal.
-     * Can return null during group startup. Behavior is not well defined during cluster shutdown.
+     *
+     * <p>
+     * If the last GMS notification is a JOIN with a REJOIN subevent, the list previous CORE members will be same as list of current CORE members.
+     * (this scenario reflects a fast restart of an instance in less than GMS heartbeat failure detection can detect failure, this is called a REJOIN
+     * when an instance fails and restarts so quickly that FAILURE_NOTIFICATION is never sent. THe REJOIN subevent represents the unreported FAILURE
+     * detected  at the time that the instance is restarting.
+     *
+     * <p>
+     * Behavior is not well defined at during GROUP_STARTUP or GROUP_SHUTDOWN.
+     *
      *
      * @return the previous AliveAndReady Core member snapshot
      */
@@ -321,7 +330,6 @@ public interface GroupHandle {
      * AliveAndReadyView.getSignal() returns null to signify that
      * the view is still the current view and no GMS notification signal
      * has terminated this current view yet.
-     * Can return null during group startup.  
      *
      * @return current view of AliveAndReady Core members
      */
