@@ -63,20 +63,23 @@
         <xmlproperty prefix="haapijar" file="${basedir}/../../pom.xml"/>
 
         <echo message="Updating ha-api.jar from maven repository" />
-        <!--<xmlproperty file="../pom.xml"/> -->
-        <pathconvert property="hagroupid" description="Replace '.' with '/' and assign value to new property">
-            <!-- when I figure out how to parse multivalues in pom.xml then I can use the line below -->
-            <!-- <path path="${project.dependencies.dependency.groupId}"/> -->
-            <path path="${haapigroupid}"/>
 
-            <!--Pathconvert will try to add the root directory to the "path", so replace with empty string -->
+        <!-- when I figure out how to parse multivalues in pom.xml then I can use the code below -->
+        <!--
+        <xmlproperty file="../pom.xml"/> 
+        <pathconvert property="hagroupid" description="Replace '.' with '/' and assign value to new property">
+            <path path="${project.dependencies.dependency.groupId}"/> 
+
+            Pathconvert will try to add the root directory to the "path", so replace with empty string 
             <map from="${basedir}" to="" />
             <filtermapper>
                 <replacestring from="." to="/"/>
             </filtermapper>
         </pathconvert>
+        -->
+        <property name="hagroupid" value="${haapigroupid}"/>
         <property name="haapiversion" value="${haapijar.project.properties.ha.api.version}"/>
-        <property name="mavenhaapijar" value="${maven.repository}${hagroupid}/ha-api/${haapiversion}/ha-api-${haapiversion}.jar"/>
+        <property name="mavenhaapijar" value="${maven.repository}/${hagroupid}/ha-api/${haapiversion}/ha-api-${haapiversion}.jar"/>
         <echo message="mavenhaapijar=${mavenhaapijar}"/>
         <mkdir dir="${ha-api-path}"/>
         <delete file="${ha-api-path}/ha-api.jar"/>
