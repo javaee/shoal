@@ -25,6 +25,7 @@
  # "Portions Copyrighted [year] [name of copyright owner]"
  #
 
+DIST=false
 
 TCPSTARTPORT=9060
 TCPENDPORT=9089
@@ -41,6 +42,7 @@ GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:$
 JXTA_JARS=${LIB_HOME}/jxta.jar:${GRIZZLY_JARS}
 JARS=${GRIZZLY_JARS}
 TRANSPORT=grizzly
+BINDINGINTERFACEADDRESS=""
 
 MAINCLASS=com.sun.enterprise.ee.cms.tests.GMSAdminCLI
 
@@ -63,7 +65,8 @@ usage() {
     echo "    state groupName gmsmemberstate  - list member(s) in the specific state"
     echo
     echo " optional arguments:"
-    echo "      [<-resend> [-t grizzly|jxta] <-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      [-d] [<-resend> [-t grizzly|jxta] <-tl level> <-sl level> <-ts TCPSTARTPORT> <-te TCPENDPORT> <-ma multicastaddress> <-mp multicastport>]"
+    echo "      -d - distributed testing"
     echo "      -resend - if reply is not received, try 2 additional times"
     echo "      -t  - transport type (defaults to grizzly"
     echo "      -tl - test log level"
@@ -93,8 +96,17 @@ do
        -h)
        usage
        ;;
+       -d)
+         shift
+         DIST=true
+       ;;
        -ph)
        programhelp
+       ;;
+       -bia)
+       shift
+       BINDINGINTERFACEADDRESS="${1}"
+       shift
        ;;
        -resend)
        _OPTARGS="${_OPTARGS}${1}"
@@ -166,9 +178,11 @@ fi
 if [ $TRANSPORT != "grizzly" ]; then
     JARS=${JXTA_JARS}
 fi
-
+if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    BINDINGINTERFACEADDRESS="-DBIND_INTERFACE_ADDRESS=${BINDINGINTERFACEADDRESS}"
+fi
 # echo java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
-java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
+java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} -DTCPSTARTPORT=${TCPSTARTPORT} -DTCPENDPORT=${TCPENDPORT} -DMULTICASTADDRESS=${MULTICASTADDRESS} -DMULTICASTPORT=${MULTICASTPORT} ${BINDINGINTERFACEADDRESS} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -DLOG_LEVEL=${SHOALGMS_LOG_LEVEL} ${OPTARGS} -cp ${JARS} $MAINCLASS ${COMMAND} ${GROUPNAME} ${MEMBERNAME}
 
 
 
