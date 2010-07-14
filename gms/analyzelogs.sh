@@ -45,13 +45,13 @@ do
      esac
 done
 if [ "${CMD}" = "stop" ]; then
-   LOGS_DIR=LOGS/simulateCluster_stop
+   LOGS_DIR=${LOGS_DIR}/simulateCluster_stop
 elif [ "${CMD}" = "kill" ]; then
-   LOGS_DIR=LOGS/simulateCluster_kill
+   LOGS_DIR=${LOGS_DIR}/simulateCluster_kill
 elif [ "${CMD}" = "rejoin" ]; then
-   LOGS_DIR=LOGS/simulateCluster_rejoin
+   LOGS_DIR=${LOGS_DIR}/simulateCluster_rejoin
 else
-   LOGS_DIR=LOGS/simulateCluster
+   LOGS_DIR=${LOGS_DIR}/simulateCluster
 fi
 
 echo "Logs_Dir:${LOGS_DIR}"
