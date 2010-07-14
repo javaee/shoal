@@ -17,9 +17,12 @@ TRANSPORT=grizzly
 CMD=normal
 NUMOFMEMBERS=10
 
+TCPSTARTPORT=9121
+TCPENDPORT=9160
 GROUPNAME=testgroup
 MULTICASTADDRESS=229.9.1.`./randomNumber.sh`
 MULTICASTPORT=2299
+BINDINTERFACEADDRESS=""
 
 DIST=false
 
@@ -135,6 +138,11 @@ fi
 
 echo "LOGS_DIRS=${LOGS_DIR}"
 
+if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    BIA="-bia ${BINDINGINTERFACEADDRESS}"
+else
+    BIA=""
+fi
 #--------------------------
 # STARTING OF THE MASTER
 if [ $DIST = false ]; then
@@ -142,15 +150,33 @@ if [ $DIST = false ]; then
     echo "Removing old logs"
     rm -f ${LOGS_DIR}/*.log
     echo "Starting server"
-    ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9130 -te 9160 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR}
+    ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${TCPSTARTPORT} -te ${TCPENDPORT} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
        TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
        TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+       TMP=`egrep "^TCPSTARTPORT" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       if [ ! -z ${TMP} ]; then
+           TSA="-ts `echo $TMP | awk -F= '{print $2}' ` "
+       else
+           TSA=""
+       fi
+       TMP=`egrep "^TCPENDPORT" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       if [ ! -z ${TMP} ]; then
+           TEA="-te `echo $TMP | awk -F= '{print $2}' ` "
+       else
+           TEA=""
+       fi
+       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       if [ ! -z ${TMP} ]; then
+           BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+       else
+           BIA=""
+       fi
        echo "Starting server on ${MACHINE_NAME}"
-       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/server.log; mkdir -p ${LOGS_DIR}; ${WORKSPACE_HOME}/rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts 9130 -te 9160 -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/server.log; mkdir -p ${LOGS_DIR}; ${WORKSPACE_HOME}/rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} ${TSA} ${TEA} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
     else
        echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
        exit 1
@@ -161,8 +187,13 @@ fi
 # Give time for the master to startup before starting the other members
 sleep 5
 
-sdtcp=9161
-edtcp=`expr ${sdtcp} + 30`
+SDTCP=`expr ${TCPENDPORT} + 1`
+EDTCP=`expr ${SDTCP} + 30`
+if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    BIA="-bia ${BINDINGINTERFACEADDRESS}"
+else
+    BIA=""
+fi
 if [ $DIST = false ]; then
     # single machine startup
     echo "Starting ${NUMOFMEMBERS} CORE members"
@@ -175,15 +206,15 @@ if [ $DIST = false ]; then
            INSTANCE_NAME=instance${count}
         fi
         echo "Starting ${INSTANCE_NAME}"
-        MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR}"
+        MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}"
         ${MEMBERSTARTCMD}
 
         if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
            EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
         fi
 
-        sdtcp=`expr ${edtcp} + 1`
-        edtcp=`expr ${sdtcp} + 30`
+        SDTCP=`expr ${EDTCP} + 1`
+        EDTCP=`expr ${SDTCP} + 30`
         count=`expr ${count} + 1`
     done
 else
@@ -199,9 +230,20 @@ else
       INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
       TMP=`egrep "^WORKSPACE_HOME" ${member}`
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^TCPSTARTPORT" ${member}`
+      if [ ! -z ${TMP} ]; then
+           SDTCP=`echo $TMP | awk -F= '{print $2}' `
+      fi
+      TMP=`egrep "^TCPENDPORT" ${member}`
+      if [ ! -z ${TMP} ]; then
+           EDTCP=`echo $TMP | awk -F= '{print $2}' `
+      fi
+      TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+      if [ ! -z ${TMP} ]; then
+           BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+      fi
       echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-
-      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${sdtcp} -te ${edtcp} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR}"
+      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
       if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
            EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
@@ -216,11 +258,28 @@ else
 fi
 
 
-
+if [ $DIST = false ]; then
+    if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+         BIA="-bia ${BINDINGINTERFACEADDRESS}"
+    else
+        BIA=""
+    fi
+else
+    if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
+       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       if [ ! -z ${TMP} ]; then
+           BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+       else
+           BIA=""
+       fi
+    else
+       BIA=""
+    fi
+fi
 
 echo "Waiting for group [${GROUPNAME}] to complete startup"
 # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
-ADMINCMD="./gms_admin.sh waits ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+ADMINCMD="./gms_admin.sh waits ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
 if [ $DIST = false ]; then
     ${ADMINCMD}
 else
@@ -231,7 +290,7 @@ echo "Group startup has completed"
 
 if [ "${CMD}" = "stop" ]; then
        echo "Stopping ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh stopm ${GROUPNAME} ${INSTANCE_EFFECTED} -resend -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       ADMINCMD="./gms_admin.sh stopm ${GROUPNAME} ${INSTANCE_EFFECTED} -resend -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
 
        if [ $DIST = false ]; then
            ${ADMINCMD}
@@ -250,7 +309,7 @@ if [ "${CMD}" = "stop" ]; then
        CMD_OK=false
        while [ true ]
        do
-         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
@@ -275,7 +334,7 @@ if [ "${CMD}" = "stop" ]; then
        fi
 elif [ "${CMD}" = "kill" ]; then
        echo "Killing ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
        if [ $DIST = false ]; then
            ${ADMINCMD}
        else
@@ -293,7 +352,7 @@ elif [ "${CMD}" = "kill" ]; then
        CMD_OK=false
        while [ true ]
        do
-         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
@@ -318,7 +377,7 @@ elif [ "${CMD}" = "kill" ]; then
        fi
 elif [ "${CMD}" = "rejoin" ]; then
        echo "Killing ${INSTANCE_EFFECTED}"
-       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+       ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
        if [ $DIST = false ]; then
            ${ADMINCMD}
        else
@@ -334,7 +393,7 @@ elif [ "${CMD}" = "rejoin" ]; then
        CMD_OK=false
        while [ true ]
        do
-         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
          if [ $DIST = false ]; then
              TMP=`${ADMINCMD}`
          else
@@ -363,7 +422,7 @@ fi
 
 echo "Shutting down group [${GROUPNAME}]"
    # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
-ADMINCMD="./gms_admin.sh stopc ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}"
+ADMINCMD="./gms_admin.sh stopc ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
 if [ $DIST = false ]; then
     ${ADMINCMD}
 else

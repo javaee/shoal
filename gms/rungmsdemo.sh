@@ -34,11 +34,11 @@ usage () {
     cat << USAGE 
 Usage: $0 <parameters...> 
 The required parameters are :
- <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxta} <-l logdir> <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport>
+ <instance_id_token> <groupname> <membertype{CORE|SPECTATOR}> <Life In Milliseconds> <log level> <transport>{grizzly,jxta} <-l logdir> <-ts tcpstartport> <-tp tcpendport> <-ma multicastaddress> <-mp multicastport> <-bia bindinginterfaceaddress>
 
 Life in milliseconds should be either 0 or at least 60000 to demo failure fencing.
 
-<-l fullpathtologdir> <-ts tcpstartport>, <-te tcpendport>, <-ma multicastaddress>, <-mp multicastport> are optional parameters.
+<-l fullpathtologdir> <-ts tcpstartport>, <-te tcpendport>, <-ma multicastaddress>, <-mp multicastport> <-bia bindinginterfaceaddress> are optional parameters.
 Grizzly and jxta transports have different defaults.
 USAGE
    exit 0
@@ -56,9 +56,9 @@ TCPSTARTPORT=""
 TCPENDPORT=""
 MULTICASTADDRESS="-DMULTICASTADDRESS=229.9.1.2"
 MULTICASTPORT="-DMULTICASTPORT=2299"
-#BIND_INTERFACE_ADDRESS="-DBIND_INTERFACE_ADDRESS=ipv4oripv6address"
-TRANSPORT=grizzly
 
+TRANSPORT=grizzly
+BINDINGINTERFACEADDRESS=""
 TEST_LOG_LEVEL=WARNING
 LOG_LEVEL=INFO
 
@@ -75,6 +75,11 @@ do
        -debug)
        shift
        DEBUG=true
+       ;;
+       -bia)
+       shift
+       BINDINGINTERFACEADDRESS="${1}"
+       shift
        ;;
        -l)
        shift
@@ -153,8 +158,13 @@ else
     OTHERARGS=${DEBUGARGS}
 fi
 
+if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    BINDINGINTERFACEADDRESS="-DBIND_INTERFACE_ADDRESS=${BINDINGINTERFACEADDRESS}"
+fi
+
 #  If you run shoal over grizzly on JDK7, NIO.2 multicast channel used. Otherwise, blocking multicast server used
-CMD="java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BIND_INTERFACE_ADDRESS} ${MAINCLASS}"
+CMD="java ${OTHERARGS} -DMEMBERTYPE=${MEMBERTYPE} -DINSTANCEID=${INSTANCEID} -DCLUSTERNAME=${CLUSTERNAME} -DMESSAGING_MODE=true -DLIFEINMILLIS=${LIFEINMILLIS} -DLOG_LEVEL=${LOGLEVEL} -DTEST_LOG_LEVEL=${TEST_LOG_LEVEL} -cp ${JARS} ${TCPSTARTPORT} ${TCPENDPORT} -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${TRANSPORT} ${MULTICASTADDRESS} ${MULTICASTPORT} ${BINDINGINTERFACEADDRESS} ${MAINCLASS}"
+
 if [ -z "${LOGS_DIR}" ]; then
    echo "Running using Shoal with transport ${TRANSPORT}"
    echo "=========================="
