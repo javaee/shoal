@@ -376,7 +376,7 @@ elif [ "${CMD}" = "kill" ]; then
             echo "ERROR: Instance ${INSTANCE_EFFECTED} DID NOT restarted"
        fi
 elif [ "${CMD}" = "rejoin" ]; then
-       echo "Killing ${INSTANCE_EFFECTED}"
+       echo "Rejoining ${INSTANCE_EFFECTED}"
        ADMINCMD="./gms_admin.sh killm ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
        if [ $DIST = false ]; then
            ${ADMINCMD}
