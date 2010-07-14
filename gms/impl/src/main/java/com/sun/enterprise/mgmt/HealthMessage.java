@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -38,6 +38,7 @@ package com.sun.enterprise.mgmt;
 import com.sun.enterprise.ee.cms.impl.base.CustomTagNames;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.io.Serializable;
@@ -171,21 +172,10 @@ public class HealthMessage implements Serializable {
             return seqID;
         }
 
+        // todo: change calling methods to check for NO_SUCH_TIME instead of -1
         public long getSrcStartTime() {
-            String startTime = null;
-            if (srcStartTime == 0) {
-                try {
-                    startTime = adv.getCustomTagValue(CustomTagNames.START_TIME.toString());
-                } catch (NoSuchFieldException ex) {
-                    LOG.warning("SystemAdvertisement is missing CustomTag START_TIME adv=" + adv.toString());
-                }
-                if (startTime != null) {
-                    srcStartTime = Long.parseLong(startTime);
-                } else {
-                    srcStartTime = -1;  // make it an impossible value to detect it was missing
-                }
-            }
-            return srcStartTime;
+            srcStartTime = Utility.getStartTime(adv);
+            return (srcStartTime == Utility.NO_SUCH_TIME ? -1 : srcStartTime);
         }
 
         /**

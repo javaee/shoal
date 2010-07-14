@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -34,22 +34,30 @@
  * holder.
  */
 
-package com.sun.enterprise.ee.cms.core;
+package com.sun.enterprise.ee.cms.impl.client;
 
-import java.util.List;
+import com.sun.enterprise.ee.cms.core.RejoinSubevent;
+import java.util.Date;
 
 /**
- * Signal corresponding to JoinedAndReadyNotificationAction. This Signal enables the
- * consumer to get specifics about a join and ready notification. This Signal type
- * will only be passed to a JoinedAndReadyNotificationAction.  This Signal
- * is delivered to registered GMS Clients on all members of the group.
- *
- * @author Sheetal Vartak
- * Date: Nov 13 2007
+ * Implementation of rejoin subevent that captures the time
+ * an instance rejoined the cluster.
  */
-public interface JoinedAndReadyNotificationSignal extends Signal,
-    GroupStartupNotificationSignal, RejoinableEvent {
-    
-    List<String> getCurrentCoreMembers();
-    List<String> getAllCurrentMembers();
+public class RejoinSubeventImpl implements RejoinSubevent {
+
+    final long groupJoinTime;
+
+    public RejoinSubeventImpl(long groupJoinTime) {
+        this.groupJoinTime = groupJoinTime;
+    }
+
+    @Override
+    public long getGroupJoinTime() {
+        return groupJoinTime;
+    }
+
+    @Override
+    public String toString() {
+        return new Date(groupJoinTime).toString();
+    }
 }

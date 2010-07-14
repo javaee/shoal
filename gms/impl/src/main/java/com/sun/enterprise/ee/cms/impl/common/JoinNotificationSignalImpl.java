@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -63,10 +63,11 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
     private GMSContext ctx;
     final private GMSConstants.startupType startupKind;
+    private long startTime;
+    private RejoinSubevent rs;
 
     //Logging related stuff
-     protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private long startTime;
+    protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
     public JoinNotificationSignalImpl(final String memberToken, 
                                       final List<String> currentCoreMembers,
@@ -98,6 +99,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * @throws com.sun.enterprise.ee.cms.core.SignalAcquireException
      *
      */
+    @Override
     public void acquire() throws SignalAcquireException {
 
     }
@@ -109,6 +111,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
      *
      */
+    @Override
     public void release() throws SignalReleaseException {
         memberToken=null;
         currentCoreMembers=null;
@@ -122,18 +125,22 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * In the case of a JoinNotificationSignal or PlannedShutdownSignal, the member token would be
      * the member who joined or is being gracefully shutdown, respectively.
      */
+    @Override
     public String getMemberToken() {
         return memberToken;
     }
 
+    @Override
     public List<String> getCurrentCoreMembers() {
         return currentCoreMembers;
     }
 
+    @Override
     public List<String> getAllCurrentMembers() {
         return allCurrentMembers;
     }
 
+    @Override
     public MemberStates getMemberState() {
         if(ctx == null){
             ctx = GMSContextFactory.getGMSContext(groupName);
@@ -148,6 +155,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * the member's details
      * @return Map <Serializable, Serializable> 
      */
+    @Override
     public Map<Serializable, Serializable> getMemberDetails ( ) {
         Map<Serializable, Serializable>ret = new HashMap<Serializable, Serializable>();
         if(ctx == null) {
@@ -167,15 +175,28 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * returns the group to which the member involved in the Signal belonged to
      * @return String
      */
+    @Override
     public String getGroupName( ){
         return groupName;
     }
 
+    @Override
     public long getStartTime () {
         return startTime;
     }
 
+    @Override
     public GMSConstants.startupType getEventSubType() {
         return startupKind;
     }
+
+    @Override
+    public RejoinSubevent getRejoinSubevent() {
+        return rs;
+    }
+
+    public void setRs(RejoinSubevent rs) {
+        this.rs = rs;
+    }
+
 }

@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -36,9 +36,13 @@
 package com.sun.enterprise.mgmt;
 
 import com.sun.enterprise.ee.cms.core.GMSMember;
+import com.sun.enterprise.ee.cms.core.RejoinSubevent;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.impl.client.RejoinSubeventImpl;
+import com.sun.enterprise.ee.cms.impl.common.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.text.MessageFormat;
@@ -62,6 +66,7 @@ public class ClusterViewManager {
     private AtomicLong masterViewID = new AtomicLong(0);
     private ClusterManager manager;
     private ReentrantLock viewLock = new ReentrantLock();
+    private GMSContext gmsCtxt = null;
 
     /**
      * Constructor for the ClusterViewManager object
@@ -77,6 +82,8 @@ public class ClusterViewManager {
         this.advertisement = advertisement;
         this.manager = manager;
         cvListeners.addAll(listeners);
+        gmsCtxt = (GMSContext) GMSContextFactory.getGMSContext(
+            manager.getGroupName());
     }
 
     public void start() {
@@ -96,7 +103,7 @@ public class ClusterViewManager {
     /**
      * adds a system advertisement
      *
-     * @param advertisement system adverisement to add
+     * @param advertisement system advertisement to add
      */
     boolean add(final SystemAdvertisement advertisement) {
         boolean result = false;
@@ -127,6 +134,23 @@ public class ClusterViewManager {
                     }
                     manager.getNetworkManager().addRemotePeer(advertisement.getID());
                     view.put(advertisement.getID(), advertisement);
+
+                    // this can't return NO_SUCH_TIME -- we wouldn't have
+                    // entered this 'if' block
+                    RejoinSubeventImpl rsi = new RejoinSubeventImpl(
+                        Utility.getStartTime(adv));
+                    RejoinSubevent previous =
+                        gmsCtxt.getInstanceRejoins().put(adv.getName(), rsi);
+                    if (previous != null && LOG.isLoggable(Level.INFO)) {
+                        // todo: test this
+                        String [] params = {adv.getName(), previous.toString()};
+                        LOG.log(Level.INFO, "rejoin.subevent.replaced", params);
+                    }
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.fine(String.format(
+                            "Added rejoin subevent for '%s' to context map",
+                            adv.getName()));
+                    }
                     result = true;
                 }
             }

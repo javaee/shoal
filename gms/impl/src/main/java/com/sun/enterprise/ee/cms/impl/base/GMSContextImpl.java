@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 /**
@@ -74,6 +75,8 @@ public class GMSContextImpl extends GMSContextBase {
     private Thread viewWindowThread = null;
     private Thread messageWindowThread = null;
     private AliveAndReadyViewWindow aliveAndReadyViewWindow = null;
+    private static final Map<String, RejoinSubevent> instanceRejoins =
+        new ConcurrentHashMap<String, RejoinSubevent>();
 
     public GMSContextImpl(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -110,6 +113,7 @@ public class GMSContextImpl extends GMSContextBase {
         logger.log(Level.FINE,  "gms.init");
     }
 
+    @Override
     protected void createDistributedStateCache() {
         if (isWatchdog()) {
             distributedStateCache = null;
@@ -123,10 +127,12 @@ public class GMSContextImpl extends GMSContextBase {
      *
      * @return Group handle
      */
+    @Override
     public GroupHandle getGroupHandle() {
         return gh;
     }
 
+    @Override
     public DistributedStateCache getDistributedStateCache() {
         // Never create a distributed state cache for a WATCHDOG.
         if (distributedStateCache == null && !isWatchdog()) {
@@ -135,6 +141,7 @@ public class GMSContextImpl extends GMSContextBase {
         return distributedStateCache;
     }
 
+    @Override
     public void join() throws GMSException {
         viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "ViewWindowThread:" + groupName);
         MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
@@ -163,6 +170,7 @@ public class GMSContextImpl extends GMSContextBase {
         }
     }
 
+    @Override
     public void leave(final GMSConstants.shutdownType shutdownType) {
         if(shutdownHelper.isGroupBeingShutdown(groupName)){
             logger.log(Level.INFO, "shutdown.groupshutdown", new Object[] {groupName});
@@ -186,10 +194,12 @@ public class GMSContextImpl extends GMSContextBase {
         }
     }
 
+    @Override
     public long getStartTime() {
         return startTime;
     }
 
+    @Override
     public void announceGroupShutdown(final String groupName,
                                       final GMSConstants.shutdownState shutdownState) {
         // if not groupleader, seize it before shutting down all other members of the group.
@@ -203,6 +213,7 @@ public class GMSContextImpl extends GMSContextBase {
                                 groupName, null));
     }
 
+    @Override
      public void announceGroupStartup(final String groupName,
                                       final GMSConstants.groupStartupState startupState,
                                      final List<String> memberTokens) {
@@ -210,6 +221,7 @@ public class GMSContextImpl extends GMSContextBase {
                 announceGroupStartup(groupName, startupState, memberTokens);
     }
 
+    @Override
     public boolean addToSuspectList(final String token) {
         boolean retval = false;
         synchronized (suspectList) {
@@ -221,6 +233,7 @@ public class GMSContextImpl extends GMSContextBase {
         return retval;
     }
 
+    @Override
     public void removeFromSuspectList(final String token) {
         synchronized (suspectList) {
             if (suspectList.contains(token)) {
@@ -229,6 +242,7 @@ public class GMSContextImpl extends GMSContextBase {
         }
     }
 
+    @Override
     public boolean isSuspected(final String token) {
         boolean retval = false;
         synchronized (suspectList) {
@@ -239,6 +253,7 @@ public class GMSContextImpl extends GMSContextBase {
         return retval;
     }
 
+    @Override
     public List<String> getSuspectList() {
         final List<String> retval;
         synchronized (suspectList) {
@@ -247,6 +262,7 @@ public class GMSContextImpl extends GMSContextBase {
         return retval;
     }
 
+    @Override
     public ShutdownHelper getShutdownHelper() {
         return shutdownHelper;
     }
@@ -259,30 +275,37 @@ public class GMSContextImpl extends GMSContextBase {
         return messageQueue;
     }
 
+    @Override
     public GroupCommunicationProvider getGroupCommunicationProvider() {
         return groupCommunicationProvider;
     }
 
+    @Override
     public com.sun.enterprise.ee.cms.impl.common.ViewWindow getViewWindow() {
         return viewWindow;
     }
 
+    @Override
     public void assumeGroupLeadership() {
         groupCommunicationProvider.assumeGroupLeadership();
     }
 
+    @Override
     public boolean isGroupBeingShutdown(String groupName) {
         return isGroupShutdown || getShutdownHelper().isGroupBeingShutdown(groupName);
     }
 
+    @Override
     public boolean isGroupStartup() {
         return isGroupStartup;
     }
 
+    @Override
     public void  setGroupStartup(boolean value) {
         isGroupStartup = value;
     }
 
+    @Override
     public boolean isWatchdog() {
         return this.getMemberType() == WATCHDOG;
     }
@@ -290,6 +313,7 @@ public class GMSContextImpl extends GMSContextBase {
         return viewQueue.size();
     }
 
+    @Override
     public AliveAndReadyView getPreviousAliveAndReadyView() {
         if (aliveAndReadyViewWindow != null) {
             return aliveAndReadyViewWindow.getPreviousView();
@@ -298,11 +322,17 @@ public class GMSContextImpl extends GMSContextBase {
         }
     }
 
+    @Override
     public AliveAndReadyView getCurrentAliveAndReadyView() {
         if (aliveAndReadyViewWindow != null) {
             return aliveAndReadyViewWindow.getCurrentView();
         } else {
             return null;
         }
+    }
+
+    @Override
+    public Map<String, RejoinSubevent> getInstanceRejoins() {
+        return instanceRejoins;
     }
 }

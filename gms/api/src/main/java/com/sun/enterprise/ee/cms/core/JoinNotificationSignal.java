@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -49,7 +49,9 @@ import java.util.List;
  *         Date: Feb 3, 2005
  * @version $Revision$
  */
-public interface JoinNotificationSignal extends Signal, GroupStartupNotificationSignal {
+public interface JoinNotificationSignal extends Signal,
+    GroupStartupNotificationSignal, RejoinableEvent {
+    
     /**
      * provides a list of all live and current CORE designated members.
      *
@@ -65,7 +67,7 @@ public interface JoinNotificationSignal extends Signal, GroupStartupNotification
 
     /**
      * Provides the current liveness state of the member whose joining the group is being
-     * signalled by this JoinNotification Signal. The state corresponds to one of the states enumerated
+     * signaled by this JoinNotification Signal. The state corresponds to one of the states enumerated
      * by the MemberStates enum
      * @return MemberStates
      */

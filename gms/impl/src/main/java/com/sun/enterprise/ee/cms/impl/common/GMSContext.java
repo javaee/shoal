@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,6 +40,7 @@ import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Provides contextual information about all useful GMS artifacts. These are
@@ -132,4 +133,6 @@ public interface GMSContext {
     public AliveAndReadyView getPreviousAliveAndReadyView();
 
     public AliveAndReadyView getCurrentAliveAndReadyView();
+
+    public Map<String, RejoinSubevent> getInstanceRejoins();
 }

@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -51,24 +51,20 @@ import java.util.Map;
  */
 public class Utility {
 
-    private static Logger logger = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
+    private static Logger logger =
+        GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+
+    public static final long NO_SUCH_TIME = -1L;
 
     public static void setLogger(Logger theLogger) {
         logger = theLogger;
     }
 
-
     public static GMSMember getGMSMember( final SystemAdvertisement systemAdvertisement ) {
         GMSMember member;
         String memberType = getCustomTagValue(systemAdvertisement, CustomTagNames.MEMBER_TYPE.toString());
-        String groupName = getCustomTagValue(systemAdvertisement, CustomTagNames.GROUP_NAME.toString());
-        String startTimeString = getCustomTagValue(systemAdvertisement, CustomTagNames.START_TIME.toString());
-        long startTime = 0L;
-        try {
-            startTime = Long.valueOf(startTimeString);
-        } catch (NumberFormatException nfe) {
-            logger.log(Level.WARNING, "Misformed SystemAdvertisement.  Missing StartingTime for member:" + systemAdvertisement.getName() + " systemAdverisement=" + systemAdvertisement.toString());
-        }
+        String groupName = getGroupName(systemAdvertisement);
+        long startTime = getStartTime(systemAdvertisement);
         member = new GMSMember( systemAdvertisement.getName(), memberType, groupName, startTime);
         return member;
     }
@@ -199,4 +195,31 @@ public class Utility {
         logger.setLevel(Level.parse(level));
     }
 
+    public static long getStartTime(SystemAdvertisement advert) {
+        try {
+            return Long.valueOf(advert.getCustomTagValue(
+                CustomTagNames.START_TIME.toString()));
+        } catch (NoSuchFieldException nsfe) {
+            // logged at FINER since most calling methods already
+            // log result at FINE or higher
+            if (logger.isLoggable(Level.FINER)) {
+                logger.finer(String.format(
+                    "NoSuchFieldException caught in Utility#getStartTime. Returning %s",
+                    NO_SUCH_TIME));
+            }
+            return NO_SUCH_TIME;
+        }
+    }
+
+    public static String getGroupName(SystemAdvertisement advert) {
+        try {
+            return advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString());
+        } catch (NoSuchFieldException nsfe) {
+            if (logger.isLoggable(Level.FINER)) {
+                logger.finer(
+                    "NoSuchFieldException caught in Utility#getGroupName. Returning null");
+            }
+            return null;
+        }
+    }
 }

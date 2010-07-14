@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -38,7 +38,6 @@ package com.sun.enterprise.mgmt;
 import static com.sun.enterprise.mgmt.ClusterViewEvents.ADD_EVENT;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSMember;
-import com.sun.enterprise.ee.cms.impl.base.CustomTagNames;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -706,47 +705,49 @@ class MasterNode implements MessageListener, Runnable {
 
     boolean confirmInstanceHasRestarted(SystemAdvertisement oldSysAdv, SystemAdvertisement newSysAdv) {
         if (oldSysAdv != null && newSysAdv != null) {
-            LOG.fine("MasterNode.confirmInstanceHasRestarted() : oldSysAdv.getName() = " + oldSysAdv.getName());
-            long cachedAdvStartTime = -1;
-            try {
-                cachedAdvStartTime = Long.valueOf(oldSysAdv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
-                LOG.fine("MasterNode.confirmInstanceHasRestarted() : cachedAdvStartTime = " + cachedAdvStartTime);
-            } catch (NoSuchFieldException ex) {
-                LOG.fine("MasterNode.confirmInstanceHasRestarted : Could not find the START_TIME field in the cached system advertisement");
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("MasterNode.confirmInstanceHasRestarted() : oldSysAdv.getName() = " + oldSysAdv.getName());
+            }
+            long cachedAdvStartTime = Utility.getStartTime(oldSysAdv);
+            if (cachedAdvStartTime == Utility.NO_SUCH_TIME) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("MasterNode.confirmInstanceHasRestarted : Could not find the START_TIME field in the cached system advertisement");
+                }
                 return false;
             }
-
-            if (cachedAdvStartTime != -1) {
-                //that means this instance already had the restarted instance in its view
-                //get the new start time for the restarted instance
-                long currentAdvStartTime = -1;
-                try {
-                    currentAdvStartTime = Long.valueOf(newSysAdv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
-                } catch (NoSuchFieldException ex) {
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("MasterNode.confirmInstanceHasRestarted() : cachedAdvStartTime = " + cachedAdvStartTime);
+            }
+            long currentAdvStartTime = Utility.getStartTime(newSysAdv);
+            if (currentAdvStartTime == Utility.NO_SUCH_TIME) {
+                if (LOG.isLoggable(Level.FINE)) {
                     LOG.fine("MasterNode.confirmInstanceHasRestarted : Could not find the START_TIME field in the current system advertisement");
-                    return false;
                 }
+                return false;
+            }
+            if (LOG.isLoggable(Level.FINE)) {
                 LOG.fine("MasterNode.confirmInstanceHasRestarted() : currentAdvStartTime = " + currentAdvStartTime);
-                if (currentAdvStartTime != cachedAdvStartTime) {
-                    // previous instance has restarted w/o a FAILURE detection.  Clean cache of references to previous instantiation of the instance.
-                    manager.getHealthMonitor().cleanAllCaches(oldSysAdv.getName());
-                    //that means the instance has really restarted
-                    LOG.log(Level.WARNING, MessageFormat.format("Instance {0} was restarted at  {1,time,full} on {1,date}.",
-                            newSysAdv.getName(), new Date(currentAdvStartTime)));
-                    LOG.log(Level.WARNING, MessageFormat.format("Note that there was no Failure notification sent out for " +
-                            "this instance that was previously started at  {0,time,full} on {0,date}", new Date(cachedAdvStartTime)));
-                    return true;
-                } else {
+            }
+            if (currentAdvStartTime != cachedAdvStartTime) {
+                // previous instance has restarted w/o a FAILURE detection.  Clean cache of references to previous instantiation of the instance.
+                manager.getHealthMonitor().cleanAllCaches(oldSysAdv.getName());
+                //that means the instance has really restarted
+                LOG.log(Level.WARNING, MessageFormat.format("Instance {0} was restarted at  {1,time,full} on {1,date}.",
+                        newSysAdv.getName(), new Date(currentAdvStartTime)));
+                LOG.log(Level.WARNING, MessageFormat.format("Note that there was no Failure notification sent out for " +
+                        "this instance that was previously started at  {0,time,full} on {0,date}", new Date(cachedAdvStartTime)));
+                return true;
+            } else {
+                if (LOG.isLoggable(Level.FINE)) {
                     LOG.fine("MasterNode.confirmInstanceHasRestarted : currentAdvStartTime and cachedAdvStartTime have the same value = " +
                     new Date(cachedAdvStartTime) + " .Instance " + newSysAdv.getName() + "was not restarted.");
-                    return false;
                 }
-            } else {
-                LOG.fine("MasterNode.confirmInstanceHasRestarted : cachedAdvStartTime does not havea valid value = " + cachedAdvStartTime);
                 return false;
             }
         } else {
-            LOG.fine("MasterNode.confirmInstanceHasRestarted : oldSysAdv or newSysAdv is null");
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("MasterNode.confirmInstanceHasRestarted : oldSysAdv or newSysAdv is null");
+            }
             return false;
         }
     }
@@ -766,10 +767,13 @@ class MasterNode implements MessageListener, Runnable {
         if (msgElement == null || adv == null) {
             return false;
         }
-        LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
-
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINER, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+        }
         if (isMaster() && masterAssigned) {
-            LOG.log(Level.FINE, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.FINE, MessageFormat.format("Received a Node Query from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+            }
             if(isAdvAddedToView) {
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
                 Message responseMsg = createMasterResponse(false, localNodeID);
@@ -779,11 +783,15 @@ class MasterNode implements MessageListener, Runnable {
                 }
                 clusterViewManager.notifyListeners(cvEvent);
                 sendNewView(null, cvEvent, responseMsg, false);
-            } else LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
+            } else if (LOG.isLoggable(Level.FINER)) {
+                LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
+            }
         } else {
             final Message response = createSelfNodeAdvertisement();
             response.addMessageElement(NODERESPONSE, "noderesponse");
-            LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
+            if (LOG.isLoggable(Level.FINER)) {
+                LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
+            }
             send(adv.getID(), null, response);
         }
         return true;

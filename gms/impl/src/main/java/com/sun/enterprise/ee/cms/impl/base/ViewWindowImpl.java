@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -48,6 +48,7 @@ import com.sun.enterprise.ee.cms.core.DistributedStateCache;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSCacheable;
 import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.RejoinSubevent;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GroupLeadershipNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
@@ -78,7 +79,7 @@ import java.util.logging.Logger;
  */
 class ViewWindowImpl implements ViewWindow, Runnable {
     private GMSContext ctx;
-    static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    static private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final int MAX_VIEWS = 100;  // 100 is some default.
     private static final List<GMSMember> EMPTY_GMS_MEMBER_LIST = new ArrayList<GMSMember>();
     private final List<List<GMSMember>> views = new Vector<List<GMSMember>>();
@@ -295,23 +296,31 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final SystemAdvertisement advert = packet.getSystemAdvertisement();
         final String token = advert.getName();
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
-        try {
-            final GMSConstants.shutdownType shutdownType;
-            if (packet.getClusterViewEvent().equals(ClusterViewEvents.CLUSTER_STOP_EVENT)) {
-                shutdownType = GMSConstants.shutdownType.GROUP_SHUTDOWN;
-            } else {
-                shutdownType = GMSConstants.shutdownType.INSTANCE_SHUTDOWN;
-                if (dsc != null) {
-                    dsc.removeAllForMember(token);
-                }
+        final GMSConstants.shutdownType shutdownType;
+        if (packet.getClusterViewEvent().equals(ClusterViewEvents.CLUSTER_STOP_EVENT)) {
+            shutdownType = GMSConstants.shutdownType.GROUP_SHUTDOWN;
+        } else {
+            shutdownType = GMSConstants.shutdownType.INSTANCE_SHUTDOWN;
+            if (dsc != null) {
+                dsc.removeAllForMember(token);
             }
-            logger.log(Level.INFO, "plannedshutdownevent.announcement", new Object[]{token, shutdownType, groupName});
-            signals.add(new PlannedShutdownSignalImpl(token,
-                    advert.getCustomTagValue(CustomTagNames.GROUP_NAME.toString()),
-                    Long.valueOf(advert.getCustomTagValue(CustomTagNames.START_TIME.toString())), shutdownType));
-        } catch (NoSuchFieldException e) {
-            logger.log(Level.WARNING, "systemadv.not.contain.customtag", new Object[]{e.getLocalizedMessage()});
         }
+        logger.log(Level.INFO, "plannedshutdownevent.announcement",
+            new Object[]{token, shutdownType, groupName});
+        String gName = Utility.getGroupName(advert);
+        if (gName == null) {
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
+                CustomTagNames.GROUP_NAME);
+            return;
+        }
+        long startTime = Utility.getStartTime(advert);
+        if (startTime == Utility.NO_SUCH_TIME) {
+            logger.log(Level.WARNING, "systemadv.not.contain.customtag",
+                CustomTagNames.START_TIME);
+            return;
+        }
+        signals.add(new PlannedShutdownSignalImpl(token, gName,
+            startTime, shutdownType));
     }
 
     private void addInDoubtMemberSignals(final EventPacket packet) {
@@ -504,9 +513,6 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final GMSMember member = Utility.getGMSMember(advert);
 
         if (member.isCore()) {
-            final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-            logger.log(Level.INFO, "Adding Joined And Ready member : " + token + " Group: :" + member.getGroupName() +
-                    " StartupState:" + startupState.toString());
             addJoinedAndReadyNotificationSignal(token, member.getGroupName(), member.getStartTime());
         }
     }
@@ -514,25 +520,60 @@ class ViewWindowImpl implements ViewWindow, Runnable {
     private void addJoinedAndReadyNotificationSignal(final String token,
                                                      final String groupName,
                                                      final long startTime) {
-        logger.log(Level.FINE, "adding join and ready signal");
-        signals.add(new JoinedAndReadyNotificationSignalImpl(token,
-                getCurrentCoreMembers(),
-                getAllCurrentMembers(),
-                groupName,
-                startTime));
+        String rejoinTxt = "";
+        RejoinSubevent rse = ctx.getInstanceRejoins().remove(token);
+        if (rse != null) {
+            rejoinTxt = " rejoin: instance started at time" + rse.toString();
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine(String.format(
+                    "addJoinedAndReadyNotificationSignal setting rejoin subevent for token '%s'",
+                    token));
+            }
+        }
+        final GMSConstants.startupType startupState =
+            getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+        logger.log(Level.INFO, "viewwindow.adding.joined.ready.member",
+            new Object[]{token, groupName, startupState.toString(), rejoinTxt});
+        JoinedAndReadyNotificationSignalImpl jarSignal =
+            new JoinedAndReadyNotificationSignalImpl(
+            token,
+            getCurrentCoreMembers(),
+            getAllCurrentMembers(),
+            groupName,
+            startTime);
+        if (rse != null) {
+            jarSignal.setRs(rse);
+        }
+        signals.add(jarSignal);
     }
 
     private void addJoinNotificationSignal(final String token,
                                            final String groupName,
                                            final long startTime) {
-
-        final GMSConstants.startupType startupState = getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-        logger.log( Level.INFO, "Adding Join member: " + token + " group: " + groupName + " StartupState:" + startupState.toString() );
-        signals.add( new JoinNotificationSignalImpl( token,
-                                                     getCurrentCoreMembers(),
-                                                     getAllCurrentMembers(),
-                                                     groupName,
-                                                     startTime ) );
+        String rejoinTxt = "";
+        RejoinSubevent rse = ctx.getInstanceRejoins().get(token);
+        if (rse != null) {
+            rejoinTxt = " rejoin: instance started at time" + rse.toString();
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine(String.format(
+                    "addJoinNotificationSignal setting rejoin subevent for token '%s'",
+                    token));
+            }
+        }
+        final GMSConstants.startupType startupState =
+            getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+        logger.log( Level.INFO, "viewwindow.adding.join.member",
+            new Object[]{token, groupName, startupState.toString(), rejoinTxt});
+        JoinNotificationSignalImpl jnSignal = new JoinNotificationSignalImpl(
+            token,
+            getCurrentCoreMembers(),
+            getAllCurrentMembers(),
+            groupName,
+            startTime);
+        if (rse != null) {
+            jnSignal.setRs(rse);
+        }
+        signals.add(jnSignal);
     }
 
     private void addGroupLeadershipNotificationSignal( final String token,
