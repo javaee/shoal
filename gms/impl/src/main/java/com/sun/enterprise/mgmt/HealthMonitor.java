@@ -93,6 +93,8 @@ public class HealthMonitor implements MessageListener, Runnable {
     private volatile boolean started = false;
     private volatile boolean stop = false;
 
+    private ConcurrentHashMap<String, MsgSendStats> msgSendStats = new ConcurrentHashMap<String, MsgSendStats>();
+
     private Thread healthMonitorThread = null;
     private Thread failureDetectorThread = null;
     private static final String NODEADV = "NAD";
@@ -187,7 +189,7 @@ public class HealthMonitor implements MessageListener, Runnable {
             mcast = new LWRMulticast(manager,this);
             mcast.setSoTimeout(lwrTimeout);
         } catch (IOException e) {
-            LOG.warning("Cound not instantiate LWRMulticast : " + e.getMessage());
+            LOG.warning("Could not instantiate LWRMulticast : " + e.getMessage());
         }
 
         //this.shutdownHook = new ShutdownHook();
@@ -719,26 +721,57 @@ public class HealthMonitor implements MessageListener, Runnable {
                     id == null ? "group" : id));
         }
         boolean sent = true;
-        if (state == ALIVE) {
-            sent = send(id, getAliveMessage());
-        } else {
-            if (state == ALIVEANDREADY) {
-                sent = send(id, getAliveAndReadyMessage());
-            } else
-                sent = send(id, createHealthMessage(state));
-        }
-        if (!sent) {
-            LOG.warning("failed to send heartbeatmessage with state=" + states[state] + " to " +
-                    id == null ? "group" : id + ", send returned false");
+        IOException ioe = null;
+        try {
+            if (state == ALIVE) {
+                sent = send(id, getAliveMessage());
+            } else {
+                if (state == ALIVEANDREADY) {
+                    sent = send(id, getAliveAndReadyMessage());
+                } else
+                    sent = send(id, createHealthMessage(state));
+                }
+        } catch (IOException e) {
+            ioe = e;
+            sent = false;
+        } finally {
+            if (!sent) {
+                String reason = "";
+                MsgSendStats msgSendStats = this.getMsgSendStats(manager.getGroupName());
+                if (msgSendStats.reportSendFailed()) {
+                    if (ioe != null) {
+                        reason = ". Reason: " + ioe.getClass().getSimpleName() + ":" + ioe.getLocalizedMessage();
+                    }
+                    final String target =  id == null ? "group " + manager.getGroupName() : "member " + id;
+                    LOG.warning("failed to send heartbeatmessage with state=" + states[state] + " to " +
+                                target + reason);
+                }
+            }
         }
     }
 
     private void reportOtherPeerState(final HealthMessage.Entry entry) {
         final Message msg = createHealthMessageForOtherPeer(entry);
         LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} health state as {1}", entry.adv.getName(), entry.state));
-        boolean sent = send(null, msg);
-        if (!sent) {
-            LOG.warning("send returned false. failed to report member " + entry.adv.getName() + " state=" + entry.state + " to group: " + manager.getGroupName());
+        boolean sent = false;
+        IOException ioe = null;
+        try {
+            sent = send(null, msg);
+        } catch (IOException e) {
+            ioe = e;
+            sent = false;
+        } finally {
+            if (!sent) {
+                MsgSendStats msgSendStats = this.getMsgSendStats(manager.getGroupName());
+                if (msgSendStats.reportSendFailed()) {
+                    String reason = "";
+                    if (ioe != null) {
+                        reason = ". Reason: " + ioe.getClass().getSimpleName() + ":" + ioe.getLocalizedMessage();
+                    }
+                    LOG.warning("send failed to report member " + entry.adv.getName() + " state=" + entry.state +
+                                " to group: " + manager.getGroupName() + reason);
+                }
+            }
         }
     }
 
@@ -796,7 +829,8 @@ public class HealthMonitor implements MessageListener, Runnable {
      * non-error related congestion, meaning that you should be able to send
      * the message after waiting some amount of time.
      */
-    private boolean send(final PeerID peerid, final Message msg) {
+    private boolean send(final PeerID peerid, final Message msg) throws IOException {
+        MsgSendStats msgSendStat = null;
         boolean sent = false;
         sendStopLock.lock();
         try {
@@ -821,16 +855,23 @@ public class HealthMonitor implements MessageListener, Runnable {
             } else {
                 LOG.log( Level.WARNING, "Received an unknown message" );
             }
+
             if (peerid != null) {
                 // Unicast datagram
                 // create a op pipe to the destination peer
                 LOG.log(Level.FINE, "Unicasting Message to :" + peerid.toString());
+                msgSendStat = getMsgSendStats(peerid.getInstanceName());
                 sent = manager.getNetworkManager().send( peerid, msg );
+                msgSendStat.sendSucceeded();
+
             } else {
+                msgSendStat = getMsgSendStats(manager.getGroupName());
                 sent = manager.getNetworkManager().broadcast( msg );
+                msgSendStat.sendSucceeded();
             }
         } catch (IOException io) {
-            LOG.log(Level.WARNING, "Failed to send message", io);
+            msgSendStat.sendFailed();
+            throw io;
         } finally {
             sendStopLock.unlock();
         }
@@ -1708,10 +1749,26 @@ public class HealthMonitor implements MessageListener, Runnable {
     }
 
     public void announceWatchdogObservedFailure(String failedMemberToken) {
+        IOException ioe = null;
         Message msg = createWatchdogNotification(failedMemberToken);
-        boolean sent = send(null, msg);
-        if (!sent) {
-            LOG.info("broadcast send returned false. failed WATCHDOG notification of failed member " + failedMemberToken + " to group" + manager.getGroupName());
+        boolean sent = false;
+        try {
+            sent = send(null, msg);
+        } catch (IOException io) {
+            ioe = io;
+        } finally {
+            if (!sent) {
+                String reason = "";
+                MsgSendStats msgSendStats = this.getMsgSendStats(manager.getGroupName());
+                if (msgSendStats.reportSendFailed()) {
+                    if (ioe != null) {
+                        reason = ". Reason: " + ioe.getClass().getSimpleName() + ":" +ioe.getLocalizedMessage();
+                    }
+                    LOG.warning("broadcast send returned false. failed WATCHDOG notification of failed member " +
+                                 failedMemberToken + " to group" + manager.getGroupName() + reason);
+
+                }
+            }
         }
     }
 
@@ -1778,5 +1835,60 @@ private class ShutdownHook extends Thread {
     }
 }
 */
+        public MsgSendStats getMsgSendStats(String memberName) {
+            MsgSendStats result = msgSendStats.get(memberName);
+            if (result == null) {
+                result = new MsgSendStats(memberName);
+                MsgSendStats putresult = msgSendStats.putIfAbsent(memberName, result);
+                if (putresult != null) {
+                    result = putresult;
+                }
+            }
+            return result;
+        }
 
+        private static class MsgSendStats {
+            final long MAX_DURATION_BETWEEN_FAILURE_REPORT_MS = (60000 * 60) * 2;  // two hours between fail to send to an instance.
+            String     memberName;
+            AtomicLong numSends;
+            AtomicLong numFailSends;
+            AtomicLong lastReportedFailSendTime;
+            AtomicLong lastSendTime;
+
+            MsgSendStats(String memberName) {
+                this.memberName = memberName;
+                numSends = new AtomicLong(0);
+                numFailSends = new AtomicLong(0);
+                lastReportedFailSendTime = new AtomicLong(-1);
+                lastSendTime = new AtomicLong(0);
+            }
+
+            MsgSendStats sendSucceeded() {
+                long value = numSends.incrementAndGet();
+                if (value == Long.MAX_VALUE) {
+                    numSends.set(1);  // reset to avoid overflow.
+                }
+                lastSendTime.set(System.currentTimeMillis());
+                return this;
+            }
+
+            void sendFailed() {
+                numSends.incrementAndGet();
+                numFailSends.incrementAndGet();
+            }
+
+            boolean reportSendFailed() {
+                if (lastSendTime.get() > lastReportedFailSendTime.get() ||
+                    (System.currentTimeMillis() - this.lastReportedFailSendTime.get()) > MAX_DURATION_BETWEEN_FAILURE_REPORT_MS ) {
+                     lastReportedFailSendTime.set(System.currentTimeMillis());
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            String getFailureReport() {
+                return memberName + " (failed to send " + numFailSends + " times)";
+            }
+        }
 }
