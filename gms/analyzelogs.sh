@@ -4,7 +4,7 @@ usage () {
  echo "usage: [-h] [-l logdir] [stop|kill|rejoin|default is normal)]"
  exit 1
 }
-
+LOGS_DIR=LOGS
 CMD=normal
 while [ $# -ne 0 ]
 do
