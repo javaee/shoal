@@ -141,7 +141,7 @@ TMP=`grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICA
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=2
 elif [ "${CMD}" = "kill" ]; then
-   EXPECTED=3
+   EXPECTED=2
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=2
 else
