@@ -121,7 +121,7 @@ else
 fi
 
 echo
-TMP=`grep " rejoin: instance started at time" ${SERVERLOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "rejoining: missed reporting past" ${SERVERLOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "kill" ]; then
@@ -142,7 +142,7 @@ else
 fi
 
 echo
-TMP=`grep " rejoin: instance started at time" ${SERVERLOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "rejoining: missed reporting past" ${SERVERLOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "kill" ]; then
@@ -271,7 +271,7 @@ do
 done
 
 echo
-TMP=`grep " rejoin: instance started at time" ${ALLLOGS} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "rejoining: missed reporting past" ${ALLLOGS} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "kill" ]; then
@@ -284,7 +284,7 @@ else
    EXPECTED=0
 fi
 echo "Check for REJOIN(addJoinNotificationSignal) over all logs. Expect ${EXPECTED},   Found: ${TMP}"
-TMP=`grep "rejoin: instance started at time"  ${SERVERLOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "rejoining: missed reporting past"  ${SERVERLOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
 echo "REJOIN(addJoinNotificationSignal) in server    : ${TMP}"
 count=1
 num=0
@@ -296,13 +296,13 @@ do
        num=${count}
     fi
     LOG=${LOGS_DIR}/instance${num}.log
-    TMP=`grep "rejoin: instance started at time"  ${LOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+    TMP=`grep "rejoining: missed reporting past"  ${LOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
     echo "REJOIN(addJoinNotificationSignal) in instance${num}: ${TMP}"
     count=`expr ${count} + 1`
 done
 
 echo
-TMP=`grep " rejoin: instance started at time" ${ALLLOGS} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "rejoining: missed reporting past" ${ALLLOGS} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "kill" ]; then
@@ -315,7 +315,7 @@ else
    EXPECTED=0
 fi
 echo "Check for REJOIN(addJoinedAndReadyNotificationSignal) over all logs. Expect ${EXPECTED},   Found: ${TMP}"
-TMP=`grep "rejoin: instance started at time"  ${SERVERLOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "rejoining: missed reporting past"  ${SERVERLOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
 echo "REJOIN(addJoinedAndReadyNotificationSignal) in server    : ${TMP}"
 count=1
 num=0
@@ -327,7 +327,7 @@ do
        num=${count}
     fi
     LOG=${LOGS_DIR}/instance${num}.log
-    TMP=`grep "rejoin: instance started at time"  ${LOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
+    TMP=`grep "rejoining: missed reporting past"  ${LOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN} | wc -l`
     echo "REJOIN(addJoinedAndReadyNotificationSignal) in instance${num}: ${TMP}"
     count=`expr ${count} + 1`
 done
