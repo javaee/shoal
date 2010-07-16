@@ -1,22 +1,22 @@
 #!/bin/sh +x
 
 usage () {
- echo "usage: [-h] [-l logdir] [stop|kill|rejoin|default is normal)]"
+ echo "usage: [-h] [-l logdir] [add|stop|kill|rejoin|default]"
  exit 1
 }
 LOGS_DIR=LOGS
-CMD=normal
+CMD=default
 while [ $# -ne 0 ]
 do
      case ${1} in
        -h)
          usage
        ;;
-       stop|kill|rejoin)
+       add|stop|kill|rejoin)
          CMD=${1}
          shift
          if [ ! -z "${CMD}" ] ;then
-            if [ "${CMD}" != "stop" -a "${CMD}" != "kill" -a "${CMD}" != "rejoin" -a "${CMD}" != "normal" ]; then
+            if [ "${CMD}" != "add" -a "${CMD}" != "stop" -a "${CMD}" != "kill" -a "${CMD}" != "rejoin" -a "${CMD}" != "default" ]; then
                echo "ERROR: Invalid command specified"
                usage
             fi
@@ -44,7 +44,9 @@ do
        ;;
      esac
 done
-if [ "${CMD}" = "stop" ]; then
+if [ "${CMD}" = "add" ]; then
+   LOGS_DIR=${LOGS_DIR}/simulateCluster_add
+elif [ "${CMD}" = "stop" ]; then
    LOGS_DIR=${LOGS_DIR}/simulateCluster_stop
 elif [ "${CMD}" = "kill" ]; then
    LOGS_DIR=${LOGS_DIR}/simulateCluster_kill
@@ -84,6 +86,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=`expr ${NUMOFINSTANCES} + 1`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr ${NUMOFINSTANCES} + 1`
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=${NUMOFINSTANCES}
 else
    EXPECTED=${NUMOFINSTANCES}
 fi
@@ -103,6 +107,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=`expr ${NUMOFMEMBERS}`
 else
    EXPECTED=`expr ${NUMOFMEMBERS}`
 fi
@@ -122,6 +128,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=1
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=0
 else
    EXPECTED=0
 fi
@@ -141,6 +149,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=1
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=0
 else
    EXPECTED=0
 fi
@@ -160,6 +170,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=`expr ${NUMOFINSTANCES}`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=${NUMOFINSTANCES}
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=${NUMOFINSTANCES}
 else
    EXPECTED=${NUMOFINSTANCES}
 fi
@@ -178,6 +190,8 @@ if [ "${CMD}" = "stop" ]; then
 elif [ "${CMD}" = "kill" ]; then
    EXPECTED=2
 elif [ "${CMD}" = "rejoin" ]; then
+   EXPECTED=2
+elif [ "${CMD}" = "add" ]; then
    EXPECTED=2
 else
    EXPECTED=2
@@ -203,6 +217,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + 2`
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + 2`
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=`expr ${NUMOFMEMBERS} \* ${NUMOFINSTANCES} `
 else
    EXPECTED=`expr ${NUMOFMEMBERS} \* ${NUMOFINSTANCES} `
 fi
@@ -231,6 +247,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + 1 `
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + 1`
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=`expr ${NUMOFMEMBERS} \* ${NUMOFINSTANCES} + 1 `
 else
    EXPECTED=`expr ${NUMOFMEMBERS} \* ${NUMOFINSTANCES} + 1 `
 fi
@@ -260,6 +278,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=${NUMOFMEMBERS}
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=0
 else
    EXPECTED=0
 fi
@@ -289,6 +309,8 @@ elif [ "${CMD}" = "kill" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "rejoin" ]; then
    EXPECTED=${NUMOFMEMBERS}
+elif [ "${CMD}" = "add" ]; then
+   EXPECTED=0
 else
    EXPECTED=0
 fi
@@ -327,6 +349,8 @@ elif [ "${CMD}" = "kill" ]; then
     TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | grep -v "was restarted at" | grep -v "Note that there was no Failure notification" | wc -l`
 elif [ "${CMD}" = "rejoin" ]; then
     TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | grep -v "was restarted at" | grep -v "Note that there was no Failure notification" | wc -l`
+elif [ "${CMD}" = "add" ]; then
+    TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 else
     TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 fi
@@ -349,6 +373,8 @@ elif [ "${CMD}" = "kill" ]; then
     grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | grep -v "was restarted at" | grep -v "Note that there was no Failure notification"
 elif [ "${CMD}" = "rejoin" ]; then
     grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | grep -v "was restarted at" | grep -v "Note that there was no Failure notification"
+elif [ "${CMD}" = "add" ]; then
+    grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
 else
     grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
 fi

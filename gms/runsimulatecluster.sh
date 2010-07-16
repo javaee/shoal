@@ -14,7 +14,7 @@ if [ -f "./configs/clusters" ]; then
    exit 1
 fi
 TRANSPORT=grizzly
-CMD=normal
+CMD=default
 NUMOFMEMBERS=10
 
 TCPSTARTPORT=9121
@@ -29,13 +29,13 @@ DIST=false
 usage () {
  echo "usage:"
  echo "   single machine:"
- echo "      [-h] [-t grizzly|jxta] [stop|kill|rejoin|default is normal)] [numberOfMembers(10 is default)] "
+ echo "      [-h] [-t grizzly|jxta] [-bia address] [add|stop|kill|rejoin|default] [numberOfMembers(10 is default)] "
  echo "   distributed environment:"
- echo "      -d <-g groupname> [-t grizzly|jxta] [stop|kill|rejoin|default is normal)]"
+ echo "      -d <-g groupname> [-t grizzly|jxta] [add|stop|kill|rejoin|default]"
  echo " "
  echo " Examples:"
  echo "     runsimulatecluster.sh"
- echo "     runsimulatecluster.sh 5 rejoin"
+ echo "     runsimulatecluster.sh 5 -bia 129.168.1.4 rejoin"
  echo "     runsimulatecluster.sh -d -g testgroup"
  echo "     runsimulatecluster.sh -d -g testgroup rejoin"
  exit 1
@@ -48,11 +48,11 @@ do
        -h)
          usage
        ;;
-       stop|kill|rejoin)
+       add|stop|kill|rejoin)
          CMD=${1}
          shift
          if [ ! -z "${CMD}" ] ;then
-            if [ "${CMD}" != "stop" -a "${CMD}" != "kill" -a "${CMD}" != "rejoin" -a "${CMD}" != "normal" ]; then
+            if [ "${CMD}" != "add" -a "${CMD}" != "stop" -a "${CMD}" != "kill" -a "${CMD}" != "rejoin" -a "${CMD}" != "default" ]; then
                echo "ERROR: Invalid command specified"
                usage
             fi
@@ -61,6 +61,11 @@ do
             usage
          fi
        ;;
+       -bia)
+         shift
+         BINDINGINTERFACEADDRESS=${1}
+         shift
+         ;;
        -d)
          shift
          DIST=true
@@ -128,9 +133,13 @@ else
         echo "ERROR: The number of members specified [${NUMOFMEMBERS}] must be greater and 1 for command [${CMD}]"
         usage
 fi
+if [ $DIST = false ]; then
+   if [ "${CMD}" = "add" ]; then
+      NUMOFMEMBERS=`expr ${NUMOFMEMBERS} - 1`
+   fi
+fi
 
-
-if [ "${CMD}" = "normal" ]; then
+if [ "${CMD}" = "default" ]; then
    LOGS_DIR=LOGS/simulateCluster
 else
    LOGS_DIR=LOGS/simulateCluster_${CMD}
@@ -138,11 +147,24 @@ fi
 
 echo "LOGS_DIRS=${LOGS_DIR}"
 
-if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
-    BIA="-bia ${BINDINGINTERFACEADDRESS}"
+#--------------------------
+# killing of any previous processes
+if [ $DIST = false ]; then
+     killmembers.sh
 else
-    BIA=""
+   MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties"  `
+   for member in ${MEMBERS}
+   do
+       TMP=`egrep "^MACHINE_NAME" ${member}`
+       MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+       TMP=`egrep "^WORKSPACE_HOME" ${member}`
+       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+       echo "Killing processes on ${MACHINE_NAME}"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh"
+   done
 fi
+
+
 #--------------------------
 # STARTING OF THE MASTER
 if [ $DIST = false ]; then
@@ -150,6 +172,11 @@ if [ $DIST = false ]; then
     echo "Removing old logs"
     rm -f ${LOGS_DIR}/*.log
     echo "Starting server"
+    if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+       BIA="-bia ${BINDINGINTERFACEADDRESS}"
+    else
+       BIA=""
+    fi
     ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${TCPSTARTPORT} -te ${TCPENDPORT} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
@@ -189,11 +216,6 @@ sleep 5
 
 SDTCP=`expr ${TCPENDPORT} + 1`
 EDTCP=`expr ${SDTCP} + 30`
-if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
-    BIA="-bia ${BINDINGINTERFACEADDRESS}"
-else
-    BIA=""
-fi
 if [ $DIST = false ]; then
     # single machine startup
     echo "Starting ${NUMOFMEMBERS} CORE members"
@@ -206,6 +228,11 @@ if [ $DIST = false ]; then
            INSTANCE_NAME=instance${count}
         fi
         echo "Starting ${INSTANCE_NAME}"
+        if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+          BIA="-bia ${BINDINGINTERFACEADDRESS}"
+        else
+          BIA=""
+        fi
         MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}"
         ${MEMBERSTARTCMD}
 
@@ -224,32 +251,36 @@ else
    MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties  `
    for member in ${MEMBERS}
    do
-      TMP=`egrep "^MACHINE_NAME" ${member}`
-      MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
-      TMP=`egrep "^INSTANCE_NAME" ${member}`
-      INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
-      TMP=`egrep "^WORKSPACE_HOME" ${member}`
-      WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
-      TMP=`egrep "^TCPSTARTPORT" ${member}`
-      if [ ! -z ${TMP} ]; then
-           SDTCP=`echo $TMP | awk -F= '{print $2}' `
-      fi
-      TMP=`egrep "^TCPENDPORT" ${member}`
-      if [ ! -z ${TMP} ]; then
-           EDTCP=`echo $TMP | awk -F= '{print $2}' `
-      fi
-      TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
-      if [ ! -z ${TMP} ]; then
-           BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
-      fi
-      echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
-      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
-      if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
-           EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
-           EFFECTED_MEMBER_MACHINE_NAME=${MACHINE_NAME}
-           EFFECTED_MEMBER_WORKSPACE_HOME=${WORKSPACE_HOME}
-      fi
+      TMP=`egrep "^STARTTYPE" ${member}`
+      STARTTYPE=`echo $TMP | awk -F= '{print $2}' `
+      if [ "${STARTTYPE}" = "auto" ]; then
+          TMP=`egrep "^MACHINE_NAME" ${member}`
+          MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^INSTANCE_NAME" ${member}`
+          INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^WORKSPACE_HOME" ${member}`
+          WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+          TMP=`egrep "^TCPSTARTPORT" ${member}`
+          if [ ! -z ${TMP} ]; then
+               SDTCP=`echo $TMP | awk -F= '{print $2}' `
+          fi
+          TMP=`egrep "^TCPENDPORT" ${member}`
+          if [ ! -z ${TMP} ]; then
+               EDTCP=`echo $TMP | awk -F= '{print $2}' `
+          fi
+          TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+          if [ ! -z ${TMP} ]; then
+               BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+          fi
+          echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
+          MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
+          ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
+          if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
+               EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
+               EFFECTED_MEMBER_MACHINE_NAME=${MACHINE_NAME}
+               EFFECTED_MEMBER_WORKSPACE_HOME=${WORKSPACE_HOME}
+          fi
+       fi
    done
    TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
    MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
@@ -257,7 +288,9 @@ else
    MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
 fi
 
-
+#
+# setting up the BIA for the admin cli
+#
 if [ $DIST = false ]; then
     if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
          BIA="-bia ${BINDINGINTERFACEADDRESS}"
@@ -418,6 +451,86 @@ elif [ "${CMD}" = "rejoin" ]; then
        # do a quick little sleep just to make sure everything gets started
        # since everyone might not notice the instance went down and up quickly
        sleep 5
+elif [ "${CMD}" = "add" ]; then
+    echo "Starting New CORE member"
+    if [ $DIST = false ]; then
+        # single machine startup
+        if [  ${count} -lt 10 ]; then
+           INSTANCE_NAME="instance0${count}"
+        else
+           INSTANCE_NAME=instance${count}
+        fi
+        echo "Starting ${INSTANCE_NAME}"
+        if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+          BIA="-bia ${BINDINGINTERFACEADDRESS}"
+        else
+          BIA=""
+        fi
+        MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}"
+        ${MEMBERSTARTCMD}
+
+        if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
+           EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
+        fi
+
+        SDTCP=`expr ${EDTCP} + 1`
+        EDTCP=`expr ${SDTCP} + 30`
+        count=`expr ${count} + 1`
+    else
+       # distributed environment startup
+       INSTANCES=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "instance*.properties" `
+       for member in ${INSTANCES}
+       do
+          TMP=`egrep "^STARTTYPE" ${member}`
+          STARTTYPE=`echo $TMP | awk -F= '{print $2}' `
+          if [ "${STARTTYPE}" = "manual" ]; then
+              TMP=`egrep "^MACHINE_NAME" ${member}`
+              MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+              TMP=`egrep "^INSTANCE_NAME" ${member}`
+              INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+              TMP=`egrep "^WORKSPACE_HOME" ${member}`
+              WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+              TMP=`egrep "^TCPSTARTPORT" ${member}`
+              if [ ! -z ${TMP} ]; then
+                   SDTCP=`echo $TMP | awk -F= '{print $2}' `
+              fi
+              TMP=`egrep "^TCPENDPORT" ${member}`
+              if [ ! -z ${TMP} ]; then
+                   EDTCP=`echo $TMP | awk -F= '{print $2}' `
+              fi
+              TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+              if [ ! -z ${TMP} ]; then
+                   BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+              fi
+              echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
+              MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
+              ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
+              echo "Done with startup  of ${INSTANCE_NAME} on ${MACHINE_NAME}"
+           fi
+       done
+    fi
+fi
+
+#
+# setting up the BIA for the admin cli
+#
+if [ $DIST = false ]; then
+    if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+         BIA="-bia ${BINDINGINTERFACEADDRESS}"
+    else
+        BIA=""
+    fi
+else
+    if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
+       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+       if [ ! -z ${TMP} ]; then
+           BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+       else
+           BIA=""
+       fi
+    else
+       BIA=""
+    fi
 fi
 
 echo "Shutting down group [${GROUPNAME}]"
