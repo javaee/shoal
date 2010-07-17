@@ -78,12 +78,27 @@ public class InMemoryBackingStore<K extends Serializable, V extends Serializable
             }
         }
 
+        Object cacheLocally = vendorSpecificMap.get("local.caching");;
+        boolean enableLocalCaching = false;
+        if (cacheLocally != null) {
+            if (cacheLocally instanceof String) {
+                try {
+                    enableLocalCaching = Boolean.valueOf((String) cacheLocally);
+                } catch (Throwable th) {
+                    //Ignore
+                }
+            } else if (cacheLocally instanceof Boolean) {
+                enableLocalCaching = (Boolean) stGMS;
+            }
+        }
+
         ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
         if (cl == null) {
             cl = conf.getValueClazz().getClassLoader();
         }
         dsConf.setClassLoader(cl)
-                .setStartGMS(startGMS);
+                .setStartGMS(startGMS)
+                .setCacheLocally(enableLocalCaching);
 
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
         dataStore = DataStoreFactory.createDataStore(dsConf);
