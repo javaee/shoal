@@ -145,6 +145,9 @@ public class GMSClientService implements Runnable, CallBack{
 
     public synchronized void processNotification(final Signal notification){
         final String serverToken;
+        if (notification.getMemberToken().equals("admincli")) {
+            return;
+        }
         logger.log(Level.FINEST, new StringBuffer().append(serviceName)
                 .append(": Notification Received from:")
                 .append(notification.getMemberToken())

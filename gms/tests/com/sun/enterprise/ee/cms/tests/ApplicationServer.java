@@ -43,6 +43,7 @@ import com.sun.enterprise.ee.cms.core.GMSFactory;
 import com.sun.enterprise.ee.cms.core.GroupHandle;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationSignal;
+import com.sun.enterprise.ee.cms.core.JoinNotificationSignal;
 import com.sun.enterprise.ee.cms.core.FailureNotificationSignal;
 import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
 import com.sun.enterprise.ee.cms.core.AliveAndReadyView;
@@ -235,6 +236,12 @@ public class ApplicationServer implements Runnable, CallBack {
             AliveAndReadyView current = gms.getGroupHandle().getCurrentAliveAndReadyCoreView();
             logger.info("previous AliveAndReadyView: " + previous);
             logger.info("current AliveAndReadyView: " + current);
+        }
+        if (notification instanceof JoinNotificationSignal) {
+            JoinNotificationSignal joinSignal = (JoinNotificationSignal)notification;
+            if (joinSignal.getRejoinSubevent() != null) {
+                logger.info("ApplicationServer: join for member:" + joinSignal.getMemberToken() + "rejoin subevent: " + joinSignal.getRejoinSubevent() );
+            }
         }
         if (notification instanceof JoinedAndReadyNotificationSignal) {
             // getMemberState constraint check for member being added.

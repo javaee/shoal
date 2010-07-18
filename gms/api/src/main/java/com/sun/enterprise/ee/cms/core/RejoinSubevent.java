@@ -36,10 +36,12 @@
 
 package com.sun.enterprise.ee.cms.core;
 
+import java.io.Serializable;
+
 /**
  * Representation of a missed FAILURE notification when restarting an instance.
  */
-public interface RejoinSubevent {
+public interface RejoinSubevent extends Serializable {
 
     // time that the failed instance instantiation joined the group.
     long getGroupJoinTime();

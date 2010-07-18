@@ -41,7 +41,7 @@ import java.util.Date;
 
 /**
  * Implementation of rejoin subevent that captures the time
- * an instance rejoined the cluster.
+ * that a previously failed instance had joined the cluster.
  */
 public class RejoinSubeventImpl implements RejoinSubevent {
 

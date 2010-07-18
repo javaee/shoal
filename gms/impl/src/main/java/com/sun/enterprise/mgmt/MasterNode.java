@@ -35,12 +35,14 @@
  */
 package com.sun.enterprise.mgmt;
 
-import static com.sun.enterprise.mgmt.ClusterViewEvents.ADD_EVENT;
+import static com.sun.enterprise.mgmt.ClusterViewEvents.*;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSMember;
+import com.sun.enterprise.ee.cms.core.RejoinSubevent;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.impl.client.RejoinSubeventImpl;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
@@ -122,6 +124,7 @@ class MasterNode implements MessageListener, Runnable {
     // Default master node discovery timeout
     private long timeout = 10 * 1000L;
     private static final String VIEW_CHANGE_EVENT = "VCE";
+    private static final String REJOIN_SUBEVENT = "RJSE";
 
     private boolean groupStarting = false;
     private List<String> groupStartingMembers = null;
@@ -580,7 +583,17 @@ class MasterNode implements MessageListener, Runnable {
         Object msgElement = msg.getMessageElement(VIEW_CHANGE_EVENT);
         LOG.log(Level.FINER,"Inside processChangeEvent for group: " + manager.getGroupName());
         if (msgElement != null && msgElement instanceof ClusterViewEvent) {
-            final ClusterViewEvent cvEvent = (ClusterViewEvent)msgElement;
+            final ClusterViewEvent cvEvent = (ClusterViewEvent) msgElement;
+            switch (cvEvent.getEvent()) {
+                case ADD_EVENT:
+                case JOINED_AND_READY_EVENT:
+                    RejoinSubevent rjse = (RejoinSubevent) msg.getMessageElement(REJOIN_SUBEVENT);
+                    if (rjse != null) {
+                        getGMSContext().getInstanceRejoins().put(cvEvent.getAdvertisement().getName(), rjse);
+                    }
+                    break;
+                default:
+            }
             msgElement = msg.getMessageElement(AMASTERVIEW);
             if (msgElement != null && msgElement instanceof List && cvEvent != null) {
                 if (cvEvent.getEvent()  == ClusterViewEvents.JOINED_AND_READY_EVENT &&
@@ -697,13 +710,24 @@ class MasterNode implements MessageListener, Runnable {
         } else {
             //some instance other than the master has restarted
             //without a failure notification
-             confirmInstanceHasRestarted(oldSysAdv, adv);
+
+            // todo:  this is an intermediate fix for ADD_EVENT with REJOIN to work.
+            //        issue is that addToView() does a reset of view, flushing old systemAdvertisements necessary
+            //        to detect restart.
+             boolean restarted = confirmInstanceHasRestarted(oldSysAdv, adv, false);
+             if (restarted) {
+                manager.getClusterViewManager().add(adv);
+             }
 
         }
         return true;
     }
 
     boolean confirmInstanceHasRestarted(SystemAdvertisement oldSysAdv, SystemAdvertisement newSysAdv) {
+        return confirmInstanceHasRestarted(oldSysAdv, newSysAdv, true);
+    }
+
+    boolean confirmInstanceHasRestarted(SystemAdvertisement oldSysAdv, SystemAdvertisement newSysAdv, boolean reportWarning) {
         if (oldSysAdv != null && newSysAdv != null) {
             if (LOG.isLoggable(Level.FINE)) {
                 LOG.fine("MasterNode.confirmInstanceHasRestarted() : oldSysAdv.getName() = " + oldSysAdv.getName());
@@ -1145,13 +1169,33 @@ class MasterNode implements MessageListener, Runnable {
                      final ClusterViewEvent event,
                      final Message msg,
                      final boolean includeView) {
+        RejoinSubevent rjse = null;
         if (includeView) {
             addAuthoritativeView(msg);
         }
         //LOG.log(Level.FINER, MessageFormat.format("Created a view element of size {0}bytes", cvEvent.getByteLength()));
         msg.addMessageElement(VIEW_CHANGE_EVENT, event);
+        switch (event.getEvent()) {
+            case ADD_EVENT:
+            case JOINED_AND_READY_EVENT:
+                GMSContext gmsCtx = getGMSContext();
+                if (gmsCtx != null) {
+                    rjse = gmsCtx.getInstanceRejoins().get(event.getAdvertisement().getName());
+                    LOG.info("sendNewView: clusterViewEvent:" + event.getEvent().toString() + " rejoinSubevent=" + rjse + " member: " + event.getAdvertisement().getName());
+                    if (rjse != null) {
+                        msg.addMessageElement(REJOIN_SUBEVENT, rjse);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+
         LOG.log(Level.FINER, "Sending new authoritative cluster view to group, event :" + event.getEvent().toString()+" viewSeqId: "+clusterViewManager.getMasterViewID());
         send(toID, null, msg);
+        if (rjse != null && event.getEvent() == JOINED_AND_READY_EVENT) {
+            ctx.getInstanceRejoins().remove(rjse);
+        }
     }
 
     /**

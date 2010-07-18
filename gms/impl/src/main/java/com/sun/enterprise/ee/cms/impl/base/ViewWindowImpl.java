@@ -63,11 +63,8 @@ import com.sun.enterprise.mgmt.ClusterView;
 import com.sun.enterprise.mgmt.ClusterViewEvents;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
-import java.util.Collections;
+import java.text.MessageFormat;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -80,6 +77,7 @@ import java.util.logging.Logger;
 class ViewWindowImpl implements ViewWindow, Runnable {
     private GMSContext ctx;
     static private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    static private final ResourceBundle gmsRb= logger.getResourceBundle();
     private static final int MAX_VIEWS = 100;  // 100 is some default.
     private static final List<GMSMember> EMPTY_GMS_MEMBER_LIST = new ArrayList<GMSMember>();
     private final List<List<GMSMember>> views = new Vector<List<GMSMember>>();
@@ -489,6 +487,10 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final String token = member.getMemberToken();
         final List<String> oldMembers = getTokens(getPreviousView());
 
+        RejoinSubevent rjse = getGMSContext().getInstanceRejoins().get(packet.getSystemAdvertisement().getName());
+        logger.log(Level.INFO, "addNewMemberJoins: member: " + member  +
+                               " joined group time:" + new Date(Utility.getStartTime(advert)) + " rejoin subevent=" + rjse);
+
         // Series of checks needed to avoid duplicate ADD messages.
         // This conditional was added to avoid duplicate ADD events caused
         // by GroupLeaderShip change notifications.
@@ -496,6 +498,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         // Lastly,  this instance is always added to view so let ADD event through w/o check for this instance.
         if (isCoordinator() ||
             ! oldMembers.contains(token)  ||
+            rjse != null || 
             token.compareTo(getGMSContext().getServerIdentityToken()) == 0) {
             if (packet.getClusterView().getSize() > 1) {
                 // TODO: Figure out a better way to sync
@@ -521,9 +524,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                                                      final String groupName,
                                                      final long startTime) {
         String rejoinTxt = "";
-        RejoinSubevent rse = ctx.getInstanceRejoins().remove(token);
+        RejoinSubevent rse = ctx.getInstanceRejoins().get(token);
         if (rse != null) {
-            rejoinTxt = " rejoin: instance started at time" + rse.toString();
+            rejoinTxt =  gmsRb.getString("viewwindow.rejoining") + rse.toString();
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine(String.format(
                     "addJoinedAndReadyNotificationSignal setting rejoin subevent for token '%s'",
@@ -532,8 +535,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         }
         final GMSConstants.startupType startupState =
             getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-        logger.log(Level.INFO, "viewwindow.adding.joined.ready.member",
-            new Object[]{token, groupName, startupState.toString(), rejoinTxt});
+        String msg = MessageFormat.format(gmsRb.getString("viewwindow.adding.joined.ready.member"),
+                                          new Object[]{token, groupName, startupState.toString(), rejoinTxt} );
+        logger.log(Level.INFO, msg);
         JoinedAndReadyNotificationSignalImpl jarSignal =
             new JoinedAndReadyNotificationSignalImpl(
             token,
@@ -552,8 +556,11 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                                            final long startTime) {
         String rejoinTxt = "";
         RejoinSubevent rse = ctx.getInstanceRejoins().get(token);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "addJoinNotificationSignal member:" + token + " RejoinSubevent:" + rse);
+        }
         if (rse != null) {
-            rejoinTxt = " rejoin: instance started at time" + rse.toString();
+            rejoinTxt =  gmsRb.getString("viewwindow.rejoining") + rse.toString();
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine(String.format(
                     "addJoinNotificationSignal setting rejoin subevent for token '%s'",
@@ -562,8 +569,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         }
         final GMSConstants.startupType startupState =
             getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
-        logger.log( Level.INFO, "viewwindow.adding.join.member",
-            new Object[]{token, groupName, startupState.toString(), rejoinTxt});
+        String msg = MessageFormat.format(gmsRb.getString("viewwindow.adding.join.member"),
+                                          new Object[]{token, groupName, startupState.toString(), rejoinTxt} );
+        logger.log( Level.INFO, msg);
         JoinNotificationSignalImpl jnSignal = new JoinNotificationSignalImpl(
             token,
             getCurrentCoreMembers(),
