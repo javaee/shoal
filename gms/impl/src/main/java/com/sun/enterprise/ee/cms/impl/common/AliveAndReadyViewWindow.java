@@ -83,9 +83,9 @@ public class AliveAndReadyViewWindow {
         failureActionFactory = new FailureNotificationActionFactoryImpl(leaveCallback);
         plannedShutdownFactory = new PlannedShutdownActionFactoryImpl(leaveCallback);
 
-        router.addDestination(joinedAndReadyActionFactory);
-        router.addDestination(failureActionFactory);
-        router.addDestination(plannedShutdownFactory);
+        router.addSystemDestination(joinedAndReadyActionFactory);
+        router.addSystemDestination(failureActionFactory);
+        router.addSystemDestination(plannedShutdownFactory);
     }
 
     // junit testing only - only scope to package access
@@ -217,7 +217,8 @@ public class AliveAndReadyViewWindow {
 
         public void processNotification(Signal signal) {
             if (signal instanceof JoinedAndReadyNotificationSignal) {
-                JoinedAndReadyNotificationSignal jrns = (JoinedAndReadyNotificationSignal) signal;
+                final JoinedAndReadyNotificationSignal jrns = (JoinedAndReadyNotificationSignal) signal;
+                final RejoinSubevent rejoin = jrns.getRejoinSubevent();
                 if (jrns.getCurrentCoreMembers().contains(signal.getMemberToken())) {
                     synchronized (aliveAndReadyView) {
 
@@ -281,17 +282,14 @@ public class AliveAndReadyViewWindow {
                             }
                         } else {
 
-                            // todo : check for REJOIN subevent here when it is implemented.
-                            // RejoinSubevent rejoin = jrns.getRejoinSubevent();
-                            // if (rejoin != null) {
-                            //
-                            //}
-
-                            // handle joined and ready with no REJOIN subevent
                             AliveAndReadyView current = aliveAndReadyView.get(aliveAndReadyView.size() - 1);
                             SortedSet<String> currentMembers = new TreeSet<String>(current.getMembers());
-                            boolean result = currentMembers.add(signal.getMemberToken());
-                            assert (result);
+                            if (rejoin == null) {
+                                // handle joined and ready with no REJOIN subevent
+                                boolean result = currentMembers.add(signal.getMemberToken());
+                                assert (result);
+                            } // else REJOIN means that GMS missed detecting a FAILURE and restarted instance has
+                              // already JOINED again.  previous and current view are same when signal is REJOIN.
                             add(signal, currentMembers);
                         }
                     } // end synchronized aliveAndReadyView

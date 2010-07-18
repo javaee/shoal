@@ -37,6 +37,7 @@
 package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.base.GroupHandleImpl;
+import com.sun.enterprise.ee.cms.impl.client.RejoinSubeventImpl;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import junit.framework.TestCase;
 
@@ -277,6 +278,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         stopCluster();
     }
 
+    // simulate failure followed by a restart of instance that is longer than GMS heartbeat failure detection.
     public void testFailureInstanceRestartInstance() throws GMSException {
         mySetup();
         startCluster(10);
@@ -350,11 +352,29 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
 
 
-    // todo:  implement when REJOIN subevent of JoinedAndReadyNotification is implemented.
-    //public void testRejoin() throws GMSException {
-    //    mySetup();
-    //    startCluster(10);
-    //    notify a JoinedAndReadyNotification with REJOIN subevent. // simulates fast restart without failure detection.
-    //}
+
+    public void testRejoin() throws GMSException {
+        mySetup();
+        startCluster(10);
+        final String killInstance = coreClusterMembers.first();
+
+        // simulate fast restart of killed instance.
+        // GMS fails to detect FAILURE due to instance being restarted quicker than heartbeat failure
+        // detection can detect the failure.
+        JoinedAndReadyNotificationSignalImpl jrSignal;
+        jrSignal = (JoinedAndReadyNotificationSignalImpl)this.createJoinAndReadyNotificationSignal(killInstance, GROUP_NAME,  IS_CORE,
+                                                             START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP);
+        RejoinSubevent rjse = new RejoinSubeventImpl(System.currentTimeMillis() - 4000);
+        jrSignal.setRs(rjse);
+        aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+
+        // assert that previous and current view are same when a JoinedAndReady with REJOIN subevent occurs.
+        TreeSet<String> expectedMembers = new TreeSet<String>(coreClusterMembers);
+        assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
+        assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
+        assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(aliveAndReadyViewWindow.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
+        stopCluster();
+    }
 }
 

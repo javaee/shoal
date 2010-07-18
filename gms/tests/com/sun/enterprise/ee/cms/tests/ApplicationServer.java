@@ -43,10 +43,17 @@ import com.sun.enterprise.ee.cms.core.GMSFactory;
 import com.sun.enterprise.ee.cms.core.GroupHandle;
 import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationSignal;
+import com.sun.enterprise.ee.cms.core.FailureNotificationSignal;
+import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
+import com.sun.enterprise.ee.cms.core.AliveAndReadyView;
+import com.sun.enterprise.ee.cms.core.RejoinSubevent;
+import java.util.Date;
 import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
 import com.sun.enterprise.ee.cms.core.Signal;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.FailureNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
@@ -170,6 +177,8 @@ public class ApplicationServer implements Runnable, CallBack {
         logger.log(Level.FINE, "ApplicationServer: Starting GMS service");
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
+        gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
+        gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
         try {
             gms.join();
             logger.info("joined group " + gms.getGroupName()  + " groupLeader: " + gms.getGroupHandle().getGroupLeader());
@@ -202,11 +211,31 @@ public class ApplicationServer implements Runnable, CallBack {
     }
 
     public void processNotification(Signal notification) {
+        if (notification.getMemberToken().equals("admincli")) {
+            return;
+        }
         MemberStates[] states;
         logger.fine("received a notification " + notification.getClass().getName());
 
+        String rejoin = "";
+        if (notification instanceof JoinedAndReadyNotificationSignal) {
+            JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal)notification;
+            RejoinSubevent rjse = readySignal.getRejoinSubevent();
+            if (rjse != null)  {
+                rejoin = " Rejoining: missed FAILURE detection of instance that joined group at " + new Date(rjse.getGroupJoinTime()) + " instance has already rejoined group";
+
+            }
+        }
         logger.info("processing notification " + notification.getClass().getName() + " for group " +
-                notification.getGroupName() + " memberName=" + notification.getMemberToken());
+                notification.getGroupName() + " memberName=" + notification.getMemberToken() + rejoin);
+        if (notification instanceof FailureNotificationSignal ||
+                notification instanceof PlannedShutdownSignal ||
+                notification instanceof JoinedAndReadyNotificationSignal) {
+            AliveAndReadyView previous = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
+            AliveAndReadyView current = gms.getGroupHandle().getCurrentAliveAndReadyCoreView();
+            logger.info("previous AliveAndReadyView: " + previous);
+            logger.info("current AliveAndReadyView: " + current);
+        }
         if (notification instanceof JoinedAndReadyNotificationSignal) {
             // getMemberState constraint check for member being added.
             MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());

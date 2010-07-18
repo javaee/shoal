@@ -78,6 +78,14 @@ public class Router {
     private final Vector<GroupLeadershipNotificationActionFactory> groupLeadershipNotificationAFs =
             new Vector<GroupLeadershipNotificationActionFactory>();
 
+    // execute these synchronously before user registered handlers.
+    private final Vector<JoinedAndReadyNotificationActionFactory> systemJoinedAndReadyNotificationAF =
+            new Vector<JoinedAndReadyNotificationActionFactory>();
+    private final Vector<FailureNotificationActionFactory> systemFailureNotificationAF =
+            new Vector<FailureNotificationActionFactory>();
+    private final Vector<PlannedShutdownActionFactory> systemPlannedShutdownAF =
+            new Vector<PlannedShutdownActionFactory>();
+
     private final BlockingQueue<SignalPacket> queue;
     private AtomicInteger queueHighWaterMark = new AtomicInteger(0);
     private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
@@ -111,6 +119,18 @@ public class Router {
         failureNotificationAF.add(failureNotificationActionFactory);
     }
 
+    void addSystemDestination(final FailureNotificationActionFactory failureNotificationActionFactory) {
+        systemFailureNotificationAF.add(failureNotificationActionFactory);
+    }
+
+    void addSystemDestination(final PlannedShutdownActionFactory planneShutdownActionFactory) {
+        systemPlannedShutdownAF.add(planneShutdownActionFactory);
+    }
+
+
+    void addSystemDestination(final JoinedAndReadyNotificationActionFactory JoinedAndReadyNotificationActionFactory) {
+        systemJoinedAndReadyNotificationAF.add(JoinedAndReadyNotificationActionFactory);
+    }
     /**
      * adds a FailureRecoveryActionFactory as a destination.
      * Collects this actionfactory in a Collection of same type.
@@ -332,6 +352,20 @@ public class Router {
     void notifyFailureNotificationAction(final FailureNotificationSignal signal) {
         FailureNotificationAction a;
         FailureNotificationSignal fns;
+        for (FailureNotificationActionFactory sysjraf : systemFailureNotificationAF) {
+            a = (FailureNotificationAction) sysjraf.produceAction();
+            fns = new FailureNotificationSignalImpl(signal);
+            try {
+                a.consumeSignal(fns);
+            }  catch (ActionException e) {
+                logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
+            } catch (Throwable t) {
+                // just in case application provides own ActionImpl.
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+            }
+        }
+
+
         logger.log(Level.INFO, "failurenotificationsignals.send.member", new Object[]{signal.getMemberToken()});
         synchronized (failureNotificationAF) {
             for (FailureNotificationActionFactory fnaf : failureNotificationAF) {
@@ -460,6 +494,18 @@ public class Router {
         JoinedAndReadyNotificationSignal jns;
         //todo: NEED to be able to predetermine the number of GMS clients
         //that would register for joined and ready notifications.
+        for (JoinedAndReadyNotificationActionFactory sysjraf : systemJoinedAndReadyNotificationAF) {
+            a = (JoinedAndReadyNotificationAction) sysjraf.produceAction();
+            jns = new JoinedAndReadyNotificationSignalImpl(signal);
+            try {
+                a.consumeSignal(jns);
+            }  catch (ActionException e) {
+                logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
+            } catch (Throwable t) {
+                // just in case application provides own ActionImpl.
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+            }
+        }
         if (isJoinedAndReadyNotificationAFRegistered()) {
             logger.log(Level.FINE,
                     MessageFormat.format("Sending JoinedAndReadyNotificationSignals to " +
@@ -479,6 +525,18 @@ public class Router {
         PlannedShutdownSignal pss;
         logger.log(Level.INFO, "plannedshutdownsignals.send.member",
                 new Object[]{signal.getEventSubType(), signal.getMemberToken()});
+        for (PlannedShutdownActionFactory sysPsaf : systemPlannedShutdownAF) {
+            a = (PlannedShutdownAction) sysPsaf.produceAction();
+            pss = new PlannedShutdownSignalImpl(signal);
+            try {
+                a.consumeSignal(pss);
+            }  catch (ActionException e) {
+                logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
+            } catch (Throwable t) {
+                // just in case application provides own ActionImpl.
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+            }
+        }
         synchronized (plannedShutdownAF) {
             for (PlannedShutdownActionFactory psaf : plannedShutdownAF) {
                 a = (PlannedShutdownAction) psaf.produceAction();
