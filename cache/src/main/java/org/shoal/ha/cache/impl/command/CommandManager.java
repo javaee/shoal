@@ -100,7 +100,7 @@ public class CommandManager<K, V>
         if (head != null) {
             if (forward) {
                 cmd.prepareToTransmit(dsc);
-                if (! cmd.getTargetName().equals(myName)) {
+                if (! myName.equals(cmd.getTargetName())) {
                     head.onTransmit(cmd);
                 } else {
                     cmd.execute(dsc);

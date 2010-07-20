@@ -73,7 +73,7 @@ public class GroupServiceProvider
 
     private boolean createdAndJoinedGMSGroup;
 
-    private AtomicLong previousViewId = new AtomicLong();
+    private AtomicLong previousViewId = new AtomicLong(-100);
 
     private volatile AliveAndReadyView arView;
 
@@ -95,13 +95,14 @@ public class GroupServiceProvider
 
     private synchronized void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent) {
 
-        List<String> currentAliveAndReadyMembers = gms.getGroupHandle().getCurrentAliveOrReadyMembers();
+        SortedSet<String> currentAliveAndReadyMembers = gms.getGroupHandle().getCurrentAliveAndReadyCoreView().getMembers();
         AliveAndReadyView aView = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
         SortedSet<String> previousAliveAndReadyMembers = new TreeSet<String>();
 
         if (aView == null) { //Possible during unit tests when listeners are registered before GMS is started
             return;
         }
+
 
         long arViewId = aView.getViewId();
         long knownId = previousViewId.get();
