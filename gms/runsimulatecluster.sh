@@ -133,11 +133,6 @@ else
         echo "ERROR: The number of members specified [${NUMOFMEMBERS}] must be greater and 1 for command [${CMD}]"
         usage
 fi
-if [ $DIST = false ]; then
-   if [ "${CMD}" = "add" ]; then
-      NUMOFMEMBERS=`expr ${NUMOFMEMBERS} - 1`
-   fi
-fi
 
 if [ "${CMD}" = "default" ]; then
    LOGS_DIR=LOGS/simulateCluster
@@ -227,14 +222,18 @@ if [ $DIST = false ]; then
         else
            INSTANCE_NAME=instance${count}
         fi
-        echo "Starting ${INSTANCE_NAME}"
         if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
           BIA="-bia ${BINDINGINTERFACEADDRESS}"
         else
           BIA=""
         fi
         MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}"
-        ${MEMBERSTARTCMD}
+        if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
+           echo "Not Starting ${INSTANCE_NAME}, it will be started later"
+        else
+           echo "Starting ${INSTANCE_NAME}"
+           ${MEMBERSTARTCMD}
+        fi
 
         if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
            EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
@@ -251,35 +250,36 @@ else
    MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties  `
    for member in ${MEMBERS}
    do
-      TMP=`egrep "^STARTTYPE" ${member}`
-      STARTTYPE=`echo $TMP | awk -F= '{print $2}' `
-      if [ "${STARTTYPE}" = "auto" ]; then
-          TMP=`egrep "^MACHINE_NAME" ${member}`
-          MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
-          TMP=`egrep "^INSTANCE_NAME" ${member}`
-          INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
-          TMP=`egrep "^WORKSPACE_HOME" ${member}`
-          WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
-          TMP=`egrep "^TCPSTARTPORT" ${member}`
-          if [ ! -z ${TMP} ]; then
-               SDTCP=`echo $TMP | awk -F= '{print $2}' `
-          fi
-          TMP=`egrep "^TCPENDPORT" ${member}`
-          if [ ! -z ${TMP} ]; then
-               EDTCP=`echo $TMP | awk -F= '{print $2}' `
-          fi
-          TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
-          if [ ! -z ${TMP} ]; then
-               BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
-          fi
-          echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-          MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
-          ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
-          if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
+
+      TMP=`egrep "^MACHINE_NAME" ${member}`
+      MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^INSTANCE_NAME" ${member}`
+      INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^WORKSPACE_HOME" ${member}`
+      WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^TCPSTARTPORT" ${member}`
+      if [ ! -z ${TMP} ]; then
+           SDTCP=`echo $TMP | awk -F= '{print $2}' `
+      fi
+      TMP=`egrep "^TCPENDPORT" ${member}`
+      if [ ! -z ${TMP} ]; then
+           EDTCP=`echo $TMP | awk -F= '{print $2}' `
+      fi
+      TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
+      if [ ! -z ${TMP} ]; then
+           BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
+      fi
+      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
+      if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
+         echo "Not Starting ${INSTANCE_NAME}, it will be started later"
+      else
+         echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
+         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
+      fi
+      if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
                EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
                EFFECTED_MEMBER_MACHINE_NAME=${MACHINE_NAME}
                EFFECTED_MEMBER_WORKSPACE_HOME=${WORKSPACE_HOME}
-          fi
        fi
    done
    TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
@@ -452,65 +452,39 @@ elif [ "${CMD}" = "rejoin" ]; then
        # since everyone might not notice the instance went down and up quickly
        sleep 5
 elif [ "${CMD}" = "add" ]; then
-    echo "Starting New CORE member"
-    if [ $DIST = false ]; then
-        # single machine startup
-        if [  ${count} -lt 10 ]; then
-           INSTANCE_NAME="instance0${count}"
-        else
-           INSTANCE_NAME=instance${count}
-        fi
-        echo "Starting ${INSTANCE_NAME}"
-        if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
-          BIA="-bia ${BINDINGINTERFACEADDRESS}"
-        else
-          BIA=""
-        fi
-        MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}"
-        ${MEMBERSTARTCMD}
-
-        if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
-           EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
-        fi
-
-        SDTCP=`expr ${EDTCP} + 1`
-        EDTCP=`expr ${SDTCP} + 30`
-        count=`expr ${count} + 1`
-    else
-       # distributed environment startup
-       INSTANCES=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "instance*.properties" `
-       for member in ${INSTANCES}
+       echo "Starting New CORE member ${INSTANCE_EFFECTED} on ${EFFECTED_MEMBER_MACHINE_NAME}"
+       if [ $DIST = false ]; then
+           ${EFFECTED_MEMBERSTARTCMD}
+       else
+           ${EXECUTE_REMOTE_CONNECT} ${EFFECTED_MEMBER_MACHINE_NAME} "cd ${EFFECTED_MEMBER_WORKSPACE_HOME}; ${EFFECTED_MEMBERSTARTCMD}"
+       fi
+       count=1
+       CMD_OK=false
+       while [ true ]
        do
-          TMP=`egrep "^STARTTYPE" ${member}`
-          STARTTYPE=`echo $TMP | awk -F= '{print $2}' `
-          if [ "${STARTTYPE}" = "manual" ]; then
-              TMP=`egrep "^MACHINE_NAME" ${member}`
-              MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
-              TMP=`egrep "^INSTANCE_NAME" ${member}`
-              INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
-              TMP=`egrep "^WORKSPACE_HOME" ${member}`
-              WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
-              TMP=`egrep "^TCPSTARTPORT" ${member}`
-              if [ ! -z ${TMP} ]; then
-                   SDTCP=`echo $TMP | awk -F= '{print $2}' `
-              fi
-              TMP=`egrep "^TCPENDPORT" ${member}`
-              if [ ! -z ${TMP} ]; then
-                   EDTCP=`echo $TMP | awk -F= '{print $2}' `
-              fi
-              TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
-              if [ ! -z ${TMP} ]; then
-                   BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
-              fi
-              echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-              MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
-              ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
-              echo "Done with startup  of ${INSTANCE_NAME} on ${MACHINE_NAME}"
-           fi
+         ADMINCMD="./gms_admin.sh list ${GROUPNAME} ${INSTANCE_EFFECTED} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
+         if [ $DIST = false ]; then
+             TMP=`${ADMINCMD}`
+         else
+             TMP=`${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}" `
+         fi
+         _TMP=`echo ${TMP} | grep "WAS SUCCESSFUL"`
+         if [ ! -z "${_TMP}" ];then
+            CMD_OK=true
+            break;
+         fi
+         count=`expr ${count} + 1`
+         if [ ${count} -gt 10 ]; then
+            break
+         fi
+         sleep 1
        done
-    fi
+       if [ ${CMD_OK} = true ]; then
+            echo "Instance ${INSTANCE_EFFECTED} has started"
+       else
+            echo "ERROR: Instance ${INSTANCE_EFFECTED} DID NOT started"
+       fi
 fi
-
 #
 # setting up the BIA for the admin cli
 #

@@ -10,10 +10,6 @@ IS_BOOTSTRAPPING_NODE=false
 # specify network interface to use on a multihomed machine
 #BIND_INTERFACE_ADDRESS=
 
-# set to auto or manual to control whether the instance is started during normal
-# startup of the instances in the cluster
-STARTTYPE=@STARTUPTYPE@
-
 # CORE or SPECTATOR
 MEMBER_TYPE=CORE
 
