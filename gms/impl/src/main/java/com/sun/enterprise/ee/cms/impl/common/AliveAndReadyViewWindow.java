@@ -58,7 +58,7 @@ public class AliveAndReadyViewWindow {
 
     static final int MAX_ALIVE_AND_READY_VIEWS = 5;
     private final List<AliveAndReadyView> aliveAndReadyView = new LinkedList<AliveAndReadyView>();
-    private long viewId = 1;
+    private long viewId = 0;
 
     private JoinedAndReadyNotificationActionFactoryImpl joinedAndReadyActionFactory = null;
     private FailureNotificationActionFactoryImpl failureActionFactory = null;
@@ -90,6 +90,7 @@ public class AliveAndReadyViewWindow {
         router.addSystemDestination(failureActionFactory);
         router.addSystemDestination(plannedShutdownFactory);
         startTime = System.currentTimeMillis();
+        aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
     }
 
     // junit testing only - only scope to package access
@@ -145,6 +146,10 @@ public class AliveAndReadyViewWindow {
                 }
             } else if (size == 1) {
                 result = aliveAndReadyView.get(0);
+                if (LOG.isLoggable(TRACE_LEVEL)) {
+                    LOG.log(TRACE_LEVEL, "getPreviousAliveAndReadyView() called and only a current view", result);
+
+                }
             }
         }
         // return current view when previous join and ready had a short duration and looks like it was part of startup.
