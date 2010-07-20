@@ -93,7 +93,7 @@ public class GroupServiceProvider
         }
     }
 
-    private void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent) {
+    private synchronized void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent) {
 
         List<String> currentAliveAndReadyMembers = gms.getGroupHandle().getCurrentAliveOrReadyMembers();
         AliveAndReadyView aView = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
@@ -107,16 +107,20 @@ public class GroupServiceProvider
         long knownId = previousViewId.get();
         Signal sig = aView.getSignal();
 
-//        System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: previous viewID: " + knownId
-//                + "; current viewID: " + arViewId + "; " + aView.getSignal());
+        System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: previous viewID: " + knownId
+                + "; current viewID: " + arViewId + "; " + aView.getSignal());
         if (knownId < arViewId) {
             if (previousViewId.compareAndSet(knownId, arViewId)) {
                 this.arView = aView;
                 sig = this.arView.getSignal();
                 previousAliveAndReadyMembers = this.arView.getMembers();
+            } else {
+                previousAliveAndReadyMembers = this.arView.getMembers();
+                System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 1");
             }
         } else {
             previousAliveAndReadyMembers = this.arView.getMembers();
+            System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 2");
         }
 
         //Listeners must be notified even if view has not changed.

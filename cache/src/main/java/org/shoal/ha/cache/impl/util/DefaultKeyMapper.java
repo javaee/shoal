@@ -161,17 +161,18 @@ public class DefaultKeyMapper<K>
     }
 
     public void printMemberStates(String message) {
-        System.out.print(message + " DefaultKeyMapper<" + myName + "> [");
+        StringBuilder sb = new StringBuilder(message + " DefaultKeyMapper<" + myName + "> [");
         for (String st : members) {
-            System.out.print("<" + st + "> ");
+            sb.append("<" + st + "> ");
         }
-        System.out.println("]");
+        sb.append("]");
 
-        System.out.print("\t MembersIncludingMe[");
+        sb.append("\n\t PreviuousViewMembers[");
         for (String st : previuousAliveAndReadyMembers) {
-            System.out.print("<" + st + "> ");
+            sb.append("<" + st + "> ");
         }
-        System.out.println("]");
+        sb.append("]");
+        System.out.println(sb.toString());
     }
 
 }
