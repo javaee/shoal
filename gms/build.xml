@@ -172,6 +172,7 @@
             description="Create jar files">
         <antcall target="assemblejar" />
         <antcall target="assembletestjar" />
+        <antcall target="assemblegmswszip" />
     </target>
 
     <target name="assemblejar" description="create ${shoal-gms.jar}" >
@@ -246,17 +247,19 @@
         <!-- create test jar -->
         <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
             <fileset dir="${component.classes.dir}" includes="**/*test*/**, **/*Test*/**"/>
-        </jar>
-
-        <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
-            <fileset dir="." includes="**/*.jar" excludes="**/${shoal-gms-tests.jar}" />
-            <fileset dir="." includes="**/*.sh"/>
-        </jar>
-        <jar jarfile="${dist.dir}/${shoal-gms-tests.jar}" update="yes">
-            <fileset dir="." includes="**/configs/**" />
+            <fileset dir="${tests.dir}" includes="**/*.java"/>
         </jar>
     </target>
 
+    <target name="assemblegmswszip" description="create ${shoal-gms-ws.zip}" >
+        <zip zipfile="dist/${shoal-gms-ws.zip}" >
+            <zipfileset prefix="gms" dir="." includes="**/*.jar" excludes="**/api/**, **/impl/**"/>
+            <zipfileset prefix="gms" dir="." includes="**/*.sh" />
+            <zipfileset prefix="gms" dir="." includes="**/*.xml" excludes="**/pom.xml" />
+            <zipfileset prefix="gms" dir="." includes="**/*.properties" />
+            <zipfileset prefix="gms" dir="." includes="**/configs/**" />
+        </zip>
+    </target>
 
 
     <!-- clean -->
