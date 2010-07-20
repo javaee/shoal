@@ -34,13 +34,8 @@ MULTICASTPORT=2299
 
 TEST_LOG_LEVEL=WARNING
 SHOALGMS_LOG_LEVEL=WARNING
+GMS_WORKSPACE_HOME=`pwd`
 
-SHOAL_WORKSPACE_HOME=`pwd`
-PUBLISH_HOME=${SHOAL_WORKSPACE_HOME}/dist
-LIB_HOME=${SHOAL_WORKSPACE_HOME}/lib
-GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
-JXTA_JARS=${LIB_HOME}/jxta.jar:${GRIZZLY_JARS}
-JARS=${GRIZZLY_JARS}
 TRANSPORT=grizzly
 BINDINGINTERFACEADDRESS=""
 
@@ -102,6 +97,11 @@ do
        ;;
        -ph)
        programhelp
+       ;;
+       -swh)
+       shift
+       GMS_WORKSPACE_HOME="${1}"
+       shift
        ;;
        -bia)
        shift
@@ -170,6 +170,13 @@ do
        ;;
      esac
 done
+
+
+PUBLISH_HOME=${GMS_WORKSPACE_HOME}/dist
+LIB_HOME=${GMS_WORKSPACE_HOME}/lib
+GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+JXTA_JARS=${LIB_HOME}/jxta.jar:${GRIZZLY_JARS}
+JARS=${GRIZZLY_JARS}
 
 OPTARGS=""
 if [ ! -z "${_OPTARGS}" ];then
