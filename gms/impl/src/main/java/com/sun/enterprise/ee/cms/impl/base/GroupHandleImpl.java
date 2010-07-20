@@ -519,18 +519,18 @@ public final class GroupHandleImpl implements GroupHandle {
     }
 
     public List<GMSMember> getCurrentView() {
-        return ctx.getViewWindow().getCurrentView();
+        return getGMSContext().getViewWindow().getCurrentView();
     }
 
     public List<GMSMember> getPreviousView() {
-        return ctx.getViewWindow().getPreviousView();
+        return getGMSContext().getViewWindow().getPreviousView();
     }
 
     public AliveAndReadyView getPreviousAliveAndReadyCoreView() {
-        return ctx.getPreviousAliveAndReadyView();
+        return getGMSContext().getPreviousAliveAndReadyView();
     }
 
     public AliveAndReadyView getCurrentAliveAndReadyCoreView() {
-        return ctx.getCurrentAliveAndReadyView();
+        return getGMSContext().getCurrentAliveAndReadyView();
     }
 }
