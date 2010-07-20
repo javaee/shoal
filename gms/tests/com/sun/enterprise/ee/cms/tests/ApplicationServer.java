@@ -234,8 +234,10 @@ public class ApplicationServer implements Runnable, CallBack {
                 notification instanceof JoinedAndReadyNotificationSignal) {
             AliveAndReadyView previous = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
             AliveAndReadyView current = gms.getGroupHandle().getCurrentAliveAndReadyCoreView();
-            logger.info("previous AliveAndReadyView: " + previous);
-            logger.info("current AliveAndReadyView: " + current);
+            logger.info("ASprocessNotification(" + notification.getClass().getSimpleName() + " for member:" +
+                         notification.getMemberToken() +  " previous AliveAndReadyView: " + previous);
+            logger.info("ASprocessNotification(" + notification.getClass().getSimpleName() + " for member:" +
+                         notification.getMemberToken() +  "current AliveAndReadyView: " + current);
         }
         if (notification instanceof JoinNotificationSignal) {
             JoinNotificationSignal joinSignal = (JoinNotificationSignal)notification;

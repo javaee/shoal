@@ -69,12 +69,15 @@ public class AliveAndReadyViewWindow {
 
     private long simulatedStartClusterTime;
     private AtomicBoolean isSimulatedStartCluster = new AtomicBoolean(false);
+    private final long startTime;
+    private final String currentInstanceName;
 
     // set to Level.INFO to aid debugging.
     static private final Level TRACE_LEVEL = Level.FINE;
 
     public AliveAndReadyViewWindow(GMSContext ctx) {
         Router router = ctx.getRouter();
+        currentInstanceName = ctx.getServerIdentityToken();
 
         jrcallback = new JoinedAndReadyCallBack(ctx.getGroupHandle(), aliveAndReadyView);
         joinedAndReadyActionFactory = new JoinedAndReadyNotificationActionFactoryImpl(jrcallback);
@@ -86,12 +89,15 @@ public class AliveAndReadyViewWindow {
         router.addSystemDestination(joinedAndReadyActionFactory);
         router.addSystemDestination(failureActionFactory);
         router.addSystemDestination(plannedShutdownFactory);
+        startTime = System.currentTimeMillis();
     }
 
     // junit testing only - only scope to package access
     AliveAndReadyViewWindow() {
         jrcallback = new JoinedAndReadyCallBack(null, aliveAndReadyView);
         leaveCallback = new LeaveCallBack(null, aliveAndReadyView);
+        startTime = System.currentTimeMillis();
+        currentInstanceName = null;
     }
 
     public void setStartClusterMaxDuration(long durationInMs) {
@@ -209,6 +215,14 @@ public class AliveAndReadyViewWindow {
         }
     }
 
+    private boolean isMySignal(Signal sig) {
+        return currentInstanceName != null && currentInstanceName.equals(sig.getMemberToken());
+    }
+
+    private boolean isStartupPeriod() {
+        return (System.currentTimeMillis() - startTime) < 10000;
+    }
+
     private class JoinedAndReadyCallBack extends CommonCallBack {
 
         public JoinedAndReadyCallBack(GroupHandle gh, List<AliveAndReadyView> aliveAndReadyView) {
@@ -284,6 +298,37 @@ public class AliveAndReadyViewWindow {
 
                             AliveAndReadyView current = aliveAndReadyView.get(aliveAndReadyView.size() - 1);
                             SortedSet<String> currentMembers = new TreeSet<String>(current.getMembers());
+
+                            // only do this check in first 10 seconds of up time.
+                            // also do for instance's own joined and ready.
+                            // compensate for possible missed JoinedAndReady at start up.
+                            if (gh != null && (isStartupPeriod() || isMySignal(signal))) {
+                                // check for missed JoinedAndReady
+                                for (String member : jrns.getCurrentCoreMembers()) {
+                                    if (currentMembers.contains(member)) {
+                                        continue;
+                                    }
+
+                                    if (member.compareTo(signal.getMemberToken()) == 0) {
+                                        // handle below.
+                                        continue;
+                                    }
+
+                                    MemberStates states = gh.getMemberState(member, 10000, 0);
+                                    switch (states) {
+                                        case READY:
+                                        case ALIVEANDREADY:
+                                            currentMembers.add(member);
+                                            // tmp debug
+                                            if (LOG.isLoggable(Level.INFO)) {
+                                                LOG.log(Level.INFO, "CORRECTION: member added " + member + " with  a heartbeat state of " + states.toString());
+                                            }
+                                            break;
+                                        default:
+                                    }
+                                }
+                            }
+
                             if (rejoin == null) {
                                 // handle joined and ready with no REJOIN subevent
                                 boolean result = currentMembers.add(signal.getMemberToken());
