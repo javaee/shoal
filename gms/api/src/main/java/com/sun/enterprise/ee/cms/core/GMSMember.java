@@ -39,6 +39,7 @@ package com.sun.enterprise.ee.cms.core;
 import java.io.Serializable;
 import java.text.MessageFormat;
 import java.util.Date;
+import java.util.List;
 
 import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
 import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.CORE;
@@ -120,6 +121,17 @@ public class GMSMember implements Serializable {
     public String toString() {
         String result = MessageFormat.format("GMSMember name: {0}  group: {1} memberType: {2} startTime: {3,date} {3,time,full}",
                 memberToken, groupName, memberType, new Date(startTime));
+        return result;
+    }
+
+    public GMSMember getByMemberToken(List<GMSMember> view) {
+        GMSMember result = null;
+        for (GMSMember current : view) {
+            if (memberToken.equals(current.memberToken)) {
+                result = current;
+                break;
+            }
+        }
         return result;
     }
 }
