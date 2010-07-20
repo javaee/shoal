@@ -361,7 +361,7 @@ public class Router {
                 logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
             } catch (Throwable t) {
                 // just in case application provides own ActionImpl.
-                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString(), t);
             }
         }
 
@@ -439,7 +439,7 @@ public class Router {
                 logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
             } catch (Throwable t) {
                 // just in case application provides own ActionImpl.
-                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString(), t);
             }
         }
     }
@@ -503,7 +503,7 @@ public class Router {
                 logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
             } catch (Throwable t) {
                 // just in case application provides own ActionImpl.
-                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString(), t);
             }
         }
         if (isJoinedAndReadyNotificationAFRegistered()) {
@@ -534,7 +534,7 @@ public class Router {
                 logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
             } catch (Throwable t) {
                 // just in case application provides own ActionImpl.
-                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString());
+                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString(), t);
             }
         }
         synchronized (plannedShutdownAF) {
