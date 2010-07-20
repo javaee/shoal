@@ -41,5 +41,4 @@ if [ ! -z "$PID" ]; then
    fi
 else
    echo "No pid(s) found"
-   exit 1
 fi
