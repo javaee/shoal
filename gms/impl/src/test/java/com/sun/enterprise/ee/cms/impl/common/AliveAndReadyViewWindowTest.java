@@ -140,10 +140,12 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         }
         if (coreClusterMembers.size() > 0) {
             assertTrue("startCluster assertion failure coreClusterMembers != getCurrentView()", coreClusterMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
-            assertTrue("startCluster assertion failure coreClusterMembers != getPrevioussView()", coreClusterMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
+            assertTrue("startCluster assertion failure coreClusterMembers == getPrevioussView()", ! coreClusterMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         } else if (coreClusterMembers.size() ==0 ) {
-            assertTrue(aliveAndReadyViewWindow.getCurrentView() == null);
-            assertTrue(aliveAndReadyViewWindow.getPreviousView() == null);
+            assertTrue(aliveAndReadyViewWindow.getCurrentView().getMembers().size() == 0);
+            assertTrue(aliveAndReadyViewWindow.getPreviousView().getMembers().size() == 0);
+            assertTrue(aliveAndReadyViewWindow.getCurrentView().getViewId() !=
+                       aliveAndReadyViewWindow.getPreviousView().getViewId());
         }
     }
 
@@ -312,11 +314,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
     public void testZeroMemberCluster() {
         mySetup();
         startCluster(0);
-        assertTrue(aliveAndReadyViewWindow.getPreviousView() == null);
-        assertTrue(aliveAndReadyViewWindow.getCurrentView() == null);
         stopCluster();
-        assertTrue(aliveAndReadyViewWindow.getPreviousView() == null);
-        assertTrue(aliveAndReadyViewWindow.getCurrentView() == null);
     }
 
 

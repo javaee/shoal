@@ -46,6 +46,7 @@ import com.sun.enterprise.ee.cms.impl.client.RejoinSubeventImpl;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
 import com.sun.enterprise.mgmt.transport.MessageImpl;
@@ -116,6 +117,7 @@ class MasterNode implements MessageListener, Runnable {
     private static final String NAMESPACE = "MASTER";
     private static final String NODEADV = "NAD";
     private static final String AMASTERVIEW = "AMV";
+    private static final String AMASTERVIEWSTATES = "AMVS";
     private static final String MASTERVIEWSEQ = "SEQ";
     private static final String GROUPSTARTING = "GS";
     private static final String GROUPSTARTUPCOMPLETE = "GSC";
@@ -579,28 +581,56 @@ class MasterNode implements MessageListener, Runnable {
     @SuppressWarnings("unchecked")
     boolean processChangeEvent(final Message msg,
                                final SystemAdvertisement source) throws IOException {
-
+        MemberStates[] memberStates = null;
         Object msgElement = msg.getMessageElement(VIEW_CHANGE_EVENT);
         LOG.log(Level.FINER,"Inside processChangeEvent for group: " + manager.getGroupName());
         if (msgElement != null && msgElement instanceof ClusterViewEvent) {
             final ClusterViewEvent cvEvent = (ClusterViewEvent) msgElement;
+            RejoinSubevent rjse = null;
             switch (cvEvent.getEvent()) {
                 case ADD_EVENT:
-                case JOINED_AND_READY_EVENT:
-                    RejoinSubevent rjse = (RejoinSubevent) msg.getMessageElement(REJOIN_SUBEVENT);
+                    rjse = (RejoinSubevent) msg.getMessageElement(REJOIN_SUBEVENT);
                     if (rjse != null) {
                         getGMSContext().getInstanceRejoins().put(cvEvent.getAdvertisement().getName(), rjse);
+                    }
+                    break;
+                case JOINED_AND_READY_EVENT:
+                    rjse = (RejoinSubevent) msg.getMessageElement(REJOIN_SUBEVENT);
+                    if (rjse != null) {
+                        getGMSContext().getInstanceRejoins().put(cvEvent.getAdvertisement().getName(), rjse);
+                    }
+                    msgElement = msg.getMessageElement(AMASTERVIEWSTATES);
+                    if (msgElement != null) {
+                        memberStates = (MemberStates[])msgElement;
                     }
                     break;
                 default:
             }
             msgElement = msg.getMessageElement(AMASTERVIEW);
             if (msgElement != null && msgElement instanceof List && cvEvent != null) {
-                if (cvEvent.getEvent()  == ClusterViewEvents.JOINED_AND_READY_EVENT &&
-                    cvEvent.getAdvertisement().getID().equals(localNodeID)){
+                final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>)msgElement;
+                if (cvEvent.getEvent() == ClusterViewEvents.JOINED_AND_READY_EVENT) {
+                    if (cvEvent.getAdvertisement().getID().equals(localNodeID)) {
 
-                    // after receiving JOINED_AND_READY_EVENT from Master, stop sending READY heartbeat.
-                    manager.getHealthMonitor().setJoinedAndReadyReceived();
+                        // after receiving JOINED_AND_READY_EVENT from Master, stop sending READY heartbeat.
+                        manager.getHealthMonitor().setJoinedAndReadyReceived();
+                    }
+                    if (memberStates != null) {
+
+                        // get health state from DAS.
+                        int i = 0;
+                        SortedSet<String> readyMembers = new TreeSet<String>();
+                        for (SystemAdvertisement adv : newLocalView) {
+                            switch (memberStates[i]) {
+                                case READY:
+                                case ALIVEANDREADY:
+                                    readyMembers.add(adv.getName());
+                                    break;
+                            }
+                            i++;
+                        }
+                        getGMSContext().getAliveAndReadyViewWindow().put(cvEvent.getAdvertisement().getName(), readyMembers);
+                    }
                 }
                 long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
                 if (seqID <= clusterViewManager.getMasterViewID()) {
@@ -611,7 +641,6 @@ class MasterNode implements MessageListener, Runnable {
                     clusterViewManager.notifyListeners(cvEvent);
                     return true;
                 }
-                final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>)msgElement;
                 LOG.log(Level.FINER,
                         MessageFormat.format("Received a new view of size :{0}, event :{1}",
                                 newLocalView.size(), cvEvent.getEvent().toString()));
@@ -1081,8 +1110,12 @@ class MasterNode implements MessageListener, Runnable {
         final SystemAdvertisement madv;
         LOG.log(Level.FINER, "MasterNode: discoveryInProgress="+discoveryInProgress);
         if (discoveryInProgress) {
+            // ensure current instance is in the view.
+            discoveryView.add(sysAdv);
             madv = discoveryView.getMasterCandidate();
         } else {
+            // ensure current instance is in the view.
+            clusterViewManager.add(sysAdv);
             madv = clusterViewManager.getMasterCandidate();
         }
         LOG.log(Level.FINER, "MasterNode: Master Candidate="+madv.getName());
@@ -1213,6 +1246,34 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     /**
+     * Adds an authoritative message element to a Message
+     *
+     * @param msg The message to add the view to
+     */
+    void addReadyAuthoritativeView(final Message msg) {
+        final List<SystemAdvertisement> view;
+        ClusterView cv = clusterViewManager.getLocalView();
+        view = cv.getView();
+        LOG.log(Level.FINE, "MasterNode: Adding Authoritative View of size "+view.size()+ "  to view message masterSeqId=" + cv.masterViewId);
+        msg.addMessageElement(AMASTERVIEW, (Serializable)view);
+
+        // compute MemberStates for AMASTERVIEW list.
+        MemberStates[] memberStates = new MemberStates[view.size()];
+        int i = 0;
+        for (SystemAdvertisement adv : view) {
+            MemberStates value = MemberStates.UNKNOWN;
+            try {
+                value = MemberStates.valueOf(manager.getHealthMonitor().getMemberStateFromHeartBeat(adv.getID(), 10000).toUpperCase());
+            } catch (Throwable t) {}
+            memberStates[i] = value;
+            i++;
+        }
+        msg.addMessageElement(AMASTERVIEWSTATES, (Serializable)memberStates);
+
+        addLongToMessage(msg, NAMESPACE, MASTERVIEWSEQ, cv.masterViewId);
+    }
+
+    /**
      * Stops this service
      */
     synchronized void stop() {
@@ -1339,7 +1400,7 @@ class MasterNode implements MessageListener, Runnable {
         Message msg = this.createSelfNodeAdvertisement();
         synchronized(masterViewID) {
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
-            this.addAuthoritativeView(msg);
+            this.addReadyAuthoritativeView(msg);
         }
         sendNewView(null, cvEvent, msg, false);
         return cvEvent;

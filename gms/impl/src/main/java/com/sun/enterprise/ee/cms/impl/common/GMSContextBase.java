@@ -122,5 +122,6 @@ public abstract class GMSContextBase implements GMSContext {
     public boolean isShuttingDown() {
         return shuttingDown;
     }
-    
+
+    abstract public AliveAndReadyViewWindow  getAliveAndReadyViewWindow();
  }

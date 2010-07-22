@@ -335,4 +335,9 @@ public class GMSContextImpl extends GMSContextBase {
     public Map<String, RejoinSubevent> getInstanceRejoins() {
         return instanceRejoins;
     }
+
+    @Override
+    public AliveAndReadyViewWindow  getAliveAndReadyViewWindow() {
+        return aliveAndReadyViewWindow;
+    }
 }

@@ -46,6 +46,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -69,8 +70,10 @@ public class AliveAndReadyViewWindow {
 
     private long simulatedStartClusterTime;
     private AtomicBoolean isSimulatedStartCluster = new AtomicBoolean(false);
-    private final long startTime;
     private final String currentInstanceName;
+
+    // map from JoinedAndReady memberName to its DAS ready members
+    private ConcurrentHashMap<String, SortedSet<String>> joinedAndReadySignalReadyList= new ConcurrentHashMap<String, SortedSet<String>>();
 
     // set to Level.INFO to aid debugging.
     static private final Level TRACE_LEVEL = Level.FINE;
@@ -89,7 +92,9 @@ public class AliveAndReadyViewWindow {
         router.addSystemDestination(joinedAndReadyActionFactory);
         router.addSystemDestination(failureActionFactory);
         router.addSystemDestination(plannedShutdownFactory);
-        startTime = System.currentTimeMillis();
+
+        // initialize with a null initial previous and current views
+        aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
         aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
     }
 
@@ -97,8 +102,11 @@ public class AliveAndReadyViewWindow {
     AliveAndReadyViewWindow() {
         jrcallback = new JoinedAndReadyCallBack(null, aliveAndReadyView);
         leaveCallback = new LeaveCallBack(null, aliveAndReadyView);
-        startTime = System.currentTimeMillis();
         currentInstanceName = null;
+        
+         // initialize with a null initial previous and current views
+        aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
+        aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
     }
 
     public void setStartClusterMaxDuration(long durationInMs) {
@@ -119,42 +127,19 @@ public class AliveAndReadyViewWindow {
         AliveAndReadyView result = null;
         synchronized (aliveAndReadyView) {
             int size = aliveAndReadyView.size();
+            assert(size > 2);
             if (size >= 2) {
                 result = aliveAndReadyView.get(size - 2);
-                Signal signal = result.getSignal();
-
-                // edge case handling.  Checking for start-cluster situation. No previous view during start-cluster, just current view.
-                if (signal != null && signal instanceof JoinedAndReadyNotificationSignal) {
-                    JoinedAndReadyNotificationSignal jrsignal = (JoinedAndReadyNotificationSignal)signal;
-                    if (jrsignal.getEventSubType() == GMSConstants.startupType.GROUP_STARTUP ) {
-                         // return current view when previous join and ready had a short duration and looks like it was part of startup.
-                        if (LOG.isLoggable(TRACE_LEVEL)) {
-                            LOG.log(TRACE_LEVEL, "getPreviousAliveAndReadyView: returning current view during cluster startup. JoinedAndReadyNotificationSignal indicates " + jrsignal.getEventSubType());
-                        }
-                        result = aliveAndReadyView.get(size - 1);
-                    } else if (isSimulatedStartCluster.get() ) {
-                        long duration = result.getSignalTime() - simulatedStartClusterTime;
-                        if (duration  < MAX_CLUSTER_STARTTIME_DURATION_MS) {
-
-                            // return current view when previous join and ready had a short duration and looks like it was part of startup.
-                            if (LOG.isLoggable(TRACE_LEVEL)) {
-                                LOG.log(TRACE_LEVEL, "getPreviousAliveAndReadyView: returning current view since detected cluster startup due to JoinedAndReadyNotification occurring within " + duration + " ms of initial startup");
-                            }
-                            result = aliveAndReadyView.get(size - 1);
-                        }
-                    }
-                }
             } else if (size == 1) {
                 result = aliveAndReadyView.get(0);
                 if (LOG.isLoggable(TRACE_LEVEL)) {
                     LOG.log(TRACE_LEVEL, "getPreviousAliveAndReadyView() called and only a current view", result);
-
                 }
             }
         }
         // return current view when previous join and ready had a short duration and looks like it was part of startup.
-        if (LOG.isLoggable(TRACE_LEVEL)) {
-            LOG.log(TRACE_LEVEL, "getPreviousAliveAndReadyView: returning " + result);
+        if (LOG.isLoggable(Level.INFO)) {
+            LOG.log(Level.INFO, "getPreviousAliveAndReadyView: returning " + result);
         }
 
         return result;
@@ -167,6 +152,9 @@ public class AliveAndReadyViewWindow {
             if (length > 0) {
                 result = aliveAndReadyView.get(length - 1);
             }
+        }  // return current view when previous join and ready had a short duration and looks like it was part of startup.
+        if (LOG.isLoggable(TRACE_LEVEL)) {
+            LOG.log(TRACE_LEVEL, "getCurrentAliveAndReadyView: returning " + result);
         }
         return result;
     }
@@ -220,14 +208,6 @@ public class AliveAndReadyViewWindow {
         }
     }
 
-    private boolean isMySignal(Signal sig) {
-        return currentInstanceName != null && currentInstanceName.equals(sig.getMemberToken());
-    }
-
-    private boolean isStartupPeriod() {
-        return (System.currentTimeMillis() - startTime) < 10000;
-    }
-
     private class JoinedAndReadyCallBack extends CommonCallBack {
 
         public JoinedAndReadyCallBack(GroupHandle gh, List<AliveAndReadyView> aliveAndReadyView) {
@@ -238,113 +218,42 @@ public class AliveAndReadyViewWindow {
             if (signal instanceof JoinedAndReadyNotificationSignal) {
                 final JoinedAndReadyNotificationSignal jrns = (JoinedAndReadyNotificationSignal) signal;
                 final RejoinSubevent rejoin = jrns.getRejoinSubevent();
-                if (jrns.getCurrentCoreMembers().contains(signal.getMemberToken())) {
-                    synchronized (aliveAndReadyView) {
-
-                        if (aliveAndReadyView.size() == 0) {
-                            if (LOG.isLoggable(TRACE_LEVEL)) {
-                                LOG.log(TRACE_LEVEL, "first alive and ready view: initializing");
-                            }
-
-                            // perform first time startup check for all existing CORE members to find ones that
-                            // are already ALIVEANDREADY.
-                            SortedSet<String> aliveAndReadyMembers = new TreeSet<String>();
-                            for (String member : jrns.getCurrentCoreMembers()) {
-                                if (member.compareTo(signal.getMemberToken()) == 0) {
-
-                                    // receiving this member's alive and ready signal, no need to check its state.
-                                    aliveAndReadyMembers.add(member);
-                                } else if (gh != null) {
-                                    MemberStates states = gh.getMemberState(member, 10000, 0);
-                                    switch (states) {
-                                        case ALIVEANDREADY:
-                                        case READY:
-                                            aliveAndReadyMembers.add(member);
-                                            if (LOG.isLoggable(TRACE_LEVEL)) {
-                                                LOG.log(TRACE_LEVEL, "member added " + member + " with  a heartbeat state of " + states.toString());
-                                            }
-                                            break;
-
-                                        case UNKNOWN:
-
-                                            // member in the UNKNOWN state have either failed during start up,
-                                            // just have not reached the ready state, may have a multicast broadcast issue.
-                                            if (LOG.isLoggable(TRACE_LEVEL)) {
-                                                LOG.log(TRACE_LEVEL, "aliveAndReadyView initialization: member " + member + " has an UNKNOWN member state from 10 seconds of heartbeat state");
-                                            }
-                                            // MemberStates stateQuery = gh.getMemberState(member, 10000, 2000);
-                                            // if (stateQuery == MemberStates.ALIVEANDREADY ||  stateQuery == MemberStates.READY) {
-                                            //    aliveAndReadyMembers.add(member);
-                                            // } else if (stateQuery == MemberStates.UNKNOWN) {
-                                            //    LOG.warning("aliveAndReadyView initialization: member " + member + " still unknown state after a direct query on state");
-                                            // }
-                                            break;
-                                        
-                                        case ALIVE:
-                                        default:
-                                            if (LOG.isLoggable(TRACE_LEVEL)) {
-                                                LOG.log(TRACE_LEVEL, "member " + member + " not added with a heartbeat state of " + states.toString());
-                                            }
-                                            break;
-                                    }
+                SortedSet<String> dasReadyMembers = joinedAndReadySignalReadyList.remove(jrns.getMemberToken());
+                synchronized (aliveAndReadyView) {
+                    AliveAndReadyView current = getCurrentView();
+                    SortedSet<String> currentMembers = new TreeSet<String>(current.getMembers());
+                    for (String member : jrns.getCurrentCoreMembers()) {
+                        if (dasReadyMembers != null && dasReadyMembers.contains(member)) {
+                            if (currentMembers.add(member)) {
+                                if (LOG.isLoggable(TRACE_LEVEL)) {
+                                    LOG.log(TRACE_LEVEL, "das ready member: " + member + " added");
                                 }
                             }
-                            if (aliveAndReadyMembers.size() > 0) {
-
-                                // disabled simulated cluster.
-
-//                                if (jrns.getEventSubType() == GMSConstants.startupType.INSTANCE_STARTUP) {
-//                                    isSimulatedStartCluster.compareAndSet(false, true);
-//                                    simulatedStartClusterTime = System.currentTimeMillis();
-//                                }
-                                add(signal, aliveAndReadyMembers);
+                        } else if (jrns.getMemberToken().equals(member)) {
+                            currentMembers.add(member);
+                        } else if (gh != null) {
+                            // last check.  see if received ready heartbeat.
+                            MemberStates state = gh.getMemberState(member, 10000, 0);
+                            switch (state) {
+                                case READY:
+                                case ALIVEANDREADY:
+                                    currentMembers.add(member);
+                                    break;
+                                default:
                             }
-                        } else {
-
-                            AliveAndReadyView current = aliveAndReadyView.get(aliveAndReadyView.size() - 1);
-                            SortedSet<String> currentMembers = new TreeSet<String>(current.getMembers());
-
-                            // only do this check in first 10 seconds of up time.
-                            // also do for instance's own joined and ready.
-                            // compensate for possible missed JoinedAndReady at start up.
-                            if (gh != null && (isStartupPeriod() || isMySignal(signal))) {
-                                // check for missed JoinedAndReady
-                                for (String member : jrns.getCurrentCoreMembers()) {
-                                    if (currentMembers.contains(member)) {
-                                        continue;
-                                    }
-
-                                    if (member.compareTo(signal.getMemberToken()) == 0) {
-                                        // handle below.
-                                        continue;
-                                    }
-
-                                    MemberStates states = gh.getMemberState(member, 10000, 0);
-                                    switch (states) {
-                                        case READY:
-                                        case ALIVEANDREADY:
-                                            currentMembers.add(member);
-                                            // tmp debug
-                                            if (LOG.isLoggable(Level.INFO)) {
-                                                LOG.log(Level.INFO, "CORRECTION: member added " + member + " with  a heartbeat state of " + states.toString());
-                                            }
-                                            break;
-                                        default:
-                                    }
-                                }
-                            }
-
-                            if (rejoin == null) {
-                                // handle joined and ready with no REJOIN subevent
-                                boolean result = currentMembers.add(signal.getMemberToken());
-                                assert (result);
-                            } // else REJOIN means that GMS missed detecting a FAILURE and restarted instance has
-                              // already JOINED again.  previous and current view are same when signal is REJOIN.
-                            add(signal, currentMembers);
                         }
-                    } // end synchronized aliveAndReadyView
-                }// else ignore non-CORE member joinedandreadynotification signal.
+                    }
+                    add(signal, currentMembers);
+                } // end synchronized aliveAndReadyView
             }
         }
+    }
+
+    public void put(String joinedAndReadyMember, SortedSet<String> readyMembers) {
+        if (LOG.isLoggable(TRACE_LEVEL)) {
+            LOG.log(TRACE_LEVEL, "put joinedAndReadySignal member:" + joinedAndReadyMember + " ready members:" + readyMembers);
+        }
+        SortedSet<String> result = joinedAndReadySignalReadyList.put(joinedAndReadyMember, readyMembers);
+        assert(result == null);
     }
 }

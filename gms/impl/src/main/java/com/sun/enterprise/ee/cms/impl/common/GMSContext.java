@@ -135,4 +135,6 @@ public interface GMSContext {
     public AliveAndReadyView getCurrentAliveAndReadyView();
 
     public Map<String, RejoinSubevent> getInstanceRejoins();
+
+    public AliveAndReadyViewWindow  getAliveAndReadyViewWindow();
 }
