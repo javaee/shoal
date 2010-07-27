@@ -143,11 +143,16 @@ public class AliveAndReadyViewImpl implements AliveAndReadyView {
             sb.append(" View terminated at ").append(MessageFormat.format("{0,date} {0,time,full}", signalTime));
         }
         if (members != null) {
-            sb.append(" Members[").append(members.size()).append("]:[");
+            int size = members.size();
+            sb.append(" Members[").append(size).append("]:[");
             for (String member : members) {
                 sb.append(member).append(",");
             }
-            sb.setCharAt(sb.length() -1, ']');
+            if (size != 0) {
+                sb.setCharAt(sb.length() - 1, ']');
+            } else {
+                sb.append("]");
+            }
         }
 
         return sb.toString();
