@@ -38,9 +38,11 @@ package com.sun.enterprise.ee.cms.impl.common;
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides contextual information about all useful GMS artifacts. These are
@@ -137,4 +139,10 @@ public interface GMSContext {
     public Map<String, RejoinSubevent> getInstanceRejoins();
 
     public AliveAndReadyViewWindow  getAliveAndReadyViewWindow();
+
+    public void setGroupStartupJoinMembers(Set<String> members);
+
+    public boolean isGroupStartupComplete();
+
+    public boolean setGroupStartupState(String member, MemberStates state);
 }

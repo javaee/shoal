@@ -59,6 +59,7 @@ import com.sun.enterprise.ee.cms.impl.common.Router;
 import com.sun.enterprise.ee.cms.impl.common.SignalPacket;
 import com.sun.enterprise.ee.cms.impl.common.ViewWindow;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.ClusterView;
 import com.sun.enterprise.mgmt.ClusterViewEvents;
 
@@ -66,6 +67,7 @@ import java.io.Serializable;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -92,6 +94,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
     private static final String REC_APPOINTED_STATE = GroupManagementService.RECOVERY_STATE.RECOVERY_SERVER_APPOINTED.toString();
     private final ArrayBlockingQueue<EventPacket> viewQueue;
     private final String groupName;
+    private ConcurrentHashMap<String, MemberStates> pendingGroupJoins = new ConcurrentHashMap<String, MemberStates>();
 
     ViewWindowImpl(final String groupName, final ArrayBlockingQueue<EventPacket> viewQueue) {
         this.groupName = groupName;
@@ -103,6 +106,70 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             ctx = (GMSContext) GMSContextFactory.getGMSContext(groupName);
         }
         return ctx;
+    }
+
+    public void setPendingGroupJoins(Set<String> memberTokens) {
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("setPendingGroupJoins: members:" + memberTokens);
+        }
+        for (String member : memberTokens) {
+            pendingGroupJoins.put(member, MemberStates.UNKNOWN);
+        }
+    }
+
+    public boolean isGroupStartup(String member) {
+        boolean result = false;
+        MemberStates state = null;
+        if (member != null) {
+            state = pendingGroupJoins.get(member);
+            if (logger.isLoggable(Level.FINE)){
+                logger.fine("pendingGroupJoins member:" + member + " state=" + state);
+            }
+            if (state != null) {
+                switch (state) {
+                case UNKNOWN:
+                case ALIVE:
+                    result = true;
+                    break;
+                default:
+                    result = false;
+                    break;
+                }
+            }
+        }
+        if (logger.isLoggable(Level.FINE)){
+            logger.fine("isGroupStartup: member: " + member + " result:" + result + " isGroupStartupComplete:" + isGroupStartupComplete());
+        }
+        return result;
+    }
+
+    public boolean setGroupStartupState(String member, MemberStates state){
+        boolean result = false;
+        switch(state) {
+            case READY:
+            case ALIVEANDREADY:
+                Object value = pendingGroupJoins.remove(member);
+                result = value != null;
+                break;
+            case ALIVE:
+                result = pendingGroupJoins.replace(member, MemberStates.UNKNOWN, MemberStates.ALIVE);
+                break;
+            default:
+                break;
+        }
+         if (logger.isLoggable(Level.FINE)){
+            logger.fine("setGroupStartupState: member: " + member + " newState:" + state + " result:" + result + " isGroupStartupComplete:" + isGroupStartupComplete() + " pendingMembers:" +
+                    pendingGroupJoins.keySet().toString());
+        }
+        return result;
+    }
+
+    public boolean isGroupStartupComplete() {
+        boolean result = pendingGroupJoins.size() == 0;
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("isGroupStartupComplete: result=" + result + " pendingJoinedAndReadys=" + pendingGroupJoins.size());
+        }
+        return result;
     }
 
     public void run() {
@@ -488,9 +555,11 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final List<String> oldMembers = getTokens(getPreviousView());
 
         RejoinSubevent rjse = getGMSContext().getInstanceRejoins().get(packet.getSystemAdvertisement().getName());
-        logger.log(Level.INFO, "addNewMemberJoins: member: " + member  +
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "addNewMemberJoins: member: " + member  +
                                " joined group time:" + new Date(Utility.getStartTime(advert)) + " rejoin subevent=" + rjse);
-
+        }
+        
         // Series of checks needed to avoid duplicate ADD messages.
         // This conditional was added to avoid duplicate ADD events caused
         // by GroupLeaderShip change notifications.
@@ -533,8 +602,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                     token));
             }
         }
-        final GMSConstants.startupType startupState =
-            getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+        final GMSConstants.startupType startupState = isGroupStartup(token) ? GROUP_STARTUP : INSTANCE_STARTUP;
         String msg = MessageFormat.format(gmsRb.getString("viewwindow.adding.joined.ready.member"),
                                           new Object[]{token, groupName, startupState.toString(), rejoinTxt} );
         logger.log(Level.INFO, msg);
@@ -544,7 +612,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             getCurrentCoreMembers(),
             getAllCurrentMembers(),
             groupName,
-            startTime);
+            startTime,
+            startupState);
         if (rse != null) {
             jarSignal.setRs(rse);
         }
@@ -567,8 +636,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                     token));
             }
         }
-        final GMSConstants.startupType startupState =
-            getGMSContext().isGroupStartup() ? GROUP_STARTUP : INSTANCE_STARTUP;
+        final GMSConstants.startupType startupState =isGroupStartup(token) ? GROUP_STARTUP : INSTANCE_STARTUP;
+        setGroupStartupState(token, MemberStates.ALIVE);
         String msg = MessageFormat.format(gmsRb.getString("viewwindow.adding.join.member"),
                                           new Object[]{token, groupName, startupState.toString(), rejoinTxt} );
         logger.log( Level.INFO, msg);
@@ -577,7 +646,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             getCurrentCoreMembers(),
             getAllCurrentMembers(),
             groupName,
-            startTime);
+            startTime,
+            startupState);
         if (rse != null) {
             jnSignal.setRs(rse);
         }

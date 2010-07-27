@@ -43,18 +43,18 @@ import com.sun.enterprise.ee.cms.core.Signal;
 import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class AliveAndReadyViewImpl implements AliveAndReadyView {
-
     private Signal signal;
     private long signalTime;
 
-    final private SortedSet<String> members;
+    private SortedSet<String> members;
     final private long viewId;
     final private long creationTime;
 
     public AliveAndReadyViewImpl(SortedSet<String> members, long viewId) {
-        this.members = Collections.unmodifiableSortedSet(members);
+        this.members = new TreeSet<String>(members);
         this.viewId = viewId;
         this.creationTime = System.currentTimeMillis();
         this.signal = null;
@@ -90,8 +90,20 @@ public class AliveAndReadyViewImpl implements AliveAndReadyView {
      *
      * @return an unmodifiable list of members who were alive and ready.
      */
-    public SortedSet<String> getMembers() {
-        return members;
+    public synchronized SortedSet<String> getMembers() {
+        return Collections.unmodifiableSortedSet(members);
+    }
+
+    // Do not make public.  Implementation only use.
+    // only to enable setting previous view to EMPTY list when start-cluster has completed.
+    synchronized void clearMembers() {
+        this.members = new TreeSet<String>();
+    }
+
+    // Do not make public. Implementation only use.
+    // only to enable previous view for INSTANCE_STARTUP.
+    synchronized void setMembers(SortedSet<String> members) {
+        this.members = members;
     }
 
     /**
@@ -131,14 +143,11 @@ public class AliveAndReadyViewImpl implements AliveAndReadyView {
             sb.append(" View terminated at ").append(MessageFormat.format("{0,date} {0,time,full}", signalTime));
         }
         if (members != null) {
-            int size = members.size();
-            if (size > 0) {
-                sb.append(" Members[").append(members.size()).append("]:[");
-                for (String member : members) {
-                    sb.append(member).append(",");
-                }
-                sb.setCharAt(sb.length() -1, ']');
+            sb.append(" Members[").append(members.size()).append("]:[");
+            for (String member : members) {
+                sb.append(member).append(",");
             }
+            sb.setCharAt(sb.length() -1, ']');
         }
 
         return sb.toString();

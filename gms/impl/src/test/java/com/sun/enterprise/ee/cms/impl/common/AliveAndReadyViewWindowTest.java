@@ -77,8 +77,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         }
         JoinedAndReadyNotificationSignalImpl result =
                 new JoinedAndReadyNotificationSignalImpl(memberName, currentCoreMembers, currentMembers,
-                                                         groupName, startTime);
-        result.setStartupKind(startupKind);
+                                                         groupName, startTime, startupKind); 
         return result;
     }
 

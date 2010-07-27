@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -120,6 +121,7 @@ class MasterNode implements MessageListener, Runnable {
     private static final String AMASTERVIEWSTATES = "AMVS";
     private static final String MASTERVIEWSEQ = "SEQ";
     private static final String GROUPSTARTING = "GS";
+    private static final String GROUPMEMBERS = "GN";
     private static final String GROUPSTARTUPCOMPLETE = "GSC";
 
     private int interval = 6;
@@ -133,13 +135,15 @@ class MasterNode implements MessageListener, Runnable {
     private final Timer timer;
     private DelayedSetGroupStartingCompleteTask groupStartingTask = null;
     static final private long MAX_GROUPSTARTING_TIME = 240000;  // 4 minute limit for group starting duration.
-    static final private long GROUPSTARTING_COMPLETE_DELAY = 30000;   // delay before completing group startup.  Allow late arriving JoinedAndReady notifications
+    static final private long GROUPSTARTING_COMPLETE_DELAY = 3000;   // delay before completing group startup.  Allow late arriving JoinedAndReady notifications
                                                                      // to be group starting.
     private boolean clusterStopping = false;
     final Object discoveryLock = new Object();
     private GMSContext ctx = null;
     final private SortedSet<MasterNodeMessageEvent> outstandingMasterNodeMessages;
     private Thread processOutstandingMessagesThread = null;
+    private ConcurrentHashMap<String, Object> pendingGroupStartupMembers = new ConcurrentHashMap<String, Object>();
+    private SortedSet<String> groupMembers = new TreeSet<String>();
 
     /**
      * Constructor for the MasterNode object
@@ -252,7 +256,9 @@ class MasterNode implements MessageListener, Runnable {
 
     private void sendGroupStartupComplete() {
         final Message msg = createSelfNodeAdvertisement();
-        LOG.log(Level.FINER, "Sending GroupStartupComplete Message for group:" + manager.getGroupName());
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, "Sending GroupStartupComplete Message for group:" + manager.getGroupName());
+        }
         msg.addMessageElement(GROUPSTARTUPCOMPLETE, "true");
         send(null, null, msg);
     }
@@ -297,7 +303,8 @@ class MasterNode implements MessageListener, Runnable {
         msg.addMessageElement(type, masterID);
         if (groupStarting) {
             // note that we are currently not sending static list of known group members in MasterNodeResponse at this time
-            msg.addMessageElement(GROUPSTARTING, Boolean.toString(groupStarting));
+            msg.addMessageElement(GROUPSTARTING, Boolean.valueOf(groupStarting));
+            msg.addMessageElement(GROUPMEMBERS, (Serializable)groupMembers);
         }
         if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE, "Created a Master Response Message with masterId = " + masterID.toString() + " groupStarting=" + Boolean.toString(groupStarting));
@@ -496,12 +503,18 @@ class MasterNode implements MessageListener, Runnable {
                                 " isMaster=" + isMaster() + " discoveryInProgress:" + isDiscoveryInProgress());
         }
         msgElement = msg.getMessageElement(GROUPSTARTING);
-        if (msgElement != null) {
+        if (msgElement != null && !groupStarting) {
+            Set<String> groupmembers = null;
+            msgElement = msg.getMessageElement(GROUPMEMBERS);
+            if (msgElement != null && msgElement instanceof Set){
+                groupmembers= (Set<String>)msgElement;
+                getGMSContext().setGroupStartupJoinMembers(groupmembers);
+            }
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "MNR indicates GroupStart for group: " + manager.getGroupName());
+                LOG.log(Level.FINE, "MNR indicates GroupStart for group: " + manager.getGroupName() + " members:" + groupmembers);
             }
             setGroupStarting(true);
-            delayedSetGroupStarting(false, MAX_GROUPSTARTING_TIME);  // place a boundary on length of time that GroupStarting state is true.  Default is 10 minutes.
+            delayedSetGroupStarting(false, MAX_GROUPSTARTING_TIME);  // place a boundary on length of time that GroupStarting state is true.
         }
         msgElement = msg.getMessageElement(AMASTERVIEW);
         if ( msgElement == null || !(msgElement instanceof List) ) {
@@ -563,6 +576,7 @@ class MasterNode implements MessageListener, Runnable {
         if ( msgElement == null )
             return false;
 
+        LOG.fine("received GROUPSTARTUPCOMPLETE from Master");
         // provide wiggle room to enable JoinedAndReady Notifications to be considered part of group startup.
         // have a small delay before transitioning out of GROUP_STARTUP state.
         delayedSetGroupStarting(false, GROUPSTARTING_COMPLETE_DELAY);
@@ -1214,7 +1228,9 @@ class MasterNode implements MessageListener, Runnable {
                 GMSContext gmsCtx = getGMSContext();
                 if (gmsCtx != null) {
                     rjse = gmsCtx.getInstanceRejoins().get(event.getAdvertisement().getName());
-                    LOG.info("sendNewView: clusterViewEvent:" + event.getEvent().toString() + " rejoinSubevent=" + rjse + " member: " + event.getAdvertisement().getName());
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.fine("sendNewView: clusterViewEvent:" + event.getEvent().toString() + " rejoinSubevent=" + rjse + " member: " + event.getAdvertisement().getName());
+                    }
                     if (rjse != null) {
                         msg.addMessageElement(REJOIN_SUBEVENT, rjse);
                     }
@@ -1395,6 +1411,7 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     ClusterViewEvent sendReadyEventView(final SystemAdvertisement adv) {
+        boolean isGroup = this.pendingGroupStartupMembers.containsKey(adv.getName());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.JOINED_AND_READY_EVENT, adv);
         LOG.log(Level.FINEST, MessageFormat.format("Sending to Group, Joined and Ready Event View for peer :{0}", adv.getName()));
         Message msg = this.createSelfNodeAdvertisement();
@@ -1403,6 +1420,15 @@ class MasterNode implements MessageListener, Runnable {
             this.addReadyAuthoritativeView(msg);
         }
         sendNewView(null, cvEvent, msg, false);
+        
+        if (isGroup) {
+            this.pendingGroupStartupMembers.remove(adv.getName());
+            LOG.fine("sendReadyEventView: pendingGroupStartupMembers: member=" + adv.getName() + " size=" + pendingGroupStartupMembers.size() + " pending members remaining:" + pendingGroupStartupMembers.keySet());
+            if (pendingGroupStartupMembers.size() == 0) {
+                LOG.fine("sendReadyEventView:  start-cluster groupStartup completed");
+                setGroupStarting(false);
+            }
+        }
         return cvEvent;
     }
 
@@ -1411,8 +1437,16 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     void setGroupStarting(boolean value) {
+        boolean sendMessage = false;
+        if (groupStarting && !value && this.isMaster() && this.isMasterAssigned()) {
+            sendMessage = true;
+        }
         groupStarting = value;
         getGMSContext().setGroupStartup(value);
+        if (sendMessage) {
+            // send a message to other instances in cluster that group startup has completed
+            sendGroupStartupComplete();
+        }
     }
 
     /**
@@ -1453,6 +1487,10 @@ class MasterNode implements MessageListener, Runnable {
     void groupStartup(GMSConstants.groupStartupState startupState, List<String> memberTokens) {
         StringBuffer sb = new StringBuffer();
         groupStartingMembers = memberTokens;
+
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("MasterNode:groupStartup: memebrTokens:" + memberTokens + " startupState:" + startupState);
+        }
         switch(startupState) {
             case INITIATED:
                 // Optimization:  Rather than broadcast to members of cluster (that have not been started yet when INIATIATED group startup),
@@ -1461,9 +1499,25 @@ class MasterNode implements MessageListener, Runnable {
                 // See createMasterResponse() for how this group starting is sent from Master to members of the group.
                 // See processMasterNodeResponse() for how members process this sent info.
                 setGroupStarting(true);
+                groupMembers = new TreeSet<String>(memberTokens);
+                getGMSContext().setGroupStartupJoinMembers(new TreeSet<String>(memberTokens));
                 sb.append(" Starting Members: ");
+                pendingGroupStartupMembers = new ConcurrentHashMap<String, Object>();
+                for (String member : memberTokens) {
+                    pendingGroupStartupMembers.put(member, member);
+                }
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("groupStartup: pendingGroupStartupMembers:" + pendingGroupStartupMembers.size() + " members:" + pendingGroupStartupMembers.keySet() + " members passed in:" + memberTokens);
+
+                }
                 break;
             case COMPLETED_FAILED:
+
+                // todo:  communicate to all clustered isntances that they should no longer consider the failed members
+                //        to be starting within start-cluster.  Need to pass failure and list of failed members to all instances.
+                //        Send groupstartup complete needs to send more info in future.  Now just sends start-clsuter is done.
+                //        Need to send whether succeeded or failed. If failed, need to send list of failing instances so they
+                //        be removed from pendingJoins list in ViewWindowImpl.
                 setGroupStarting(false);
                 sb.append(" Failed Members: ");
                 if (this.isMaster() && this.isMasterAssigned()) {
@@ -1472,12 +1526,11 @@ class MasterNode implements MessageListener, Runnable {
                 }
                 break;
             case COMPLETED_SUCCESS:
-                setGroupStarting(false);
-                sb.append(" Started Members: ");
-                if (this.isMaster() && this.isMasterAssigned()) {
-                    // send a message to other instances in cluster that group startup has completed
-                    sendGroupStartupComplete();
+                if (pendingGroupStartupMembers.size() == 0) {
+                    setGroupStarting(false);
                 }
+                sb.append(" Started Members: ");
+
                 break;
         }
         for (String member: memberTokens) {
@@ -1498,8 +1551,8 @@ class MasterNode implements MessageListener, Runnable {
 
         public DelayedSetGroupStartingCompleteTask(long delay) {
             this.delay = delay;
-            if (LOG.isLoggable(Level.FINER)) {
-                LOG.finer("GroupStartupCompleteTask scheduled in " + delay + " ms");
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("GroupStartupCompleteTask scheduled in " + delay + " ms");
             }
         }
 

@@ -74,18 +74,15 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
                                       final List<String> currentCoreMembers,
                                       final List<String> allCurrentMembers,
                                       final String groupName,
-                                      final long startTime) {
+                                      final long startTime,
+                                      final GMSConstants.startupType startupKind) {
         this.memberToken=memberToken;
         this.currentCoreMembers=currentCoreMembers;
         this.allCurrentMembers=allCurrentMembers;
         this.groupName = groupName;
         this.startTime=startTime;
-        ctx = GMSContextFactory.getGMSContext( groupName );
-        if (ctx == null) {
-            this.startupKind = GMSConstants.startupType.INSTANCE_STARTUP;
-        } else {
-            this.startupKind = ctx.isGroupStartup() ? GMSConstants.startupType.GROUP_STARTUP : GMSConstants.startupType.INSTANCE_STARTUP;
-        }
+        this.startupKind = startupKind;
+
         if (logger.isLoggable(Level.FINE)) {
             logger.fine("JoinAndReadyNotificationSignalImpl ctor: member=" + memberToken + " group=" + groupName +  " startupKind=" + startupKind.toString());
         }
@@ -93,7 +90,7 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
 
     JoinedAndReadyNotificationSignalImpl ( final JoinedAndReadyNotificationSignal signal ) {
         this(signal.getMemberToken(), signal.getCurrentCoreMembers(), signal.getAllCurrentMembers(),
-            signal.getGroupName(), signal.getStartTime());
+            signal.getGroupName(), signal.getStartTime(), signal.getEventSubType());
     }
 
     /**

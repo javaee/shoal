@@ -43,13 +43,11 @@ import com.sun.enterprise.ee.cms.impl.common.Router;
 import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
+import com.sun.enterprise.ee.cms.spi.MemberStates;
+
 import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.WATCHDOG;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -339,5 +337,20 @@ public class GMSContextImpl extends GMSContextBase {
     @Override
     public AliveAndReadyViewWindow  getAliveAndReadyViewWindow() {
         return aliveAndReadyViewWindow;
+    }
+
+    @Override
+    public void setGroupStartupJoinMembers(Set<String> members) {
+        this.viewWindow.setPendingGroupJoins(members);
+    }
+
+    @Override
+    public boolean isGroupStartupComplete() {
+        return viewWindow.isGroupStartupComplete();
+    }
+
+    @Override
+    public boolean setGroupStartupState(String member, MemberStates state) {
+        return viewWindow.setGroupStartupState(member, state);
     }
 }

@@ -75,10 +75,13 @@ public class AliveAndReadyViewWindow {
     // map from JoinedAndReady memberName to its DAS ready members
     private ConcurrentHashMap<String, SortedSet<String>> joinedAndReadySignalReadyList= new ConcurrentHashMap<String, SortedSet<String>>();
 
+    private final GMSContext ctx;
+
     // set to Level.INFO to aid debugging.
     static private final Level TRACE_LEVEL = Level.FINE;
 
     public AliveAndReadyViewWindow(GMSContext ctx) {
+        this.ctx = ctx;
         Router router = ctx.getRouter();
         currentInstanceName = ctx.getServerIdentityToken();
 
@@ -100,6 +103,7 @@ public class AliveAndReadyViewWindow {
 
     // junit testing only - only scope to package access
     AliveAndReadyViewWindow() {
+        ctx = null;
         jrcallback = new JoinedAndReadyCallBack(null, aliveAndReadyView);
         leaveCallback = new LeaveCallBack(null, aliveAndReadyView);
         currentInstanceName = null;
@@ -138,8 +142,8 @@ public class AliveAndReadyViewWindow {
             }
         }
         // return current view when previous join and ready had a short duration and looks like it was part of startup.
-        if (LOG.isLoggable(Level.INFO)) {
-            LOG.log(Level.INFO, "getPreviousAliveAndReadyView: returning " + result);
+        if (LOG.isLoggable(TRACE_LEVEL)) {
+            LOG.log(TRACE_LEVEL, "getPreviousAliveAndReadyView: returning " + result);
         }
 
         return result;
@@ -157,6 +161,10 @@ public class AliveAndReadyViewWindow {
             LOG.log(TRACE_LEVEL, "getCurrentAliveAndReadyView: returning " + result);
         }
         return result;
+    }
+
+    private boolean isMySignal(Signal sig) {
+        return currentInstanceName != null && currentInstanceName.equals(sig.getMemberToken());
     }
 
     private abstract class CommonCallBack implements CallBack {
@@ -219,31 +227,72 @@ public class AliveAndReadyViewWindow {
                 final JoinedAndReadyNotificationSignal jrns = (JoinedAndReadyNotificationSignal) signal;
                 final RejoinSubevent rejoin = jrns.getRejoinSubevent();
                 SortedSet<String> dasReadyMembers = joinedAndReadySignalReadyList.remove(jrns.getMemberToken());
+                AliveAndReadyView current = null;
                 synchronized (aliveAndReadyView) {
-                    AliveAndReadyView current = getCurrentView();
+                    current = getCurrentView();
                     SortedSet<String> currentMembers = new TreeSet<String>(current.getMembers());
                     for (String member : jrns.getCurrentCoreMembers()) {
                         if (dasReadyMembers != null && dasReadyMembers.contains(member)) {
                             if (currentMembers.add(member)) {
+                                if (ctx != null) {
+                                    ctx.setGroupStartupState(member, MemberStates.ALIVEANDREADY);
+                                }
                                 if (LOG.isLoggable(TRACE_LEVEL)) {
                                     LOG.log(TRACE_LEVEL, "das ready member: " + member + " added");
                                 }
                             }
                         } else if (jrns.getMemberToken().equals(member)) {
                             currentMembers.add(member);
-                        } else if (gh != null) {
-                            // last check.  see if received ready heartbeat.
-                            MemberStates state = gh.getMemberState(member, 10000, 0);
-                            switch (state) {
-                                case READY:
-                                case ALIVEANDREADY:
-                                    currentMembers.add(member);
-                                    break;
-                                default:
+                            if (ctx != null) {
+                                ctx.setGroupStartupState(member, MemberStates.ALIVEANDREADY);
                             }
                         }
+                        // Commented out this step that relied on local heartbeat cache.
+                        // Rely solely on heartbeat state received from DAS so all instances will agree on previous and current views.
+//                        else if (gh != null) {
+//                            // last check.  see if received ready heartbeat.
+//                            MemberStates state = gh.getMemberState(member, 10000, 0);
+//                            switch (state) {
+//                                case READY:
+//                                case ALIVEANDREADY:              
+//                                    currentMembers.add(member);
+//                                    break;
+//                                default:
+//                            }
+//                        }
                     }
                     add(signal, currentMembers);
+
+                    // current is now previous view after the add above.
+                    // while still holding synchronize block,
+                    // check if this is transition from GROUPSTARTUP to cluster is all started.
+                    // if so, set MemberList to empty list in previous view.
+                    if (jrns.getEventSubType() == GMSConstants.startupType.GROUP_STARTUP) {
+                        if (ctx != null) {
+                            ctx.setGroupStartupState(signal.getMemberToken(), MemberStates.ALIVEANDREADY);
+                            if (isStartClusterComplete()) {
+
+                                // after group starutp is complete, all clstered instances in cluser will have same previous view of empty members.
+                                AliveAndReadyView previous = getPreviousView();
+                                ((AliveAndReadyViewImpl)previous).clearMembers();
+                                if (LOG.isLoggable(TRACE_LEVEL)) {
+                                    LOG.log(TRACE_LEVEL, "start cluster has completed, resetting previous view. previous=" + previous);
+                                }
+                            }
+                        }
+                    } else if (isMySignal(signal)) {  //  && INSTANCE_STARTUP
+
+                        // set previous view to be all members in current view minus myself.
+                        // typically previous view after a restart is empty view.
+                        // this change is so all clustered instances in cluster have same previous view after a INSTANTCE_STARTUP JoinedAnDReady.
+                        AliveAndReadyView previous = getPreviousView();
+                        SortedSet<String> previousMembers = new TreeSet<String>(currentMembers);
+                        previousMembers.remove(currentInstanceName);
+                        ((AliveAndReadyViewImpl)previous).setMembers(previousMembers);
+                        if (LOG.isLoggable(TRACE_LEVEL)) {
+                            LOG.log(TRACE_LEVEL, "JoinedAndReady INSTANCE_STARTUP current=" + getCurrentView() + " previous=" + getPreviousView());
+                        }
+                    }
                 } // end synchronized aliveAndReadyView
             }
         }
@@ -254,6 +303,9 @@ public class AliveAndReadyViewWindow {
             LOG.log(TRACE_LEVEL, "put joinedAndReadySignal member:" + joinedAndReadyMember + " ready members:" + readyMembers);
         }
         SortedSet<String> result = joinedAndReadySignalReadyList.put(joinedAndReadyMember, readyMembers);
-        assert(result == null);
+    }
+
+    private boolean isStartClusterComplete() {
+        return ctx != null ? ctx.isGroupStartupComplete() : false;
     }
 }
