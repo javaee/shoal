@@ -46,6 +46,7 @@ import org.shoal.ha.cache.impl.command.*;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
@@ -107,6 +108,8 @@ public class ReplicatedDataStore<K, V>
         gs.registerGroupMessageReceiver(storeName, cm);
 
         localDS = new ReplicaLocationHolder<K, V>(conf, dsc);
+
+        Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
     }
 
     public DataStoreContext<K, V> getDataStoreContext() {

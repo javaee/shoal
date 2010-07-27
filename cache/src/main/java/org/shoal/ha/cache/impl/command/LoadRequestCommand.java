@@ -39,6 +39,7 @@ package org.shoal.ha.cache.impl.command;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.*;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
@@ -48,12 +49,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class LoadRequestCommand<K, V>
         extends Command<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
 
     private K key;
 
@@ -93,8 +98,10 @@ public class LoadRequestCommand<K, V>
         ros.write(Utility.longToBytes(resp.getTokenId()));
         int keyLen = ReplicationIOUtils.writeLengthPrefixedKey(key, trans.getDataStoreKeyHelper(), ros);
         ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
-//        System.out.println("**LoadRequestCommand.writeCommandPayload: " + keyLen);
         trans.getDataStoreKeyHelper().writeKey(ros, key);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, trans.getInstanceName() + " sending load " + key + " to " + getTargetName());
+        }
     }
 
     @Override
@@ -107,8 +114,9 @@ public class LoadRequestCommand<K, V>
 
         originatingInstance = ReplicationIOUtils.readLengthPrefixedString(
                 data, offset + 8 + 4 + keyInfo.keyLen);
-
-       System.out.println("**RECEIVED LoadRequestCommand: " + key + "; originatingInstance: " + originatingInstance);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, trans.getInstanceName() + " received load " + key + " from " + originatingInstance);
+        }
     }
 
 
@@ -117,7 +125,6 @@ public class LoadRequestCommand<K, V>
         originatingInstance = ctx.getInstanceName();
         String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
         setTargetName(targetName);
-        System.out.println("**Sending loadRequest to: " + getTargetName());
         ResponseMediator respMed = ctx.getResponseMediator();
         resp = respMed.createCommandResponse();
 
@@ -131,14 +138,8 @@ public class LoadRequestCommand<K, V>
         if (!originatingInstance.equals(ctx.getInstanceName())) {
             LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
             rsp.setOriginatingInstance(originatingInstance);
-            System.out.println("1. LoadRequestCommand.execute: about to send response for key: " + key
-                    +  " from " + originatingInstance + "; tokenId: " + tokenId
-                    + "; *response: " + ctx.getDataStoreEntryHelper().getV(e));
             getCommandManager().execute(rsp);
         } else {
-            System.out.println("2. LoadRequestCommand.execute: key: " + key
-                    +  " from " + originatingInstance + "; tokenId: " + tokenId
-                    + "; *response: " + ctx.getDataStoreEntryHelper().getV(e));
             resp.setResult(e);
         }
         } catch (DataStoreException dsEx) {
@@ -149,7 +150,7 @@ public class LoadRequestCommand<K, V>
     public DataStoreEntry<K, V> getResult()
             throws DataStoreException {
         try {
-            Object result = future.get(15000, TimeUnit.MILLISECONDS);
+            Object result = future.get(8000, TimeUnit.MILLISECONDS);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
@@ -157,13 +158,13 @@ public class LoadRequestCommand<K, V>
         } catch (DataStoreException dsEx) {
             throw dsEx;
         } catch (InterruptedException inEx) {
-            System.out.println("Error: InterruptedException while waiting for result");
+            _logger.log(Level.WARNING, "LoadRequestCommand Interrupted while waiting for result", inEx);
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
-            System.out.println("Error: Timedout while waiting for result");
+            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
             throw new DataStoreException(timeoutEx);
         } catch (ExecutionException exeEx) {
-            System.out.println("Error: ExecutionException while waiting for result");
+            _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);
             throw new DataStoreException(exeEx);
         }
     }

@@ -38,11 +38,14 @@ package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
@@ -51,6 +54,8 @@ public class SaveCommand<K, V>
     extends Command<K, V> {
 
     private K k;
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
     private V v;
     public SaveCommand() {
@@ -79,7 +84,6 @@ public class SaveCommand<K, V>
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
         setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), k));
-//        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: attempting to transmit(" + k + ") to: " + getTargetName());
     }
 
     @Override
@@ -91,6 +95,9 @@ public class SaveCommand<K, V>
         int valueOffset = bos.mark() - keyLenMark;
         bos.reWrite(keyLenMark, Utility.intToBytes(valueOffset));
         ctx.getDataStoreEntryHelper().writeObject(bos, v);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, ctx.getInstanceName() + " sending save " + k + " to " + getTargetName());
+        }
     }
 
     @Override
@@ -99,18 +106,19 @@ public class SaveCommand<K, V>
         int valueOffset = Utility.bytesToInt(data, offset);
         k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
         v = (V) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, ctx.getInstanceName() + " received save " + k + " from " + getTargetName());
+        }
     }
 
     @Override
     public void execute(DataStoreContext<K, V> ctx)
         throws DataStoreException {
         ctx.getReplicaStore().put(k, v);
-        System.out.println("SaveCommand[" + getDataStoreContext().getServiceName() + "]: saved(" + k + ")");
     }
 
     @Override
     public void postTransmit(String target, boolean status) {
         super.postTransmit(target, status);
-        
     }
 }

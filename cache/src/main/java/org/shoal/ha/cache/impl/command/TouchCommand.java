@@ -38,16 +38,21 @@ package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class TouchCommand<K, V>
     extends Command<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
 
     private K key;
 
@@ -85,6 +90,9 @@ public class TouchCommand<K, V>
         ros.write(Utility.longToBytes(version));
         ros.write(Utility.longToBytes(ttl));
         trans.getDataStoreKeyHelper().writeKey(ros, key);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, trans.getInstanceName() + " sending touch " + key + " to " + getTargetName());
+        }
     }
 
     @Override
@@ -94,6 +102,9 @@ public class TouchCommand<K, V>
         version = Utility.bytesToLong(data, offset+8);
         ttl = Utility.bytesToLong(data, offset+16);
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset+24);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, trans.getInstanceName() + " received touch " + key + " from " + getTargetName());
+        }
     }
 
     @Override

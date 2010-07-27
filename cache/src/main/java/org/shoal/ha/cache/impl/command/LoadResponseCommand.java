@@ -39,18 +39,23 @@ package org.shoal.ha.cache.impl.command;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.ReplicationState;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.*;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class LoadResponseCommand<K, V>
         extends Command<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
 
     private K key;
 
@@ -94,6 +99,9 @@ public class LoadResponseCommand<K, V>
         if (entry != null) {
             entry.writeDataStoreEntry(trans, ros);
         }
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, trans.getInstanceName() + " sending load_response " + key + " to " + getTargetName());
+        }
     }
 
     @Override
@@ -110,11 +118,13 @@ public class LoadResponseCommand<K, V>
             entry = new DataStoreEntry<K, V>();
             entry.readDataStoreEntry(trans, data, offset + vOffset + 4);
         }
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, trans.getInstanceName() + " received load_response " + key + " from " + originatingInstance);
+        }
     }
 
     @Override
     protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
-        System.out.println("**LoadResponseComand::prepareToTransmit(" + originatingInstance + ")");
         setTargetName(originatingInstance);
     }
 
@@ -123,7 +133,9 @@ public class LoadResponseCommand<K, V>
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
-            System.out.println("RECEIVED LOAD RESPONSE: " + tokenId + ", " + key + "  from " + originatingInstance);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, ctx.getInstanceName() + " executed load_response " + key + " value " + entry);
+            }
             resp.setResult(entry);
         }
     }

@@ -38,17 +38,21 @@ package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class UpdateDeltaCommand<K, V>
     extends Command<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
 
     private K k;
 

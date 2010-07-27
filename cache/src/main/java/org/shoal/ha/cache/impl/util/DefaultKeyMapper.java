@@ -37,6 +37,7 @@
 package org.shoal.ha.cache.impl.util;
 
 import org.shoal.ha.cache.api.HashableKey;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.mapper.KeyMapper;
 
@@ -45,12 +46,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class DefaultKeyMapper<K>
         implements KeyMapper<K>, GroupMemberEventListener {
+
+    Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_KEY_MAPPER);
 
     private String myName;
 
@@ -74,6 +79,8 @@ public class DefaultKeyMapper<K>
         wLock = rwLock.writeLock();
 
         previuousAliveAndReadyMembers = new String[] {myName};
+
+        _logger.log(Level.INFO, "DefaultKeyMapper created for: myName: " + myName + "; groupName: " + groupName);
     }
 
     @Override
@@ -136,7 +143,7 @@ public class DefaultKeyMapper<K>
             }
             previuousAliveAndReadyMembers = previousView.toArray(new String[0]);
 
-            printMemberStates("onViewChange");
+            printMemberStates("onViewChange (isJoin: " + isJoinEvent + ")");
         } finally {
             wLock.unlock();
         }
@@ -161,18 +168,16 @@ public class DefaultKeyMapper<K>
     }
 
     public void printMemberStates(String message) {
-        StringBuilder sb = new StringBuilder(message + " DefaultKeyMapper<" + myName + "> [");
+        StringBuilder sb = new StringBuilder("DefaultKeyMapper[" + myName + "]." + message + " currentView: ");
         for (String st : members) {
-            sb.append("<" + st + "> ");
+            sb.append(st);
         }
-        sb.append("]");
+        sb.append("; previousView ");
 
-        sb.append("\n\t PreviuousViewMembers[");
         for (String st : previuousAliveAndReadyMembers) {
-            sb.append("<" + st + "> ");
+            sb.append(st);
         }
-        sb.append("]");
-        System.out.println(sb.toString());
+        _logger.log(Level.INFO, sb.toString());
     }
 
 }
