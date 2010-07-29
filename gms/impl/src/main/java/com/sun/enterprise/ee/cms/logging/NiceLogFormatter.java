@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -44,8 +44,6 @@ import java.util.logging.Level;
 import java.util.ResourceBundle;
 import java.util.HashMap;
 import java.util.Date;
-import java.util.Map;
-import java.util.Collection;
 import java.text.SimpleDateFormat;
 import java.text.MessageFormat;
 import java.io.StringWriter;
@@ -138,47 +136,6 @@ public class NiceLogFormatter extends Formatter {
 
 
     /**
-     * Sun One Appserver SE/EE? can override to specify their product specific
-     * key value pairs.
-     *
-     * @param buf    buffer
-     * @param record log record
-     */
-    protected void getNameValuePairs(StringBuilder buf, LogRecord record) {
-
-        Object[] parameters = record.getParameters();
-        if ((parameters == null) || (parameters.length == 0)) {
-            return;
-        }
-
-        try {
-            for (Object obj : parameters) {
-                if (obj == null) {
-                    continue;
-                }
-                if (obj instanceof Map ) {
-                    Map map = (Map) obj;
-                    for (Object key : map.keySet()) {
-                        buf.append(key.toString()).append( NV_SEPARATOR ).
-                                append(map.get(key).toString()).
-                                append( NVPAIR_SEPARATOR );
-                    }
-                } else if (obj instanceof java.util.Collection) {
-                    for (Object entry : ((Collection) obj)) {
-                        buf.append(entry.toString()).append( NVPAIR_SEPARATOR );
-                    }
-                } else {
-                    buf.append(obj.toString()).append( NVPAIR_SEPARATOR );
-                }
-            }
-        } catch (Exception e) {
-            new ErrorManager().error(
-                    "Error in extracting Name Value Pairs", e,
-                    ErrorManager.FORMAT_FAILURE);
-        }
-    }
-
-    /**
      * Note: This method is not synchronized, we are assuming that the
      * synchronization will happen at the Log Handler.publish( ) method.
      *
@@ -228,7 +185,6 @@ public class NiceLogFormatter extends Formatter {
                 recordBuffer.append("RecordNumber").append( NV_SEPARATOR );
                 recordBuffer.append(recordNumber++).append( NVPAIR_SEPARATOR );
             }
-            getNameValuePairs(recordBuffer, record);
             recordBuffer.append( FIELD_SEPARATOR );
 
             String logMessage = record.getMessage();
