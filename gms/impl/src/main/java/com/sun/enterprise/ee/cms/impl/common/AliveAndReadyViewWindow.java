@@ -287,7 +287,14 @@ public class AliveAndReadyViewWindow {
                         // this change is so all clustered instances in cluster have same previous view after a INSTANTCE_STARTUP JoinedAnDReady.
                         AliveAndReadyView previous = getPreviousView();
                         SortedSet<String> previousMembers = new TreeSet<String>(currentMembers);
-                        previousMembers.remove(currentInstanceName);
+                        if (rejoin == null) {
+
+                            // this is a restart after FAILURE was detected or a PlannedShutdown.
+                            // this instance should not be in previous view.
+                            previousMembers.remove(currentInstanceName);
+                        } // else this instance is rejoining group with no failure detection.
+                        // the previous view and current view members are the same for this case.
+
                         ((AliveAndReadyViewImpl)previous).setMembers(previousMembers);
                         if (LOG.isLoggable(TRACE_LEVEL)) {
                             LOG.log(TRACE_LEVEL, "JoinedAndReady INSTANCE_STARTUP current=" + getCurrentView() + " previous=" + getPreviousView());
