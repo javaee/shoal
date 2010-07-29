@@ -58,14 +58,16 @@ public class MultiCastReceiverThread extends Thread {
     String mcAddress;
     String bindInterface;
     boolean debug;
+    String targetData;
 
-    public MultiCastReceiverThread(int mcPort,
-        String mcAddress, String bindInterface, boolean debug) {
+    public MultiCastReceiverThread(int mcPort, String mcAddress,
+        String bindInterface, boolean debug, String targetData) {
         super("McastReceiver");
         this.mcPort = mcPort;
         this.mcAddress = mcAddress;
         this.bindInterface = bindInterface;
         this.debug = debug;
+        this.targetData = targetData;
     }
 
     @Override
@@ -73,8 +75,6 @@ public class MultiCastReceiverThread extends Thread {
         InetAddress group = null;
         MulticastSocket ms = null;
         try {
-            String localHost = InetAddress.getLocalHost().getHostName();
-            log(String.format("localhost string is '%s'", localHost));
             byte[] buffer = new byte[8192];
 
             group = InetAddress.getByName(mcAddress);
@@ -89,13 +89,13 @@ public class MultiCastReceiverThread extends Thread {
             while (!interrupted()) {
                 DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
                 ms.receive(dp);
-                String dataString = new String(dp.getData()).trim();
-                log(String.format("received '%s'", dataString));
-                if (hosts.add(dataString)) {
-                    if (localHost.equals(dataString)) {
-                        System.out.println(sm.get("loopback.from", dataString));
+                String newData = new String(dp.getData()).trim();
+                log(String.format("received '%s'", newData));
+                if (hosts.add(newData)) {
+                    if (targetData.equals(newData)) {
+                        System.out.println(sm.get("loopback.from", newData));
                     } else {
-                        System.out.println(sm.get("received.from", dataString));
+                        System.out.println(sm.get("received.from", newData));
                         receivedAnything.set(true);
                     }
                 }

@@ -56,7 +56,9 @@ public class StringManager {
     }
 
     /*
-     * 
+     * This is a utility method so that the rest of the code
+     * doesn't have to deal with resource bundles and
+     * formatting strings.  
      */
     String get(String key, Object... params) {
         final String message = bundle.getString(key);

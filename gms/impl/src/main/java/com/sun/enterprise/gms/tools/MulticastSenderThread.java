@@ -47,21 +47,24 @@ import java.net.MulticastSocket;
 public class MulticastSenderThread extends Thread {
 
     static final StringManager sm = StringManager.getInstance();
-    
+
     int mcPort;
     String mcAddress;
     String bindInterface;
     long msgPeriodInMillis;
     boolean debug;
+    String dataString;
 
     public MulticastSenderThread(int mcPort, String mcAddress,
-        String bindInterface, long msgPeriodInMillis, boolean debug) {
+        String bindInterface, long msgPeriodInMillis,
+        boolean debug, String dataString) {
         super("McastSender");
         this.mcPort = mcPort;
         this.mcAddress = mcAddress;
         this.bindInterface = bindInterface;
         this.msgPeriodInMillis = msgPeriodInMillis;
         this.debug = debug;
+        this.dataString = dataString;
     }
 
     @Override
@@ -69,10 +72,7 @@ public class MulticastSenderThread extends Thread {
         InetAddress group = null;
         MulticastSocket socket = null;
         try {
-            InetAddress localHost = InetAddress.getLocalHost();
-            String dataString = localHost.getHostName();
-            byte[] data = dataString.getBytes();
-
+            byte [] data = dataString.getBytes();
             group = InetAddress.getByName(mcAddress);
             DatagramPacket datagramPacket = new DatagramPacket(data,
                 data.length, group, mcPort);
@@ -80,7 +80,10 @@ public class MulticastSenderThread extends Thread {
             if (bindInterface != null) {
                 socket.setInterface(InetAddress.getByName(bindInterface));
             }
+
+            // 'false' means do not disable
             socket.setLoopbackMode(false);
+            
             log(String.format("joining group: %s", group.toString()));
             socket.joinGroup(group);
             System.out.println(sm.get("sending.message",

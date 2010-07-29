@@ -36,6 +36,10 @@
 
 package com.sun.enterprise.gms.tools;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.UUID;
+
 /**
  * A work in progress.
  */
@@ -71,14 +75,26 @@ public class MulticastTester {
         out.append(sm.get("period.set", msgPeriodInMillis)).append("\n");
         System.out.println(out.toString());
 
+        String dataString;
+
+        try {
+            InetAddress localHost = InetAddress.getLocalHost();
+            dataString = localHost.getHostName() + "|" +
+                UUID.randomUUID().toString();
+        } catch (UnknownHostException uhe) {
+            System.err.println(sm.get("whoops", uhe.getMessage()));
+            return;
+        }
+
         MultiCastReceiverThread receiver = new MultiCastReceiverThread(
-            mcPort, mcAddress, bindInterface, debug);
-        MulticastSenderThread sender = new MulticastSenderThread(
-            mcPort, mcAddress, bindInterface, msgPeriodInMillis, debug);
+            mcPort, mcAddress, bindInterface, debug, dataString);
+        MulticastSenderThread sender = new MulticastSenderThread(mcPort,
+            mcAddress, bindInterface, msgPeriodInMillis, debug, dataString);
         receiver.start();
         sender.start();
 
-        try {
+        try{
+
             Thread.sleep(1000 * testerTimeoutInSeconds);
 
             log("interrupting sender thread");
