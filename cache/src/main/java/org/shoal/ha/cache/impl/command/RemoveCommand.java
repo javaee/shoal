@@ -83,8 +83,8 @@ public class RemoveCommand<K, V>
     @Override
     public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
         trans.getDataStoreKeyHelper().writeKey(ros, key);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " sending remove " + key + " to " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " sending remove " + key + " to " + getTargetName());
         }
     }
 
@@ -92,8 +92,8 @@ public class RemoveCommand<K, V>
     public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
         throws DataStoreException {
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " received remove " + key + " from " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " received remove " + key + " from " + getTargetName());
         }
     }
 

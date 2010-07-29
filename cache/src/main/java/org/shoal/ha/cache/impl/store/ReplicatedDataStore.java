@@ -46,6 +46,7 @@ import org.shoal.ha.cache.impl.command.*;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -110,6 +111,7 @@ public class ReplicatedDataStore<K, V>
         localDS = new ReplicaLocationHolder<K, V>(conf, dsc);
 
         Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
+        logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
     }
 
     public DataStoreContext<K, V> getDataStoreContext() {

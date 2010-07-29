@@ -99,8 +99,8 @@ public class LoadRequestCommand<K, V>
         int keyLen = ReplicationIOUtils.writeLengthPrefixedKey(key, trans.getDataStoreKeyHelper(), ros);
         ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
         trans.getDataStoreKeyHelper().writeKey(ros, key);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " sending load " + key + " to " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " sending load " + key + " to " + getTargetName());
         }
     }
 
@@ -114,8 +114,8 @@ public class LoadRequestCommand<K, V>
 
         originatingInstance = ReplicationIOUtils.readLengthPrefixedString(
                 data, offset + 8 + 4 + keyInfo.keyLen);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " received load " + key + " from " + originatingInstance);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " received load " + key + " from " + originatingInstance);
         }
     }
 

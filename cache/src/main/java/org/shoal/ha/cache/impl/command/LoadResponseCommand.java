@@ -99,8 +99,8 @@ public class LoadResponseCommand<K, V>
         if (entry != null) {
             entry.writeDataStoreEntry(trans, ros);
         }
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " sending load_response " + key + " to " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " sending load_response " + key + " to " + getTargetName());
         }
     }
 
@@ -118,8 +118,8 @@ public class LoadResponseCommand<K, V>
             entry = new DataStoreEntry<K, V>();
             entry.readDataStoreEntry(trans, data, offset + vOffset + 4);
         }
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " received load_response " + key + " from " + originatingInstance);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " received load_response " + key + " from " + originatingInstance);
         }
     }
 
@@ -133,8 +133,8 @@ public class LoadResponseCommand<K, V>
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
-            if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, ctx.getInstanceName() + " executed load_response " + key + " value " + entry);
+            if (_logger.isLoggable(Level.INFO)) {
+                _logger.log(Level.INFO, ctx.getInstanceName() + " executed load_response " + key + " value " + entry);
             }
             resp.setResult(entry);
         }

@@ -90,8 +90,8 @@ public class TouchCommand<K, V>
         ros.write(Utility.longToBytes(version));
         ros.write(Utility.longToBytes(ttl));
         trans.getDataStoreKeyHelper().writeKey(ros, key);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " sending touch " + key + " to " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " sending touch " + key + " to " + getTargetName());
         }
     }
 
@@ -102,8 +102,8 @@ public class TouchCommand<K, V>
         version = Utility.bytesToLong(data, offset+8);
         ttl = Utility.bytesToLong(data, offset+16);
         key = (K) trans.getDataStoreKeyHelper().readKey(data, offset+24);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, trans.getInstanceName() + " received touch " + key + " from " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, trans.getInstanceName() + " received touch " + key + " from " + getTargetName());
         }
     }
 

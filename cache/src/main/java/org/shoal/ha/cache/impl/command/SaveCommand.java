@@ -95,8 +95,8 @@ public class SaveCommand<K, V>
         int valueOffset = bos.mark() - keyLenMark;
         bos.reWrite(keyLenMark, Utility.intToBytes(valueOffset));
         ctx.getDataStoreEntryHelper().writeObject(bos, v);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, ctx.getInstanceName() + " sending save " + k + " to " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, ctx.getInstanceName() + " sending save " + k + " to " + getTargetName());
         }
     }
 
@@ -106,8 +106,8 @@ public class SaveCommand<K, V>
         int valueOffset = Utility.bytesToInt(data, offset);
         k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
         v = (V) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, ctx.getInstanceName() + " received save " + k + " from " + getTargetName());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, ctx.getInstanceName() + " received save " + k + " from " + getTargetName());
         }
     }
 

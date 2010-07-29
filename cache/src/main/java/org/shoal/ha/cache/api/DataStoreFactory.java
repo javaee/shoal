@@ -122,7 +122,6 @@ public class DataStoreFactory {
     public static <K, V> DataStore<K, V> createDataStore(DataStoreConfigurator<K, V> conf) {
         GroupService gs = GroupServiceFactory.getInstance().getGroupService(conf.getInstanceName(), conf.getGroupName(), conf.isStartGMS());
 
-        System.out.println("*** BEFORE: " + conf);
         if (conf.getKeyMapper() == null) {
             conf.setKeyMapper(new DefaultKeyMapper(conf.getInstanceName(), conf.getGroupName()));
         }
@@ -146,8 +145,6 @@ public class DataStoreFactory {
             conf.setDataStoreKeyHelper(new ObjectKeyHelper<K>(
                     conf.getClassLoader(), conf.getObjectInputOutputStreamFactory()));
         }
-
-        System.out.println("*** AFTER: " + conf);
 
         DataStore<K, V> ds = new ReplicatedDataStore<K, V>(conf, gs);
 
