@@ -39,6 +39,7 @@ package org.shoal.adapter.store;
 import org.glassfish.ha.store.api.*;
 
 import java.io.Serializable;
+import java.util.Properties;
 
 /**
  * @author Mahesh Kannan
@@ -46,6 +47,11 @@ import java.io.Serializable;
 public class ReplicationBackingStoreFactory
     implements BackingStoreFactory {
 
+    private Properties props;
+
+    public ReplicationBackingStoreFactory(Properties p)  {
+        this.props=p;
+    }
 
     @Override
     public <K extends Serializable, V extends Serializable> BackingStore<K, V> createBackingStore(BackingStoreConfiguration<K, V> conf) throws BackingStoreException {
