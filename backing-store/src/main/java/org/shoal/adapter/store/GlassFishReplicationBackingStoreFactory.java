@@ -44,15 +44,15 @@ import java.util.Properties;
 /**
  * @author Mahesh Kannan
  */
-public class ReplicationBackingStoreFactory
+public class GlassFishReplicationBackingStoreFactory
     implements BackingStoreFactory {
 
     private Properties props;
 
-    public ReplicationBackingStoreFactory()  {
+    public GlassFishReplicationBackingStoreFactory() {
     }
-
-    public ReplicationBackingStoreFactory(Properties p)  {
+    
+    public GlassFishReplicationBackingStoreFactory(Properties p)  {
         this.props=p;
     }
 
@@ -69,7 +69,7 @@ public class ReplicationBackingStoreFactory
     public BackingStoreTransaction createBackingStoreTransaction() {
         return new BackingStoreTransaction() {
             @Override
-            public void commit() throws BackingStoreException {    
+            public void commit() throws BackingStoreException {
             }
         };
     }
