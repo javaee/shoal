@@ -210,6 +210,15 @@ public class AliveAndReadyViewWindow {
                         boolean result = currentMembers.remove(signal.getMemberToken());
                         assert (result);
                         add(signal, currentMembers);
+                        if (signal instanceof PlannedShutdownSignalImpl) {
+                            PlannedShutdownSignalImpl pssig = (PlannedShutdownSignalImpl)signal;
+                            pssig.setCurrentView(getCurrentView());
+                            pssig.setPreviousView(getPreviousView());
+                        } else if (signal instanceof FailureNotificationSignalImpl) {
+                            FailureNotificationSignalImpl fsig = (FailureNotificationSignalImpl)signal;
+                            fsig.setCurrentView(getCurrentView());
+                            fsig.setPreviousView(getPreviousView());
+                        }
                     }
                 }
             }
@@ -222,6 +231,8 @@ public class AliveAndReadyViewWindow {
             super(gh, aliveAndReadyView);
         }
 
+        // todo:  currently allowing non-CORE JoinedAndReady to create a new view.
+        //        since it might have CORE members from DAS,  may need to keep doing this.
         public void processNotification(Signal signal) {
             if (signal instanceof JoinedAndReadyNotificationSignal) {
                 final JoinedAndReadyNotificationSignal jrns = (JoinedAndReadyNotificationSignal) signal;
@@ -247,19 +258,6 @@ public class AliveAndReadyViewWindow {
                                 ctx.setGroupStartupState(member, MemberStates.ALIVEANDREADY);
                             }
                         }
-                        // Commented out this step that relied on local heartbeat cache.
-                        // Rely solely on heartbeat state received from DAS so all instances will agree on previous and current views.
-//                        else if (gh != null) {
-//                            // last check.  see if received ready heartbeat.
-//                            MemberStates state = gh.getMemberState(member, 10000, 0);
-//                            switch (state) {
-//                                case READY:
-//                                case ALIVEANDREADY:              
-//                                    currentMembers.add(member);
-//                                    break;
-//                                default:
-//                            }
-//                        }
                     }
                     add(signal, currentMembers);
 
@@ -299,6 +297,11 @@ public class AliveAndReadyViewWindow {
                         if (LOG.isLoggable(TRACE_LEVEL)) {
                             LOG.log(TRACE_LEVEL, "JoinedAndReady INSTANCE_STARTUP current=" + getCurrentView() + " previous=" + getPreviousView());
                         }
+                    }
+                    if (jrns instanceof JoinedAndReadyNotificationSignalImpl) {
+                        JoinedAndReadyNotificationSignalImpl jrnsimpl = (JoinedAndReadyNotificationSignalImpl)jrns;
+                        jrnsimpl.setCurrentView(getCurrentView());
+                        jrnsimpl.setPreviousView(getPreviousView());
                     }
                 } // end synchronized aliveAndReadyView
             }

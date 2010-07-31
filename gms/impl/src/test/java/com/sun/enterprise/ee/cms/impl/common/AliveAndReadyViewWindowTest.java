@@ -246,6 +246,11 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         boolean result = expectedMembers.remove(targetedInstance);
         assertTrue(result);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(shutdownSignal.getCurrentView().getViewId() == aliveAndReadyViewWindow.getCurrentView().getViewId());
+        assertTrue(shutdownSignal.getPreviousView().getViewId() == aliveAndReadyViewWindow.getPreviousView().getViewId());
+        assertTrue(shutdownSignal.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(shutdownSignal.getPreviousView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
+
 
         // simulate restart of target instance
         JoinedAndReadyNotificationSignal jrSignal;
@@ -256,6 +261,10 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
         expectedMembers.add(targetedInstance);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(jrSignal.getCurrentView().getViewId() == aliveAndReadyViewWindow.getCurrentView().getViewId());
+        assertTrue(jrSignal.getPreviousView().getViewId() == aliveAndReadyViewWindow.getPreviousView().getViewId());
+        assertTrue(jrSignal.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(jrSignal.getPreviousView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         stopCluster();
     }
 
@@ -272,6 +281,10 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal() instanceof FailureNotificationSignal);
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(failureNotificationSignal));
+        assertTrue(failureNotificationSignal.getCurrentView().getViewId() == aliveAndReadyViewWindow.getCurrentView().getViewId());
+        assertTrue(failureNotificationSignal.getPreviousView().getViewId() == aliveAndReadyViewWindow.getPreviousView().getViewId());
+        assertTrue(failureNotificationSignal.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(failureNotificationSignal.getPreviousView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
 
         boolean result = expectedMembers.remove(killInstance);
         assertTrue(result);
@@ -296,6 +309,10 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         boolean result = expectedMembers.remove(killInstance);
         assertTrue(result);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(failureNotificationSignal.getCurrentView().getViewId() == aliveAndReadyViewWindow.getCurrentView().getViewId());
+        assertTrue(failureNotificationSignal.getPreviousView().getViewId() == aliveAndReadyViewWindow.getPreviousView().getViewId());
+        assertTrue(failureNotificationSignal.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(failureNotificationSignal.getPreviousView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
 
         // simulate restart of killed instance
         JoinedAndReadyNotificationSignal jrSignal;
@@ -306,7 +323,10 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
         expectedMembers.add(killInstance);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
-
+        assertTrue(jrSignal.getCurrentView().getViewId() == aliveAndReadyViewWindow.getCurrentView().getViewId());
+        assertTrue(jrSignal.getPreviousView().getViewId() == aliveAndReadyViewWindow.getPreviousView().getViewId());
+        assertTrue(jrSignal.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(jrSignal.getPreviousView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         stopCluster();
     }
 
@@ -371,6 +391,10 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
+        assertTrue(jrSignal.getCurrentView().getViewId() == aliveAndReadyViewWindow.getCurrentView().getViewId());
+        assertTrue(jrSignal.getPreviousView().getViewId() == aliveAndReadyViewWindow.getPreviousView().getViewId());
+        assertTrue(jrSignal.getCurrentView().getMembers().equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        assertTrue(jrSignal.getPreviousView().getMembers().equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         stopCluster();
     }
 }

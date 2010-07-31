@@ -36,6 +36,7 @@
 
 package com.sun.enterprise.ee.cms.impl.common;
 
+import com.sun.enterprise.ee.cms.core.AliveAndReadyView;
 import com.sun.enterprise.ee.cms.core.FailureNotificationSignal;
 import com.sun.enterprise.ee.cms.core.SignalAcquireException;
 import com.sun.enterprise.ee.cms.core.SignalReleaseException;
@@ -61,6 +62,8 @@ public class FailureNotificationSignalImpl implements FailureNotificationSignal 
    //Logging related stuff
     protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     protected long startTime;
+    private AliveAndReadyView previousView = null;
+    private AliveAndReadyView currentView = null;
 
     FailureNotificationSignalImpl(){
 
@@ -80,6 +83,8 @@ public class FailureNotificationSignalImpl implements FailureNotificationSignal 
         this.groupName = signal.getGroupName();
         this.startTime = signal.getStartTime();
         ctx = GMSContextFactory.getGMSContext(groupName);
+        this.previousView = signal.getPreviousView();
+        this.currentView = signal.getCurrentView();
     }
 
     /**
@@ -139,5 +144,23 @@ public class FailureNotificationSignalImpl implements FailureNotificationSignal 
 
     public long getStartTime () {
         return startTime;
+    }
+
+    @Override
+    public AliveAndReadyView getCurrentView() {
+        return currentView;
+    }
+
+    @Override
+    public AliveAndReadyView getPreviousView() {
+        return previousView;
+    }
+
+    void setCurrentView(AliveAndReadyView current) {
+        currentView = current;
+    }
+
+    void setPreviousView(AliveAndReadyView previous) {
+        previousView = previous;
     }
 }

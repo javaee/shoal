@@ -37,10 +37,7 @@
 
 package com.sun.enterprise.ee.cms.impl.common;
 
-import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.PlannedShutdownSignal;
-import com.sun.enterprise.ee.cms.core.SignalAcquireException;
-import com.sun.enterprise.ee.cms.core.SignalReleaseException;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.io.Serializable;
@@ -62,6 +59,8 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
     private GMSContext ctx ;
     private long startTime;
     private GMSConstants.shutdownType shutdownType;
+    private AliveAndReadyView previousView = null;
+    private AliveAndReadyView currentView = null;
 
     public PlannedShutdownSignalImpl(final String memberToken,
                                      final String groupName,
@@ -80,6 +79,8 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
         this.startTime = signal.getStartTime();
         this.shutdownType = signal.getEventSubType();
         ctx = GMSContextFactory.getGMSContext( groupName );
+        this.previousView = signal.getPreviousView();
+        this.currentView = signal.getCurrentView();
     }
 
     /**
@@ -141,5 +142,23 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
      */
     public GMSConstants.shutdownType getEventSubType () {
         return shutdownType;
+    }
+
+    @Override
+    public AliveAndReadyView getCurrentView() {
+        return currentView;
+    }
+
+    @Override
+    public AliveAndReadyView getPreviousView() {
+        return previousView;
+    }
+
+    void setCurrentView(AliveAndReadyView current) {
+        currentView = current;
+    }
+
+    void setPreviousView(AliveAndReadyView previous) {
+        previousView = previous;
     }
 }

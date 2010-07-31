@@ -46,7 +46,7 @@ package com.sun.enterprise.ee.cms.core;
  * Date: Jan 8, 2004
  * @version $Revision$
  */
-public interface FailureNotificationSignal extends Signal{
+public interface FailureNotificationSignal extends Signal, AliveAndReadySignal {
     /**
      * returns the identity token of the failed member
      * @return java.lang.String

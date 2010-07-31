@@ -62,6 +62,8 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     private GMSConstants.startupType startupKind;
     private long startTime;
     private RejoinSubevent rs;
+    private AliveAndReadyView currentView = null;
+    private AliveAndReadyView previousView = null;
 
     //Logging related stuff
     protected static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
@@ -91,6 +93,8 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     JoinedAndReadyNotificationSignalImpl ( final JoinedAndReadyNotificationSignal signal ) {
         this(signal.getMemberToken(), signal.getCurrentCoreMembers(), signal.getAllCurrentMembers(),
             signal.getGroupName(), signal.getStartTime(), signal.getEventSubType());
+        currentView = signal.getCurrentView();
+        previousView = signal.getPreviousView();
     }
 
     /**
@@ -191,5 +195,23 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     public void setRs(RejoinSubevent rs) {
         this.rs = rs;
     }
-    
+
+    @Override
+    public AliveAndReadyView getCurrentView() {
+        return currentView;
+    }
+
+    @Override
+    public AliveAndReadyView getPreviousView() {
+        return previousView;
+    }
+
+    void setCurrentView(AliveAndReadyView current) {
+        currentView = current;
+    }
+
+    void setPreviousView(AliveAndReadyView previous) {
+        previousView = previous;
+    }
+
 }

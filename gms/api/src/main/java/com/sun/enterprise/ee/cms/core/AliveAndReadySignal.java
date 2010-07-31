@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -36,20 +36,10 @@
 
 package com.sun.enterprise.ee.cms.core;
 
-import java.util.List;
-
 /**
- * Signal corresponding to JoinedAndReadyNotificationAction. This Signal enables the
- * consumer to get specifics about a join and ready notification. This Signal type
- * will only be passed to a JoinedAndReadyNotificationAction.  This Signal
- * is delivered to registered GMS Clients on all members of the group.
- *
- * @author Sheetal Vartak
- * Date: Nov 13 2007
+ * Any signal that results in a change in the AliveAndReady members should implement this interface.
  */
-public interface JoinedAndReadyNotificationSignal extends Signal,
-    GroupStartupNotificationSignal, RejoinableEvent, AliveAndReadySignal {
-    
-    List<String> getCurrentCoreMembers();
-    List<String> getAllCurrentMembers();
+public interface AliveAndReadySignal {
+    AliveAndReadyView getCurrentView();
+    AliveAndReadyView getPreviousView();
 }
