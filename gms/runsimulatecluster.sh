@@ -155,8 +155,10 @@ else
        TMP=`egrep "^WORKSPACE_HOME" ${member}`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
        echo "Killing processes on ${MACHINE_NAME}"
-       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh" &
    done
+   echo "Waiting for remote process(es) to terminate"
+   wait
 fi
 
 
