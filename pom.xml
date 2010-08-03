@@ -89,7 +89,7 @@
 
     <properties>
         <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
-        <grizzly.version>1.9.19-beta4</grizzly.version>
+        <grizzly.version>1.9.19-beta7</grizzly.version>
 
         <junit.group.id>junit</junit.group.id>
         <junit.version>3.8.1</junit.version>
