@@ -355,6 +355,17 @@ else
     TMP=`grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 fi
 echo "Number of Warnings: ${TMP}"
+
+TMP=`grep "Exception" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN} | wc -l`
+if [ ${TMP} -eq 0 ];then
+   echo "Number of Exceptions :  ${TMP}  [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Number of Exceptions :  ${TMP}  [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + ${TMP} `
+fi
+
+
 echo
 echo "**************************"
 echo "TEST SUMMARY"
@@ -378,3 +389,5 @@ elif [ "${CMD}" = "add" ]; then
 else
     grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
 fi
+echo Exceptions 
+grep "Exception" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN}
