@@ -106,9 +106,7 @@ public class DefaultDataStoreEntryHelper<K, V>
         try {
             oos.writeObject(obj);
             oos.flush();
-            byte[] data = bos.toByteArray();
-            ros.write(Utility.intToBytes(data.length));
-            ros.write(data);
+            ros.writeLengthPrefixedBytes(bos.toByteArray());
         } finally {
             try {
                 oos.close();
@@ -122,10 +120,12 @@ public class DefaultDataStoreEntryHelper<K, V>
     }
 
     @Override
-    public Object readObject(byte[] data, int index) throws DataStoreException {
+    public Object readObject(ReplicationInputStream ris) throws DataStoreException {
         try {
-            int len = Utility.bytesToInt(data, index);
-            ByteArrayInputStream bis = new ByteArrayInputStream(data, index + 4, len);
+            //TODO: Scope for optimization here!! Instead of returning a new byte[] can we wrap
+            //  the buf inside ris?
+
+            ByteArrayInputStream bis = new ByteArrayInputStream(ris.readLengthPrefixedBytes());
             ObjectInputStream ois = factory.createObjectInputStream(bis, loader);
             try {
                 return ois.readObject();
@@ -150,37 +150,6 @@ public class DefaultDataStoreEntryHelper<K, V>
     public void updateState(K k, DataStoreEntry<K, V> kvDataStoreEntry, Object obj)
         throws DataStoreException {
         kvDataStoreEntry.setKey(k);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = null;
-        try {
-            oos = new ObjectOutputStream(bos);
-            oos.writeObject(obj);
-            oos.flush();
-        } catch (IOException ioEx) {
-            throw new DataStoreException("Error during updateState", ioEx);
-        } finally {
-            try {
-                oos.close();
-            } catch (IOException ioEx) {
-            }
-            try {
-                bos.close();
-            } catch (IOException ioEx) {
-            }
-        }
-
-        byte[] data = bos.toByteArray();
-        kvDataStoreEntry.setState(data);
-        kvDataStoreEntry.setLastAccessedAt(System.currentTimeMillis());
-        kvDataStoreEntry.setMaxIdleTime(this.defaultMaxIdleTime);
-    }
-
-    @Override
-    public void updateMetadata(K k, DataStoreEntry<K, V> kvDataStoreEntry, Object obj) {
-        //We do not know about the type of object here
-
-        kvDataStoreEntry.setVersion(Long.MAX_VALUE - 1);
-        kvDataStoreEntry.setLastAccessedAt(System.currentTimeMillis());
-        kvDataStoreEntry.setMaxIdleTime(this.defaultMaxIdleTime);
+        kvDataStoreEntry.setState(obj);
     }
 }

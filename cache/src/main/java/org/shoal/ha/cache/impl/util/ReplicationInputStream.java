@@ -34,48 +34,86 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.ha.cache.impl.util;
 
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
 
 /**
  * @author Mahesh Kannan
  */
-public class DirectedRemoveCommand<K, V>
-    extends RemoveCommand<K, V> {
+public class ReplicationInputStream
+    extends ByteArrayInputStream {
 
-    private String targetName;
+    private int minPos = 0;
 
-    public DirectedRemoveCommand() {
-        super();
+    private int maxPos = -1;
+
+    public ReplicationInputStream(byte[] data) {
+        super(data);
+        maxPos = data.length - 1;
     }
 
-    public String getTargetName() {
-        return targetName;
+    public ReplicationInputStream(byte[] data, int offset, int len) {
+        super(data, offset, len);
+        minPos = offset;
+        maxPos = offset + len - 1;
     }
 
-    public void setTargetName(String targetName) {
-        this.targetName = targetName;
+    public int mark() {
+        super.mark(0);
+        return super.pos;
     }
 
-    @Override
-    protected DirectedRemoveCommand<K, V> createNewInstance() {
-        return new DirectedRemoveCommand<K, V>();
+    public void skipTo(int index) {
+        if (index < minPos || index > maxPos) {
+            throw new IllegalArgumentException("Illegal position (" + index + "). Valid values are from "
+                + minPos + " to " + maxPos);
+        }
+        super.pos = index;
     }
 
-    @Override
-    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
-        setTargetName(targetName);
-        System.out.println("DirectedRemoveCommand[" + getDataStoreContext().getServiceName() + "]: attempting to transmit(" + getKey() + ") to: " + getTargetName());
+    public final int readInt() {
+        //TODO Check bounds
+        int val = Utility.bytesToInt(buf, pos);
+        pos += 4;
+        return val;
     }
 
-    @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        trans.getDataStoreKeyHelper().writeKey(ros, getKey());
+    public final long readLong() {
+        //TODO Check bounds
+        return ((long) readInt() << 32) | ((long) readInt() & 0xFFFFFFFFL);
+    }
+
+    public final String readLengthPrefixedString() {
+        String str = null;
+        int len = readInt();
+        System.out.println("**About to read a string of length: " + len);
+        if (len > 0) {
+            str = new String(buf, pos, len);
+            pos += len;
+        }
+
+        return str;
+    }
+
+    public final byte[] readLengthPrefixedBytes() {
+        byte[] data = null;
+        int len = readInt();
+        if (len > 0) {
+            data = new byte[len];
+            System.arraycopy(buf, pos, data, 0, len);
+            pos += len;
+        }
+
+        return data;
+    }
+
+    public boolean readBoolean() {
+        return buf[pos++] == 1; 
+    }
+
+    public byte[] getBuffer() {
+        return buf;
     }
 
 }

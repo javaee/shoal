@@ -37,13 +37,8 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreEntry;
-import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.util.ReplicationState;
-import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.*;
-import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -59,7 +54,7 @@ public class LoadResponseCommand<K, V>
 
     private K key;
 
-    private DataStoreEntry<K, V> entry;
+    private V v;
 
     private long tokenId;
 
@@ -69,10 +64,10 @@ public class LoadResponseCommand<K, V>
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
     }
 
-    public LoadResponseCommand(K key, DataStoreEntry<K, V> e, long tokenId) {
+    public LoadResponseCommand(K key, V v, long tokenId) {
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
         this.key = key;
-        this.entry = e;
+        this.v = v;
         this.tokenId = tokenId;
     }
 
@@ -86,57 +81,52 @@ public class LoadResponseCommand<K, V>
     }
 
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        int vMark = ros.mark();
-        int vOffset = vMark;
-        ros.write(Utility.intToBytes(vOffset));
-        ros.write(Utility.longToBytes(tokenId));
-        ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
-        trans.getDataStoreKeyHelper().writeKey(ros, key);
-        vOffset = ros.mark() - vOffset;
-        ros.reWrite(vMark, Utility.intToBytes(vOffset));
-        ros.write(Utility.intToBytes(entry == null ? 0 : 1));
-        if (entry != null) {
-            entry.writeDataStoreEntry(trans, ros);
-        }
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " sending load_response " + key + " to " + getTargetName());
-        }
-    }
-
-    @Override
-    public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-            throws IOException, DataStoreException {
-        int vOffset = Utility.bytesToInt(data, offset);
-        tokenId = Utility.bytesToLong(data, offset + 4);
-        originatingInstance =
-                ReplicationIOUtils.readLengthPrefixedString(data, offset + 12);
-        int instOffset = 4 + ((originatingInstance == null) ? 0 : originatingInstance.length());
-        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset + 12 + instOffset);
-        int flag = Utility.bytesToInt(data, offset + vOffset);
-        if (flag != 0) {
-            entry = new DataStoreEntry<K, V>();
-            entry.readDataStoreEntry(trans, data, offset + vOffset + 4);
-        }
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " received load_response " + key + " from " + originatingInstance);
-        }
-    }
-
-    @Override
-    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
+    protected void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
         setTargetName(originatingInstance);
+
+        ros.writeLong(tokenId);
+        ros.writeLengthPrefixedString(originatingInstance);
+        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        ros.writeBoolean(v != null);
+        if (v != null) {
+            dsc.getDataStoreEntryHelper().writeObject(ros, v);
+        }
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending load_response " + key + " to " + originatingInstance);
+            _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_response " + key + " => " + v + ":" + originatingInstance);
+        }
+    }
+
+
+
+    @Override
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+
+        tokenId = ris.readLong();
+        originatingInstance = ris.readLengthPrefixedString();
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
+        boolean notNull = ris.readBoolean();
+        if (notNull) {
+            v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+        }
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
+    public void execute(String initaitor) {
+
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received load_response " + key + " from " + initaitor);
+        }
+
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
             if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, ctx.getInstanceName() + " executed load_response " + key + " value " + entry);
+                _logger.log(Level.INFO, dsc.getInstanceName() + " executed load_response " + key + " value " + v);
             }
-            resp.setResult(entry);
+            resp.setResult(v);
         }
     }
 

@@ -48,7 +48,7 @@ import org.shoal.ha.cache.impl.command.CommandManager;
  */
 public abstract class AbstractCommandInterceptor<K, V> {
 
-    private DataStoreContext<K, V> dsc;
+    protected DataStoreContext<K, V> dsc;
     
     private CommandManager<K, V> cm;
     
@@ -85,21 +85,19 @@ public abstract class AbstractCommandInterceptor<K, V> {
         return prev;
     }
 
-    public void onTransmit(Command<K, V> cmd)
+    public void onTransmit(Command<K, V> cmd, String initiator)
         throws DataStoreException {
         AbstractCommandInterceptor n = getNext();
         if (n != null) {
-            n.onTransmit(cmd);
+            n.onTransmit(cmd, initiator);
         }
     }
 
-    public void onReceive(Command<K, V> cmd)
+    public void onReceive(Command<K, V> cmd, String initiator)
         throws DataStoreException {
         AbstractCommandInterceptor<K, V> p = getPrev();
         if (p != null) {
-            p.onReceive(cmd);
-        }  else {
-            cmd.execute(dsc);
+            p.onReceive(cmd, initiator);
         }
     }
 

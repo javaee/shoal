@@ -43,7 +43,7 @@ public class ReplicationCommandOpcode {
 
     public static final byte SAVE = 33;
 
-    public static final byte SAVE_WITH_DSEE = 34;
+    public static final byte SAVE_DELTA = 34;
 
     public static final byte LOAD_REQUEST = 35;
 
@@ -56,5 +56,7 @@ public class ReplicationCommandOpcode {
     public static final byte REPLICATION_FRAME_PAYLOAD = 51;
 
     public static final byte REMOVE_EXPIRED = 39;
+
+    public static final byte STALE_REMOVE = 40;
 
 }

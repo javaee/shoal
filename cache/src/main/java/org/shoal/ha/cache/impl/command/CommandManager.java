@@ -38,11 +38,17 @@ package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
+import org.shoal.ha.cache.impl.interceptor.CommandHandlerInterceptor;
+import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -61,10 +67,15 @@ public class CommandManager<K, V>
 
     private volatile AbstractCommandInterceptor<K, V> tail;
 
+    private static Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
+
     public CommandManager(DataStoreContext<K, V> dsc) {
         super(dsc.getServiceName());
         this.dsc = dsc;
         this.myName = dsc.getInstanceName();
+
+        registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
+        registerExecutionInterceptor(new TransmitInterceptor<K, V>());
 
         //dsc.getGroupService().registerGroupMessageReceiver(dsc.getServiceName(), this);
     }
@@ -90,55 +101,52 @@ public class CommandManager<K, V>
 
     public void execute(Command<K, V> cmd)
         throws DataStoreException {
-        execute(cmd, true, myName);
+        executeCommand(cmd, true, myName);
     }
 
     //Initiated to transmit
-    public void execute(Command<K, V> cmd, boolean forward, String initiator)
+    public final void executeCommand(Command<K, V> cmd, boolean forward, String initiator)
         throws DataStoreException {
         cmd.initialize(dsc);
-        if (head != null) {
-            if (forward) {
-                cmd.prepareToTransmit(dsc);
-                if (! myName.equals(cmd.getTargetName())) {
-                    head.onTransmit(cmd);
-                } else {
-                    cmd.execute(dsc);
-                }
-            } else {
-                tail.onReceive(cmd);
-            }
+        if (forward) {
+            head.onTransmit(cmd, initiator);
+        } else {
+            tail.onReceive(cmd, initiator);
         }
     }
 
-    public Command<K, V> createNewInstance(byte opcode, byte[] data, int offset)
+    public Command<K, V> createNewInstance(byte opcode)
             throws IOException {
         Command<K, V> cmd2 = commands[opcode];
         Command<K, V> cmd = null;
         if (cmd2 != null) {
             cmd = cmd2.createNewInstance();
             cmd.initialize(dsc);
-            cmd.readCommandState(data, offset);
+        } else {
+            throw new IOException("Illegal opcode: " + opcode);
         }
 
         return cmd;
     }
 
     @Override
-    protected void handleMessage(String sourceMemberName, String token, byte[] frameData) {
+    protected void handleMessage(String sourceMemberName, String token, byte[] messageData) {
 
-        byte opCode = frameData[0];
-        Command<K, V> cmd2 = commands[opCode];
-        if (cmd2 != null) {
-            Command<K, V> cmd = cmd2.createNewInstance();
-            //System.out.println("[" + dsc.getServiceName() + "] RECEIVED MEEESSAGE FOR: " + cmd.getClass().getName());
-            cmd.initialize(dsc);
-            try {
-                cmd.readCommandState(frameData, 0);
-                execute(cmd, false, sourceMemberName);
-            } catch (IOException dse) {
-                //TODO
-            }
+        ReplicationInputStream ris = null;
+        try {
+            byte opCode = messageData[0];
+            _logger.log(Level.INFO, "RECEIVED GMS MESSAGE from instance: " + sourceMemberName
+             + "; opcode: " + opCode + "; size: " + messageData.length);
+
+            Command<K, V> cmd = createNewInstance(opCode);
+            ris = new ReplicationInputStream(messageData);
+            cmd.prepareToExecute(ris);
+            this.executeCommand(cmd, false, sourceMemberName);
+        } catch (IOException dse) {
+            _logger.log(Level.INFO, "Error during parsing command", dse);
+        } finally {
+           try {ris.close();} catch (Exception ex) {}
         }
     }
+    
 }

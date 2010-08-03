@@ -34,24 +34,74 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.interceptor;
+package org.shoal.ha.cache.impl.command;
 
-import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
- *
  */
-public final class ReceiveInterceptor
-    extends AbstractCommandInterceptor {
+public class StaleCopyRemoveCommand<K, V>
+    extends Command<K, V> {
 
-    public void onTransmit(Command cmd) {
-        //Noop
+    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+
+    private K key;
+
+    private String staleTargetName;
+
+    public StaleCopyRemoveCommand() {
+        super(ReplicationCommandOpcode.STALE_REMOVE);
     }
 
-    public void onReceive(Command cmd) {
-            
+    public K getKey() {
+        return key;
+    }
+
+    public void setKey(K key) {
+        this.key = key;
+    }
+
+    public String getStaleTargetName() {
+        return staleTargetName;
+    }
+
+    public void setStaleTargetName(String targetName) {
+        this.staleTargetName = targetName;
+    }
+
+    @Override
+    protected StaleCopyRemoveCommand<K, V> createNewInstance() {
+        return new StaleCopyRemoveCommand<K, V>();
+    }
+
+    @Override
+    public void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
+        setTargetName(staleTargetName);
+        dsc.getDataStoreKeyHelper().writeKey(ros, getKey());
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending stale_copy_remove " + getKey() + " to " + staleTargetName);
+        }
+    }
+    @Override
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
+    }
+
+    @Override
+    public void execute(String initiator) {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received remove " + key + " from " + initiator);
+        }
+        dsc.getReplicaStore().remove(key);
     }
 
 }

@@ -38,11 +38,14 @@ package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.group.GroupService;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -52,26 +55,29 @@ import java.io.IOException;
 public final class TransmitInterceptor<K, V>
     extends AbstractCommandInterceptor<K, V> {
 
-    public void onTransmit(Command<K, V> cmd) {
+    private static final Logger _logger =
+            Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TRANSMIT_INTERCEPTOR);
+
+    @Override
+    public void onTransmit(Command<K, V> cmd, String initiator)
+        throws DataStoreException {
         DataStoreContext<K, V> ctx = getDataStoreContext();
-        byte[] data = new byte[0];
         ReplicationOutputStream ros = new ReplicationOutputStream();
         try {
-            cmd.writeCommandState(ros);
-            data = ros.toByteArray();
+            cmd.write(ros);
+            byte[] data = ros.toByteArray();
 
             GroupService gs = ctx.getGroupService();
             gs.sendMessage(cmd.getTargetName(),
                     ctx.getServiceName(), data);
+            if (_logger.isLoggable(Level.INFO)) {
+                _logger.log(Level.INFO, "Sent raw_data to " + cmd.getTargetName()
+                    + "; opcode? " + data[0] + "; size: " + data.length);
+            }
         } catch (IOException ioEx) {
-            System.err.println("Error DURING transmit...");
+            _logger.log(Level.WARNING, "Error DURING transmit...", ioEx);
             ioEx.printStackTrace();
         }
-    }
-
-    public void onReceive(Command<K, V> cmd)
-        throws DataStoreException {
-        super.onReceive(cmd);
     }
 
 }

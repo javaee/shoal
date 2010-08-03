@@ -40,7 +40,6 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
 import org.shoal.test.common.DummyGroupService;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.impl.command.CommandManager;
@@ -100,7 +99,7 @@ public class CommandManagerTest
         CommandMonitorInterceptor cmi2 = new CommandMonitorInterceptor();
         cm.registerExecutionInterceptor(cmi1);
         cm.registerExecutionInterceptor(cmi2);
-        cm.execute(new NoopCommand());
+        cm.executeCommand(new NoopCommand());
 
         boolean stat = cmi1.getTransmitCount() == 1;
         stat = stat && (cmi2.getTransmitCount() == cmi1.getTransmitCount());
@@ -118,7 +117,7 @@ public class CommandManagerTest
         BatchedNoopCommandInterceptor bat = new BatchedNoopCommandInterceptor();
         cm.registerExecutionInterceptor(cmi1);
         cm.registerExecutionInterceptor(bat);
-        cm.execute(new NoopCommand());
+        cm.executeCommand(new NoopCommand());
 
         System.out.println("****** testLoopBackInterceptors ******");
         System.out.println("* cmi1.getTotalTransCount(): " + cmi1.getTotalTransCount());

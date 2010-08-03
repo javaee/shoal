@@ -37,10 +37,8 @@
 package org.shoal.ha.cache.impl.store;
 
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.command.DirectedRemoveCommand;
+import org.shoal.ha.cache.impl.command.StaleCopyRemoveCommand;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -87,8 +85,6 @@ public class ReplicaLocationHolder<K, V>
 
         if (cacheV) {
             dseHelper.updateState(k, entry, v);
-        } else {
-            dseHelper.updateMetadata(k, entry, v);
         }
         le.setUseV(cacheV);
 
@@ -141,10 +137,6 @@ public class ReplicaLocationHolder<K, V>
             entry = le.getEntry();
         }
 
-        entry.setVersion(version);
-        entry.setLastAccessedAt(accessTime);
-        entry.setMaxIdleTime(maxIdle);
-
         String staleLocation = le.setReplicaInstanceName(newLocation);
         le.setUseV(false);
 
@@ -166,6 +158,7 @@ public class ReplicaLocationHolder<K, V>
     }
 
     public void run() {
+        /*
         long now = System.currentTimeMillis();
         for (LocationInfo<K, V> le : localCache.values()) {
             DataStoreEntry<K, V> dse = le.getEntry();
@@ -173,12 +166,13 @@ public class ReplicaLocationHolder<K, V>
                 localCache.remove(le.getK());
             }
         }
+        */
     }
 
     private void removeStaleData(K k, String staleLocation)
         throws DataStoreException {
-        DirectedRemoveCommand<K, V> cmd = new DirectedRemoveCommand<K, V>();
-        cmd.setTargetName(staleLocation);
+        StaleCopyRemoveCommand<K, V> cmd = new StaleCopyRemoveCommand<K, V>();
+        cmd.setStaleTargetName(staleLocation);
         cmd.setKey(k);
         dsc.getCommandManager().execute(cmd);
         System.out.println("*!!=> REMOVING STALE DATA from : " + staleLocation);

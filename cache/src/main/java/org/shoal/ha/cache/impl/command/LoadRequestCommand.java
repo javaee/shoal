@@ -41,8 +41,6 @@ import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.*;
-import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -92,69 +90,67 @@ public class LoadRequestCommand<K, V>
     protected LoadRequestCommand<K, V> createNewInstance() {
         return new LoadRequestCommand<K, V>();
     }
-
+    
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        ros.write(Utility.longToBytes(resp.getTokenId()));
-        int keyLen = ReplicationIOUtils.writeLengthPrefixedKey(key, trans.getDataStoreKeyHelper(), ros);
-        ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
-        trans.getDataStoreKeyHelper().writeKey(ros, key);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " sending load " + key + " to " + getTargetName());
-        }
-    }
-
-    @Override
-    public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-            throws IOException {
-        tokenId = Utility.bytesToLong(data, offset);
-        ReplicationIOUtils.KeyInfo keyInfo = ReplicationIOUtils.readLengthPrefixedKey(
-                trans.getDataStoreKeyHelper(), data, offset + 8);
-        key = (K) keyInfo.key;
-
-        originatingInstance = ReplicationIOUtils.readLengthPrefixedString(
-                data, offset + 8 + 4 + keyInfo.keyLen);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " received load " + key + " from " + originatingInstance);
-        }
-    }
-
-
-    @Override
-    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
-        originatingInstance = ctx.getInstanceName();
-        String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
+    protected void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
+        originatingInstance = dsc.getInstanceName();
+        String targetName = dsc.getKeyMapper().findReplicaInstance(dsc.getGroupName(), key);
         setTargetName(targetName);
-        ResponseMediator respMed = ctx.getResponseMediator();
+        ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
+
+        ros.writeLong(resp.getTokenId());
+        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        ros.writeLengthPrefixedString(originatingInstance);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending load_request " + key + " to " + getTargetName());
+        }
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
-        try {
-        DataStoreEntry<K, V> e = ctx.getReplicaStore().get(key);
-        if (!originatingInstance.equals(ctx.getInstanceName())) {
-            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
-            rsp.setOriginatingInstance(originatingInstance);
-            getCommandManager().execute(rsp);
-        } else {
-            resp.setResult(e);
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+
+        tokenId = ris.readLong();
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
+        originatingInstance = ris.readLengthPrefixedString();
+    }
+
+    @Override
+    public void execute(String initiator) {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received load_request " + key + " from " + originatingInstance);
         }
+
+        try {
+            DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
+            V v = e == null ? null : (V) e.getState();
+            if (_logger.isLoggable(Level.INFO)) {
+                _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_request " + key + " => " + v);
+            }
+            if (!originatingInstance.equals(dsc.getInstanceName())) {
+                LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);
+                rsp.setOriginatingInstance(originatingInstance);
+                getCommandManager().execute(rsp);
+            } else {
+                resp.setResult(e);
+            }
         } catch (DataStoreException dsEx) {
             resp.setException(dsEx);
         }
     }
 
-    public DataStoreEntry<K, V> getResult()
+    public V getResult()
             throws DataStoreException {
         try {
             Object result = future.get(8000, TimeUnit.MILLISECONDS);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
-            return (DataStoreEntry<K, V>) result;
+            return (V) result;
         } catch (DataStoreException dsEx) {
             throw dsEx;
         } catch (InterruptedException inEx) {

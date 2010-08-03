@@ -52,17 +52,17 @@ public class CommandMonitorInterceptor<K, V>
     private AtomicInteger recevCount = new AtomicInteger();
 
     @Override
-    public void onTransmit(Command cmd)
+    public void onTransmit(Command cmd, String initiator)
         throws DataStoreException {
-        super.onTransmit(cmd);
+        super.onTransmit(cmd, initiator);
         transCount.incrementAndGet();
     }
 
     @Override
-    public void onReceive(Command cmd)
+    public void onReceive(Command cmd, String initiator)
         throws DataStoreException {
         recevCount.incrementAndGet();
-        super.onReceive(cmd);
+        super.onReceive(cmd, initiator);
     }
 
     public int getTransmitCount() {

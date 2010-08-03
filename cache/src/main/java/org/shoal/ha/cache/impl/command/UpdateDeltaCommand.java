@@ -37,13 +37,13 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
-import java.io.Serializable;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -56,21 +56,16 @@ public class UpdateDeltaCommand<K, V>
 
     private K k;
 
-    private Serializable obj;
+    private V v;
 
     UpdateDeltaCommand() {
-        super(ReplicationCommandOpcode.SAVE_WITH_DSEE);
+        super(ReplicationCommandOpcode.SAVE_DELTA);
     }
 
-    public UpdateDeltaCommand(K k, Serializable obj) {
-        super(ReplicationCommandOpcode.SAVE_WITH_DSEE);
+    public UpdateDeltaCommand(K k, V obj) {
+        super(ReplicationCommandOpcode.SAVE_DELTA);
         this.k = k;
-        this.obj = obj;
-    }
-
-    @Override
-    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
-        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), k));
+        this.v = obj;
     }
 
     @Override
@@ -78,28 +73,38 @@ public class UpdateDeltaCommand<K, V>
         return new UpdateDeltaCommand<K, V>();
     }
 
+
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> ctx, ReplicationOutputStream ros)
-        throws IOException {int keyLenMark = ros.mark();
+    protected void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
+
+        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+
+        int valueOffset = ros.mark();
         ros.write(Utility.intToBytes(0));
-        ctx.getDataStoreKeyHelper().writeKey(ros, k);
-        int valueOffset = ros.mark() - keyLenMark;
-        ros.reWrite(keyLenMark, Utility.intToBytes(valueOffset));
-        ctx.getDataStoreEntryHelper().writeObject(ros, obj);
+        dsc.getDataStoreKeyHelper().writeKey(ros, k);
+        ros.reWrite(valueOffset, Utility.intToBytes(ros.mark()));
+        dsc.getDataStoreEntryHelper().writeObject(ros, v);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save " + k + " to " + getTargetName());
+        }
     }
 
     @Override
-    public void readCommandPayload(DataStoreContext<K,V> ctx, byte[] data, int offset)
-        throws DataStoreException {
-        int valueOffset = Utility.bytesToInt(data, offset);
-        k = ctx.getDataStoreKeyHelper().readKey(data, offset+4);
-        obj = (Serializable) ctx.getDataStoreEntryHelper().readObject(data, offset + valueOffset);
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+
+        int valueOffset = ris.readInt();
+        k = dsc.getDataStoreKeyHelper().readKey(ris);
+        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
     }
 
+
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
-        //getReplicaCache().put(eval);
-//        System.out.println("SaveCommand["+getDataStoreContext().getMyName()+"] received: " + eval);
+    public void execute(String initiator) {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
+        }
     }
 
 }

@@ -84,49 +84,45 @@ public class BroadcastLoadRequestCommand<K, V>
     }
 
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        ros.write(Utility.longToBytes(resp.getTokenId()));
-        int keyLen = ReplicationIOUtils.writeLengthPrefixedKey(key, trans.getDataStoreKeyHelper(), ros);
-        ReplicationIOUtils.writeLengthPrefixedString(ros, originatingInstance);
-        trans.getDataStoreKeyHelper().writeKey(ros, key);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " sending load " + key + " to " + getTargetName());
-        }
-    }
-
-    @Override
-    public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-            throws IOException {
-        tokenId = Utility.bytesToLong(data, offset);
-        ReplicationIOUtils.KeyInfo keyInfo = ReplicationIOUtils.readLengthPrefixedKey(
-                trans.getDataStoreKeyHelper(), data, offset + 8);
-        key = (K) keyInfo.key;
-
-        originatingInstance = ReplicationIOUtils.readLengthPrefixedString(
-                data, offset + 8 + 4 + keyInfo.keyLen);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " received load " + key + " from " + originatingInstance);
-        }
-    }
-
-
-    @Override
-    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
-        originatingInstance = ctx.getInstanceName();
+    protected void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
+        originatingInstance = dsc.getInstanceName();
 //        String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
 //        setTargetName(targetName);
-        ResponseMediator respMed = ctx.getResponseMediator();
+        ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
+
+
+        ros.writeLong(resp.getTokenId());
+        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        ros.writeLengthPrefixedString(originatingInstance);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending broadcast_load " + key + " to " + getTargetName());
+        }
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+
+        tokenId = ris.readLong();
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
+        originatingInstance = ris.readLengthPrefixedString();
+
+    }
+
+    @Override
+    public void execute(String initiator) {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received broadcast_load " + key + " from " + originatingInstance);
+        }
         try {
-        DataStoreEntry<K, V> e = ctx.getReplicaStore().get(key);
-        if (!originatingInstance.equals(ctx.getInstanceName())) {
-            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, e, tokenId);
+        DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
+        if (!originatingInstance.equals(dsc.getInstanceName())) {
+            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(
+                    key, dsc.getDataStoreEntryHelper().getV(e), tokenId);
             rsp.setOriginatingInstance(originatingInstance);
             getCommandManager().execute(rsp);
         } else {

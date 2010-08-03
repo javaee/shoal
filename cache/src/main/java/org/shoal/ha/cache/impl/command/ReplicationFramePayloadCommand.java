@@ -38,9 +38,8 @@ package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.command.ReplicationFrame;
 
 import java.io.IOException;
 import java.util.List;
@@ -67,29 +66,29 @@ public class ReplicationFramePayloadCommand<K, V>
     }
 
     @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream bos) throws IOException {
-        bos.write(frame.getSerializedData());
+    public void writeCommandPayload(ReplicationOutputStream ros)
+            throws IOException {
+        ros.write(frame.getSerializedData());
     }
 
     @Override
-    public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
+    public void readCommandPayload(ReplicationInputStream ris)
         throws DataStoreException {
-        ReplicationFrame<K, V> frame = ReplicationFrame.toReplicationFrame(trans, data, offset);
+        ReplicationFrame<K, V> frame = ReplicationFrame.toReplicationFrame(dsc, ris);
         setReplicationFrame(frame);
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx)
+    public void execute(String initiator)
         throws DataStoreException {
-//        System.out.println("ReplicationFramePayloadCommand["+getDataStoreContext().getMyName()+"] received: " + frame);
+
         List<Command<K, V>> commands = frame.getCommands();
         for (Command<K, V> cmd : commands) {
-            getCommandManager().execute(cmd, false, frame.getSourceInstanceName());
+            getCommandManager().executeCommand(cmd, false, frame.getSourceInstanceName());
         }
     }
 
     public String toString() {
-        return "ReplicationFramePayloadCommand: contains "
-                + frame.getCommands().size() + " commands";
+        return "ReplicationFramePayloadCommand: contains " + frame.getCommands().size() + " commands";
     }
 }

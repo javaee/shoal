@@ -50,12 +50,6 @@ public class DataStoreEntry<K, V> {
 
     private K key;
 
-    private long version;
-
-    private long maxIdleTime;
-
-    private long lastAccessedAt;
-
     private Object state;
 
     private String replicaInstanceName;
@@ -66,30 +60,6 @@ public class DataStoreEntry<K, V> {
 
     public K getKey() {
         return key;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public void setVersion(long v) {
-        this.version = v;
-    }
-
-    public long getMaxIdleTime() {
-        return maxIdleTime;
-    }
-
-    public void setMaxIdleTime(long t) {
-        this.maxIdleTime = t;
-    }
-
-    public long getLastAccessedAt() {
-        return lastAccessedAt;
-    }
-
-    public void setLastAccessedAt(long lastAccessedAt) {
-        this.lastAccessedAt = lastAccessedAt;
     }
 
     public Object getState() {
@@ -108,60 +78,4 @@ public class DataStoreEntry<K, V> {
         this.replicaInstanceName = replicaInstanceName;
     }
 
-    public final void writeDataStoreEntry(DataStoreContext<K, V> ctx,
-                                 ReplicationOutputStream ros)
-            throws IOException {
-        int payloadOffsetMark = ros.mark();
-        int payloadOffset = ros.mark();
-        ros.write(Utility.intToBytes(payloadOffset));
-
-        ros.write(Utility.longToBytes(getVersion()));
-        ros.write(Utility.longToBytes(getMaxIdleTime()));
-        ros.write(Utility.longToBytes(getLastAccessedAt()));
-
-        ctx.getDataStoreKeyHelper().writeKey(ros, key);
-
-        payloadOffset = ros.mark() - payloadOffset;
-        ros.reWrite(payloadOffsetMark, Utility.intToBytes(payloadOffset));
-
-        writePayloadState(ctx.getDataStoreEntryHelper(), ros);
-
-    }
-
-    public void readDataStoreEntry(DataStoreContext<K, V> ctx,
-                          byte[] data, int index) throws IOException {
-        int payloadOffset = Utility.bytesToInt(data, index);
-
-        setVersion(Utility.bytesToLong(data, index+4));
-        setMaxIdleTime(Utility.bytesToLong(data, index+12));
-        setLastAccessedAt(Utility.bytesToLong(data, index + 20));
-
-        setKey(ctx.getDataStoreKeyHelper().readKey(data, index + 28));
-        readPayloadState(ctx.getDataStoreEntryHelper(),
-                data, index + payloadOffset);
-
-    }
-    
-    public String toString() {
-        StringBuilder sb = new StringBuilder("ReplicationState: [");
-        sb.append(key).append("; ")
-                .append("; ").append(maxIdleTime)
-                .append("; ").append(lastAccessedAt);
-
-        return sb.toString();
-    }
-
-    protected void writePayloadState(DataStoreEntryHelper<K, V> helper,
-                                     ReplicationOutputStream ros)
-            throws IOException {
-        
-        helper.writeObject(ros, state);
-    }
-
-    protected void readPayloadState(DataStoreEntryHelper<K, V> helper,
-                                    byte[] data, int index)
-        throws IOException {
-
-        setState(helper.readObject(data, index));
-    }
 }

@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
@@ -48,7 +49,7 @@ public interface DataStoreKeyHelper<K> {
     public void writeKey(ReplicationOutputStream ros, K k)
             throws IOException;
 
-    public K readKey(byte[] data, int index)
-            throws DataStoreException;
+    public K readKey(ReplicationInputStream ris)
+            throws IOException;
 
 }

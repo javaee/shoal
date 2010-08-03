@@ -54,7 +54,8 @@ public class DummyGroupService
     private String groupName;
 
     public DummyGroupService(String memberName, String groupName) {
-
+        this.memberName = memberName;
+        this.groupName = groupName;
     }
 
     @Override

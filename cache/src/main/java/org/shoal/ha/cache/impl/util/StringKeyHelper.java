@@ -47,17 +47,23 @@ import java.io.IOException;
 public class StringKeyHelper
     implements DataStoreKeyHelper<String> {
 
+    public StringKeyHelper() {
+
+    }
+    
     @Override
-    public void writeKey(ReplicationOutputStream ros, String key) throws IOException {
-        ros.write(Utility.intToBytes(key.length()));
-        ros.write(key.getBytes());
+    public final void writeKey(ReplicationOutputStream ros, String key) throws IOException {
+        System.out.println("About to write @ index: " + ros.mark());
+        ros.writeLengthPrefixedString(key);
+        System.out.println("NEXT write will be @ index: " + ros.mark());
     }
 
     @Override
-    public String readKey(byte[] data, int index) throws DataStoreException {
-        String key = null;
-        int len = Utility.bytesToInt(data, index);
-        key = new String(data, index+4, len);
-        return key;
+    public final String readKey(ReplicationInputStream ris) throws DataStoreException {
+        System.out.println("About to read from index: " + ris.mark());
+        String str = ris.readLengthPrefixedString();
+        System.out.println("NEXT read will be from index: " + ris.mark());
+
+        return str;
     }
 }

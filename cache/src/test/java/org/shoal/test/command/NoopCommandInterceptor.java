@@ -55,7 +55,7 @@ public class NoopCommandInterceptor<K, V>
     private AtomicInteger noopRecvCount = new AtomicInteger();
 
     @Override
-    public void onTransmit(Command cmd)
+    public void onTransmit(Command cmd, String initiator)
         throws DataStoreException {
         totalTransCount.incrementAndGet();
         System.out.println("**** NoopCommandInterceptor.onTransmit() got: " + cmd.getClass().getName());
@@ -63,17 +63,17 @@ public class NoopCommandInterceptor<K, V>
             noopTranscount.incrementAndGet();
             getDataStoreContext().getCommandManager().execute(new BatchedNoopCommand());
         } else {
-            super.onTransmit(cmd);
+            super.onTransmit(cmd, initiator);
 
         }
     }
 
     @Override
-    public void onReceive(Command cmd)
+    public void onReceive(Command cmd, String initiator)
         throws DataStoreException {
         if (cmd instanceof NoopCommand) {
             noopRecvCount.incrementAndGet();
-            super.onReceive(cmd);
+            super.onReceive(cmd, initiator);
         }
     }
 

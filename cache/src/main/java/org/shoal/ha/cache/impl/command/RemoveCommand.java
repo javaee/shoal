@@ -39,6 +39,7 @@ package org.shoal.ha.cache.impl.command;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
@@ -54,7 +55,7 @@ import java.util.logging.Logger;
 public class RemoveCommand<K, V>
     extends Command<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
 
     private K key;
 
@@ -76,30 +77,27 @@ public class RemoveCommand<K, V>
     }
 
     @Override
-    protected void prepareToTransmit(DataStoreContext<K, V> ctx) {
-        setTargetName(ctx.getKeyMapper().getMappedInstance(ctx.getGroupName(), key));
-    }
+    public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
+        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key));
 
-    @Override
-    public void writeCommandPayload(DataStoreContext<K, V> trans, ReplicationOutputStream ros) throws IOException {
-        trans.getDataStoreKeyHelper().writeKey(ros, key);
+        dsc.getDataStoreKeyHelper().writeKey(ros, key);
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " sending remove " + key + " to " + getTargetName());
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending remove " + key + " to " + getTargetName());
         }
     }
 
     @Override
-    public void readCommandPayload(DataStoreContext<K, V> trans, byte[] data, int offset)
-        throws DataStoreException {
-        key = (K) trans.getDataStoreKeyHelper().readKey(data, offset);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, trans.getInstanceName() + " received remove " + key + " from " + getTargetName());
-        }
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
     }
 
     @Override
-    public void execute(DataStoreContext<K, V> ctx) {
-        ctx.getReplicaStore().remove(key);
+    public void execute(String initiator) {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received remove " + key + " from " + initiator);
+        }
+        dsc.getReplicaStore().remove(key);
     }
 
 }

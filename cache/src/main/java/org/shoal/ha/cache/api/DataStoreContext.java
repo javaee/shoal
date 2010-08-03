@@ -62,7 +62,7 @@ public class DataStoreContext<K, V> {
 
     private CommandManager<K, V> cm;
 
-    private KeyMapper keyMapper;
+    private KeyMapper<K> keyMapper;
 
     private ResponseMediator responseMediator;
 
@@ -111,11 +111,11 @@ public class DataStoreContext<K, V> {
         this.dataStoreEntryHelper = dataStoreEntryHelper;
     }
 
-    public KeyMapper getKeyMapper() {
+    public KeyMapper<K> getKeyMapper() {
         return keyMapper;
     }
 
-    public void setKeyMapper(KeyMapper keyMapper) {
+    public void setKeyMapper(KeyMapper<K> keyMapper) {
         this.keyMapper = keyMapper;
     }
 

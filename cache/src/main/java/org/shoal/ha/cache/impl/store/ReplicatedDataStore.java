@@ -36,7 +36,7 @@
 
 package org.shoal.ha.cache.impl.store;
 
-import org.shoal.ha.cache.impl.interceptor.CommandMonitorInterceptor;
+import org.shoal.ha.cache.impl.interceptor.CommandHandlerInterceptor;
 import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
 import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
@@ -44,7 +44,6 @@ import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.*;
 
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -92,14 +91,14 @@ public class ReplicatedDataStore<K, V>
         dsc.setDataStoreKeyHelper(conf.getDataStoreKeyHelper());
         dsc.setKeyMapper(conf.getKeyMapper());
         cm = dsc.getCommandManager();
-        cm.registerExecutionInterceptor(new CommandMonitorInterceptor<K, V>());
-        cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
+        
+//        cm.registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
+//        cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
 
         cm.registerCommand(new SaveCommand<K, V>());
         cm.registerCommand(new LoadRequestCommand<K, V>());
         cm.registerCommand(new LoadResponseCommand<K, V>(null, null, 0));
         cm.registerCommand(new RemoveCommand<K, V>());
-        cm.registerCommand(new TouchCommand<K, V>());
 
         KeyMapper<K> keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
@@ -131,7 +130,7 @@ public class ReplicatedDataStore<K, V>
     }
 
     @Override
-    public String updateDelta(K k, Serializable obj)
+    public String updateDelta(K k, V obj)
         throws DataStoreException {
         UpdateDeltaCommand<K, V> cmd = new UpdateDeltaCommand<K, V>(k, obj);
         cm.execute(cmd);
@@ -147,17 +146,14 @@ public class ReplicatedDataStore<K, V>
         if (v == null) {
 
             ReplicaStore<K, V> replicaStore = dsc.getReplicaStore();
-            DataStoreEntry<K, V> entry = replicaStore.get(k);
+            DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
 
             try {
                 if (entry == null) {
                     LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(k);
                     cm.execute(cmd);
 
-                    entry = cmd.getResult();
-                }
-                if (entry != null) {
-                    v = transformer.getV(entry);
+                    v = cmd.getResult();
                 }
             } catch (DataStoreException dseEx) {
                 throw dseEx;
@@ -179,11 +175,7 @@ public class ReplicatedDataStore<K, V>
     @Override
     public String touch(K k, long version, long ts, long ttl)
             throws DataStoreException {
-        TouchCommand<K, V> tc = new TouchCommand<K, V>(k, version, ts, ttl);
-        String newLocation = tc.getTargetName();
-
-        localDS.touch(k, version, ts, ttl, newLocation);
-        return newLocation;
+        return null;
     }
 
     @Override

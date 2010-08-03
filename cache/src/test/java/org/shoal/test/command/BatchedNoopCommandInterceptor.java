@@ -53,18 +53,18 @@ public class BatchedNoopCommandInterceptor<K, V>
     private AtomicInteger batchedRecvCount = new AtomicInteger();
 
     @Override
-    public void onTransmit(Command cmd)
+    public void onTransmit(Command cmd, String initiator)
         throws DataStoreException {
         System.out.println("**** BatchedNoopCommandInterceptor.onTransmit() got: " + cmd.getClass().getName());
         batchedTransCount.incrementAndGet();
-        super.onTransmit(cmd);
+        super.onTransmit(cmd, initiator);
     }
 
     @Override
-    public void onReceive(Command cmd)
+    public void onReceive(Command cmd, String initiator)
         throws DataStoreException {
         batchedRecvCount.incrementAndGet();
-        super.onReceive(cmd);
+        super.onReceive(cmd, initiator);
     }
 
     public int getTransmitCount() {

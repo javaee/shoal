@@ -79,7 +79,7 @@ public class ReplicationCommandTransmitter<K, V>
                 Thread.sleep(15);
                 if (list.peek() != null) {
                     ReplicationFrame<K, V> frame = new ReplicationFrame<K, V>((byte)255,
-                            dsc.getServiceName(), dsc.getInstanceName());
+                            0, dsc.getInstanceName());
 
                     Command<K, V> cmd = list.poll();
                     while (cmd != null) {
@@ -89,7 +89,7 @@ public class ReplicationCommandTransmitter<K, V>
                         if (frame.getCommands().size() >= 20) {
                             transmitFramePayload(frame);
                             frame = new ReplicationFrame<K, V>((byte)255,
-                            dsc.getServiceName(), dsc.getInstanceName());
+                            0, dsc.getInstanceName());
                         }
                     }
 

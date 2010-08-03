@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
@@ -82,19 +83,16 @@ public class ObjectKeyHelper<K>
                     }
                 }
 
-                int keyDataLength = data == null ? 0 : data.length;
-                ros.write(Utility.intToBytes(keyDataLength));
-                ros.write(data);
+                ros.writeLengthPrefixedBytes(data);
             }
         }
     }
 
     @Override
-    public K readKey(byte[] data, int index)
+    public K readKey(ReplicationInputStream ris)
             throws DataStoreException {
 
-        int len = Utility.bytesToInt(data, index);
-        ByteArrayInputStream bis = new ByteArrayInputStream(data, index+4, len);
+        ByteArrayInputStream bis = new ByteArrayInputStream(ris.readLengthPrefixedBytes());
         ObjectInputStream ois = null;
         try {
             ois = factory.createObjectInputStream(bis, loader);

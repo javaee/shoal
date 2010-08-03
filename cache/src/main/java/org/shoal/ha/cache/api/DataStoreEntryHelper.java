@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
@@ -52,12 +53,10 @@ public interface DataStoreEntryHelper<K, V> {
     public void writeObject(ReplicationOutputStream ros, Object obj)
             throws IOException;
 
-    public Object readObject(byte[] delta, int offset)
-        throws DataStoreException;
+    public Object readObject(ReplicationInputStream ris)
+        throws IOException;
 
     public void updateState(K k, DataStoreEntry<K, V> entry, Object obj)
             throws DataStoreException;
-
-    public void updateMetadata(K k, DataStoreEntry<K, V> entry, Object obj);
 
 }

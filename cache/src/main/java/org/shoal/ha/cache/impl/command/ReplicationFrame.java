@@ -37,9 +37,8 @@
 package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.command.CommandManager;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.ByteArrayOutputStream;
@@ -53,8 +52,6 @@ import java.util.List;
 public class ReplicationFrame<K, V> {
 
     private byte frameCommand;
-
-    private String serviceName;
 
     private String sourceInstanceName;
 
@@ -71,16 +68,14 @@ public class ReplicationFrame<K, V> {
     private List<Command<K, V>> commands
             = new LinkedList<Command<K, V>>();
 
-    public ReplicationFrame(byte frameCommand, int seqNo, String serviceName, String sourceInstanceName) {
+    public ReplicationFrame(byte frameCommand, int seqNo, String sourceInstanceName) {
         this.frameCommand = frameCommand;
         this.seqNo = seqNo;
-        this.serviceName = serviceName;
         this.sourceInstanceName = sourceInstanceName;
     }
 
-    public ReplicationFrame(byte frameCommand, String serviceName, String sourceInstanceName) {
+    public ReplicationFrame(byte frameCommand, String sourceInstanceName) {
         this.frameCommand = frameCommand;
-        this.serviceName = serviceName;
         this.sourceInstanceName = sourceInstanceName;
     }
 
@@ -159,33 +154,34 @@ public class ReplicationFrame<K, V> {
         byte[] data = new byte[0];
         ReplicationOutputStream bos = new ReplicationOutputStream();
         try {
-            bos.write(new byte[]{frameCommand});
-            bos.write(Utility.intToBytes(seqNo));
-            bos.write(Utility.intToBytes(windowLen));
-            bos.write(Utility.intToBytes(minOutstandingPacketNumber));
-            bos.write(Utility.intToBytes(maxOutstandingPacketNumber));
-            writeStringToStream(bos, serviceName);
-            writeStringToStream(bos, sourceInstanceName);
-            writeStringToStream(bos, targetInstanceName);
+            bos.write(frameCommand);
+            bos.writeInt(seqNo);
+            bos.writeLengthPrefixedString(sourceInstanceName);
+            bos.writeLengthPrefixedString(targetInstanceName);
 
             int cmdSz = commands.size();
-            bos.write(Utility.intToBytes(cmdSz));
+            bos.writeInt(cmdSz);
 
-            byte[] cmdOffsets = new byte[4 * cmdSz];
+            int[] cmdOffsets = new int[cmdSz];
             int offMark = bos.mark();
-            bos.write(cmdOffsets);
+            bos.write(new byte[4 * cmdSz]);
 
-            int base = bos.size();
             for (int i = 0; i < cmdSz; i++) {
-                Utility.intToBytes(bos.size() - base, cmdOffsets, i * 4);
+                cmdOffsets[i] = bos.mark();
+                bos.writeInt(0);
                 Command cmd = commands.get(i);
-                cmd.writeCommandState(bos);
-
-                System.out.println("Wrote cmd[" + i + "] => opcode: " + cmd.getOpcode()
-                        + "; offset: " + Utility.bytesToInt(cmdOffsets, i * 4) + " : " + offMark);
+                cmd.write(bos);
+                int len = bos.size() - cmdOffsets[i] - 4;
+                bos.moveTo(cmdOffsets[i]);
+                bos.writeInt(len);
+                bos.backToAppendMode();
             }
 
-            bos.reWrite(offMark, cmdOffsets);
+            bos.moveTo(offMark);
+            for (int i=0; i<cmdSz; i++) {
+                bos.writeInt(cmdOffsets[i]);
+            }
+            bos.backToAppendMode();
             bos.flush();
             data = bos.toByteArray();
 
@@ -203,61 +199,43 @@ public class ReplicationFrame<K, V> {
     }
 
     public static <K, V> ReplicationFrame<K, V> toReplicationFrame(DataStoreContext<K, V> dsc,
-                                                                   byte[] data, int offset) {
+                                                                   ReplicationInputStream ris) {
 
 
-        System.out.println("Reading frame of totalBytes: " + data.length);
         ReplicationFrame<K, V> frame = null;
-        byte com = data[offset];
-        offset += 1;
-        int seqNo = Utility.bytesToInt(data, offset);
-        offset += 4;
-        int wLen = Utility.bytesToInt(data, offset);
-        offset += 4;
-        int min = Utility.bytesToInt(data, offset);
-        offset += 4;
-        int max = Utility.bytesToInt(data, offset);
-        offset += 4;
+        byte com = (byte) ris.read();
+        int seqNo = ris.readInt();
 
-        String servName = readStringFrom(data, offset);
-        offset += 4 + (servName == null ? 0 : servName.length());
+        String srcName = ris.readLengthPrefixedString();
+        String tarName = ris.readLengthPrefixedString();
 
-        String srcName = readStringFrom(data, offset);
-        offset += 4 + ((srcName == null) ? 0 : srcName.length());
-
-        String tarName = readStringFrom(data, offset);
-        offset += 4 + ((tarName == null) ? 0 : tarName.length());
-
-        frame = new ReplicationFrame<K, V>(com, seqNo, servName, srcName);
+        frame = new ReplicationFrame<K, V>(com, seqNo, srcName);
         frame.setTargetInstanceName(tarName);
-        frame.setMinOutstandingPacketNumber(min);
-        frame.setMaxOutstandingPacketNumber(max);
         frame.setTargetInstanceName(tarName);
-        frame.setWindowLen(wLen);
 
-        int numStates = Utility.bytesToInt(data, offset);
-        offset += 4;
+        int numStates = ris.readInt();
 
-        int base = offset + numStates * 4;
         int[] cmdOffsets = new int[numStates];
         for (int i = 0; i < numStates; i++) {
-            cmdOffsets[i] = Utility.bytesToInt(data, offset);
-            offset += 4;
-            System.out.println("Read cmd[" + i + "/" + numStates + "] => " + cmdOffsets[i]
-                    + "; opcode - " + data[cmdOffsets[i] + base]);
+            cmdOffsets[i] = ris.readInt();
         }
 
         CommandManager<K, V> cm = dsc.getCommandManager();
         for (int i = 0; i < numStates; i++) {
-            byte opcode = data[cmdOffsets[i] + base];
-            Command<K, V> cmd = null;
+            ris.skipTo(cmdOffsets[i]);
+            int len = ris.readInt();
+            byte opcode = (byte) ris.read();
+            ReplicationInputStream cmdRIS = null;
             try {
-                cm.createNewInstance(opcode, data, cmdOffsets[i] + base);
+                Command<K, V> cmd = cm.createNewInstance(opcode);
+                cmdRIS = new ReplicationInputStream(ris.getBuffer(), cmdOffsets[i], len);
+                cmd.prepareToExecute(cmdRIS);
                 frame.addCommand(cmd);
             } catch (IOException dse) {
-
+                dse.printStackTrace();
+            } finally {
+                try {cmdRIS.close();} catch (Exception ex) {}
             }
-//            System.out.println("After createNewInstanceCmd[" + i + "]: " + cmd);
         }
 
         return frame;
@@ -267,7 +245,6 @@ public class ReplicationFrame<K, V> {
     public String toString() {
         return "ReplicationFrame{" +
                 "frameCommand=" + frameCommand +
-                ", serviceName='" + serviceName + '\'' +
                 ", sourceInstanceName='" + sourceInstanceName + '\'' +
                 ", targetInstanceName='" + targetInstanceName + '\'' +
                 ", seqNo=" + seqNo +

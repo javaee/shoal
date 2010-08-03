@@ -93,7 +93,7 @@ public interface DataStore<K, V> {
      *
      * @see #{DataStoreEntryEvaluator.eval}
      */
-    public String updateDelta(K k, Serializable delta)
+    public String updateDelta(K k, V delta)
                 throws DataStoreException;
 
     /**
