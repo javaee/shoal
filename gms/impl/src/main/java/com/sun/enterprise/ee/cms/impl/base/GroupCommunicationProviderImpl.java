@@ -377,7 +377,14 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public String getGroupLeader() {
-        return clusterManager.getClusterViewManager().getMaster().getName();
+        String result = "";
+        if (clusterManager != null && clusterManager.getClusterViewManager() != null) {
+            SystemAdvertisement madv = clusterManager.getClusterViewManager().getMaster();
+            if (madv != null) {
+                result = madv.getName();
+            }
+        }
+        return result;
     }
 
     private ArrayBlockingQueue<MessagePacket> msgQueue = null;
