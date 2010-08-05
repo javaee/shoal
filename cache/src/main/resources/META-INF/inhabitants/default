@@ -1,0 +1,5 @@
+# generated on 17 Jun 2010 15:23:45 GMT
+class=org.shoal.adapter.store.ReplicatedBackingStoreFactory,index=org.glassfish.ha.store.api.BackingStoreFactory:shoal-backing-store
+class=org.shoal.adapter.store.ReplicatedBackingStoreFactory2,index=org.glassfish.ha.store.api.BackingStoreFactory:replication
+
+

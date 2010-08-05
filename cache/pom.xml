@@ -61,7 +61,11 @@
             <artifactId>shoal-gms-impl</artifactId>
             <version>${project.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.glassfish.ha</groupId>
+            <artifactId>ha-api</artifactId>
+            <version>${ha.api.version}</version>
+        </dependency>
         <!-- Test -->
 
         <dependency>
@@ -91,7 +95,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Export-Package>org.shoal.ha.cache.api,org.shoal.ha.mapper</Export-Package>
+                        <Export-Package>org.shoal.ha.cache.api,org.shoal.ha.mapper,org.shoal.adapter.store</Export-Package>
                     </instructions>
                 </configuration>
             </plugin>
