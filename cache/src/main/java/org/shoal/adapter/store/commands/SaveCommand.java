@@ -34,71 +34,88 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.interceptor;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.command.CommandManager;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
- *
  */
-public abstract class AbstractCommandInterceptor<K, V> {
+public class SaveCommand<K, V>
+    extends Command<K, V> {
 
-    protected DataStoreContext<K, V> dsc;
-    
-    private CommandManager<K, V> cm;
-    
-    private AbstractCommandInterceptor<K, V> next;
-  
-    private AbstractCommandInterceptor<K, V> prev;
-    
-    public final void initialize(DataStoreContext<K, V> dsc) {
-        this.dsc = dsc;
-        this.cm = dsc.getCommandManager();
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+
+    private K k;
+
+    private V v;
+
+    private transient byte[] rawReadState;
+
+    public SaveCommand() {
+        super(ReplicationCommandOpcode.SAVE);
     }
 
-    public final DataStoreContext<K, V> getDataStoreContext() {
-        return dsc;
+    public SaveCommand(K k, V v) {
+        this();
+        setKey(k);
+        setValue(v);
     }
 
-    public CommandManager getCommandManager() {
-        return cm;
+    public void setKey(K k) {
+        this.k = k;
     }
 
-    public final void setNext(AbstractCommandInterceptor<K, V> next) {
-        this.next = next;
+    public void setValue(V v) {
+        this.v = v;
     }
 
-    public final void setPrev(AbstractCommandInterceptor<K, V> prev) {
-        this.prev = prev;
+    @Override
+    protected SaveCommand<K, V> createNewInstance() {
+        return new SaveCommand<K, V>();
     }
 
-    public final AbstractCommandInterceptor<K, V> getNext() {
-        return next;    
-    }
-    
-    public final AbstractCommandInterceptor<K, V> getPrev() {
-        return prev;
-    }
+    @Override
+    protected void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
 
-    public void onTransmit(Command<K, V> cmd, String initiator)
-        throws DataStoreException {
-        AbstractCommandInterceptor n = getNext();
-        if (n != null) {
-            n.onTransmit(cmd, initiator);
+        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+
+        dsc.getDataStoreKeyHelper().writeKey(ros, k);
+        dsc.getDataStoreEntryHelper().writeObject(ros, v);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save "
+                    + k + " to " + getTargetName());
         }
     }
 
-    public void onReceive(Command<K, V> cmd, String initiator)
-        throws DataStoreException {
-        AbstractCommandInterceptor<K, V> p = getPrev();
-        if (p != null) {
-            p.onReceive(cmd, initiator);
-        }
+    @Override
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+        k = dsc.getDataStoreKeyHelper().readKey(ris);
+        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
     }
 
+    @Override
+    public void execute(String initiator)
+        throws DataStoreException {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
+        }
+
+        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
+        synchronized (entry) {
+            entry.setV((V) v);
+        }
+    }
 }

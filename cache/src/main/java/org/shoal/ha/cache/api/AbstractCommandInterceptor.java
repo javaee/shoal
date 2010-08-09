@@ -34,61 +34,69 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.ha.cache.api;
 
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.CommandManager;
 
-import java.io.IOException;
-import java.util.List;
 
 /**
  * @author Mahesh Kannan
+ *
  */
-public class ReplicationFramePayloadCommand<K, V>
-    extends Command<K, V> {
+public abstract class AbstractCommandInterceptor<K, V> {
 
-    private ReplicationFrame<K, V> frame;
-
-    public ReplicationFramePayloadCommand() {
-        super(ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD);
+    protected DataStoreContext<K, V> dsc;
+    
+    private CommandManager<K, V> cm;
+    
+    private AbstractCommandInterceptor<K, V> next;
+  
+    private AbstractCommandInterceptor<K, V> prev;
+    
+    public void initialize(DataStoreContext<K, V> dsc) {
+        this.dsc = dsc;
+        this.cm = dsc.getCommandManager();
     }
 
-    public void setReplicationFrame(ReplicationFrame<K, V> frame) {
-        this.frame = frame;
+    public final DataStoreContext<K, V> getDataStoreContext() {
+        return dsc;
     }
 
-    @Override
-    protected ReplicationFramePayloadCommand<K, V> createNewInstance() {
-        return new ReplicationFramePayloadCommand<K, V>();
+    public CommandManager getCommandManager() {
+        return cm;
     }
 
-    @Override
-    public void writeCommandPayload(ReplicationOutputStream ros)
-            throws IOException {
-        ros.write(frame.getSerializedData());
+    public final void setNext(AbstractCommandInterceptor<K, V> next) {
+        this.next = next;
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
+    public final void setPrev(AbstractCommandInterceptor<K, V> prev) {
+        this.prev = prev;
+    }
+
+    public final AbstractCommandInterceptor<K, V> getNext() {
+        return next;    
+    }
+    
+    public final AbstractCommandInterceptor<K, V> getPrev() {
+        return prev;
+    }
+
+    public void onTransmit(Command<K, V> cmd, String initiator)
         throws DataStoreException {
-        ReplicationFrame<K, V> frame = ReplicationFrame.toReplicationFrame(dsc, ris);
-        setReplicationFrame(frame);
-    }
-
-    @Override
-    public void execute(String initiator)
-        throws DataStoreException {
-
-        List<Command<K, V>> commands = frame.getCommands();
-        for (Command<K, V> cmd : commands) {
-            getCommandManager().executeCommand(cmd, false, frame.getSourceInstanceName());
+        AbstractCommandInterceptor n = getNext();
+        if (n != null) {
+            n.onTransmit(cmd, initiator);
         }
     }
 
-    public String toString() {
-        return "ReplicationFramePayloadCommand: contains " + frame.getCommands().size() + " commands";
+    public void onReceive(Command<K, V> cmd, String initiator)
+        throws DataStoreException {
+        AbstractCommandInterceptor<K, V> p = getPrev();
+        if (p != null) {
+            p.onReceive(cmd, initiator);
+        }
     }
+
 }

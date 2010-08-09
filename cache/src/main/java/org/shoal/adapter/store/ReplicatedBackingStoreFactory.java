@@ -60,10 +60,19 @@ public class ReplicatedBackingStoreFactory
     public <K extends Serializable, V extends Serializable> BackingStore<K, V> createBackingStore(BackingStoreConfiguration<K, V> conf)
             throws BackingStoreException {
 
-        ReplicatedBackingStore<K, V> bStore = new ReplicatedBackingStore<K, V>();
-        bStore.initialize(conf);
-        System.out.println("ReplicatedBackingStoreFactory:: CREATED an instance of: " + bStore.getClass().getName());
-        return bStore;
+        Class<V> vClazz = conf.getValueClazz();
+        BackingStore<K, V> backingStore = null;
+        if (Storeable.class.isAssignableFrom(vClazz)) {
+            backingStore = createStoreableBackingStore(conf);
+        } else {
+            ReplicatedBackingStore<K, V> store = null;
+            store = new ReplicatedBackingStore<K, V>();
+            store.initialize(conf);
+
+            backingStore = store;
+        }
+        System.out.println("ReplicatedBackingStoreFactory:: CREATED an instance of: " + backingStore.getClass().getName());
+        return backingStore;
     }
 
     @Override
@@ -73,5 +82,14 @@ public class ReplicatedBackingStoreFactory
             public void commit() throws BackingStoreException {    
             }
         };
+    }
+
+
+    private BackingStore createStoreableBackingStore(
+            BackingStoreConfiguration conf) throws BackingStoreException {
+
+        StorableReplicatedBackingStore backingStore = new StorableReplicatedBackingStore();
+        backingStore.initialize(conf);
+        return backingStore;
     }
 }

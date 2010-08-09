@@ -36,15 +36,21 @@
 
 package org.shoal.ha.cache.impl.util;
 
-import org.shoal.ha.cache.api.DataStore;
-import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.api.DataStoreFactory;
+import org.glassfish.ha.store.api.BackingStore;
+import org.glassfish.ha.store.api.BackingStoreConfiguration;
+import org.glassfish.ha.store.api.BackingStoreException;
+import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
+import org.shoal.adapter.store.commands.*;
+import org.shoal.ha.cache.api.*;
+import org.shoal.ha.cache.impl.command.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 /**
@@ -52,18 +58,34 @@ import java.util.StringTokenizer;
  */
 public class DataStoreShell {
 
-    DataStore ds;
+    BackingStore<String, Serializable> ds;
 
     int counter = 0;
 
-    public static void main(String[] args) {
-        DataStore ds = DataStoreFactory.createDataStore(args[0], args[1], args[2]);
+    public static void main(String[] args)
+        throws Exception {
+        DataStoreKeyHelper<String> keyHelper = new StringKeyHelper();
+        DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
+
+        BackingStoreConfiguration<String, Serializable> conf = new BackingStoreConfiguration<String, Serializable>();
+        conf.setStoreName(args[0])
+                .setInstanceName(args[1])
+                .setClusterName(args[2])
+                .setKeyClazz(String.class)
+                .setValueClazz(Serializable.class)
+                .setClassLoader(ClassLoader.getSystemClassLoader());
+        Map<String, Object> map = conf.getVendorSpecificSettings();
+        map.put("start.gms", true);
+        map.put("local.caching", true);
+        map.put("class.loader", ClassLoader.getSystemClassLoader());
+        BackingStore<String, Serializable> ds =
+                (new ReplicatedBackingStoreFactory()).createBackingStore(conf);
 
         DataStoreShell main = new DataStoreShell();
         main.runShell(ds);
     }
 
-    private void runShell(DataStore ds) {
+    private void runShell(BackingStore<String, Serializable> ds) {
         this.ds = ds;
         String line = "";
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -84,8 +106,11 @@ public class DataStoreShell {
                     execute(command, params);
                     counter++;
                 }
-            } catch (IOException ioEx) {
-                //TODO
+            } catch (IOException  ioEx) {
+                ioEx.printStackTrace();
+            } catch (BackingStoreException bsEx) {
+                bsEx.printStackTrace();
+
             }
         } while (!"quit".equalsIgnoreCase(line));
     }
@@ -96,12 +121,12 @@ public class DataStoreShell {
     }
 
     private void execute(String command, String[] params)
-        throws DataStoreException {
+        throws BackingStoreException {
 
         if ("put".equalsIgnoreCase(command)) {
-            ds.put(params[0], params[1]);
+            ds.save(params[0], params[1], true);
         } else if ("get".equalsIgnoreCase(command)) {
-            System.out.println("get(" + params[0] + ") => " + ds.get(params[0]));
+            System.out.println("get(" + params[0] + ") => " + ds.load(params[0], null));
         } else if ("remove".equalsIgnoreCase(command)) {
             ds.remove(params[0]);
         }

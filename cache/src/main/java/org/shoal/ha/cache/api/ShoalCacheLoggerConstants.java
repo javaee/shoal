@@ -15,6 +15,8 @@ public class ShoalCacheLoggerConstants {
 
     public static final String CACHE_REMOVE_COMMAND           = "org.shoal.ha.cache.command.remove";
 
+    public static final String CACHE_STALE_REMOVE_COMMAND           = "org.shoal.ha.cache.command.remove";
+
     public static final String CACHE_LOAD_REQUEST_COMMAND     = "org.shoal.ha.cache.command.load_request";
 
     public static final String CACHE_LOAD_RESPONSE_COMMAND    = "org.shoal.ha.cache.command.load_response";

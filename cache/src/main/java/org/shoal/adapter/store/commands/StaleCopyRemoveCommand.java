@@ -34,14 +34,13 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -50,66 +49,61 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class SaveCommand<K, V>
+public class StaleCopyRemoveCommand<K, V>
     extends Command<K, V> {
 
-    private K k;
+    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_STALE_REMOVE_COMMAND);
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+    private K key;
 
-    private V v;
+    private String staleTargetName;
 
-    private byte[] stateToTransmit;
-
-    public SaveCommand() {
-        super(ReplicationCommandOpcode.SAVE);
+    public StaleCopyRemoveCommand() {
+        super(ReplicationCommandOpcode.STALE_REMOVE);
     }
 
-    public SaveCommand(K k, V v) {
-        this();
-        setKey(k);
-        setValue(v);
+    public K getKey() {
+        return key;
     }
 
-    public void setKey(K k) {
-        this.k = k;
+    public void setKey(K key) {
+        this.key = key;
     }
 
-    public void setValue(V v) {
-        this.v = v;
+    public String getStaleTargetName() {
+        return staleTargetName;
     }
 
-    @Override
-    protected SaveCommand<K, V> createNewInstance() {
-        return new SaveCommand<K, V>();
+    public void setStaleTargetName(String targetName) {
+        this.staleTargetName = targetName;
     }
 
     @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    protected StaleCopyRemoveCommand<K, V> createNewInstance() {
+        return new StaleCopyRemoveCommand<K, V>();
+    }
+
+    @Override
+    public void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
-
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
-        dsc.getDataStoreEntryHelper().writeObject(ros, v);
+        setTargetName(staleTargetName);
+        dsc.getDataStoreKeyHelper().writeKey(ros, getKey());
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save " + k + " to " + getTargetName());
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending stale_copy_remove " + getKey() + " to " + staleTargetName);
         }
     }
-
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
-        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
     }
 
     @Override
-    public void execute(String initiator)
-        throws DataStoreException {
+    public void execute(String initiator) {
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received stale_remove " + key + " from " + initiator);
         }
-        dsc.getReplicaStore().put(k, v);
+        dsc.getReplicaStore().remove(key);
     }
+
 }

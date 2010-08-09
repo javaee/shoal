@@ -54,6 +54,8 @@ public class CommandResponse
 
     private long tokenId;
 
+    private String respondingInstanceName;
+
     private Object result;
 
     private FutureTask future;
@@ -82,6 +84,14 @@ public class CommandResponse
 
     public void setException(Exception ex) {
         setResult(ex);
+    }
+
+    public String getRespondingInstanceName() {
+        return respondingInstanceName;
+    }
+
+    public void setRespondingInstanceName(String respondingInstanceName) {
+        this.respondingInstanceName = respondingInstanceName;
     }
 
     public Object call() {

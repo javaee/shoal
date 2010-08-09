@@ -34,44 +34,67 @@
  * holder.
  */
 
-package org.shoal.test.command;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.api.AbstractCommandInterceptor;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
-public class BatchedNoopCommandInterceptor<K, V>
-        extends AbstractCommandInterceptor<K, V> {
+public class RemoveCommand<K, V>
+    extends Command<K, V> {
 
-    private AtomicInteger batchedTransCount = new AtomicInteger();
+    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
 
-    private AtomicInteger batchedRecvCount = new AtomicInteger();
+    private K key;
 
-    @Override
-    public void onTransmit(Command cmd, String initiator)
-        throws DataStoreException {
-        System.out.println("**** BatchedNoopCommandInterceptor.onTransmit() got: " + cmd.getClass().getName());
-        batchedTransCount.incrementAndGet();
-        super.onTransmit(cmd, initiator);
+    public RemoveCommand() {
+        super(ReplicationCommandOpcode.REMOVE);
+    }
+
+    public K getKey() {
+        return key;
+    }
+
+    public void setKey(K key) {
+        this.key = key;
     }
 
     @Override
-    public void onReceive(Command cmd, String initiator)
-        throws DataStoreException {
-        batchedRecvCount.incrementAndGet();
-        super.onReceive(cmd, initiator);
+    protected RemoveCommand<K, V> createNewInstance() {
+        return new RemoveCommand<K, V>();
     }
 
-    public int getTransmitCount() {
-        return batchedTransCount.get();
+    @Override
+    public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
+        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key));
+
+        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending remove " + key + " to " + getTargetName());
+        }
     }
 
-    public int getReceiveCount() {
-        return batchedRecvCount.get();
+    @Override
+    public void readCommandPayload(ReplicationInputStream ris)
+        throws IOException {
+        key = dsc.getDataStoreKeyHelper().readKey(ris);
     }
+
+    @Override
+    public void execute(String initiator) {
+        if (_logger.isLoggable(Level.INFO)) {
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received remove " + key + " from " + initiator);
+        }
+        dsc.getReplicaStore().remove(key);
+    }
+
 }

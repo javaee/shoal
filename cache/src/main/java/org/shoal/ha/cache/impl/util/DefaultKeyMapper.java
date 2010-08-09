@@ -169,13 +169,17 @@ public class DefaultKeyMapper<K>
 
     public void printMemberStates(String message) {
         StringBuilder sb = new StringBuilder("DefaultKeyMapper[" + myName + "]." + message + " currentView: ");
+        String delim = "";
         for (String st : members) {
-            sb.append(st);
+            sb.append(delim).append(st);
+            delim = " : ";
         }
         sb.append("; previousView ");
 
+        delim = "";
         for (String st : previuousAliveAndReadyMembers) {
-            sb.append(st);
+            sb.append(delim).append(st);
+            delim = " : ";
         }
         _logger.log(Level.INFO, sb.toString());
     }

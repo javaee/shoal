@@ -36,8 +36,10 @@
 
 package org.shoal.ha.cache.impl.store;
 
-import org.shoal.ha.cache.impl.interceptor.CommandHandlerInterceptor;
-import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
+import org.shoal.adapter.store.commands.LoadRequestCommand;
+import org.shoal.adapter.store.commands.RemoveCommand;
+import org.shoal.adapter.store.commands.SaveCommand;
+import org.shoal.adapter.store.commands.UpdateDeltaCommand;
 import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
@@ -70,7 +72,7 @@ public class ReplicatedDataStore<K, V>
 
     private DataStoreConfigurator<K, V> conf;
 
-    private ReplicaLocationHolder<K, V> localDS;
+    private ReplicaStore<K, V> replicaStore;
 
     public ReplicatedDataStore(DataStoreConfigurator<K, V> conf, GroupService gs) {
         this.conf = conf;
@@ -95,10 +97,12 @@ public class ReplicatedDataStore<K, V>
 //        cm.registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
 //        cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
 
-        cm.registerCommand(new SaveCommand<K, V>());
-        cm.registerCommand(new LoadRequestCommand<K, V>());
-        cm.registerCommand(new LoadResponseCommand<K, V>(null, null, 0));
-        cm.registerCommand(new RemoveCommand<K, V>());
+
+        if (conf.getCommands() != null) {
+            for (Command<K, ? super V> cmd : conf.getCommands()) {
+                cm.registerCommand(cmd);
+            }
+        }
 
         KeyMapper<K> keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
@@ -107,7 +111,7 @@ public class ReplicatedDataStore<K, V>
 
         gs.registerGroupMessageReceiver(storeName, cm);
 
-        localDS = new ReplicaLocationHolder<K, V>(conf, dsc);
+        replicaStore = dsc.getReplicaStore();
 
         Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
         logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
@@ -120,13 +124,24 @@ public class ReplicatedDataStore<K, V>
     @Override
     public String put(K k, V v)
             throws DataStoreException {
-        SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
-        cm.execute(cmd);
 
-        String newLocation = cmd.getTargetName();
-        localDS.put(k, v, newLocation);
+        String result = null;
+        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
+        synchronized (entry) {
+            if (! entry.isRemoved()) {
+                SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
+                cm.execute(cmd);
+                if (conf.isCacheLocally()) {
+                    entry.setV(v);
+                }
+                entry.setReplicaInstanceName(cmd.getTargetName());
+                result = cmd.getTargetName();
+            } else {
+                return "";
+            }
+        }
 
-        return newLocation;
+        return result;
     }
 
     @Override
@@ -139,33 +154,53 @@ public class ReplicatedDataStore<K, V>
     }
 
     @Override
-    public V get(K k)
+    public V get(K key)
             throws DataStoreException {
 
-        V v = localDS.get(k);
+        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
+        V v = null;
+        synchronized (entry) {
+            if (! entry.isRemoved()) {
+                v = entry.getV();
+            } else {
+                return null; //Because it is already removed
+            }
+        }
+
         if (v == null) {
-
-            ReplicaStore<K, V> replicaStore = dsc.getReplicaStore();
-            DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
-
             try {
-                if (entry == null) {
-                    LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(k);
-                    cm.execute(cmd);
+                LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(key);
+                cm.execute(cmd);
 
-                    v = cmd.getResult();
+                v = cmd.getResult();
+
+
+                entry = replicaStore.getOrCreateEntry(key);
+                synchronized (entry) {
+                    if (! entry.isRemoved()) {
+                        entry.setReplicaInstanceName(cmd.getRespondingInstanceName());
+
+                        if (conf.isCacheLocally()) {
+                            entry.setV(v);
+                        }
+                    }
                 }
             } catch (DataStoreException dseEx) {
                 throw dseEx;
             }
+
         }
+
         return v;
     }
 
     @Override
     public void remove(K k)
             throws DataStoreException {
-        localDS.remove(k);
+        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
+        synchronized (entry) {
+            entry.markAsRemoved("Removed by ReplicatedDataStore.remove");
+        }
         
         RemoveCommand<K, V> cmd = new RemoveCommand<K, V>();
         cmd.setKey(k);

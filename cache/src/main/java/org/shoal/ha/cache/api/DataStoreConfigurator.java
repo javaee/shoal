@@ -36,7 +36,12 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.mapper.KeyMapper;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Mahesh Kannan
@@ -67,6 +72,11 @@ public class DataStoreConfigurator<K, V> {
 
     private boolean cacheLocally;
 
+    private boolean doSyncReplication;
+
+    private List<Command<K, ? super V>> commands = new ArrayList<Command<K, ? super V>>();
+
+    private List<AbstractCommandInterceptor<K, V>> interceptors;
 
     public String getInstanceName() {
         return instanceName;
@@ -173,6 +183,22 @@ public class DataStoreConfigurator<K, V> {
     public DataStoreConfigurator<K, V> setCacheLocally(boolean cacheLocally) {
         this.cacheLocally = cacheLocally;
         return this;
+    }
+
+    public boolean isDoSyncReplication() {
+        return doSyncReplication;
+    }
+
+    public void setDoSyncReplication(boolean doSyncReplication) {
+        this.doSyncReplication = doSyncReplication;
+    }
+
+    public List<Command<K, ? super V>> getCommands() {
+        return commands;
+    }
+
+    public void addCommand(Command<K, V> cmd) {
+        commands.add(cmd);
     }
 
     @Override

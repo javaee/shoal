@@ -34,104 +34,100 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreContext;
+import org.glassfish.ha.store.api.Storeable;
+import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
- * 
  */
-public abstract class Command<K, V> {
+public class StoreableFullSaveCommand<K, V extends Storeable>
+    extends Command<K, V> {
 
-    private byte opcode;
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
-    protected DataStoreContext<K, V> dsc;
+    private K k;
 
-    private CommandManager<K, V> cm;
+    private Storeable v;
 
-    private String targetName;
+    private long version;
 
-    private ReplicationOutputStream cachedROS;
+    private transient byte[] rawReadState;
 
-    private String commandName;
-
-    protected Command(byte opcode) {
-        this.opcode = opcode;
-        this.commandName = this.getClass().getName();
-        int index = commandName.lastIndexOf('.');
-        commandName = commandName.substring(index+1);
+    public StoreableFullSaveCommand() {
+        super(ReplicationCommandOpcode.SAVE);
     }
 
-    public void initialize(DataStoreContext<K, V> rs) {
-        this.dsc = rs;
-        this.cm = rs.getCommandManager();
+    public StoreableFullSaveCommand(K k, V v) {
+        this();
+        setKey(k);
+        setValue(v);
     }
 
-    protected final DataStoreContext<K, V> getDataStoreContext() {
-        return dsc;
+    @Override
+    public String getName() {
+        return "full_save";
     }
 
-    protected final CommandManager<K, V> getCommandManager() {
-        return cm;
+    public void setKey(K k) {
+        this.k = k;
     }
 
-    public String getTargetName() {
-        return targetName;
+    public void setValue(V v) {
+        this.v = v;
     }
 
-    public final byte getOpcode() {
-        return opcode;
+    @Override
+    protected StoreableFullSaveCommand<K, V> createNewInstance() {
+        return new StoreableFullSaveCommand<K, V>();
     }
 
-    protected void setTargetName(String val) {
-        targetName = val;
-    }
-
-    public final void prepareTransmit(DataStoreContext<K, V> ctx)
+    @Override
+    protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-        cachedROS = new ReplicationOutputStream();
-        cachedROS.write(getOpcode());
 
-        writeCommandPayload(cachedROS);
+        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+
+        dsc.getDataStoreKeyHelper().writeKey(ros, k);
+        ros.writeLong(v._storeable_getVersion());
+        dsc.getDataStoreEntryHelper().writeObject(ros, (V) v);
     }
 
-    public final void write(ReplicationOutputStream globalROS)
+    @Override
+    public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        try {
-            byte[] data = cachedROS.toByteArray();
-            globalROS.write(data);
-            globalROS.flush();
-            System.out.println("**Command.write wrote: " + data.length);
-        } catch (IOException ex) {
-           ex.printStackTrace();
+        k = dsc.getDataStoreKeyHelper().readKey(ris);
+        version = ris.readLong();
+        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+    }
+
+    @Override
+    public void execute(String initiator)
+        throws DataStoreException {
+
+        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
+        synchronized (entry) {
+            V entryV = entry.getV();
+            boolean canUpdate = false;
+            if (entryV != null) {
+                if ((!entry.isRemoved()) && (entryV._storeable_getVersion() < version)) {
+                    canUpdate = true;
+                }
+            }
+            
+            if (canUpdate) {
+                entry.setV((V) v);
+            }
         }
     }
-
-    public final void prepareToExecute(ReplicationInputStream ris)
-        throws IOException, DataStoreException {
-        ris.read(); //Don't remove this
-        readCommandPayload(ris);
-    }
-
-    public String getName() {
-        return commandName + ":" + opcode;
-    }
-
-    protected abstract void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException;
-
-    protected abstract void readCommandPayload(ReplicationInputStream ris)
-        throws IOException;
-
-    protected abstract Command<K, V> createNewInstance();
-
-    public abstract void execute(String initiator)
-            throws DataStoreException;
-
 }

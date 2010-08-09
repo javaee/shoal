@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.impl.interceptor;
 
+import org.shoal.ha.cache.api.AbstractCommandInterceptor;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 

@@ -36,11 +36,13 @@
 
 package org.shoal.ha.cache.impl.command;
 
+import org.shoal.ha.cache.api.AbstractCommandInterceptor;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.interceptor.CommandHandlerInterceptor;
+import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
+import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
 import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
@@ -75,12 +77,16 @@ public class CommandManager<K, V>
         this.myName = dsc.getInstanceName();
 
         registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
-        registerExecutionInterceptor(new TransmitInterceptor<K, V>());
 
-        //dsc.getGroupService().registerGroupMessageReceiver(dsc.getServiceName(), this);
+        if (! dsc.isDoSyncReplication()) {
+            registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
+            registerCommand(new ReplicationFramePayloadCommand<K, V>());
+        }
+
+        registerExecutionInterceptor(new TransmitInterceptor<K, V>());
     }
 
-    public void registerCommand(Command<K, V> command) {
+    public void registerCommand(Command command) {
         commands[command.getOpcode()] = command;
         command.initialize(dsc);
     }
@@ -92,6 +98,7 @@ public class CommandManager<K, V>
         } else {
             tail.setNext(interceptor);
         }
+        
         interceptor.setPrev(tail);
         interceptor.setNext(null);
         tail = interceptor;

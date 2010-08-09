@@ -39,22 +39,29 @@ package org.shoal.adapter.store;
 import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
+import org.glassfish.ha.store.api.Storeable;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.api.*;
+import org.shoal.ha.cache.impl.store.ReplicaStore;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Mahesh Kannan
  */
-public class ReplicatedBackingStore<K extends Serializable, V extends Serializable>
+public class StorableReplicatedBackingStore<K extends Serializable, V extends Storeable>
         extends BackingStore<K, V> {
 
-    DataStore<K, V> dataStore;
+    private ReplicationFramework<K, V> framework;
+
+    private ReplicaStore<K, V> replicaStore;
+
+    boolean localCachingEnabled;
 
     @Override
-    protected void initialize(BackingStoreConfiguration<K, V> conf)
+    public void initialize(BackingStoreConfiguration<K, V> conf)
             throws BackingStoreException {
         super.initialize(conf);
         DataStoreConfigurator<K, V> dsConf = new DataStoreConfigurator<K, V>();
@@ -103,29 +110,94 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
         boolean doSyncReplication = Boolean.valueOf((String) vendorSpecificMap.get("synchronous.replication"));
         dsConf.setDoSyncReplication(doSyncReplication);
-        
+
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
-        dsConf.addCommand(new SaveCommand<K, V>());
-        dsConf.addCommand(new RemoveCommand<K, V>());
-        dsConf.addCommand(new LoadRequestCommand<K, V>());
-        dsConf.addCommand(new LoadResponseCommand<K, V>());
-        dataStore = DataStoreFactory.createDataStore(dsConf);
+        dsConf.addCommand(new StoreableSaveCommand<K, V>());
+        dsConf.addCommand(new StoreableRemoveCommand<K, V>());
+        dsConf.addCommand(new StoreableTouchCommand<K, V>());
+        dsConf.addCommand(new StoreableBroadcastLoadRequestCommand<K, V>());
+        dsConf.addCommand(new StoreableLoadResponseCommand<K, V>());
+        dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
+
+        framework = new ReplicationFramework<K, V>(dsConf);
+
+        replicaStore = framework.getReplicaStore();
+
+        localCachingEnabled = framework.getDataStoreConfigurator().isCacheLocally();
     }
 
     @Override
-    public V load(K key, String version) throws BackingStoreException {
-        try {
-            return dataStore.get(key);
-        } catch (DataStoreException dsEx) {
-            throw new BackingStoreException("Error during load: " + key, dsEx);
+    public V load(K key, String strVersion) throws BackingStoreException {
+        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
+        Long version = strVersion == null ? Long.MIN_VALUE : Long.valueOf(strVersion);
+        V v = null;
+        synchronized (entry) {
+            if (!entry.isRemoved()) {
+                v = entry.getV();
+                if (v == null || v._storeable_getVersion() < version) {
+                    v = null;
+                }
+            } else {
+                //Because it is already removed
+                return null;
+            }
         }
+
+        if (v == null) {
+            try {
+                //NOTE: Be careful with LoadREquest command. Do not synchronize while executing the command
+                //  as the response may want to set the result on the entry
+                StoreableBroadcastLoadRequestCommand<K, V> cmd =
+                        new StoreableBroadcastLoadRequestCommand<K, V>(key, version == null ? null : Long.valueOf(version));
+                framework.execute(cmd);
+                v = cmd.getResult(6, TimeUnit.SECONDS);
+                entry.setV(v);
+
+                entry = replicaStore.getOrCreateEntry(key);
+
+                synchronized (entry) {
+                    if (!entry.isRemoved()) {
+                        entry.setReplicaInstanceName(cmd.getRespondingInstanceName());
+
+                        if (localCachingEnabled) {
+                            entry.setV(v);
+                        }
+                    }
+                }
+            } catch (DataStoreException dseEx) {
+                throw new BackingStoreException("Error during load", dseEx);
+            }
+        }
+
+        return v;
     }
 
     @Override
     public String save(K key, V value, boolean isNew) throws BackingStoreException {
+        String result = null;
         try {
-            return dataStore.put(key, value);
+            DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
+
+            //Note: synchronizing the entire method or during framework.execute
+            //  could result in deadlock if we support concurrent save from different VMs!!
+            //  (because both entries will be locked by diff threads)
+            synchronized (entry) {
+                StoreableSaveCommand<K, V> cmd = new StoreableSaveCommand<K, V>(key, value);
+                cmd.setEntry(entry);
+                framework.execute(cmd);
+
+                if (!entry.isRemoved()) {
+                    if (localCachingEnabled) {
+                        entry.setV(value);
+                    }
+                    entry.setReplicaInstanceName(cmd.getTargetName());
+
+                    result = cmd.getTargetName();
+                }
+            }
+
+            return result;
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during save: " + key, dsEx);
         }
@@ -134,7 +206,12 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     @Override
     public void remove(K key) throws BackingStoreException {
         try {
-            dataStore.remove(key);
+            DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
+            synchronized (entry) {
+                entry.markAsRemoved("Removed by BackingStore.remove");
+            }
+            StoreableRemoveCommand<K, V> cmd = new StoreableRemoveCommand<K, V>(key);
+            framework.execute(cmd);
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during remove: " + key, dsEx);
         }
@@ -142,26 +219,49 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
-        return dataStore.removeIdleEntries(idleTime);
+        return 0; //TODO
     }
 
     @Override
     public int size() throws BackingStoreException {
-        return 0;
+        return framework.getReplicaStore().size();
     }
 
     @Override
     public void destroy() throws BackingStoreException {
-        dataStore.close();
+        framework = null;
     }
 
     @Override
-    public void updateTimestamp(K key, long time) throws BackingStoreException {
+    public void updateTimestamp(K key, long t) {
+        //Will be removed shortly
+    }
+
+    //TODO: @Override
+
+    public String updateTimestamp(K key, Long version, Long accessTime, Long maxIdleTime) throws BackingStoreException {
+        String result = "";
         try {
-            dataStore.touch(key, Long.MAX_VALUE - 1, time, 30 * 60 * 1000);
+            DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
+            synchronized (entry) {
+                if (! entry.isRemoved()) {
+                    if (entry.getReplicaInstanceName() != null) {
+                        StoreableTouchCommand<K, V> cmd = new StoreableTouchCommand<K, V>(key, version, accessTime, maxIdleTime);
+                        framework.execute(cmd);
+
+                        result = entry.getReplicaInstanceName().equals(cmd.getTargetName())
+                                ? cmd.getTargetName() : "";
+                    }
+                } else {
+                    //entry already removed
+                }
+            }
+
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during load: " + key, dsEx);
         }
+
+        return result;
     }
 
 }

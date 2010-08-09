@@ -34,10 +34,11 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.*;
 
 import java.io.IOException;
@@ -60,7 +61,7 @@ public class LoadResponseCommand<K, V>
 
     private String originatingInstance;
 
-    private LoadResponseCommand() {
+    public LoadResponseCommand() {
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
     }
 

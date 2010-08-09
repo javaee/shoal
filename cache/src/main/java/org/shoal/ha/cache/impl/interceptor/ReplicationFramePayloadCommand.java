@@ -34,44 +34,63 @@
  * holder.
  */
 
-package org.shoal.test.command;
+package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.api.AbstractCommandInterceptor;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * @author Mahesh Kannan
  */
-public class BatchedNoopCommandInterceptor<K, V>
-        extends AbstractCommandInterceptor<K, V> {
+public class ReplicationFramePayloadCommand<K, V>
+    extends Command<K, V> {
 
-    private AtomicInteger batchedTransCount = new AtomicInteger();
+    private ReplicationFrame<K, V> frame;
 
-    private AtomicInteger batchedRecvCount = new AtomicInteger();
+    public ReplicationFramePayloadCommand() {
+        super(ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD);
+    }
 
-    @Override
-    public void onTransmit(Command cmd, String initiator)
-        throws DataStoreException {
-        System.out.println("**** BatchedNoopCommandInterceptor.onTransmit() got: " + cmd.getClass().getName());
-        batchedTransCount.incrementAndGet();
-        super.onTransmit(cmd, initiator);
+    public void setReplicationFrame(ReplicationFrame<K, V> frame) {
+        this.frame = frame;
     }
 
     @Override
-    public void onReceive(Command cmd, String initiator)
+    protected ReplicationFramePayloadCommand<K, V> createNewInstance() {
+        return new ReplicationFramePayloadCommand<K, V>();
+    }
+
+    @Override
+    public void writeCommandPayload(ReplicationOutputStream ros)
+            throws IOException {
+        setTargetName(frame.getTargetInstanceName());
+        ros.write(frame.getSerializedData());
+    }
+
+    @Override
+    public void readCommandPayload(ReplicationInputStream ris)
         throws DataStoreException {
-        batchedRecvCount.incrementAndGet();
-        super.onReceive(cmd, initiator);
+        ReplicationFrame<K, V> frame = ReplicationFrame.toReplicationFrame(dsc, ris);
+        setReplicationFrame(frame);
     }
 
-    public int getTransmitCount() {
-        return batchedTransCount.get();
+    @Override
+    public void execute(String initiator)
+        throws DataStoreException {
+
+        List<Command<K, V>> commands = frame.getCommands();
+        for (Command<K, V> cmd : commands) {
+            getCommandManager().executeCommand(cmd, false, frame.getSourceInstanceName());
+        }
     }
 
-    public int getReceiveCount() {
-        return batchedRecvCount.get();
+    public String toString() {
+        return "ReplicationFramePayloadCommand: contains " + frame.getCommands().size() + " commands";
     }
 }

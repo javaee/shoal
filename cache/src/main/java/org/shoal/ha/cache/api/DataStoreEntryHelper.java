@@ -50,13 +50,10 @@ public interface DataStoreEntryHelper<K, V> {
     public V getV(DataStoreEntry<K, V> entry)
             throws DataStoreException;
 
-    public void writeObject(ReplicationOutputStream ros, Object obj)
+    public void writeObject(ReplicationOutputStream ros, V obj)
             throws IOException;
 
     public Object readObject(ReplicationInputStream ris)
         throws IOException;
-
-    public void updateState(K k, DataStoreEntry<K, V> entry, Object obj)
-            throws DataStoreException;
 
 }

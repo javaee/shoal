@@ -34,15 +34,17 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.command.ReplicationFramePayloadCommand;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.ASyncThreadPool;
 
-import java.io.ByteArrayOutputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -57,14 +59,18 @@ public class ReplicationCommandTransmitter<K, V>
 
     private DataStoreContext<K, V> dsc;
 
-    private String targetName;
+    private volatile String targetName;
 
     private ConcurrentLinkedQueue<Command<K, V>> list
             = new ConcurrentLinkedQueue<Command<K, V>>();
 
-    public void initialize(String targetName, DataStoreContext<K, V> rsInfo) {
+    private ScheduledFuture future;
+
+    public void initialize(String targetName, DataStoreContext<K, V> rsInfo, ASyncThreadPool asyncPool) {
         this.targetName = targetName;
         this.dsc = rsInfo;
+
+        future = asyncPool.scheduleAtFixedRate(this, 100, 100, TimeUnit.MILLISECONDS);
     }
 
     public void addCommand(Command<K, V> cmd) {
@@ -74,41 +80,34 @@ public class ReplicationCommandTransmitter<K, V>
     }
 
     public void run() {
-        while (true) {
-            try {
-                Thread.sleep(15);
-                if (list.peek() != null) {
-                    ReplicationFrame<K, V> frame = new ReplicationFrame<K, V>((byte)255,
-                            0, dsc.getInstanceName());
+        try {
+            if (list.peek() != null) {
+                ReplicationFrame<K, V> frame = new ReplicationFrame<K, V>(0, dsc.getInstanceName());
 
-                    Command<K, V> cmd = list.poll();
-                    while (cmd != null) {
-                        frame.addCommand(cmd);
-                        cmd = list.poll();
+                Command<K, V> cmd = list.poll();
+                while (cmd != null) {
+                    frame.addCommand(cmd);
 
-                        if (frame.getCommands().size() >= 20) {
-                            transmitFramePayload(frame);
-                            frame = new ReplicationFrame<K, V>((byte)255,
-                            0, dsc.getInstanceName());
-                        }
-                    }
-
-                    if (frame.getCommands().size() > 0) {
+                    if (frame.getCommands().size() >= 20) {
                         transmitFramePayload(frame);
+                        frame = new ReplicationFrame<K, V>(0, dsc.getInstanceName());
                     }
 
-
+                    cmd = list.poll();
                 }
-            } catch (Exception ex) {
-                ex.printStackTrace();
+
+                if (frame.getCommands().size() > 0) {
+                    transmitFramePayload(frame);
+                }
             }
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 
     private void transmitFramePayload(ReplicationFrame<K, V> frame)
         throws DataStoreException {
         frame.setSeqNo(outgoingSeqno.incrementAndGet());
-        frame.setMinOutstandingPacketNumber(acknowledgedSeqno.get());
         frame.setTargetInstanceName(targetName);
         ReplicationFramePayloadCommand<K, V> cmd = new ReplicationFramePayloadCommand<K, V>();
         cmd.setReplicationFrame(frame);

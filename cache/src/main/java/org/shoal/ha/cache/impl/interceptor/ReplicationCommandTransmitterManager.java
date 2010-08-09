@@ -34,19 +34,19 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.ha.cache.impl.interceptor;
 
-import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.api.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.ASyncThreadPool;
 
-import java.util.Arrays;
-import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
@@ -61,7 +61,20 @@ public class ReplicationCommandTransmitterManager<K, V>
     private ConcurrentHashMap<String, ReplicationCommandTransmitter<K, V>> transmitters
             = new ConcurrentHashMap<String, ReplicationCommandTransmitter<K, V>>();
 
-    private ReplicationCommandTransmitter<K, V> broadcastTransmitter = new ReplicationCommandTransmitter<K, V>();
+    private ReplicationCommandTransmitter<K, V> broadcastTransmitter;
+
+    private ASyncThreadPool asyncPool;
+
+    public ReplicationCommandTransmitterManager() {
+        this.asyncPool = new ASyncThreadPool(7);
+    }
+
+    @Override
+    public void initialize(DataStoreContext<K, V> dsc) {
+        super.initialize(dsc);
+        broadcastTransmitter = new ReplicationCommandTransmitter<K, V>();
+        broadcastTransmitter.initialize(null, dsc, asyncPool);
+    }
 
     @Override
     public void onTransmit(Command<K, V> cmd, String initiator)
@@ -70,7 +83,8 @@ public class ReplicationCommandTransmitterManager<K, V>
             case ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD:
             case ReplicationCommandOpcode.REMOVE:
                 super.onTransmit(cmd, initiator);
-
+                break;
+            
             default:
                 String target = cmd.getTargetName();
                 if (target != null) {
@@ -79,7 +93,7 @@ public class ReplicationCommandTransmitterManager<K, V>
                     ReplicationCommandTransmitter<K, V> rft = transmitters.get(target);
                     if (rft == null) {
                         rft = new ReplicationCommandTransmitter<K, V>();
-                        rft.initialize(target, getDataStoreContext());
+                        rft.initialize(target, getDataStoreContext(), asyncPool);
                         ReplicationCommandTransmitter oldRCT = transmitters.putIfAbsent(target, rft);
                         if (oldRCT != null) {
                             rft = oldRCT;

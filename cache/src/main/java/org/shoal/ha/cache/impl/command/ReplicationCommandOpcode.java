@@ -53,7 +53,7 @@ public class ReplicationCommandOpcode {
 
     public static final byte TOUCH = 38;
 
-    public static final byte REPLICATION_FRAME_PAYLOAD = 51;
+    public static final byte REPLICATION_FRAME_PAYLOAD = 16;
 
     public static final byte REMOVE_EXPIRED = 39;
 

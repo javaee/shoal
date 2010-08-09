@@ -87,7 +87,6 @@ public class ReplicationInputStream
     public final String readLengthPrefixedString() {
         String str = null;
         int len = readInt();
-        System.out.println("**About to read a string of length: " + len);
         if (len > 0) {
             str = new String(buf, pos, len);
             pos += len;

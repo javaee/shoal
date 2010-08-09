@@ -68,12 +68,14 @@ public class DefaultDataStoreEntryHelper<K, V>
         if (replicationEntry == null) {
             return null;
         }
-        
-        byte[] data = (byte[]) replicationEntry.getState();
+
+        V v = replicationEntry.getV();
+        /*
+        byte[] data = (byte[]) replicationEntry.getV();
         if (data == null) {
             return null;
         }
-        
+
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
         ObjectInputStream ois = null;
         V v = null;
@@ -94,6 +96,7 @@ public class DefaultDataStoreEntryHelper<K, V>
             } catch (IOException ioEx2) {
             }
         }
+        */
 
         return v;
     }
@@ -146,10 +149,16 @@ public class DefaultDataStoreEntryHelper<K, V>
         }
     }
 
-    @Override
-    public void updateState(K k, DataStoreEntry<K, V> kvDataStoreEntry, Object obj)
-        throws DataStoreException {
-        kvDataStoreEntry.setKey(k);
-        kvDataStoreEntry.setState(obj);
-    }
+//    @Override
+//    public void updateState(K k, DataStoreEntry<K, V> kvDataStoreEntry, V obj)
+//        throws DataStoreException {
+//        kvDataStoreEntry.setKey(k);
+//        kvDataStoreEntry.setV(obj);
+//    }
+//
+//    @Override
+//    public void setV(K k, DataStoreEntry<K, V> kvDataStoreEntry, V obj) throws DataStoreException {
+//        kvDataStoreEntry.setV(obj);
+//    }
+
 }

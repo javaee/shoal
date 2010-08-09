@@ -34,12 +34,13 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.*;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class LoadRequestCommand<K, V>
+public class BroadcastLoadRequestCommand<K, V>
         extends Command<K, V> {
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
@@ -68,45 +69,37 @@ public class LoadRequestCommand<K, V>
 
     private String originatingInstance;
 
-
-    public LoadRequestCommand() {
+    public BroadcastLoadRequestCommand() {
         this(null);
     }
 
-    public LoadRequestCommand(K key) {
+    public BroadcastLoadRequestCommand(K key) {
         super(ReplicationCommandOpcode.LOAD_REQUEST);
         this.key = key;
     }
 
-    public K getKey() {
-        return key;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
-    }
-
     @Override
-    protected LoadRequestCommand<K, V> createNewInstance() {
-        return new LoadRequestCommand<K, V>();
+    protected BroadcastLoadRequestCommand<K, V> createNewInstance() {
+        return new BroadcastLoadRequestCommand<K, V>();
     }
-    
+
     @Override
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
         originatingInstance = dsc.getInstanceName();
-        String targetName = dsc.getKeyMapper().findReplicaInstance(dsc.getGroupName(), key);
-        setTargetName(targetName);
+//        String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
+        setTargetName(null);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
 
+
         ros.writeLong(resp.getTokenId());
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending load_request " + key + " to " + getTargetName());
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending broadcast_load " + key + " to " + getTargetName());
         }
     }
 
@@ -117,40 +110,37 @@ public class LoadRequestCommand<K, V>
         tokenId = ris.readLong();
         key = dsc.getDataStoreKeyHelper().readKey(ris);
         originatingInstance = ris.readLengthPrefixedString();
+
     }
 
     @Override
     public void execute(String initiator) {
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received load_request " + key + " from " + originatingInstance);
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received broadcast_load " + key + " from " + originatingInstance);
         }
-
         try {
-            DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
-            V v = e == null ? null : (V) e.getState();
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_request " + key + " => " + v);
-            }
-            if (!originatingInstance.equals(dsc.getInstanceName())) {
-                LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);
-                rsp.setOriginatingInstance(originatingInstance);
-                getCommandManager().execute(rsp);
-            } else {
-                resp.setResult(e);
-            }
+        DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
+        if (!originatingInstance.equals(dsc.getInstanceName())) {
+            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(
+                    key, dsc.getDataStoreEntryHelper().getV(e), tokenId);
+            rsp.setOriginatingInstance(originatingInstance);
+            getCommandManager().execute(rsp);
+        } else {
+            resp.setResult(e);
+        }
         } catch (DataStoreException dsEx) {
             resp.setException(dsEx);
         }
     }
 
-    public V getResult()
+    public DataStoreEntry<K, V> getResult(long waitFor, TimeUnit unit)
             throws DataStoreException {
         try {
-            Object result = future.get(8000, TimeUnit.MILLISECONDS);
+            Object result = future.get(waitFor, unit);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
-            return (V) result;
+            return (DataStoreEntry<K, V>) result;
         } catch (DataStoreException dsEx) {
             throw dsEx;
         } catch (InterruptedException inEx) {

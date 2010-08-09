@@ -34,15 +34,13 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.ReplicationInputStream;
+import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.Utility;
 
 import java.io.IOException;
@@ -52,52 +50,62 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class RemoveCommand<K, V>
+public class UpdateDeltaCommand<K, V>
     extends Command<K, V> {
 
-    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
 
-    private K key;
+    private K k;
 
-    public RemoveCommand() {
-        super(ReplicationCommandOpcode.REMOVE);
+    private V v;
+
+    UpdateDeltaCommand() {
+        super(ReplicationCommandOpcode.SAVE_DELTA);
     }
 
-    public K getKey() {
-        return key;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
-    }
-
-    @Override
-    protected RemoveCommand<K, V> createNewInstance() {
-        return new RemoveCommand<K, V>();
+    public UpdateDeltaCommand(K k, V obj) {
+        super(ReplicationCommandOpcode.SAVE_DELTA);
+        this.k = k;
+        this.v = obj;
     }
 
     @Override
-    public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key));
+    protected UpdateDeltaCommand<K, V> createNewInstance() {
+        return new UpdateDeltaCommand<K, V>();
+    }
 
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+
+    @Override
+    protected void writeCommandPayload(ReplicationOutputStream ros)
+        throws IOException {
+
+        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+
+        int valueOffset = ros.mark();
+        ros.write(Utility.intToBytes(0));
+        dsc.getDataStoreKeyHelper().writeKey(ros, k);
+        ros.reWrite(valueOffset, Utility.intToBytes(ros.mark()));
+        dsc.getDataStoreEntryHelper().writeObject(ros, v);
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending remove " + key + " to " + getTargetName());
+            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save " + k + " to " + getTargetName());
         }
     }
 
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+
+        int valueOffset = ris.readInt();
+        k = dsc.getDataStoreKeyHelper().readKey(ris);
+        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
     }
+
 
     @Override
     public void execute(String initiator) {
         if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received remove " + key + " from " + initiator);
+            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
         }
-        dsc.getReplicaStore().remove(key);
     }
 
 }

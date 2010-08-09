@@ -36,11 +36,10 @@
 
 package org.shoal.ha.cache.api;
 
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.util.Utility;
+import org.shoal.ha.cache.impl.command.Command;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -50,9 +49,23 @@ public class DataStoreEntry<K, V> {
 
     private K key;
 
-    private Object state;
+    private V v;
 
     private String replicaInstanceName;
+
+    private List<Command<K, V>> pendingUpdates;
+
+    private boolean removed;
+
+    private long removedAt;
+
+    private String reasonForRemoval;
+
+    private boolean localCopy;
+
+    public DataStoreEntry() {
+
+    }
 
     public void setKey(K key) {
         this.key = key;
@@ -62,12 +75,16 @@ public class DataStoreEntry<K, V> {
         return key;
     }
 
-    public Object getState() {
-        return state;
+    public V getV() {
+        return v;
     }
 
-    public void setState(Object state) {
-        this.state = state;
+    public boolean setV(V state) {
+        if (! removed) {
+            this.v = state;
+        }
+
+        return !removed;
     }
 
     public String getReplicaInstanceName() {
@@ -78,4 +95,34 @@ public class DataStoreEntry<K, V> {
         this.replicaInstanceName = replicaInstanceName;
     }
 
+    public List<Command<K, V>> getPendingUpdates() {
+        return pendingUpdates;
+    }
+
+
+    public void clearPendingUpdates() {
+        if (pendingUpdates != null) {
+            pendingUpdates.clear();
+        }
+    }
+
+    public void addPendingUpdate(Command<K, V> cmd) {
+        if (pendingUpdates == null) {
+            pendingUpdates = new ArrayList<Command<K, V>>();
+        }
+        this.pendingUpdates.add(cmd);
+    }
+
+    public boolean isRemoved() {
+        return removed;
+    }
+
+    public void markAsRemoved(String reason) {
+        this.removed = true;
+        v = null;
+        pendingUpdates = null;
+        reasonForRemoval = reason;
+        removedAt = System.currentTimeMillis();
+    }
+    
 }

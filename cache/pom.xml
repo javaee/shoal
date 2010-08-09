@@ -64,7 +64,7 @@
         <dependency>
             <groupId>org.glassfish.ha</groupId>
             <artifactId>ha-api</artifactId>
-            <version>${ha.api.version}</version>
+            <version>3.1-SNAPSHOT</version>
         </dependency>
         <!-- Test -->
 

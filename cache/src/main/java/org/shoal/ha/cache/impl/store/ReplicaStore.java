@@ -57,26 +57,41 @@ public class ReplicaStore<K, V> {
         this.ctx = ctx;
     }
 
-    public void put(K k, Object obj)
-        throws DataStoreException {
-        DataStoreEntry<K, V> dse = map.get(k);
-        if (dse == null) {
-            dse = new DataStoreEntry<K, V>();
-            DataStoreEntry<K, V> oldDSE = map.putIfAbsent(k, dse);
-            if (oldDSE != null) {
-                dse = oldDSE;
+//    public void put(K k, V obj)
+//        throws DataStoreException {
+//        DataStoreEntry<K, V> dse = map.get(k);
+//        if (dse == null) {
+//            dse = new DataStoreEntry<K, V>();
+//            DataStoreEntry<K, V> oldDSE = map.putIfAbsent(k, dse);
+//            if (oldDSE != null) {
+//                dse = oldDSE;
+//            }
+//        }
+//
+//        synchronized (dse) {
+//            ctx.getDataStoreEntryHelper().updateState(k, dse, obj);
+//        }
+//    }
+
+    //This is called during loadRequest. We do not want LoadRequests
+    //  to call getOrCreateEntry()
+    public DataStoreEntry<K, V> getEntry(K k) {
+        return map.get(k);
+
+    }
+
+    public DataStoreEntry<K, V> getOrCreateEntry(K k) {
+        DataStoreEntry<K, V> entry = map.get(k);
+        if (entry == null) {
+            entry = new DataStoreEntry<K, V>();
+            entry.setKey(k);
+            DataStoreEntry<K, V> tEntry = map.putIfAbsent(k, entry);
+            if (tEntry != null) {
+                entry = tEntry;
             }
         }
 
-        synchronized (dse) {
-            ctx.getDataStoreEntryHelper().updateState(k, dse, obj);
-        }
-    }
-
-    public DataStoreEntry<K, V> getEntry(K k)
-        throws DataStoreException {
-        return map.get(k);
-
+        return entry;
     }
 
     public V getV(K k)
@@ -87,7 +102,7 @@ public class ReplicaStore<K, V> {
     }
 
     public void remove(K k) {
-        map.remove(k);
+        DataStoreEntry<K, V> entry = getOrCreateEntry(k);
         System.out.println("** ReplicaStore::remove("+k);
     }
 

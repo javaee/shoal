@@ -38,7 +38,7 @@ package org.shoal.test.command;
 
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.interceptor.AbstractCommandInterceptor;
+import org.shoal.ha.cache.api.AbstractCommandInterceptor;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

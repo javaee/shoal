@@ -34,14 +34,14 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.CommandManager;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.util.Utility;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,36 +51,18 @@ import java.util.List;
  */
 public class ReplicationFrame<K, V> {
 
-    private byte frameCommand;
-
     private String sourceInstanceName;
 
     private String targetInstanceName;
 
     private int seqNo;
 
-    private int windowLen;
-
-    private int minOutstandingPacketNumber;
-
-    private int maxOutstandingPacketNumber;
-
     private List<Command<K, V>> commands
             = new LinkedList<Command<K, V>>();
 
-    public ReplicationFrame(byte frameCommand, int seqNo, String sourceInstanceName) {
-        this.frameCommand = frameCommand;
+    public ReplicationFrame(int seqNo, String sourceInstanceName) {
         this.seqNo = seqNo;
         this.sourceInstanceName = sourceInstanceName;
-    }
-
-    public ReplicationFrame(byte frameCommand, String sourceInstanceName) {
-        this.frameCommand = frameCommand;
-        this.sourceInstanceName = sourceInstanceName;
-    }
-
-    public byte getFrameCommand() {
-        return frameCommand;
     }
 
     public String getSourceInstanceName() {
@@ -103,30 +85,6 @@ public class ReplicationFrame<K, V> {
         this.seqNo = seqNo;
     }
 
-    public int getWindowLen() {
-        return windowLen;
-    }
-
-    public void setWindowLen(int windowLen) {
-        this.windowLen = windowLen;
-    }
-
-    public int getMinOutstandingPacketNumber() {
-        return minOutstandingPacketNumber;
-    }
-
-    public void setMinOutstandingPacketNumber(int minOutstandingPacketNumber) {
-        this.minOutstandingPacketNumber = minOutstandingPacketNumber;
-    }
-
-    public int getMaxOutstandingPacketNumber() {
-        return maxOutstandingPacketNumber;
-    }
-
-    public void setMaxOutstandingPacketNumber(int maxOutstandingPacketNumber) {
-        this.maxOutstandingPacketNumber = maxOutstandingPacketNumber;
-    }
-
     public void addCommand(Command<K, V> cmd) {
         commands.add(cmd);
     }
@@ -135,26 +93,10 @@ public class ReplicationFrame<K, V> {
         return commands;
     }
 
-    private static void writeStringToStream(ByteArrayOutputStream bos, String str)
-            throws IOException {
-        if (str == null) {
-            bos.write(Utility.intToBytes(0));
-        } else {
-            bos.write(Utility.intToBytes(str.length()));
-            bos.write(str.getBytes());
-        }
-    }
-
-    private static String readStringFrom(byte[] data, int offset) {
-        int len = Utility.bytesToInt(data, offset);
-        return len == 0 ? null : new String(data, offset + 4, len);
-    }
-
     public byte[] getSerializedData() {
         byte[] data = new byte[0];
         ReplicationOutputStream bos = new ReplicationOutputStream();
         try {
-            bos.write(frameCommand);
             bos.writeInt(seqNo);
             bos.writeLengthPrefixedString(sourceInstanceName);
             bos.writeLengthPrefixedString(targetInstanceName);
@@ -164,8 +106,11 @@ public class ReplicationFrame<K, V> {
 
             int[] cmdOffsets = new int[cmdSz];
             int offMark = bos.mark();
-            bos.write(new byte[4 * cmdSz]);
+            for (int i=0; i<cmdSz; i++) {
+                bos.writeInt(0);
+            }
 
+            int cmdDataMark = bos.size();
             for (int i = 0; i < cmdSz; i++) {
                 cmdOffsets[i] = bos.mark();
                 bos.writeInt(0);
@@ -203,14 +148,13 @@ public class ReplicationFrame<K, V> {
 
 
         ReplicationFrame<K, V> frame = null;
-        byte com = (byte) ris.read();
+        int frameOffset = ris.mark();
         int seqNo = ris.readInt();
 
         String srcName = ris.readLengthPrefixedString();
         String tarName = ris.readLengthPrefixedString();
 
-        frame = new ReplicationFrame<K, V>(com, seqNo, srcName);
-        frame.setTargetInstanceName(tarName);
+        frame = new ReplicationFrame<K, V>(seqNo, srcName);
         frame.setTargetInstanceName(tarName);
 
         int numStates = ris.readInt();
@@ -222,13 +166,12 @@ public class ReplicationFrame<K, V> {
 
         CommandManager<K, V> cm = dsc.getCommandManager();
         for (int i = 0; i < numStates; i++) {
-            ris.skipTo(cmdOffsets[i]);
-            int len = ris.readInt();
-            byte opcode = (byte) ris.read();
+            ris.skipTo(cmdOffsets[i] + frameOffset);
+            byte[] cmdData = ris.readLengthPrefixedBytes();
             ReplicationInputStream cmdRIS = null;
             try {
-                Command<K, V> cmd = cm.createNewInstance(opcode);
-                cmdRIS = new ReplicationInputStream(ris.getBuffer(), cmdOffsets[i], len);
+                Command<K, V> cmd = cm.createNewInstance(cmdData[0]);
+                cmdRIS = new ReplicationInputStream(cmdData);
                 cmd.prepareToExecute(cmdRIS);
                 frame.addCommand(cmd);
             } catch (IOException dse) {
@@ -244,13 +187,9 @@ public class ReplicationFrame<K, V> {
     @Override
     public String toString() {
         return "ReplicationFrame{" +
-                "frameCommand=" + frameCommand +
-                ", sourceInstanceName='" + sourceInstanceName + '\'' +
+                "sourceInstanceName='" + sourceInstanceName + '\'' +
                 ", targetInstanceName='" + targetInstanceName + '\'' +
                 ", seqNo=" + seqNo +
-                ", windowLen=" + windowLen +
-                ", minOutstandingPacketNumber=" + minOutstandingPacketNumber +
-                ", maxOutstandingPacketNumber=" + maxOutstandingPacketNumber +
                 ", state.size=" + commands.size() +
                 '}';
     }
