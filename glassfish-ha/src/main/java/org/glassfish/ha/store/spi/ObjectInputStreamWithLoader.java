@@ -36,8 +36,6 @@
 
 package org.glassfish.ha.store.spi;
 
-import org.jvnet.hk2.annotations.Service;
-
 import java.io.*;
 import java.lang.reflect.Array;
 
@@ -46,7 +44,6 @@ import java.lang.reflect.Array;
  * an existing ClassLoader.
  */
 
-@Service
 public class ObjectInputStreamWithLoader extends ObjectInputStream {
     protected ClassLoader loader;
 

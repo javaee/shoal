@@ -37,14 +37,12 @@
 package org.glassfish.ha.store.impl;
 
 import org.glassfish.ha.store.api.*;
-import org.jvnet.hk2.annotations.Service;
 
 import java.io.Serializable;
 
 /**
  * @author Mahesh Kannan
  */
-@Service(name="noop")
 public class NoOpBackingStoreFactory
     implements BackingStoreFactory {
 
@@ -52,7 +50,6 @@ public class NoOpBackingStoreFactory
         public void commit() {}
     };
 
-    @Override
     public <K extends Serializable, V extends Serializable> BackingStore<K, V> createBackingStore(
             BackingStoreConfiguration<K, V> conf)
                 throws BackingStoreException {
@@ -62,7 +59,6 @@ public class NoOpBackingStoreFactory
         return store;
     }
 
-    @Override
     public BackingStoreTransaction createBackingStoreTransaction() {
         return _noOpTransaction;
     }

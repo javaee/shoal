@@ -36,8 +36,6 @@
 
 package org.glassfish.ha.store.api;
 
-import org.jvnet.hk2.annotations.Contract;
-
 import java.io.Serializable;
 
 /**
@@ -58,7 +56,6 @@ import java.io.Serializable;
  * @author Mahesh Kannan
  *
  */
-@Contract
 public interface BackingStoreFactory {
 
     /**

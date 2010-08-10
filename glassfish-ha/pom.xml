@@ -40,14 +40,15 @@
 
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <parent>
-        <groupId>org.glassfish.ha</groupId>
-        <artifactId>ha</artifactId>
-        <version>3.1-SNAPSHOT</version>
+        <groupId>org.shoal</groupId>
+        <artifactId>shoal</artifactId>
+        <version>1.5.10-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>ha-api</artifactId>
-    <packaging>hk2-jar</packaging>
+    <groupId>org.glassfish.ha</groupId>
+    <artifactId>glassfish-ha-api</artifactId>
+    <packaging>jar</packaging>
     <name>GlassFish High Availability APIs and SPI</name>
 
     <developers>
@@ -61,33 +62,23 @@
             </roles>
         </developer>
     </developers>
+    
     <build>
         <plugins>
             <plugin>
-                <groupId>com.sun.enterprise</groupId>
-                <artifactId>hk2-maven-plugin</artifactId>
-                <configuration>
-                    <source>1.4</source>
-                    <target>1.4</target>
-                </configuration>
+              <artifactId>maven-jar-plugin</artifactId>
+              <configuration>
+                <archive>
+                  <manifestFile>${basedir}/src/main/resources/META-INF/MANIFEST.MF</manifestFile>
+                </archive>
+              </configuration>
             </plugin>
         </plugins>
-        <resources>
-            <resource>
-                <directory>src/main/java</directory>
-                <includes>
-                    <include>**/*.properties</include>
-                    <include>**/*.xml</include>
-                </includes>
-            </resource>
-        </resources>
     </build>
+
+    
     <dependencies>
-        <dependency>
-            <groupId>com.sun.enterprise</groupId>
-            <artifactId>hk2</artifactId>
-        </dependency>
-        <dependency>
+       <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>3.8.1</version>
