@@ -1,8 +1,8 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
- * 
+ *
  * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
- * 
+ *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
  * and Distribution License("CDDL") (collectively, the "License").  You
@@ -10,7 +10,7 @@
  * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
  * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific
  * language governing permissions and limitations under the License.
- * 
+ *
  * When distributing the software, include this License Header Notice in each
  * file and include the License file at glassfish/bootstrap/legal/LICENSE.txt.
  * Sun designates this particular file as subject to the "Classpath" exception
@@ -19,9 +19,9 @@
  * Header, with the fields enclosed by brackets [] replaced by your own
  * identifying information: "Portions Copyrighted [year]
  * [name of copyright owner]"
- * 
+ *
  * Contributor(s):
- * 
+ *
  * If you wish your version of this file to be governed by only the CDDL or
  * only the GPL Version 2, indicate your decision by adding "[Contributor]
  * elects to include this software in this distribution under the [CDDL or GPL
@@ -34,55 +34,55 @@
  * holder.
  */
 
-package org.glassfish.ha.store.spi;
+package org.glassfish.ha.store.api;
+
+import org.jvnet.hk2.annotations.Contract;
+
+import java.io.Serializable;
 
 /**
- * A class that saves a set of EjbMetaData atomically. The implementation is
- * responsible for atomically saving all the <code>BatchMetadata</code> that
- * is passed as parameter to the <code>saveAll()</code> method.
+ * A factory for creating BackingStore(s). Every provider must provide an
+ * implementation of this interface.
  *
- * @author Mahesh.Kannan@Sun.Com
- * @author Larry.White@Sun.Com
+ * <p>
+ * The <code>createBackingStore(env)</code> method is called typically during
+ * container creation time. A store instance is typically used to store state
+ * for a single container.
+ *
+ * <p>
+ * Any runtime exception thrown from createBackingStore and
+ * createBatchBackingStore method will cause the container to use a default
+ * persistence-type (typically no replication) and a log message will be logged
+ * at WARNING level.
+ *
+ * @author Mahesh Kannan
+ *
  */
-public interface BatchBackingStore<T> {
+@Contract
+public interface BackingStoreFactory {
 
     /**
-     * Save all the BatchMetadata atomically.
+     * This method is called to create a BackingStore. This
+     * class must be thread safe.
      * <p>
-     * Note that not all <code>BatchMetadata.getAppId()</code> in the
-     * collection may return the same value. The store is expected to save all
-     * of them atomically
-     * 
-     * @param data
-     *            the BatchMetadata to be stored
+     * If the factory can produce a BackingStore that can handle the factors
+     *  specified in the conf, then it must return a fully initialized and operational BackingStore.
+     * Else it must return null.
+     *
+     * @param conf The BackingStoreConfiguration
+     *
+     * @return a BackingStore. The returned BackingStore must be thread safe.
+     *
      * @throws BackingStoreException
-     * @throws BackingStoreException
-     *             if the underlying store implementation encounters any
-     *             exception
+     *             If the store could not be created
      */
-    public void saveAll(T... data) throws BackingStoreException;
+    public <K extends Serializable, V extends Serializable> BackingStore<K, V> createBackingStore(BackingStoreConfiguration<K, V> conf)
+            throws BackingStoreException;
 
     /**
-     * Save the entry. Overwrites entry if it already exists.
      *
-     * @param storeName the Store name
-     * @param key the key of the entry
-     * @param entry the StoreEntry
-     * @param isNew true if the entry is new false if the entry has already been persisted.
-     *
-     * @throws IllegalArgumentException if entry is not a
-     *                                  StoreEntry
+     * @return
      */
-    public abstract void save(String storeName, Object key, T entry, boolean isNew)
-             throws BackingStoreException;
+    public BackingStoreTransaction createBackingStoreTransaction();
 
-    /**
-     * Commit all the batch operations as (possibly) a single unit. This
-     * BatchManager must not be used after a commit.
-     *
-     * The BatchManager may also implement the save as a write through method.
-     * In which case, commit will be a no-op.
-     */
-    public abstract void commit()
-             throws BackingStoreException;
 }

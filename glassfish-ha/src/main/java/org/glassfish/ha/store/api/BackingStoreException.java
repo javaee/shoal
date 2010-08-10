@@ -1,8 +1,8 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
- *
+ * 
  * Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved.
- *
+ * 
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
  * and Distribution License("CDDL") (collectively, the "License").  You
@@ -10,7 +10,7 @@
  * a copy of the License at https://glassfish.dev.java.net/public/CDDL+GPL.html
  * or glassfish/bootstrap/legal/LICENSE.txt.  See the License for the specific
  * language governing permissions and limitations under the License.
- *
+ * 
  * When distributing the software, include this License Header Notice in each
  * file and include the License file at glassfish/bootstrap/legal/LICENSE.txt.
  * Sun designates this particular file as subject to the "Classpath" exception
@@ -19,9 +19,9 @@
  * Header, with the fields enclosed by brackets [] replaced by your own
  * identifying information: "Portions Copyrighted [year]
  * [name of copyright owner]"
- *
+ * 
  * Contributor(s):
- *
+ * 
  * If you wish your version of this file to be governed by only the CDDL or
  * only the GPL Version 2, indicate your decision by adding "[Contributor]
  * elects to include this software in this distribution under the [CDDL or GPL
@@ -34,29 +34,49 @@
  * holder.
  */
 
-package org.glassfish.ha.store.impl;
-
-import org.glassfish.ha.store.spi.BackingStoreException;
-import org.glassfish.ha.store.spi.BatchBackingStore;
+package org.glassfish.ha.store.api;
 
 /**
- * @author Mahesh Kannan
+ * This exception is thrown to signal any BackingStore specific exception.
+ * <code>BackingStore.getCause()</code> can be used to get the actual store
+ * specific exception.
+ *
+ * @author Mahesh.Kannan@Sun.Com
+ * @author Larry.White@Sun.Com
+ *
  */
-public class NoOpBatchBackingStore<T>
-    implements BatchBackingStore<T> {
+public class BackingStoreException extends Exception {
 
-    @Override
-    public void saveAll(T... data) throws BackingStoreException {
-
+    /**
+     * Creates a BackingStoreException with null as its detail message. The
+     * cause is not initialized, and may subsequently be initialized by a call
+     * to <code>Throwable.initCause(java.lang.Throwable)</code>.
+     */
+    public BackingStoreException() {
     }
 
-    @Override
-    public void save(String storeName, Object key, T entry, boolean isNew) throws BackingStoreException {
-
+    /**
+     * constructs a BackingStoreException with the specified detail message
+     * 
+     * @param message
+     *            the detail message. The detail message is saved for later
+     *            retrieval by the <code>Throwable.getMessage()</code> method.
+     */
+    public BackingStoreException(String message) {
+        super(message);
     }
 
-    @Override
-    public void commit() throws BackingStoreException {
-        
+    /**
+     * Constructs a new BackingStoreException exception with the specified cause
+     * and a detail message of (cause==null ? null : cause.toString())
+     * 
+     * @param message
+     *            the detail message. The detail message is saved for
+     * @param th
+     *            the cause
+     */
+    public BackingStoreException(String message, Throwable th) {
+        super(message, th);
     }
+
 }
