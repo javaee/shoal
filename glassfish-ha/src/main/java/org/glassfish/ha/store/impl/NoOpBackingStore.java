@@ -68,6 +68,11 @@ public class NoOpBackingStore<K, V>
     }
 
     @Override
+    public void updateTimestamp(K key, long time) throws BackingStoreException {
+        
+    }
+
+    @Override
     public int removeExpired(long idleForMillis) throws BackingStoreException {
         return 0;
     }
