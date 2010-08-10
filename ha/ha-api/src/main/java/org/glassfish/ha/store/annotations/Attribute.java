@@ -56,5 +56,7 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.METHOD)
 public @interface Attribute {
 
-    String value() default "";
+    String name() default "";
+
+    boolean loadEagerly() default true;
 }

@@ -46,7 +46,7 @@ import org.glassfish.ha.store.annotations.Attribute;
  */
 public class MethodInfo {
 
-    public enum MethodType {SETTER, VERSION};
+    public enum MethodType {GETTER, VERSION, HASHKEY, MAPPED};
 
     String attrName;
 

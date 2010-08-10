@@ -36,6 +36,7 @@
 
 package org.glassfish.ha.store.apt.generators;
 
+import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.type.TypeMirror;
 
 import java.util.StringTokenizer;
@@ -84,15 +85,15 @@ public class StorableGenerator
 
     private void handleDirtyAttribute(String setterMethodName, String attrName, TypeMirror paramType) {
         super.addAttribute(attrName, paramType);
+        increaseIndent();
         println("public void " + setterMethodName + "("
-                + getWrapperType(paramType) + " value) { ");
-        increaseIndent();        
+                + getWrapperType(paramType) + ") { ");
         println("_markAsDirty(\"" + attrName + "\");");
         println("super." + setterMethodName + "(value);");
         decreaseIndent();
     }
 
-    public void visitSetter(String setterMethodName, String attrName, String javaDoc, TypeMirror paramType) {
+    public void visitGetter(String setterMethodName, String attrName, String javaDoc, TypeMirror paramType) {
         println("//@Attribute(name=\"" + attrName + "\")");
         handleDirtyAttribute(setterMethodName, attrName, paramType);
         println("}");
@@ -107,6 +108,13 @@ public class StorableGenerator
         println();
     }
 
+    public void visitHashKeyMethod(String setterMethodName, String attrName, String javaDoc, TypeMirror paramType) {
+        println("//@HashKey(name=\"" + attrName + "\")");
+        handleDirtyAttribute(setterMethodName, attrName, paramType);
+        println("}");
+        println();
+    }
+
     public void visitEnd() {
         println("//Storable method");
         println("public String _getStoreName() {");
@@ -116,12 +124,18 @@ public class StorableGenerator
         println("}");
         println();
 
+        println("public String _getHashKey() {");
+        increaseIndent();
+        println("return _hashKey;");
+        decreaseIndent();
+        println("}");
+        println();
+
         String getVersionName = (versionGetterMethodName == null)
                 ? null : versionGetterMethodName;
         if (getVersionName != null) {
             getVersionName = "g" + getVersionName.substring(1);
         }
-        
         println("public String _getVersion() {");
         increaseIndent();
         println("return " + getVersionName + "();");

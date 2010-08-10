@@ -36,16 +36,11 @@
 
 package org.glassfish.ha.store.spi;
 
-import org.glassfish.ha.store.api.BackingStoreException;
-import org.glassfish.ha.store.api.BackingStoreFactory;
-import org.glassfish.ha.store.impl.NoOpBackingStoreFactory;
-
 import java.util.Properties;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * @author bhavanishankar@dev.java.net
@@ -62,23 +57,42 @@ import java.util.logging.Logger;
  */
 public final class BackingStoreFactoryRegistry {
 
+    private static final HashMap<String, RegistrationInfo> factoryRegistrations =
+            new HashMap<String, RegistrationInfo>();
+
     private static final HashMap<String, BackingStoreFactory> factories =
             new HashMap<String, BackingStoreFactory>();
 
-    static {
-        factories.put("noop", new NoOpBackingStoreFactory());
-    }
-
-    public static synchronized void register(String type, BackingStoreFactory factory)
+    /**
+     * Will be called by Store's Lifecycle module to register
+     * the factory class name.
+     */
+    public static synchronized void register(String type,
+                                             String factoryClassName,
+                                             Properties props)
             throws DuplicateFactoryRegistrationException {
-        if (factories.get(type) != null) {
+        if (factoryRegistrations.get(type) != null) {
             throw new DuplicateFactoryRegistrationException("BackingStoreFactory " +
                     "for persistene-type " + type + " already exists");
         }
-        factories.put(type, factory);
-        Logger.getLogger(BackingStoreFactoryRegistry.class.getName()).log(Level.INFO, "Registered "
-            + factory.getClass().getName() + " for persistence-type = " + type
-            + " in BackingStoreFactoryRegistry");
+        RegistrationInfo regInfo = new RegistrationInfo(factoryClassName, props);
+        factoryRegistrations.put(type, regInfo);
+    }
+
+    /**
+     * Will be called by Store's Lifecycle module to register
+     * the factory class name.
+     */
+    public static synchronized void register(String type,
+                                             Class factoryClass,
+                                             Properties props)
+            throws DuplicateFactoryRegistrationException {
+        if (factoryRegistrations.get(type) != null) {
+            throw new DuplicateFactoryRegistrationException("BackingStoreFactory " +
+                    "for persistene-type " + type + " already exists");
+        }
+        RegistrationInfo regInfo = new RegistrationInfo(factoryClass.getName(), props);
+        factoryRegistrations.put(type, regInfo);
     }
 
     /**
@@ -88,13 +102,29 @@ public final class BackingStoreFactoryRegistry {
      * created using the public no-arg constructor.
      */
     public static synchronized BackingStoreFactory getFactoryInstance(String type)
-            throws BackingStoreException {
+            throws BackingStoreException, ClassNotFoundException,
+            InstantiationException, IllegalAccessException {
         BackingStoreFactory factory = factories.get(type);
         if (factory == null) {
-            throw new BackingStoreException("Backing store for " +
+            RegistrationInfo regInfo = factoryRegistrations.get(type);
+            if (regInfo != null) {
+                try {
+                    Class clazz = Class.forName(regInfo.factoryClassName);
+                    Constructor con = clazz.getConstructor(
+                            new Class[]{Properties.class});
+                    factory = (BackingStoreFactory)
+                            con.newInstance(regInfo.props);
+                    factories.put(type, factory);
+                } catch (NoSuchMethodException nme) {
+                    throw new BackingStoreException(nme.getMessage(), nme.getCause());
+                } catch (InvocationTargetException ite) {
+                    throw new BackingStoreException(ite.getMessage(), ite.getCause());
+                }
+            } else {
+                throw new BackingStoreException("Backing store for " +
                         "persistence-type " + type + " is not registered.");
+            }
         }
-        
         return factory;
     }
 
@@ -103,8 +133,19 @@ public final class BackingStoreFactoryRegistry {
      * the factory class name.
      */
     public static synchronized void unregister(String type) {
+        factoryRegistrations.remove(type);
         factories.remove(type);
     }
-    
+
+    static class RegistrationInfo {
+
+        String factoryClassName;
+        Properties props;
+
+        RegistrationInfo(String factoryClassName, Properties props) {
+            this.factoryClassName = factoryClassName;
+            this.props = props;
+        }
+    }
 }
 

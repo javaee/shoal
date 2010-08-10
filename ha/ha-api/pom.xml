@@ -50,6 +50,10 @@
     <packaging>hk2-jar</packaging>
     <name>GlassFish High Availability APIs and SPI</name>
 
+    <properties>
+        <findbugs.exclude>${project.basedir}/exclude.xml</findbugs.exclude>
+    </properties>
+
     <developers>
         <developer>
             <id>mk111283</id>
@@ -87,11 +91,12 @@
             <groupId>com.sun.enterprise</groupId>
             <artifactId>hk2</artifactId>
         </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>3.8.1</version>
-            <scope>test</scope>
-        </dependency>
+          <dependency>
+            <groupId>sun.jdk</groupId>
+            <artifactId>tools</artifactId>
+            <version>1.6.0</version>
+            <scope>system</scope>
+            <systemPath>${java.home}/../lib/tools.jar</systemPath>
+          </dependency>
     </dependencies>
 </project>

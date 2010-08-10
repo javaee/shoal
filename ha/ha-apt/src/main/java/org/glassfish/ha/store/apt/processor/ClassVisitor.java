@@ -45,9 +45,11 @@ public interface ClassVisitor {
 
     public void visit(String packageName, String javaDoc, String className);
 
-    public void visitSetter(String methodName, String attrName, String javaDoc, TypeMirror paramType);
+    public void visitGetter(String methodName, String attrName, String javaDoc, TypeMirror paramType);
 
     public void visitVersionMethod(String methodName, String attrName, String javaDoc, TypeMirror paramType);
+
+    public void visitHashKeyMethod(String methodName, String attrName, String javaDoc, TypeMirror paramType);
 
     public void visitEnd();
 
