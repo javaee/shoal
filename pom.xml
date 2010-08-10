@@ -1,9 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- 
 /* 
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER. 
 * 
-* Copyright 1997-2010 Sun Microsystems, Inc. All rights reserved. 
+* Copyright 2009-2010 Sun Microsystems, Inc. All rights reserved.
 * 
 * The contents of this file are subject to the terms of either the GNU 
 * General Public License Version 2 only ("GPL") or the Common Development 
@@ -35,39 +34,147 @@
 * only if the new code is made subject to such option by the copyright 
 * holder. 
 */ 
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+--> 
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.glassfish</groupId>
-        <artifactId>glassfish-parent</artifactId>
-        <version>3.1-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
-    <groupId>org.glassfish.ha</groupId>
-    <artifactId>ha</artifactId>
-    <packaging>pom</packaging>
-    <name>GlassFish HA modules</name>
     
+    <groupId>org.shoal</groupId>
+    <artifactId>shoal</artifactId>
+    <packaging>pom</packaging>
+    <version>1.5.10-SNAPSHOT</version>
+    <name>shoal</name>
+    <url>http://shoal.dev.java.net/</url>
+
+    <scm>
+        <connection>scm:svn:https://shoal.dev.java.net/svn/shoal/branches/SHOAL_1_1_ABSTRACTING_TRANSPORT</connection>
+    </scm>
+
+    <issueManagement>
+        <system>IssueTracker</system>
+        <url>https://glassfish.dev.java.net/servlets/ProjectIssues</url>
+    </issueManagement>
+
     <developers>
         <developer>
             <id>mk111283</id>
             <name>Mahesh Kannan</name>
             <url>http://forum.java.sun.com/profile.jspa?userID=487934</url>
-            <organization>Sun Microsystems, Inc.</organization>
+            <organization>Oracle Inc.</organization>
             <roles>
-                <role>lead</role>
+                <role>lead (For shoal cache)</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>jfialli</id>
+            <name>Joe Fialli</name>
+            <organization>Oracle Inc.</organization>
+            <roles>
+                <role>lead (For Shoal GMS)</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>bbissett</id>
+            <name>Bobby Bissett</name>
+            <url>http://blogs.sun.com/bobby</url>
+            <organization>Oracle Inc.</organization>
+            <roles>
                 <role>developer</role>
             </roles>
         </developer>
     </developers>
-    
+
+    <properties>
+        <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
+        <grizzly.version>1.9.19-beta7</grizzly.version>
+
+        <junit.group.id>junit</junit.group.id>
+        <junit.version>3.8.1</junit.version>
+
+        <ha.api.version>3.1-b05</ha.api.version>
+    </properties>
+
     <modules>
-        <module>ha-api</module>
-        <module>ha-file-store</module>
-        <module>ha-shoal-cache-bootstrap</module>
-        <module>ha-shoal-store</module>
-        <!--<module>ha-apt</module>-->
+        <module>gms</module>
+        <module>cache</module>
     </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <!--
+                    <scope>system</scope>
+                    <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                    -->
+                </configuration>
+            </plugin>
+        </plugins>
+        <!-- explicitly define this extension to resolve invalid checksums -->
+        <!-- See:  http://jira.codehaus.org/browse/MNG-4301 -->
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav</artifactId>
+                <version>1.0-beta-2</version>                                                               
+           </extension>              
+        </extensions>
+    </build>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${grizzly.group.id}</groupId>
+                <version>${grizzly.version}</version>
+                <artifactId>grizzly-utils</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>${grizzly.group.id}</groupId>
+                <version>${grizzly.version}</version>
+                <artifactId>grizzly-framework</artifactId>
+            </dependency>
+
+            <dependency>
+                <groupId>${junit.group.id}</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.ha</groupId>
+                <artifactId>ha-api</artifactId>
+                <version>${ha.api.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>osgi_R4_core</artifactId>
+                <version>1.0</version>
+                <scope>provided</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>glassfish-repo-archive</id>
+            <name>Nexus repository collection for Glassfish</name>
+            <url>http://maven.glassfish.org/content/groups/glassfish</url>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>       <!-- internal repository to publish to -->
+            <uniqueVersion>false</uniqueVersion>
+            <id>rator.sfbay</id>
+            <url>dav:http://glassfish-maven-repository.sfbay.sun.com/maven/repositories/glassfish/</url>
+        </repository>
+    </distributionManagement>
+
 </project>
