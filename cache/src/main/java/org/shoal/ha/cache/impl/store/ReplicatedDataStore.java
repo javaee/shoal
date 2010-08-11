@@ -40,7 +40,7 @@ import org.shoal.adapter.store.commands.LoadRequestCommand;
 import org.shoal.adapter.store.commands.RemoveCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
 import org.shoal.adapter.store.commands.UpdateDeltaCommand;
-import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
+import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;

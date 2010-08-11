@@ -34,7 +34,7 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.util;
+package org.shoal.ha.mapper;
 
 import org.shoal.ha.cache.api.HashableKey;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;

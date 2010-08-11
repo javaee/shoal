@@ -64,7 +64,7 @@
         <dependency>
             <groupId>org.glassfish.ha</groupId>
             <artifactId>ha-api</artifactId>
-            <version>3.1-SNAPSHOT</version>
+            <version>2.0-SNAPSHOT</version>
         </dependency>
         <!-- Test -->
 
@@ -95,7 +95,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Export-Package>org.shoal.ha.cache.api,org.shoal.ha.mapper,org.shoal.adapter.store</Export-Package>
+                        <Export-Package>org.shoal.adapter.store,org.shoal.ha.mapper</Export-Package>
                     </instructions>
                 </configuration>
             </plugin>

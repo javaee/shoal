@@ -40,9 +40,8 @@ import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
-import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.command.*;
+import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.io.BufferedReader;
 import java.io.IOException;

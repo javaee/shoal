@@ -39,7 +39,7 @@ package org.shoal.test.maptest;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
+import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.util.ArrayList;
 import java.util.Arrays;

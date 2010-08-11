@@ -40,7 +40,7 @@ import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
-import org.shoal.ha.cache.impl.util.DefaultKeyMapper;
+import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.group.GroupServiceFactory;
