@@ -338,9 +338,10 @@ public class NetworkUtility {
             try {
                 return (Boolean)isUpMethod.invoke( anInterface ) && (Boolean)supportsMulticastMethod.invoke( anInterface );
             } catch( Throwable t ) {
+                // will just return false in this case
             }
         }
-        return true;
+        return false;
     }
 
     public static void writeIntToByteArray( final byte[] bytes, final int offset, final int value ) throws IllegalArgumentException {

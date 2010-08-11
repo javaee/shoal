@@ -48,13 +48,15 @@ public class MulticastTester {
     static final StringManager sm = StringManager.getInstance();
 
     static final String DASH = "--";
-    static final String HELP_OPTION = DASH + sm.get("help.option");
-    static final String PORT_OPTION = DASH + sm.get("port.option");
-    static final String ADDRESS_OPTION = DASH + sm.get("address.option");
-    static final String BIND_OPTION = DASH + sm.get("bind.int.option");
-    static final String WAIT_PERIOD_OPTION = DASH + sm.get("period.option");
-    static final String TIMEOUT_OPTION = DASH + sm.get("timeout.option");
-    static final String DEBUG_OPTION = DASH + sm.get("debug.option");
+
+    // these are public so they can be used in external programs
+    public static final String HELP_OPTION = DASH + sm.get("help.option");
+    public static final String PORT_OPTION = DASH + sm.get("port.option");
+    public static final String ADDRESS_OPTION = DASH + sm.get("address.option");
+    public static final String BIND_OPTION = DASH + sm.get("bind.int.option");
+    public static final String WAIT_PERIOD_OPTION = DASH + sm.get("period.option");
+    public static final String TIMEOUT_OPTION = DASH + sm.get("timeout.option");
+    public static final String DEBUG_OPTION = DASH + sm.get("debug.option");
 
     int mcPort = 2048;
     String mcAddress = "228.9.3.1";
@@ -192,6 +194,7 @@ public class MulticastTester {
         sb.append(ADDRESS_OPTION).append("\n");
         sb.append(BIND_OPTION).append("\n");
         sb.append(WAIT_PERIOD_OPTION).append("\n");
+        sb.append(TIMEOUT_OPTION).append("\n");
         sb.append(DEBUG_OPTION).append("\n");
         printAndExit(sb.toString(), status);
     }
