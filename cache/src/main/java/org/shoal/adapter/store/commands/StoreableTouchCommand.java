@@ -67,7 +67,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
     private long maxIdleTime;
 
     public StoreableTouchCommand() {
-        super(ReplicationCommandOpcode.TOUCH);
+        super(ReplicationCommandOpcode.STOREABLE_TOUCH);
     }
 
     public StoreableTouchCommand(K k, long version, long accessTime, long maxIdleTime) {
@@ -81,11 +81,6 @@ public class StoreableTouchCommand<K, V extends Storeable>
     @Override
     protected StoreableTouchCommand<K, V> createNewInstance() {
         return new StoreableTouchCommand<K, V>();
-    }
-
-    @Override
-    public String getName() {
-        return "storeable_touch";
     }
 
     @Override

@@ -57,7 +57,7 @@ import java.util.logging.Logger;
 public class LoadRequestCommand<K, V>
         extends Command<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
 
     private K key;
 
@@ -71,11 +71,11 @@ public class LoadRequestCommand<K, V>
 
 
     public LoadRequestCommand() {
-        this(null);
+        super(ReplicationCommandOpcode.LOAD_REQUEST);
     }
 
     public LoadRequestCommand(K key) {
-        super(ReplicationCommandOpcode.LOAD_REQUEST);
+        this();
         this.key = key;
     }
 
@@ -106,9 +106,6 @@ public class LoadRequestCommand<K, V>
         ros.writeLong(resp.getTokenId());
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending load_request " + key + " to " + getTargetName());
-        }
     }
 
     @Override
@@ -122,9 +119,6 @@ public class LoadRequestCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received load_request " + key + " from " + originatingInstance);
-        }
 
         try {
             DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);

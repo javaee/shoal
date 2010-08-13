@@ -73,7 +73,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
     private DataStoreEntry<K, V> entry;
 
     public StoreableSaveCommand() {
-        super(ReplicationCommandOpcode.SAVE);
+        super(ReplicationCommandOpcode.STOREABLE_SAVE);
     }
 
     public StoreableSaveCommand(K k, V v) {
@@ -101,11 +101,6 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     protected StoreableSaveCommand<K, V> createNewInstance() {
         return new StoreableSaveCommand<K, V>();
-    }
-
-    @Override
-    public String getName() {
-        return "storeable_save";
     }
 
     @Override
@@ -160,7 +155,6 @@ public class StoreableSaveCommand<K, V extends Storeable>
             if (wasFullWrite) {
                 entry.setV((V) v);
                 entry.clearPendingUpdates();
-                System.out.println("Full Save: " + v);
             } else {
                 V entryV = entry.getV();
                 if (entryV != null) {

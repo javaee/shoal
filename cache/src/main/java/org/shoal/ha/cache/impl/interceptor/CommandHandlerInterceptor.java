@@ -63,10 +63,6 @@ public final class CommandHandlerInterceptor<K, V>
             throw new DataStoreException("Error during writeCommandPayload", ex);
         }
 
-
-
-        _logger.log(Level.INFO, "CommandHandlerInterceptor_Sending " + cmd.getName() + " to " + cmd.getTargetName());
-
         if (dsc.getInstanceName().equals(cmd.getTargetName())) {
             _logger.log(Level.INFO, "To Me???");
             cmd.execute(initiator);
@@ -79,7 +75,7 @@ public final class CommandHandlerInterceptor<K, V>
     public void onReceive(Command<K, V> cmd, String initiator)
             throws DataStoreException {
 
-        _logger.log(Level.INFO, "Received " + cmd.getOpcode() + " to " + cmd.getTargetName());
+        _logger.log(Level.INFO, "Received " + cmd.getName() + " from " + initiator);
         
         
         try {

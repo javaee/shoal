@@ -51,7 +51,7 @@ import java.util.logging.Logger;
 public class LoadResponseCommand<K, V>
         extends Command<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
 
     private K key;
 
@@ -61,12 +61,14 @@ public class LoadResponseCommand<K, V>
 
     private String originatingInstance;
 
+    private String respondingInstanceName;
+
     public LoadResponseCommand() {
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
     }
 
     public LoadResponseCommand(K key, V v, long tokenId) {
-        super(ReplicationCommandOpcode.LOAD_RESPONSE);
+        this();
         this.key = key;
         this.v = v;
         this.tokenId = tokenId;
@@ -88,14 +90,11 @@ public class LoadResponseCommand<K, V>
 
         ros.writeLong(tokenId);
         ros.writeLengthPrefixedString(originatingInstance);
+        ros.writeLengthPrefixedString(dsc.getInstanceName());
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeBoolean(v != null);
         if (v != null) {
             dsc.getDataStoreEntryHelper().writeObject(ros, v);
-        }
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending load_response " + key + " to " + originatingInstance);
-            _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_response " + key + " => " + v + ":" + originatingInstance);
         }
     }
 
@@ -107,6 +106,7 @@ public class LoadResponseCommand<K, V>
 
         tokenId = ris.readLong();
         originatingInstance = ris.readLengthPrefixedString();
+        respondingInstanceName = ris.readLengthPrefixedString();
         key = dsc.getDataStoreKeyHelper().readKey(ris);
         boolean notNull = ris.readBoolean();
         if (notNull) {
@@ -115,11 +115,7 @@ public class LoadResponseCommand<K, V>
     }
 
     @Override
-    public void execute(String initaitor) {
-
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received load_response " + key + " from " + initaitor);
-        }
+    public void execute(String initiator) {
 
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
@@ -127,6 +123,8 @@ public class LoadResponseCommand<K, V>
             if (_logger.isLoggable(Level.INFO)) {
                 _logger.log(Level.INFO, dsc.getInstanceName() + " executed load_response " + key + " value " + v);
             }
+            
+            resp.setRespondingInstanceName(respondingInstanceName);
             resp.setResult(v);
         }
     }

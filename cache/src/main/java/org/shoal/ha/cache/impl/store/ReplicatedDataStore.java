@@ -36,10 +36,7 @@
 
 package org.shoal.ha.cache.impl.store;
 
-import org.shoal.adapter.store.commands.LoadRequestCommand;
-import org.shoal.adapter.store.commands.RemoveCommand;
-import org.shoal.adapter.store.commands.SaveCommand;
-import org.shoal.adapter.store.commands.UpdateDeltaCommand;
+import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
@@ -47,6 +44,7 @@ import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.*;
 
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -169,10 +167,10 @@ public class ReplicatedDataStore<K, V>
 
         if (v == null) {
             try {
-                LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(key);
+                BroadcastLoadRequestCommand<K, V> cmd = new BroadcastLoadRequestCommand<K, V>(key);
                 cm.execute(cmd);
 
-                v = cmd.getResult();
+                v = cmd.getResult(6, TimeUnit.SECONDS);
 
 
                 entry = replicaStore.getOrCreateEntry(key);

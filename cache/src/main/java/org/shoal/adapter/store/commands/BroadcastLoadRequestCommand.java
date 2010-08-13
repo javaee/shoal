@@ -57,7 +57,7 @@ import java.util.logging.Logger;
 public class BroadcastLoadRequestCommand<K, V>
         extends Command<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
 
     private K key;
 
@@ -70,11 +70,11 @@ public class BroadcastLoadRequestCommand<K, V>
     private String originatingInstance;
 
     public BroadcastLoadRequestCommand() {
-        this(null);
+        super(ReplicationCommandOpcode.BROADCAST_LOAD_REQUEST);
     }
 
     public BroadcastLoadRequestCommand(K key) {
-        super(ReplicationCommandOpcode.LOAD_REQUEST);
+        this();
         this.key = key;
     }
 
@@ -98,9 +98,6 @@ public class BroadcastLoadRequestCommand<K, V>
         ros.writeLong(resp.getTokenId());
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending broadcast_load " + key + " to " + getTargetName());
-        }
     }
 
     @Override
@@ -113,34 +110,40 @@ public class BroadcastLoadRequestCommand<K, V>
 
     }
 
+
+    public String getRespondingInstanceName() {
+        return resp.getRespondingInstanceName();
+    }
+
     @Override
     public void execute(String initiator) {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received broadcast_load " + key + " from " + originatingInstance);
-        }
         try {
-        DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
-        if (!originatingInstance.equals(dsc.getInstanceName())) {
-            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(
-                    key, dsc.getDataStoreEntryHelper().getV(e), tokenId);
-            rsp.setOriginatingInstance(originatingInstance);
-            getCommandManager().execute(rsp);
-        } else {
-            resp.setResult(e);
-        }
+            DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
+            if (!originatingInstance.equals(dsc.getInstanceName())) {
+                if (e.getV() != null) {
+                    LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(
+                        key, dsc.getDataStoreEntryHelper().getV(e), tokenId);
+                    rsp.setOriginatingInstance(originatingInstance);
+                    getCommandManager().execute(rsp);
+                } else {
+                    //Ignore...
+                }
+            } else {
+                //its for me . Ignore
+            }
         } catch (DataStoreException dsEx) {
             resp.setException(dsEx);
         }
     }
 
-    public DataStoreEntry<K, V> getResult(long waitFor, TimeUnit unit)
+    public V getResult(long waitFor, TimeUnit unit)
             throws DataStoreException {
         try {
             Object result = future.get(waitFor, unit);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
-            return (DataStoreEntry<K, V>) result;
+            return (V) result;
         } catch (DataStoreException dsEx) {
             throw dsEx;
         } catch (InterruptedException inEx) {

@@ -125,7 +125,7 @@ public class ReplicationFramework<K, V extends Serializable> {
             }
         }
 
-        dsc.setDoSyncReplication(conf.isDoSyncReplication());
+        dsc.setADoSyncReplication(conf.isDoASyncReplication());
         
         KeyMapper<K> keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {

@@ -65,18 +65,13 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
     private transient byte[] rawReadState;
 
     public StoreableFullSaveCommand() {
-        super(ReplicationCommandOpcode.SAVE);
+        super(ReplicationCommandOpcode.STOREABLE_FULL_SAVE_COMMAND);
     }
 
     public StoreableFullSaveCommand(K k, V v) {
         this();
         setKey(k);
         setValue(v);
-    }
-
-    @Override
-    public String getName() {
-        return "full_save";
     }
 
     public void setKey(K k) {

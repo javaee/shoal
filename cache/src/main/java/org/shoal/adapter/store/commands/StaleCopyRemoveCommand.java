@@ -88,9 +88,6 @@ public class StaleCopyRemoveCommand<K, V>
         throws IOException {
         setTargetName(staleTargetName);
         dsc.getDataStoreKeyHelper().writeKey(ros, getKey());
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending stale_copy_remove " + getKey() + " to " + staleTargetName);
-        }
     }
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
@@ -100,9 +97,6 @@ public class StaleCopyRemoveCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received stale_remove " + key + " from " + initiator);
-        }
         dsc.getReplicaStore().remove(key);
     }
 

@@ -59,12 +59,12 @@ public class UpdateDeltaCommand<K, V>
 
     private V v;
 
-    UpdateDeltaCommand() {
+    public UpdateDeltaCommand() {
         super(ReplicationCommandOpcode.SAVE_DELTA);
     }
 
     public UpdateDeltaCommand(K k, V obj) {
-        super(ReplicationCommandOpcode.SAVE_DELTA);
+        this();
         this.k = k;
         this.v = obj;
     }
@@ -86,9 +86,6 @@ public class UpdateDeltaCommand<K, V>
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         ros.reWrite(valueOffset, Utility.intToBytes(ros.mark()));
         dsc.getDataStoreEntryHelper().writeObject(ros, v);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save " + k + " to " + getTargetName());
-        }
     }
 
     @Override
@@ -103,9 +100,6 @@ public class UpdateDeltaCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
-        }
     }
 
 }

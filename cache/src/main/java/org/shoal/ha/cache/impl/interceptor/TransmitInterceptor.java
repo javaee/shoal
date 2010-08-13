@@ -72,8 +72,9 @@ public final class TransmitInterceptor<K, V>
             gs.sendMessage(cmd.getTargetName(),
                     ctx.getServiceName(), data);
             if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, "Sent raw_data to " + cmd.getTargetName()
-                    + "; opcode? " + data[0] + "; size: " + data.length);
+                _logger.log(Level.INFO, "Sent " + cmd.getName() + " to "
+                        + (cmd.getTargetName() == null ? " ALL MEMBERS " : cmd.getTargetName())
+                        + "; size: " + data.length);
             }
         } catch (IOException ioEx) {
             _logger.log(Level.WARNING, "Error DURING transmit...", ioEx);

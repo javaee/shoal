@@ -57,21 +57,17 @@ public class StoreableRemoveCommand<K, V>
     private K key;
 
     public StoreableRemoveCommand() {
-        super(ReplicationCommandOpcode.REMOVE);
+        super(ReplicationCommandOpcode.STOREABLE_REMOVE);
     }
 
     public StoreableRemoveCommand(K key) {
-        super(ReplicationCommandOpcode.REMOVE);
+        this();
+        this.key = key;
     }
 
     @Override
     protected StoreableRemoveCommand<K, V> createNewInstance() {
         return new StoreableRemoveCommand<K, V>();
-    }
-
-    @Override
-    public String getName() {
-        return "storeable_remove";
     }
 
     @Override

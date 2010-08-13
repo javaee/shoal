@@ -78,7 +78,7 @@ public class CommandManager<K, V>
 
         registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
 
-        if (! dsc.isDoSyncReplication()) {
+        if (dsc.isDoASyncReplication()) {
             registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
             registerCommand(new ReplicationFramePayloadCommand<K, V>());
         }
@@ -142,8 +142,6 @@ public class CommandManager<K, V>
         ReplicationInputStream ris = null;
         try {
             byte opCode = messageData[0];
-            _logger.log(Level.INFO, "RECEIVED GMS MESSAGE from instance: " + sourceMemberName
-             + "; opcode: " + opCode + "; size: " + messageData.length);
 
             Command<K, V> cmd = createNewInstance(opCode);
             ris = new ReplicationInputStream(messageData);

@@ -119,7 +119,7 @@ public abstract class Command<K, V> {
         readCommandPayload(ris);
     }
 
-    public String getName() {
+    public final String getName() {
         return commandName + ":" + opcode;
     }
 

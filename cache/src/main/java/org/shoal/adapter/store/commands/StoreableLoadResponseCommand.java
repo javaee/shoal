@@ -54,7 +54,7 @@ import java.util.logging.Logger;
 public class StoreableLoadResponseCommand<K, V>
         extends Command<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
 
     private K key;
 
@@ -67,11 +67,11 @@ public class StoreableLoadResponseCommand<K, V>
     private String respondingInstanceName;
 
     public StoreableLoadResponseCommand() {
-        super(ReplicationCommandOpcode.LOAD_RESPONSE);
+        super(ReplicationCommandOpcode.STOREABLE_LOAD_RESPONSE);
     }
 
     public StoreableLoadResponseCommand(K key, V v, long tokenId) {
-        super(ReplicationCommandOpcode.LOAD_RESPONSE);
+        this();
         this.key = key;
         this.v = v;
         this.tokenId = tokenId;
@@ -99,10 +99,6 @@ public class StoreableLoadResponseCommand<K, V>
         if (v != null) {
             dsc.getDataStoreEntryHelper().writeObject(ros, v);
         }
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending load_response " + key + " to " + originatingInstance);
-            _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_response " + key + " => " + v + ":" + originatingInstance);
-        }
     }
 
 
@@ -123,10 +119,6 @@ public class StoreableLoadResponseCommand<K, V>
 
     @Override
     public void execute(String initaitor) {
-
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received load_response " + key + " from " + initaitor);
-        }
 
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);

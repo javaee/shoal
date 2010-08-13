@@ -39,7 +39,6 @@ package org.shoal.ha.cache.api;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.mapper.KeyMapper;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,7 +71,7 @@ public class DataStoreConfigurator<K, V> {
 
     private boolean cacheLocally;
 
-    private boolean doSyncReplication;
+    private boolean doASyncReplication;
 
     private List<Command<K, ? super V>> commands = new ArrayList<Command<K, ? super V>>();
 
@@ -185,12 +184,12 @@ public class DataStoreConfigurator<K, V> {
         return this;
     }
 
-    public boolean isDoSyncReplication() {
-        return doSyncReplication;
+    public boolean isDoASyncReplication() {
+        return doASyncReplication;
     }
 
-    public void setDoSyncReplication(boolean doSyncReplication) {
-        this.doSyncReplication = doSyncReplication;
+    public void setDoASyncReplication(boolean doASyncReplication) {
+        this.doASyncReplication = doASyncReplication;
     }
 
     public List<Command<K, ? super V>> getCommands() {
@@ -215,6 +214,7 @@ public class DataStoreConfigurator<K, V> {
                 ", cacheLocally= " + cacheLocally +
                 ", clazzLoader=" + clazzLoader +
                 ", dataStoreEntryHelper=" + dataStoreEntryHelper +
+                ", doASyncReplication=" + doASyncReplication +
                 ", objectInputOutputStreamFactory=" + objectInputOutputStreamFactory +
                 '}';
     }

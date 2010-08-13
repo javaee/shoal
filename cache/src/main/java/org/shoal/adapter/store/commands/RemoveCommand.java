@@ -78,9 +78,6 @@ public class RemoveCommand<K, V>
         setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key));
 
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending remove " + key + " to " + getTargetName());
-        }
     }
 
     @Override
@@ -91,9 +88,6 @@ public class RemoveCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received remove " + key + " from " + initiator);
-        }
         dsc.getReplicaStore().remove(key);
     }
 

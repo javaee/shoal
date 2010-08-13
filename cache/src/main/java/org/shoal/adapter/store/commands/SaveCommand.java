@@ -93,10 +93,6 @@ public class SaveCommand<K, V>
 
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         dsc.getDataStoreEntryHelper().writeObject(ros, v);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save "
-                    + k + " to " + getTargetName());
-        }
     }
 
     @Override
@@ -109,9 +105,6 @@ public class SaveCommand<K, V>
     @Override
     public void execute(String initiator)
         throws DataStoreException {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
-        }
 
         DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
         synchronized (entry) {

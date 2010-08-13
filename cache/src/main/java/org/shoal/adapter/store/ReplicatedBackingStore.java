@@ -101,15 +101,20 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
                 .setStartGMS(startGMS)
                 .setCacheLocally(enableLocalCaching);
 
-        boolean doSyncReplication = Boolean.valueOf((String) vendorSpecificMap.get("synchronous.replication"));
-        dsConf.setDoSyncReplication(doSyncReplication);
+        boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
+                ? false : (Boolean) vendorSpecificMap.get("async.replication");
+        dsConf.setDoASyncReplication(asyncReplication);
         
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         dsConf.addCommand(new SaveCommand<K, V>());
         dsConf.addCommand(new RemoveCommand<K, V>());
         dsConf.addCommand(new LoadRequestCommand<K, V>());
+        dsConf.addCommand(new BroadcastLoadRequestCommand<K, V>());
         dsConf.addCommand(new LoadResponseCommand<K, V>());
+        dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
+        dsConf.addCommand(new TouchCommand<K, V>());
+        dsConf.addCommand(new UpdateDeltaCommand<K, V>());
         dataStore = DataStoreFactory.createDataStore(dsConf);
     }
 

@@ -108,17 +108,20 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
                 .setStartGMS(startGMS)
                 .setCacheLocally(enableLocalCaching);
 
-        boolean doSyncReplication = Boolean.valueOf((String) vendorSpecificMap.get("synchronous.replication"));
-        dsConf.setDoSyncReplication(doSyncReplication);
+        boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
+                ? false : (Boolean) vendorSpecificMap.get("async.replication");
+        dsConf.setDoASyncReplication(asyncReplication);
 
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         dsConf.addCommand(new StoreableSaveCommand<K, V>());
+        dsConf.addCommand(new StoreableFullSaveCommand<K, V>());
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
         dsConf.addCommand(new StoreableTouchCommand<K, V>());
+        dsConf.addCommand(new StoreableLoadRequestCommand<K, V>());
         dsConf.addCommand(new StoreableBroadcastLoadRequestCommand<K, V>());
         dsConf.addCommand(new StoreableLoadResponseCommand<K, V>());
-        dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
+        dsConf.addCommand(new StoreableRemoveCommand<K, V>());
 
         framework = new ReplicationFramework<K, V>(dsConf);
 

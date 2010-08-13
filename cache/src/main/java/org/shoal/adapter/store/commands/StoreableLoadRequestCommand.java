@@ -77,11 +77,11 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
 
 
     public StoreableLoadRequestCommand() {
-        this(null, null);
+        super(ReplicationCommandOpcode.STOREABLE_UNICAST_LOAD_REQUEST);
     }
 
     public StoreableLoadRequestCommand(K key, Long version) {
-        super(ReplicationCommandOpcode.LOAD_REQUEST);
+        this();
         this.key = key;
         this.minimumRequiredVersion = version;
     }
@@ -89,11 +89,6 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
     @Override
     protected StoreableLoadRequestCommand<K, V> createNewInstance() {
         return new StoreableLoadRequestCommand<K, V>();
-    }
-
-    @Override
-    public String getName() {
-        return "StoreableLoadRequestCommand";
     }
 
     public void setKey(K key) {

@@ -77,11 +77,11 @@ public class StoreableBroadcastLoadRequestCommand<K, V extends Storeable>
 
 
     public StoreableBroadcastLoadRequestCommand() {
-        this(null, null);
+        super(ReplicationCommandOpcode.STOREABLE_BROADCAST_LOAD_REQUEST);
     }
 
     public StoreableBroadcastLoadRequestCommand(K key, Long version) {
-        super(ReplicationCommandOpcode.LOAD_REQUEST);
+        this();
         this.key = key;
         this.version = version;
     }
@@ -107,9 +107,6 @@ public class StoreableBroadcastLoadRequestCommand<K, V extends Storeable>
         ros.writeLong(version == null ? Long.MIN_VALUE : version);
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending broadcast_load " + key + " to " + getTargetName());
-        }
     }
 
     @Override
@@ -125,9 +122,6 @@ public class StoreableBroadcastLoadRequestCommand<K, V extends Storeable>
 
     @Override
     public void execute(String initiator) {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received broadcast_load " + key + " from " + originatingInstance);
-        }
         try {
             DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
 

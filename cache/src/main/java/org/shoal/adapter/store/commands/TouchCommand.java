@@ -95,9 +95,6 @@ public class TouchCommand<K, V>
         ros.writeLong(version);
         ros.writeLong(accessTime);
         ros.writeLong(maxIdleTime);
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " sending save " + k + " to " + getTargetName());
-        }
     }
 
     @Override

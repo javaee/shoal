@@ -69,7 +69,7 @@ public class DataStoreContext<K, V> {
 
     private boolean cacheLocally;
 
-    private boolean doSyncReplication;
+    private boolean doASyncReplication;
 
 
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
@@ -143,11 +143,11 @@ public class DataStoreContext<K, V> {
         this.cacheLocally = cacheLocally;
     }
 
-    public boolean isDoSyncReplication() {
-        return doSyncReplication;
+    public boolean isDoASyncReplication() {
+        return doASyncReplication;
     }
 
-    public void setDoSyncReplication(boolean doSyncReplication) {
-        this.doSyncReplication = doSyncReplication;
+    public void setADoSyncReplication(boolean doSyncReplication) {
+        this.doASyncReplication = doSyncReplication;
     }
 }

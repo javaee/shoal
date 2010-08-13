@@ -53,10 +53,34 @@ public class ReplicationCommandOpcode {
 
     public static final byte TOUCH = 38;
 
-    public static final byte REPLICATION_FRAME_PAYLOAD = 16;
-
     public static final byte REMOVE_EXPIRED = 39;
 
     public static final byte STALE_REMOVE = 40;
 
+    public static final byte BROADCAST_LOAD_REQUEST = 41;
+
+
+
+    public static final byte STOREABLE_SAVE = 68;
+
+    public static final byte STOREABLE_UNICAST_LOAD_REQUEST = 69;
+
+    public static final byte STOREABLE_BROADCAST_LOAD_REQUEST = 70;
+
+    public static final byte STOREABLE_REMOVE = 71;
+
+    public static final byte STOREABLE_LOAD_RESPONSE = 72;
+
+    public static final byte STOREABLE_TOUCH = 73;
+
+    public static final byte STOREABLE_REMOVE_EXPIRED = 74;
+
+    public static final byte STOREABLE_STALE_REMOVE = 75;
+
+    public static final byte STOREABLE_FULL_SAVE_COMMAND = 76;
+
+
+
+    public static final byte REPLICATION_FRAME_PAYLOAD = 16;
+    
 }
