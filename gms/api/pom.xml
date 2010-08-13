@@ -80,7 +80,6 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-Activator>com.sun.enterprise.osgi.ShoalActivator</Bundle-Activator>
                         <Export-Package>com.sun.enterprise.ee.cms.core;com.sun.enterprise.ee.cms.spi</Export-Package>
                     </instructions>
                 </configuration>
