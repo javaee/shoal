@@ -119,7 +119,7 @@ public class KeyMapperTest
     public void testEmptyMapTest() {
         DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
         String mappedInstance = km.getMappedInstance("g1", "Key1");
-        String replicaInstance = km.findReplicaInstance("g1", "Key1");
+        String replicaInstance = (km.findReplicaInstance("g1", "Key1", null))[0];
 
         System.out.println("test[testEmptyMapTest] => " + mappedInstance + " : " +
                 replicaInstance);
@@ -173,7 +173,7 @@ public class KeyMapperTest
     }
 
     public void testReplicaUponFailure() {
-        DefaultKeyMapper<String> km1 = new DefaultKeyMapper<String>("inst2", "g1");
+        DefaultKeyMapper km1 = new DefaultKeyMapper("inst2", "g1");
 
         String[] aliveInstances = new String[10];
         for (int i=0; i<10; i++) {aliveInstances[i] = "inst"+i;}
@@ -194,7 +194,7 @@ public class KeyMapperTest
         }
 
 
-        DefaultKeyMapper<String> km4 = new DefaultKeyMapper<String>("inst4", "g1");
+        DefaultKeyMapper km4 = new DefaultKeyMapper("inst4", "g1");
         List<String> currentMembers = new ArrayList();
         currentMembers.addAll(Arrays.asList(aliveInstances));
         currentMembers.remove("inst2");
@@ -203,7 +203,7 @@ public class KeyMapperTest
         km4.printMemberStates("!@#$#$#$%^%^%^%%&");
         boolean result = true;
         for (int i = 0; i < keys.length; i++) {
-            String mappedInstanceName = km4.findReplicaInstance("g1", keys[i]);
+            String mappedInstanceName = km4.findReplicaInstance("g1", keys[i], null)[0];
             if (!mappedInstanceName.equals(replicaInstanceNames[i])) {
                 result = false;
                 System.err.println("For key: " + keys[i] + " exptected Replica was: " + replicaInstanceNames[i] +

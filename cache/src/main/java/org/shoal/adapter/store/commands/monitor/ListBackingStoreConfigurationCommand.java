@@ -34,9 +34,11 @@
  * holder.
  */
 
-package org.shoal.adapter.store.commands;
+package org.shoal.adapter.store.commands.monitor;
 
-import org.glassfish.ha.store.api.Storeable;
+import org.glassfish.ha.store.api.BackingStoreConfiguration;
+import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
+import org.shoal.adapter.store.commands.LoadResponseCommand;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
@@ -48,6 +50,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -58,14 +62,10 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class StoreableLoadRequestCommand<K, V extends Storeable>
-        extends Command<K, V> {
+public class ListBackingStoreConfigurationCommand
+        extends Command {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
-
-    private K key;
-
-    private Long minimumRequiredVersion = Long.MIN_VALUE;
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_MONITOR);
 
     CommandResponse resp;
 
@@ -75,33 +75,13 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
 
     private String originatingInstance;
 
-    public StoreableLoadRequestCommand() {
-        super(ReplicationCommandOpcode.STOREABLE_UNICAST_LOAD_REQUEST);
-    }
-
-    public StoreableLoadRequestCommand(K key, String[] requestHint) {
-        this();
-        this.key = key;
-        if (requestHint != null) {
-            String version = requestHint[0];
-            if (version != null) {
-                minimumRequiredVersion = Long.valueOf(version);
-            }
-            if (requestHint.length >= 2) {
-                super.setTargetName(requestHint[1]);
-            } else if (requestHint.length >= 3) {
-                super.setTargetNames(requestHint[1], requestHint[2]);
-            }
-        }
+    public ListBackingStoreConfigurationCommand() {
+        super(ReplicationCommandOpcode.MONITOR_LIST_BACKING_STORE_CONF);
     }
 
     @Override
-    protected StoreableLoadRequestCommand<K, V> createNewInstance() {
-        return new StoreableLoadRequestCommand<K, V>();
-    }
-
-    public void setKey(K key) {
-        this.key = key;
+    protected ListBackingStoreConfigurationCommand createNewInstance() {
+        return new ListBackingStoreConfigurationCommand();
     }
 
     @Override
@@ -109,18 +89,17 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         throws IOException {
         originatingInstance = dsc.getInstanceName();
 
-        //setTargetName is not called because the constructor
-        //  itself has set the target(s)
-        
+        //We want to broadcast this
+        setTargetName(null);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
 
+
         ros.writeLong(resp.getTokenId());
-        ros.writeLong(minimumRequiredVersion);
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
+
     }
 
     @Override
@@ -128,59 +107,37 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         throws IOException {
 
         tokenId = ris.readLong();
-        minimumRequiredVersion = ris.readLong();
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
         originatingInstance = ris.readLengthPrefixedString();
+
     }
-
-    @Override
-    public void execute(String initiator) {
-
-        try {
-            DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
-            V result = null;
-
-            if (e != null) {
-                synchronized (e) {
-                    Storeable v = (Storeable) e.getV();
-                    if ((!e.isRemoved()) && (v._storeable_getVersion() >= minimumRequiredVersion)) {
-                        result = e.getV();
-                    } else {
-                        //Remove this stale / useless entry
-                        e.markAsRemoved("Removed by StoreableLoadRequestCommand");
-                    }
-                }
-            }
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_request " + key + " => " + result);
-            }
-            
-            if (!originatingInstance.equals(dsc.getInstanceName())) {
-                StoreableLoadResponseCommand<K, V> rsp = new StoreableLoadResponseCommand<K, V>(key, result, tokenId);
-                rsp.setOriginatingInstance(originatingInstance);
-                getCommandManager().execute(rsp);
-            } else {
-                resp.setResult(e);
-            }
-        } catch (DataStoreException dsEx) {
-            resp.setException(dsEx);
-        }
-    }
-
 
 
     public String getRespondingInstanceName() {
         return resp.getRespondingInstanceName();
     }
-    
-    public V getResult(long waitFor, TimeUnit unit)
+
+    @Override
+    public void execute(String initiator)
+        throws DataStoreException {
+        ArrayList<String> confList = new ArrayList<String>();
+        for (BackingStoreConfiguration  conf : RepliatedBackingStoreRegistry.getConfigurations()) {
+            confList.add(conf.toString());
+            System.out.println("Added: " + conf.toString());
+        }
+
+        ListBackingStoreConfigurationResponseCommand respCmd =
+                new ListBackingStoreConfigurationResponseCommand(originatingInstance, tokenId, confList);
+        getCommandManager().execute(respCmd);
+    }
+
+    public ArrayList<String> getResult(long waitFor, TimeUnit unit)
             throws DataStoreException {
         try {
             Object result = future.get(waitFor, unit);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
-            return (V) result;
+            return (ArrayList<String>) result;
         } catch (DataStoreException dsEx) {
             throw dsEx;
         } catch (InterruptedException inEx) {
@@ -193,16 +150,5 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);
             throw new DataStoreException(exeEx);
         }
-    }
-
-    @Override
-    public String toString() {
-        return "StoreableLoadRequestCommand{" +
-                "key=" + key +
-                ", minimumRequiredVersion=" + minimumRequiredVersion +
-                ", resp=" + resp +
-                ", tokenId=" + tokenId +
-                ", originatingInstance='" + originatingInstance + '\'' +
-                '}';
     }
 }

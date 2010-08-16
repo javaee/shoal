@@ -79,7 +79,7 @@ public class UpdateDeltaCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+        super.selectReplicaInstance( k);
 
         int valueOffset = ros.mark();
         ros.write(Utility.intToBytes(0));

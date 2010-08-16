@@ -40,12 +40,12 @@ package org.shoal.ha.mapper;
  * @author Mahesh Kannan
  * 
  */
-public interface KeyMapper<K> {
+public interface KeyMapper {
 
-    public String getMappedInstance(String groupName, K key);
+    public String getMappedInstance(String groupName, Object key);
 
-    public String findReplicaInstance(String groupName, K key);
+    public String[] findReplicaInstance(String groupName, Object key, String keyMappingInfo);
 
-    //public String[] getMappedInstances(String groupName, K key, int count);
+    public String[] getKeyMappingInfo(String groupName, Object key);
 
 }

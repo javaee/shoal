@@ -36,13 +36,17 @@
 
 package org.shoal.ha.cache.impl.store;
 
+import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
 import org.shoal.adapter.store.commands.*;
+import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
+import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.*;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -51,8 +55,10 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class ReplicatedDataStore<K, V>
+public class ReplicatedDataStore<K, V extends Serializable>
         implements DataStore<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
 
     private String storeName;
 
@@ -102,7 +108,13 @@ public class ReplicatedDataStore<K, V>
             }
         }
 
-        KeyMapper<K> keyMapper = conf.getKeyMapper();
+        if (conf.isDoASyncReplication()) {
+            cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
+            cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
+            _logger.log(Level.INFO, "ASync replication enabled...");
+        }
+        
+        KeyMapper keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
         }
@@ -113,6 +125,7 @@ public class ReplicatedDataStore<K, V>
 
         Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
         logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
+
     }
 
     public DataStoreContext<K, V> getDataStoreContext() {
@@ -133,7 +146,7 @@ public class ReplicatedDataStore<K, V>
                     entry.setV(v);
                 }
                 entry.setReplicaInstanceName(cmd.getTargetName());
-                result = cmd.getTargetName();
+                result = cmd.getKeyMappingInfo();
             } else {
                 return "";
             }
@@ -148,11 +161,11 @@ public class ReplicatedDataStore<K, V>
         UpdateDeltaCommand<K, V> cmd = new UpdateDeltaCommand<K, V>(k, obj);
         cm.execute(cmd);
 
-        return cmd.getTargetName();
+        return cmd.getKeyMappingInfo();
     }
 
     @Override
-    public V get(K key)
+    public V get(K key, String cookie)
             throws DataStoreException {
 
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
@@ -167,16 +180,23 @@ public class ReplicatedDataStore<K, V>
 
         if (v == null) {
             try {
-                BroadcastLoadRequestCommand<K, V> cmd = new BroadcastLoadRequestCommand<K, V>(key);
-                cm.execute(cmd);
-
-                v = cmd.getResult(6, TimeUnit.SECONDS);
-
+                String respondingInstanceName = null;
+                if (cookie == null) {
+                    BroadcastLoadRequestCommand<K, V> cmd = new BroadcastLoadRequestCommand<K, V>(key);
+                    cm.execute(cmd);
+                    v = cmd.getResult(3, TimeUnit.SECONDS);
+                    respondingInstanceName = cmd.getRespondingInstanceName();
+                } else {
+                    LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(key, cookie);
+                    cm.execute(cmd);
+                    v = cmd.getResult(3, TimeUnit.SECONDS);
+                    respondingInstanceName = cmd.getRespondingInstanceName();
+                }
 
                 entry = replicaStore.getOrCreateEntry(key);
                 synchronized (entry) {
                     if (! entry.isRemoved()) {
-                        entry.setReplicaInstanceName(cmd.getRespondingInstanceName());
+                        entry.setReplicaInstanceName(respondingInstanceName);
 
                         if (conf.isCacheLocally()) {
                             entry.setV(v);

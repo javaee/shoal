@@ -107,8 +107,9 @@ public class StoreableSaveCommand<K, V extends Storeable>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+        super.selectReplicaInstance( k);
 
+        version = v._storeable_getVersion();
         boolean requiresFullSave = true;
         if (entry.getReplicaInstanceName() != null) {
             //FIXME: This requires more stronger check
@@ -179,6 +180,11 @@ public class StoreableSaveCommand<K, V extends Storeable>
                 }
             }
         }
-        
+    }
+
+    @Override
+    public String getKeyMappingInfo() {
+        String locationInfo = super.getKeyMappingInfo();
+        return version + ":" + (locationInfo == null ? "" : locationInfo);
     }
 }

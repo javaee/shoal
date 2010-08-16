@@ -164,7 +164,8 @@ public class GroupServiceProvider
         if (gms == null) {
             if (startGMS) {
                 logger.info("GroupServiceProvider *CREATING* gms module for group " + groupName);
-                GroupManagementService.MemberType memberType = myName.equals("DAS") ? GroupManagementService.MemberType.SPECTATOR
+                GroupManagementService.MemberType memberType = myName.startsWith("monitor-")
+                        ? GroupManagementService.MemberType.SPECTATOR
                         : GroupManagementService.MemberType.CORE;
 
                 configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),

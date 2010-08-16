@@ -76,14 +76,15 @@ public class CommandManager<K, V>
         this.dsc = dsc;
         this.myName = dsc.getInstanceName();
 
-        registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
 
-        if (dsc.isDoASyncReplication()) {
-            registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
-            registerCommand(new ReplicationFramePayloadCommand<K, V>());
-        }
+        head = new CommandHandlerInterceptor<K, V>();
+        head.initialize(dsc);
 
-        registerExecutionInterceptor(new TransmitInterceptor<K, V>());
+        tail = new TransmitInterceptor<K, V>();
+        tail.initialize(dsc);
+        
+        head.setNext(tail);
+        tail.setPrev(head);
     }
 
     public void registerCommand(Command command) {
@@ -93,15 +94,12 @@ public class CommandManager<K, V>
 
     public synchronized void registerExecutionInterceptor(AbstractCommandInterceptor<K, V> interceptor) {
         interceptor.initialize(dsc);
-        if (head == null) {
-            head = interceptor;
-        } else {
-            tail.setNext(interceptor);
-        }
-        
-        interceptor.setPrev(tail);
-        interceptor.setNext(null);
-        tail = interceptor;
+
+        interceptor.setPrev(tail.getPrev());
+        tail.getPrev().setNext(interceptor);
+
+        interceptor.setNext(tail);
+        tail.setPrev(interceptor);
     }
 
     //Initiated to transmit

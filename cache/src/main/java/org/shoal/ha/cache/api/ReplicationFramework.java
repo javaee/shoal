@@ -38,6 +38,8 @@ package org.shoal.ha.cache.api;
 
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
+import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
+import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
 import org.shoal.ha.mapper.DefaultKeyMapper;
@@ -47,11 +49,15 @@ import org.shoal.ha.group.GroupServiceFactory;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class ReplicationFramework<K, V extends Serializable> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
 
     private String storeName;
 
@@ -126,8 +132,13 @@ public class ReplicationFramework<K, V extends Serializable> {
         }
 
         dsc.setADoSyncReplication(conf.isDoASyncReplication());
+        if (conf.isDoASyncReplication()) {
+            cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
+            cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
+            _logger.log(Level.INFO, "ASync replication enabled...");
+        }
         
-        KeyMapper<K> keyMapper = conf.getKeyMapper();
+        KeyMapper keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
         }

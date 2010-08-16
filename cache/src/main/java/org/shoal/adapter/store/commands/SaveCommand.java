@@ -89,7 +89,7 @@ public class SaveCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+        super.selectReplicaInstance( k);
 
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         dsc.getDataStoreEntryHelper().writeObject(ros, v);

@@ -87,7 +87,8 @@ public class BroadcastLoadRequestCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
         originatingInstance = dsc.getInstanceName();
-//        String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
+
+        //We want to broadcast this
         setTargetName(null);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
@@ -119,17 +120,21 @@ public class BroadcastLoadRequestCommand<K, V>
     public void execute(String initiator) {
         try {
             DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
-            if (!originatingInstance.equals(dsc.getInstanceName())) {
-                if (e.getV() != null) {
-                    LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(
-                        key, dsc.getDataStoreEntryHelper().getV(e), tokenId);
-                    rsp.setOriginatingInstance(originatingInstance);
-                    getCommandManager().execute(rsp);
+            if (e != null) {
+                if (!originatingInstance.equals(dsc.getInstanceName())) {
+                    synchronized (e) {
+                        if ((! e.isRemoved()) && (e.getV() != null)) {
+                            LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(
+                                key, dsc.getDataStoreEntryHelper().getV(e), tokenId);
+                            rsp.setOriginatingInstance(originatingInstance);
+                            getCommandManager().execute(rsp);
+                        } else {
+                            //Ignore...
+                        }
+                    }
                 } else {
-                    //Ignore...
+                    //its for me . Ignore
                 }
-            } else {
-                //its for me . Ignore
             }
         } catch (DataStoreException dsEx) {
             resp.setException(dsEx);

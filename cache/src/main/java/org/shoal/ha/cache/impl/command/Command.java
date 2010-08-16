@@ -40,6 +40,7 @@ import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.mapper.KeyMappingInfo;
 
 import java.io.IOException;
 
@@ -55,11 +56,11 @@ public abstract class Command<K, V> {
 
     private CommandManager<K, V> cm;
 
-    private String targetName;
-
     private ReplicationOutputStream cachedROS;
 
     private String commandName;
+
+    private String[] keyMappingInfo;
 
     protected Command(byte opcode) {
         this.opcode = opcode;
@@ -82,15 +83,23 @@ public abstract class Command<K, V> {
     }
 
     public String getTargetName() {
-        return targetName;
+        return keyMappingInfo == null ? null : keyMappingInfo[0];
     }
 
+    public String getAlternateTargetName() {
+        return keyMappingInfo == null ? null : keyMappingInfo.length > 1 ? keyMappingInfo[1] : null;
+    }
+    
     public final byte getOpcode() {
         return opcode;
     }
 
     protected void setTargetName(String val) {
-        targetName = val;
+        keyMappingInfo = new String[] {val, null};
+    }
+
+    protected void setTargetNames(String val1, String val2) {
+        keyMappingInfo = new String[] {val1, val2};
     }
 
     public final void prepareTransmit(DataStoreContext<K, V> ctx)
@@ -107,7 +116,6 @@ public abstract class Command<K, V> {
             byte[] data = cachedROS.toByteArray();
             globalROS.write(data);
             globalROS.flush();
-            System.out.println("**Command.write wrote: " + data.length);
         } catch (IOException ex) {
            ex.printStackTrace();
         }
@@ -117,6 +125,20 @@ public abstract class Command<K, V> {
         throws IOException, DataStoreException {
         ris.read(); //Don't remove this
         readCommandPayload(ris);
+    }
+
+    protected void selectReplicaInstance(K key) {
+        keyMappingInfo = dsc.getKeyMapper().getKeyMappingInfo(dsc.getGroupName(), key);
+    }
+
+    public String getKeyMappingInfo() {
+        if (keyMappingInfo == null || keyMappingInfo[0] == null) {
+            return null;
+        } else if (keyMappingInfo[1] == null) {
+            return keyMappingInfo[0];
+        } else {
+            return keyMappingInfo[0] + ":" + keyMappingInfo[1];
+        }
     }
 
     public final String getName() {

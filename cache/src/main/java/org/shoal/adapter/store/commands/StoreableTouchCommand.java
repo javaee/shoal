@@ -87,7 +87,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k));
+        super.selectReplicaInstance( k);
 
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         ros.writeLong(version);
@@ -129,6 +129,12 @@ public class StoreableTouchCommand<K, V extends Storeable>
                 }
             }
         }
+    }
+
+    @Override
+    public String getKeyMappingInfo() {
+        String locationInfo = super.getKeyMappingInfo();
+        return version + ":" + (locationInfo == null ? "" : locationInfo);
     }
 
 }

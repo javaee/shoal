@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
 import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
 import org.shoal.ha.cache.impl.util.StringKeyHelper;
 import org.shoal.ha.mapper.DefaultKeyMapper;

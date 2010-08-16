@@ -123,9 +123,11 @@ public class DataStoreShell {
         throws BackingStoreException {
 
         if ("put".equalsIgnoreCase(command)) {
-            ds.save(params[0], params[1], true);
+            String hint = ds.save(params[0], params[1], true);
+            System.out.println("Saved; hint: " + hint);
         } else if ("get".equalsIgnoreCase(command)) {
-            System.out.println("get(" + params[0] + ") => " + ds.load(params[0], null));
+            String hint = params.length > 1 ? params[1] : null;
+            System.out.println("get(" + params[0] + ") => " + ds.load(params[0], hint));
         } else if ("remove".equalsIgnoreCase(command)) {
             ds.remove(params[0]);
         }

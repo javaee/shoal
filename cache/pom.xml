@@ -97,7 +97,9 @@
                 <configuration>
                     <instructions>
                         <Export-Package>org.shoal.adapter.store,org.shoal.ha.mapper</Export-Package>
+                        <!--
                         <Include-Resource>{maven-resources}</Include-Resource>
+                        -->
                     </instructions>
                 </configuration>
             </plugin>

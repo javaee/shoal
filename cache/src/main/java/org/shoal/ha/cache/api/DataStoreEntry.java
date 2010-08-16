@@ -57,7 +57,7 @@ public class DataStoreEntry<K, V> {
 
     private boolean removed;
 
-    private long removedAt;
+    private long lastAccessedAt;
 
     private String reasonForRemoval;
 
@@ -122,7 +122,13 @@ public class DataStoreEntry<K, V> {
         v = null;
         pendingUpdates = null;
         reasonForRemoval = reason;
-        removedAt = System.currentTimeMillis();
     }
-    
+
+    public long getLastAccessedAt() {
+        return lastAccessedAt;
+    }
+
+    public void setLastAccessedAt(long lastAccessedAt) {
+        this.lastAccessedAt = lastAccessedAt;
+    }
 }

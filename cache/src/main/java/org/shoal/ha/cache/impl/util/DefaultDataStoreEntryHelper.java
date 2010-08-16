@@ -65,40 +65,8 @@ public class DefaultDataStoreEntryHelper<K, V>
     @Override
     public V getV(DataStoreEntry<K, V> replicationEntry)
             throws DataStoreException {
-        if (replicationEntry == null) {
-            return null;
-        }
 
-        V v = replicationEntry.getV();
-        /*
-        byte[] data = (byte[]) replicationEntry.getV();
-        if (data == null) {
-            return null;
-        }
-
-        ByteArrayInputStream bis = new ByteArrayInputStream(data);
-        ObjectInputStream ois = null;
-        V v = null;
-        try {
-            ois = factory.createObjectInputStream(bis, loader);
-            v = (V) ois.readObject();
-        } catch (IOException ioEx) {
-            throw new DataStoreException(ioEx);
-        } catch (ClassNotFoundException cnfEx) {
-            throw new DataStoreException(cnfEx);
-        } finally {
-            try {
-                ois.close();
-            } catch (IOException ioEx1) {
-            }
-            try {
-                bis.close();
-            } catch (IOException ioEx2) {
-            }
-        }
-        */
-
-        return v;
+        return replicationEntry == null ? null : replicationEntry.getV();
     }
 
     @Override
@@ -148,17 +116,5 @@ public class DefaultDataStoreEntryHelper<K, V>
             throw new DataStoreException("Cannot desrialize value", ioEx);
         }
     }
-
-//    @Override
-//    public void updateState(K k, DataStoreEntry<K, V> kvDataStoreEntry, V obj)
-//        throws DataStoreException {
-//        kvDataStoreEntry.setKey(k);
-//        kvDataStoreEntry.setV(obj);
-//    }
-//
-//    @Override
-//    public void setV(K k, DataStoreEntry<K, V> kvDataStoreEntry, V obj) throws DataStoreException {
-//        kvDataStoreEntry.setV(obj);
-//    }
 
 }

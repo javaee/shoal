@@ -75,7 +75,6 @@ public class StoreableBroadcastLoadRequestCommand<K, V extends Storeable>
 
     private String originatingInstance;
 
-
     public StoreableBroadcastLoadRequestCommand() {
         super(ReplicationCommandOpcode.STOREABLE_BROADCAST_LOAD_REQUEST);
     }

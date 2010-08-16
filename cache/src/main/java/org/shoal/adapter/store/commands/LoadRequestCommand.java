@@ -69,22 +69,20 @@ public class LoadRequestCommand<K, V>
 
     private String originatingInstance;
 
+    private String[] mappingParams;
+
+    private int replicaIndex = 0;
 
     public LoadRequestCommand() {
         super(ReplicationCommandOpcode.LOAD_REQUEST);
     }
 
-    public LoadRequestCommand(K key) {
+    public LoadRequestCommand(K key, String cookie) {
         this();
         this.key = key;
-    }
-
-    public K getKey() {
-        return key;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
+        if (cookie != null) {
+            mappingParams = cookie.split(":");
+        }
     }
 
     @Override
@@ -96,8 +94,8 @@ public class LoadRequestCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
         originatingInstance = dsc.getInstanceName();
-        String targetName = dsc.getKeyMapper().findReplicaInstance(dsc.getGroupName(), key);
-        setTargetName(targetName);
+
+        setTargetName(mappingParams == null ? null : mappingParams[0]);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
@@ -142,10 +140,10 @@ public class LoadRequestCommand<K, V>
         return resp.getRespondingInstanceName();
     }
 
-    public V getResult()
+    public V getResult(long waitFor, TimeUnit unit)
             throws DataStoreException {
         try {
-            Object result = future.get(8000, TimeUnit.MILLISECONDS);
+            Object result = future.get(waitFor, unit);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
@@ -157,7 +155,7 @@ public class LoadRequestCommand<K, V>
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
-            throw new DataStoreException(timeoutEx);
+            return null;
         } catch (ExecutionException exeEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);
             throw new DataStoreException(exeEx);

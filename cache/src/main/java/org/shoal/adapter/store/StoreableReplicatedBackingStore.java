@@ -41,7 +41,11 @@ import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.glassfish.ha.store.api.Storeable;
 import org.shoal.adapter.store.commands.*;
+import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
+import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
+import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
+import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 
 import java.io.Serializable;
@@ -51,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Mahesh Kannan
  */
-public class StorableReplicatedBackingStore<K extends Serializable, V extends Storeable>
+public class StoreableReplicatedBackingStore<K extends Serializable, V extends Storeable>
         extends BackingStore<K, V> {
 
     private ReplicationFramework<K, V> framework;
@@ -60,6 +64,12 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
 
     boolean localCachingEnabled;
 
+    private ReplicatedBackingStoreFactory factory;
+
+    /*package*/ void setBackingStoreFactory(ReplicatedBackingStoreFactory factory) {
+        this.factory = factory;
+    }
+    
     @Override
     public void initialize(BackingStoreConfiguration<K, V> conf)
             throws BackingStoreException {
@@ -109,7 +119,7 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
                 .setCacheLocally(enableLocalCaching);
 
         boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
-                ? false : (Boolean) vendorSpecificMap.get("async.replication");
+                ? true : (Boolean) vendorSpecificMap.get("async.replication");
         dsConf.setDoASyncReplication(asyncReplication);
 
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
@@ -123,17 +133,32 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
         dsConf.addCommand(new StoreableLoadResponseCommand<K, V>());
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
 
+        dsConf.addCommand(new ListBackingStoreConfigurationCommand());
+        dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
+        dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
+
         framework = new ReplicationFramework<K, V>(dsConf);
 
         replicaStore = framework.getReplicaStore();
 
         localCachingEnabled = framework.getDataStoreConfigurator().isCacheLocally();
+        
+        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf, framework.getDataStoreContext());
     }
 
     @Override
-    public V load(K key, String strVersion) throws BackingStoreException {
+    public V load(K key, String cookie) throws BackingStoreException {
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
-        Long version = strVersion == null ? Long.MIN_VALUE : Long.valueOf(strVersion);
+        Long version = Long.MIN_VALUE;
+        String[] requestHint = null;
+        if (cookie != null) {
+            requestHint = cookie.split(":");
+            String verStr = requestHint[0];
+            if (version != null) {
+                version = Long.valueOf(verStr);
+            }
+        }
+
         V v = null;
         synchronized (entry) {
             if (!entry.isRemoved()) {
@@ -149,19 +174,31 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
 
         if (v == null) {
             try {
+                String respondingInstance = null;
                 //NOTE: Be careful with LoadREquest command. Do not synchronize while executing the command
                 //  as the response may want to set the result on the entry
-                StoreableBroadcastLoadRequestCommand<K, V> cmd =
-                        new StoreableBroadcastLoadRequestCommand<K, V>(key, version == null ? null : Long.valueOf(version));
-                framework.execute(cmd);
-                v = cmd.getResult(6, TimeUnit.SECONDS);
+                if (requestHint == null || requestHint.length == 1) {
+                    StoreableBroadcastLoadRequestCommand<K, V> command
+                            = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
+
+                    framework.execute(command);
+                    v = command.getResult(6, TimeUnit.SECONDS);
+                    respondingInstance = command.getRespondingInstanceName();
+                } else {
+                    StoreableLoadRequestCommand<K, V> command
+                            = new StoreableLoadRequestCommand<K, V>(key, requestHint);
+
+                    framework.execute(command);
+                    v = command.getResult(6, TimeUnit.SECONDS);
+                    respondingInstance = command.getRespondingInstanceName();
+                }
                 entry.setV(v);
 
                 entry = replicaStore.getOrCreateEntry(key);
 
                 synchronized (entry) {
                     if (!entry.isRemoved()) {
-                        entry.setReplicaInstanceName(cmd.getRespondingInstanceName());
+                        entry.setReplicaInstanceName(respondingInstance);
 
                         if (localCachingEnabled) {
                             entry.setV(v);
@@ -198,6 +235,9 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
 
                     result = cmd.getTargetName();
                 }
+
+                result = cmd.getKeyMappingInfo();
+                System.out.println(" save cookie : " + result);
             }
 
             return result;
@@ -222,7 +262,9 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
-        return 0; //TODO
+        ReplicaStore<K, V> replicaStore = framework.getReplicaStore();
+
+        return replicaStore.removeExpired(idleTime);
     }
 
     @Override
@@ -267,4 +309,11 @@ public class StorableReplicatedBackingStore<K extends Serializable, V extends St
         return result;
     }
 
+    public ReplicationFramework<K, V> getFramework() {
+        return framework;
+    }
+
+    public DataStoreContext<K, V> getDataStoreContext() {
+        return framework.getDataStoreContext();
+    }
 }

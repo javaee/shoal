@@ -52,10 +52,12 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class DefaultKeyMapper<K>
-        implements KeyMapper<K>, GroupMemberEventListener {
+public class DefaultKeyMapper
+        implements KeyMapper, GroupMemberEventListener {
 
     Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_KEY_MAPPER);
+
+    private static final String[] _EMPTY_TARGETS = new String[] {null, null};
 
     private String myName;
 
@@ -83,8 +85,20 @@ public class DefaultKeyMapper<K>
         _logger.log(Level.INFO, "DefaultKeyMapper created for: myName: " + myName + "; groupName: " + groupName);
     }
 
+    protected ReentrantReadWriteLock.ReadLock getReadLock() {
+        return rLock;
+    }
+
+    protected ReentrantReadWriteLock.WriteLock getWriteLock() {
+        return wLock;
+    }
+
+    protected String[] getMembers() {
+        return members;
+    }
+
     @Override
-    public String getMappedInstance(String groupName, K key1) {
+    public String getMappedInstance(String groupName, Object key1) {
         int hc = key1.hashCode();
         if (key1 instanceof HashableKey) {
             HashableKey k = (HashableKey) key1;
@@ -103,7 +117,7 @@ public class DefaultKeyMapper<K>
     }
 
     @Override
-    public String findReplicaInstance(String groupName, K key1) {
+    public String[] getKeyMappingInfo(String groupName, Object key1) {
         int hc = key1.hashCode();
         if (key1 instanceof HashableKey) {
             HashableKey k = (HashableKey) key1;
@@ -113,11 +127,44 @@ public class DefaultKeyMapper<K>
 
         try {
             rLock.lock();
-            return previuousAliveAndReadyMembers.length == 0
-                    ? null
-                    : previuousAliveAndReadyMembers[hc % (previuousAliveAndReadyMembers.length)];
+            return getKeyMappingInfo(members, hc);
         } finally {
             rLock.unlock();
+        }
+    }
+
+    protected String[] getKeyMappingInfo(String[] instances, int hc) {
+        if (members.length == 0) {
+            return _EMPTY_TARGETS;
+        } else if (members.length == 1) {
+            return new String[] {members[0], null};
+        } else {
+            int index = hc % members.length;
+            return new String[] {members[index], members[(index + 1) % members.length]};
+        }
+    }
+
+    @Override
+    public String[] findReplicaInstance(String groupName, Object key1, String keyMappingInfo) {
+        if (keyMappingInfo != null) {
+            return keyMappingInfo.split(":");
+        } else {
+
+            int hc = key1.hashCode();
+            if (key1 instanceof HashableKey) {
+                HashableKey k = (HashableKey) key1;
+                hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
+            }
+            hc = Math.abs(hc);
+
+            try {
+                rLock.lock();
+                return previuousAliveAndReadyMembers.length == 0
+                        ? null
+                        : new String[] {previuousAliveAndReadyMembers[hc % (previuousAliveAndReadyMembers.length)]};
+            } finally {
+                rLock.unlock();
+            }
         }
     }
 

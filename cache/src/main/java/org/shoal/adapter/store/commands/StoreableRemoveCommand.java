@@ -72,8 +72,8 @@ public class StoreableRemoveCommand<K, V>
 
     @Override
     public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        setTargetName(dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key));
-
+        //super.selectReplicaInstance( key);
+        super.setTargetName(null);
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
     }
 

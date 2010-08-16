@@ -40,7 +40,12 @@ import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.shoal.adapter.store.commands.*;
+import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
+import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
+import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
+import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
+import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -51,10 +56,21 @@ import java.util.Map;
 public class ReplicatedBackingStore<K extends Serializable, V extends Serializable>
         extends BackingStore<K, V> {
 
-    DataStore<K, V> dataStore;
+    private DataStore<K, V> dataStore;
+
+    private ReplicatedBackingStoreFactory factory;
+
+    /*package*/ void setBackingStoreFactory(ReplicatedBackingStoreFactory factory) {
+        this.factory = factory;
+    }
+
+
+    public DataStoreContext<K, V> getDataStoreContext() {
+        return null;//dataStore.get();
+    }
 
     @Override
-    protected void initialize(BackingStoreConfiguration<K, V> conf)
+    public void initialize(BackingStoreConfiguration<K, V> conf)
             throws BackingStoreException {
         super.initialize(conf);
         DataStoreConfigurator<K, V> dsConf = new DataStoreConfigurator<K, V>();
@@ -102,9 +118,13 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
                 .setCacheLocally(enableLocalCaching);
 
         boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
-                ? false : (Boolean) vendorSpecificMap.get("async.replication");
+                ? true : (Boolean) vendorSpecificMap.get("async.replication");
         dsConf.setDoASyncReplication(asyncReplication);
-        
+
+        KeyMapper keyMapper = (KeyMapper) vendorSpecificMap.get("key.mapper");
+        if (keyMapper != null) {
+            dsConf.setKeyMapper(keyMapper);
+        }
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         dsConf.addCommand(new SaveCommand<K, V>());
@@ -115,13 +135,23 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
         dsConf.addCommand(new TouchCommand<K, V>());
         dsConf.addCommand(new UpdateDeltaCommand<K, V>());
+        
+        dsConf.addCommand(new ListBackingStoreConfigurationCommand());
+        dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
+        dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
+
         dataStore = DataStoreFactory.createDataStore(dsConf);
+
+
+        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf,
+                ((ReplicatedDataStore) dataStore).getDataStoreContext());
     }
 
     @Override
-    public V load(K key, String version) throws BackingStoreException {
+    public V load(K key, String cookie) throws BackingStoreException {
         try {
-            return dataStore.get(key);
+            System.out.println("***** =>  load(" + key + ", " + cookie + ")");
+            return dataStore.get(key, cookie);
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during load: " + key, dsEx);
         }
@@ -157,6 +187,7 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public void destroy() throws BackingStoreException {
+        RepliatedBackingStoreRegistry.unregisterStore(super.getBackingStoreConfiguration().getStoreName());
         dataStore.close();
     }
 

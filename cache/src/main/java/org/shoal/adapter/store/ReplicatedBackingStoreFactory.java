@@ -67,11 +67,13 @@ public class ReplicatedBackingStoreFactory
         } else {
             ReplicatedBackingStore<K, V> store = null;
             store = new ReplicatedBackingStore<K, V>();
+            store.setBackingStoreFactory(this);
             store.initialize(conf);
 
             backingStore = store;
         }
         System.out.println("ReplicatedBackingStoreFactory:: CREATED an instance of: " + backingStore.getClass().getName());
+
         return backingStore;
     }
 
@@ -88,8 +90,10 @@ public class ReplicatedBackingStoreFactory
     private BackingStore createStoreableBackingStore(
             BackingStoreConfiguration conf) throws BackingStoreException {
 
-        StorableReplicatedBackingStore backingStore = new StorableReplicatedBackingStore();
+        StoreableReplicatedBackingStore backingStore = new StoreableReplicatedBackingStore();
+        backingStore.setBackingStoreFactory(this);
         backingStore.initialize(conf);
+
         return backingStore;
     }
 }

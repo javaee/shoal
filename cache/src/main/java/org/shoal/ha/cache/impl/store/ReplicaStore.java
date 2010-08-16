@@ -36,11 +36,16 @@
 
 package org.shoal.ha.cache.impl.store;
 
+import org.glassfish.ha.store.api.StoreEntryProcessor;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreEntryHelper;
 import org.shoal.ha.cache.api.DataStoreException;
 
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -109,4 +114,46 @@ public class ReplicaStore<K, V> {
     public int size() {
         return map.size();
     }
+
+    public int removeExpired(long idleforMillis) {
+        int result = 0;
+        long now = System.currentTimeMillis();
+        DataStoreEntryHelper<K, V> entryHelper = ctx.getDataStoreEntryHelper();
+        Iterator<DataStoreEntry<K, V>> iterator = map.values().iterator();
+        while (iterator.hasNext()) {
+            DataStoreEntry<K, V> entry = iterator.next();
+            synchronized (entry) {
+                if (entry.getLastAccessedAt() + idleforMillis < now) {
+                    map.remove(entry.getKey());
+                    result++;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public void removeExpired(StoreEntryProcessor processor)
+        throws DataStoreException {
+        long now = System.currentTimeMillis();
+        DataStoreEntryHelper<K, V> entryHelper = ctx.getDataStoreEntryHelper();
+        Iterator<DataStoreEntry<K, V>> iterator = map.values().iterator();
+        while (iterator.hasNext()) {
+            DataStoreEntry<K, V> entry = iterator.next();
+            synchronized (entry) {
+                if ((Boolean) processor.process(entry.getKey(), (Serializable) entryHelper.getV(entry))) {
+                    map.remove(entry.getKey());
+                }
+            }
+        }
+    }
+
+    public Collection<K> keys() {
+        return map.keySet();
+    }
+
+    public Collection<DataStoreEntry<K, V>> values() {
+        return map.values();
+    }
+
 }
