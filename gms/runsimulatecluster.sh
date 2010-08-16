@@ -23,7 +23,7 @@ GROUPNAME=testgroup
 MULTICASTADDRESS=229.9.1.`./randomNumber.sh`
 MULTICASTPORT=2299
 BINDINTERFACEADDRESS=""
-
+MAXMISSEDHEARTBEATS="-mmh 10"
 DIST=false
 
 usage () {
@@ -59,6 +59,11 @@ do
          else
             echo "ERROR: Missing command value"
             usage
+         fi
+         if [ "${CMD}" = "rejoin" ]; then
+            MMH=${MAXMISSEDHEARTBEATS}
+         else
+            MMH=""
          fi
        ;;
        -bia)
@@ -108,6 +113,7 @@ do
        ;;
      esac
 done
+
 
 echo ${MULTICASTADDRESS} > ./currentMulticastAddress.txt
 
@@ -174,7 +180,7 @@ if [ $DIST = false ]; then
     else
        BIA=""
     fi
-    ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${TCPSTARTPORT} -te ${TCPENDPORT} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}
+    ./rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${TCPSTARTPORT} -te ${TCPENDPORT} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA} ${MMH}
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
        TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
@@ -200,7 +206,7 @@ else
            BIA=""
        fi
        echo "Starting server on ${MACHINE_NAME}"
-       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/server.log; mkdir -p ${LOGS_DIR}; ${WORKSPACE_HOME}/rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} ${TSA} ${TEA} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/server.log; mkdir -p ${LOGS_DIR}; ${WORKSPACE_HOME}/rungmsdemo.sh server ${GROUPNAME} SPECTATOR 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} ${TSA} ${TEA} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA} ${MMH}"
     else
        echo "ERROR: Could not find ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties"
        exit 1
@@ -229,7 +235,7 @@ if [ $DIST = false ]; then
         else
           BIA=""
         fi
-        MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA}"
+        MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA} ${MMH}"
         if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
            echo "Not Starting ${INSTANCE_NAME}, it will be started later"
         else
@@ -271,7 +277,7 @@ else
       if [ ! -z ${TMP} ]; then
            BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
       fi
-      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA}"
+      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA} ${MMH}"
       if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
          echo "Not Starting ${INSTANCE_NAME}, it will be started later"
       else
