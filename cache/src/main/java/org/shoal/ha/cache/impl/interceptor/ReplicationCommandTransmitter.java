@@ -75,8 +75,6 @@ public class ReplicationCommandTransmitter<K, V>
 
     public void addCommand(Command<K, V> cmd) {
         list.add(cmd);
-        System.out.println("ReplicationCommandTransmitter[" + targetName + "] just "
-        + " accumulated: " + cmd.getOpcode());
     }
 
     public void run() {

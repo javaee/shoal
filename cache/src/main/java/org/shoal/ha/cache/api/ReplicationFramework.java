@@ -135,7 +135,6 @@ public class ReplicationFramework<K, V extends Serializable> {
         if (conf.isDoASyncReplication()) {
             cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
             cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
-            _logger.log(Level.INFO, "ASync replication enabled...");
         }
         
         KeyMapper keyMapper = conf.getKeyMapper();
@@ -146,6 +145,7 @@ public class ReplicationFramework<K, V extends Serializable> {
         gs.registerGroupMessageReceiver(storeName, cm);
 
         replicaStore = dsc.getReplicaStore();
+        _logger.log(Level.INFO, "ReplicationFramework initialized. Configuration: " + conf);
     }
 
     public void execute(Command<K, V> cmd)

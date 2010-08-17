@@ -88,8 +88,6 @@ public class ReplicationCommandTransmitterManager<K, V>
             default:
                 String target = cmd.getTargetName();
                 if (target != null) {
-                    System.out.println("** ReplicationCommandTransmitterManager: "
-                            + "About to transmit to " + target + "; cmd: " + cmd);
                     ReplicationCommandTransmitter<K, V> rft = transmitters.get(target);
                     if (rft == null) {
                         rft = new ReplicationCommandTransmitter<K, V>();

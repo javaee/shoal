@@ -46,6 +46,8 @@ import org.shoal.ha.cache.impl.command.CommandManager;
  */
 public abstract class AbstractCommandInterceptor<K, V> {
 
+    protected String storeName;
+
     protected DataStoreContext<K, V> dsc;
     
     private CommandManager<K, V> cm;
@@ -57,6 +59,8 @@ public abstract class AbstractCommandInterceptor<K, V> {
     public void initialize(DataStoreContext<K, V> dsc) {
         this.dsc = dsc;
         this.cm = dsc.getCommandManager();
+
+        this.storeName = dsc.getServiceName();
     }
 
     public final DataStoreContext<K, V> getDataStoreContext() {
