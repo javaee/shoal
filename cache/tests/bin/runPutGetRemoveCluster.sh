@@ -113,5 +113,10 @@ echo "Group testing has completed, shutting down group [${GROUPNAME}]"
 ./gms_admin.sh stopc ${GROUPNAME} -tl ${TEST_LOG_LEVEL} -sl ${SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT}
 cd ${PWD}
 
+FAILURES=`grep -a "SEVERE" ${LOGS_DIR}/* `
+
 NUMFAILED=`grep -a "SEVERE" ${LOGS_DIR}/* | wc -l | tr -d ' ' `
 echo "FAILURES:${NUMFAILED}"
+echo "========================="
+echo "${FAILURES}"
+echo "========================="

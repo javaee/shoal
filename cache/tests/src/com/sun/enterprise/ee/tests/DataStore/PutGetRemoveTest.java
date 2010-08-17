@@ -449,27 +449,31 @@ public class PutGetRemoveTest implements CallBack {
                 try {
                     ds.put(onceExistedId, onceExistedValue);
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
+                // give time for the data to persist
+                PutGetRemoveTest.sleep(1);
                 try {
                     myLogger.log(Level.INFO, "Accessing " + onceExistedId);
                     String tmp = (String) ds.get(onceExistedId);
                     if (tmp != null) {
                         if (!tmp.equals(onceExistedValue)) {
-                            myLogger.log(Level.SEVERE, "Error: " + onceExistedValue + " != " + tmp);
+                            myLogger.log(Level.SEVERE, "ERROR: " + onceExistedValue + " != " + tmp);
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of " + onceExistedId + " resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of " + onceExistedId + " resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
                 myLogger.log(Level.INFO, "Removing " + onceExistedId);
                 try {
                     ds.remove(onceExistedId);
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while removing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while removing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
+                // give time for the data to be removed
+                PutGetRemoveTest.sleep(1);
                 //
                 // this might need to be modified the wait until remove has been sucessfully accomplished before
                 // moving on
@@ -478,13 +482,13 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.INFO, "Trying to access " + onceExistedId + " after remove");
                     String tmp = (String) ds.get(onceExistedId);
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of " + onceExistedId + " resulted in non-null return value[" + tmp + "]");
+                        myLogger.log(Level.SEVERE, "ERROR: get of " + onceExistedId + " resulted in non-null return value[" + tmp + "]");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
 
@@ -501,14 +505,14 @@ public class PutGetRemoveTest implements CallBack {
                         myLogger.log(Level.INFO, "Trying to access " + id);
                         String tmp = (String) ds.get(id);
                         if (tmp != null) {
-                            myLogger.log(Level.SEVERE, "Error: get of " + id + " resulted in non-null return value[" + tmp + "]");
+                            myLogger.log(Level.SEVERE, "ERROR: get of " + id + " resulted in non-null return value[" + tmp + "]");
                         }
                     } catch (Exception e) {
-                        myLogger.log(Level.SEVERE, "Error occurred while accessing removed [ONCEEXISTED] - " + e.getLocalizedMessage(), e);
+                        myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [ONCEEXISTED] - " + e.getLocalizedMessage(), e);
                     }
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
 
@@ -522,44 +526,44 @@ public class PutGetRemoveTest implements CallBack {
                     try {
                         ds.put(id, value);
                     } catch (Exception e) {
-                        myLogger.log(Level.SEVERE, "Error occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
+                        myLogger.log(Level.SEVERE, "ERROR: occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                     }
                 }
                 value--;
-                //
-                // this might need to be modified the wait until put has been sucessfully accomplished before
-                // moving on
-                //
+                // give time for the data to be persisted
+                PutGetRemoveTest.sleep(4);
                 try {
                     myLogger.log(Level.INFO, "Accessing " + id);
                     Integer tmp = (Integer) ds.get(id);
                     if (tmp != null) {
                         if (tmp.intValue() != value) {
-                            myLogger.log(Level.SEVERE, "Error: " + tmp.intValue() + " != " + value);
+                            myLogger.log(Level.SEVERE, "ERROR: " + tmp.intValue() + " != " + value);
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of " + id + " resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of " + id + " resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
                 }
                 myLogger.log(Level.INFO, "Removing " + id);
                 try {
                     ds.remove(id);
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
                 }
+                // give time for the data to be removed
+                PutGetRemoveTest.sleep(4);
                 try {
                     myLogger.log(Level.INFO, "Trying to access " + id + " after remove");
                     String tmp = (String) ds.get(id);
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of " + id + " resulted in non-null return value[" + tmp + "]");
+                        myLogger.log(Level.SEVERE, "ERROR: get of " + id + " resulted in non-null return value[" + tmp + "]");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [" + id + "] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [" + id + "] - " + e.getLocalizedMessage(), e);
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
 
@@ -589,7 +593,7 @@ public class PutGetRemoveTest implements CallBack {
                     ds.put(memberID + ":DOUBLE_MIN", Double.MIN_VALUE);
                     ds.put(memberID + ":DOUBLE_MAX", Double.MAX_VALUE);
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing saving [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing saving [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
                 }
                 // do this to ensure that last item has persisted until we go forward.
                 // this is only temporary
@@ -603,240 +607,243 @@ public class PutGetRemoveTest implements CallBack {
                 myLogger.log(Level.INFO, "STOPGAP - Waiting 2 seconds for DOUBLE_MAX to not return null before continuing");
                 }
                  */
+
+                // give time for the data to be persisted
+                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 try {
                     myLogger.log(Level.INFO, "Accessing TRUE");
                     Boolean tmp = (Boolean) ds.get(memberID + ":TRUE");
                     if (tmp != null) {
                         if (tmp.booleanValue() != true) {
-                            myLogger.log(Level.SEVERE, "Error: true != " + tmp.booleanValue());
+                            myLogger.log(Level.SEVERE, "ERROR: true != " + tmp.booleanValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of TRUE resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of TRUE resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [true] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [true] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing FALSE");
                     Boolean tmp = (Boolean) ds.get(memberID + ":FALSE");
                     if (tmp != null) {
                         if (tmp.booleanValue() != false) {
-                            myLogger.log(Level.SEVERE, "Error: true != " + tmp.booleanValue());
+                            myLogger.log(Level.SEVERE, "ERROR: true != " + tmp.booleanValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of TRUE resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of TRUE resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [false] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [false] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing STRING");
                     String tmp = (String) ds.get(memberID + ":STRING");
                     if (tmp != null) {
                         if (!tmp.equals("String")) {
-                            myLogger.log(Level.SEVERE, "Error: STRING != " + tmp);
+                            myLogger.log(Level.SEVERE, "ERROR: STRING != " + tmp);
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of STRING resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of STRING resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [STRING] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [STRING] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing DATE");
                     Date tmp = (Date) ds.get(memberID + ":DATE");
                     if (tmp != null) {
                         if (!tmp.equals(_date)) {
-                            myLogger.log(Level.SEVERE, "Error: DATE[" + tmp + "] != [" + _date + ":]");
+                            myLogger.log(Level.SEVERE, "ERROR: DATE[" + tmp + "] != [" + _date + ":]");
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of DATE resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of DATE resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [DATE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [DATE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing Character_MIN");
                     Character tmp = (Character) ds.get(memberID + ":Character_MIN");
                     if (tmp != null) {
                         if (tmp.charValue() != Character.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: Character.MIN_VALUE != " + tmp.charValue());
+                            myLogger.log(Level.SEVERE, "ERROR: Character.MIN_VALUE != " + tmp.charValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of Character_MIN resulted in a null return value ");
+                        myLogger.log(Level.SEVERE, "ERROR: get of Character_MIN resulted in a null return value ");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [Character.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [Character.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing Character_MAX");
                     Character tmp = (Character) ds.get(memberID + ":Character_MAX");
                     if (tmp != null) {
                         if (tmp.charValue() != Character.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: Character.MAX_VALUE != " + tmp.charValue());
+                            myLogger.log(Level.SEVERE, "ERROR: Character.MAX_VALUE != " + tmp.charValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of Character_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of Character_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [Character.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [Character.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing BYTE_MIN");
                     Byte tmp = (Byte) ds.get(memberID + ":BYTE_MIN");
                     if (tmp != null) {
                         if (tmp.byteValue() != Byte.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: BYTE.MIN_VALUE != " + tmp);
+                            myLogger.log(Level.SEVERE, "ERROR: BYTE.MIN_VALUE != " + tmp);
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of BYTE_MIN resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of BYTE_MIN resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [BYTE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [BYTE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing BYTE_MAX");
                     Byte tmp = (Byte) ds.get(memberID + ":BYTE_MAX");
                     if (tmp != null) {
                         if (tmp.byteValue() != Byte.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: BYTE.MAX_VALUE != " + tmp);
+                            myLogger.log(Level.SEVERE, "ERROR: BYTE.MAX_VALUE != " + tmp);
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of BYTE_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of BYTE_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [BYTE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [BYTE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing SHORT_MIN");
                     Short tmp = (Short) ds.get(memberID + ":SHORT_MIN");
                     if (tmp != null) {
                         if (tmp.shortValue() != Short.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: SHORT.MIN_VALUE != " + tmp.shortValue());
+                            myLogger.log(Level.SEVERE, "ERROR: SHORT.MIN_VALUE != " + tmp.shortValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of SHORT_MIN resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of SHORT_MIN resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [SHORT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [SHORT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing SHORT_MAX");
                     Short tmp = (Short) ds.get(memberID + ":SHORT_MAX");
                     if (tmp != null) {
                         if (tmp.shortValue() != Short.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: SHORT.MAX_VALUE != " + tmp.shortValue());
+                            myLogger.log(Level.SEVERE, "ERROR: SHORT.MAX_VALUE != " + tmp.shortValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of SHORT_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of SHORT_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [SHORT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [SHORT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing INTEGER_MIN");
                     Integer tmp = (Integer) ds.get(memberID + ":INTEGER_MIN");
                     if (tmp != null) {
                         if (tmp.intValue() != Integer.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: INTEGER.MIN_VALUE != " + tmp.intValue());
+                            myLogger.log(Level.SEVERE, "ERROR: INTEGER.MIN_VALUE != " + tmp.intValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of INTEGER_MIN resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of INTEGER_MIN resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [INTEGER.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [INTEGER.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing INTEGER_MAX");
                     Integer tmp = (Integer) ds.get(memberID + ":INTEGER_MAX");
                     if (tmp != null) {
                         if (tmp.intValue() != Integer.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: INTEGER.MAX_VALUE != " + tmp.intValue());
+                            myLogger.log(Level.SEVERE, "ERROR: INTEGER.MAX_VALUE != " + tmp.intValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of INTEGER_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of INTEGER_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [INTEGER.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [INTEGER.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing LONG_MIN");
                     Long tmp = (Long) ds.get(memberID + ":LONG_MIN");
                     if (tmp != null) {
                         if (tmp.longValue() != Long.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: LONG.MIN_VALUE != " + tmp.longValue());
+                            myLogger.log(Level.SEVERE, "ERROR: LONG.MIN_VALUE != " + tmp.longValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of LONG_MIN resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of LONG_MIN resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [LONG.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [LONG.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing LONG_MAX");
                     Long tmp = (Long) ds.get(memberID + ":LONG_MAX");
                     if (tmp != null) {
                         if (tmp.longValue() != Long.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: LONG.MAX_VALUE != " + tmp.longValue());
+                            myLogger.log(Level.SEVERE, "ERROR: LONG.MAX_VALUE != " + tmp.longValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of LONG_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of LONG_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [LONG.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [LONG.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing FLOAT_MIN");
                     Float tmp = (Float) ds.get(memberID + ":FLOAT_MIN");
                     if (tmp != null) {
                         if (tmp.floatValue() != Float.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: FLOAT.MIN_VALUE != " + tmp.floatValue());
+                            myLogger.log(Level.SEVERE, "ERROR: FLOAT.MIN_VALUE != " + tmp.floatValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of FLOAT_MIN resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of FLOAT_MIN resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [FLOAT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [FLOAT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing FLOAT_MAX");
                     Float tmp = (Float) ds.get(memberID + ":FLOAT_MAX");
                     if (tmp != null) {
                         if (tmp.floatValue() != Float.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: FLOAT.MAX_VALUE != " + tmp.floatValue());
+                            myLogger.log(Level.SEVERE, "ERROR: FLOAT.MAX_VALUE != " + tmp.floatValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of FLOAT_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of FLOAT_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [FLOAT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [FLOAT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing DOUBLE_MIN");
                     Double tmp = (Double) ds.get(memberID + ":DOUBLE_MIN");
                     if (tmp != null) {
                         if (tmp.doubleValue() != Double.MIN_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: DOUBLE.MIN_VALUE != " + tmp.doubleValue());
+                            myLogger.log(Level.SEVERE, "ERROR: DOUBLE.MIN_VALUE != " + tmp.doubleValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of DOUBLE_MIN resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of DOUBLE_MIN resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [DOUBLE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [DOUBLE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing DOUBLE_MAX");
                     Double tmp = (Double) ds.get(memberID + ":DOUBLE_MAX");
                     if (tmp != null) {
                         if (tmp.doubleValue() != Double.MAX_VALUE) {
-                            myLogger.log(Level.SEVERE, "Error: DOUBLE.MAX_VALUE != " + tmp.doubleValue());
+                            myLogger.log(Level.SEVERE, "ERROR: DOUBLE.MAX_VALUE != " + tmp.doubleValue());
                         }
                     } else {
-                        myLogger.log(Level.SEVERE, "Error: get of DOUBLE_MAX resulted in a null return value");
+                        myLogger.log(Level.SEVERE, "ERROR: get of DOUBLE_MAX resulted in a null return value");
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing [DOUBLE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [DOUBLE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 myLogger.log(Level.INFO, "Removing persisted data");
                 try {
@@ -859,173 +866,175 @@ public class PutGetRemoveTest implements CallBack {
                     ds.remove(memberID + ":DOUBLE_MIN");
                     ds.remove(memberID + ":DOUBLE_MAX");
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while removing  [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while removing  [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
                 }
+                // give time for the data to be removed
+                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Verify removed data");
                 try {
                     myLogger.log(Level.INFO, "Accessing TRUE");
                     Boolean tmp = (Boolean) ds.get(memberID + ":TRUE");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of TRUE resulted in a non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of TRUE resulted in a non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [true] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [true] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing FALSE");
                     Boolean tmp = (Boolean) ds.get(memberID + ":FALSE");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of TRUE resulted in a non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of TRUE resulted in a non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [false] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [false] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing STRING");
                     String tmp = (String) ds.get(memberID + ":STRING");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of STRING resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of STRING resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [STRING] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [STRING] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing DATE");
                     Date tmp = (Date) ds.get(memberID + ":DATE");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of DATE resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of DATE resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [DATE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [DATE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing Character_MIN");
                     Character tmp = (Character) ds.get(memberID + ":Character_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of Character_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of Character_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [Character.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [Character.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing Character_MAX");
                     Character tmp = (Character) ds.get(memberID + ":Character_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of Character_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of Character_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [Character.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [Character.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing BYTE_MIN");
                     Byte tmp = (Byte) ds.get(memberID + ":BYTE_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of BYTE_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of BYTE_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [BYTE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [BYTE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing BYTE_MAX");
                     Byte tmp = (Byte) ds.get(memberID + ":BYTE_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of BYTE_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of BYTE_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [BYTE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [BYTE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing SHORT_MIN");
                     Short tmp = (Short) ds.get(memberID + ":SHORT_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of SHORT_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of SHORT_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [SHORT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [SHORT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing SHORT_MAX");
                     Short tmp = (Short) ds.get(memberID + ":SHORT_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of SHORT_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of SHORT_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [SHORT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [SHORT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing INTEGER_MIN");
                     Integer tmp = (Integer) ds.get(memberID + ":INTEGER_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of INTEGER_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of INTEGER_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [INTEGER.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [INTEGER.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing INTEGER_MAX");
                     Integer tmp = (Integer) ds.get(memberID + ":INTEGER_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of INTEGER_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of INTEGER_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [INTEGER.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [INTEGER.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing LONG_MIN");
                     Long tmp = (Long) ds.get(memberID + ":LONG_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of LONG_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of LONG_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [LONG.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [LONG.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing LONG_MAX");
                     Long tmp = (Long) ds.get(memberID + ":LONG_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of LONG_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of LONG_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [LONG.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [LONG.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing FLOAT_MIN");
                     Float tmp = (Float) ds.get(memberID + ":FLOAT_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of FLOAT_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of FLOAT_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [FLOAT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [FLOAT.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing FLOAT_MAX");
                     Float tmp = (Float) ds.get(memberID + ":FLOAT_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of FLOAT_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of FLOAT_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [FLOAT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [FLOAT.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing DOUBLE_MIN");
                     Double tmp = (Double) ds.get(memberID + ":DOUBLE_MIN");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of DOUBLE_MIN resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of DOUBLE_MIN resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [DOUBLE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [DOUBLE.MIN_VALUE] - " + e.getLocalizedMessage(), e);
                 }
                 try {
                     myLogger.log(Level.INFO, "Accessing DOUBLE_MAX");
                     Double tmp = (Double) ds.get(memberID + ":DOUBLE_MAX");
                     if (tmp != null) {
-                        myLogger.log(Level.SEVERE, "Error: get of DOUBLE_MAX resulted in non-null return value" + tmp);
+                        myLogger.log(Level.SEVERE, "ERROR: get of DOUBLE_MAX resulted in non-null return value" + tmp);
                     }
                 } catch (Exception e) {
-                    myLogger.log(Level.SEVERE, "Error occurred while accessing removed [DOUBLE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
+                    myLogger.log(Level.SEVERE, "ERROR: occurred while accessing removed [DOUBLE.MAX_VALUE] - " + e.getLocalizedMessage(), e);
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error: DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
 
@@ -1046,9 +1055,11 @@ public class PutGetRemoveTest implements CallBack {
                     try {
                         ds.put(id, persistedData[num]);
                     } catch (Exception e) {
-                        myLogger.log(Level.SEVERE, "Error occurred while saving [" + id + "] - " + e.getLocalizedMessage(), e);
+                        myLogger.log(Level.SEVERE, "ERROR: occurred while saving [" + id + "] - " + e.getLocalizedMessage(), e);
                     }
                 }
+                // give time for the data to be persisted
+                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 for (int num = 0; num < numberOfObjects; num++) {
                     String id = memberID + ":" + num;
@@ -1071,17 +1082,17 @@ public class PutGetRemoveTest implements CallBack {
                                     }
                                 }
                             } else {
-                                myLogger.log(Level.SEVERE, "Error received null value for id  [" + id + "]");
+                                myLogger.log(Level.SEVERE, "ERROR: received null value for id  [" + id + "]");
                             }
                         } else {
-                            myLogger.log(Level.SEVERE, "Error: get of id resulted in a null return value");
+                            myLogger.log(Level.SEVERE, "ERROR: get of id resulted in a null return value");
                         }
                     } catch (Exception e) {
-                        myLogger.log(Level.SEVERE, "Error occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
+                        myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
                     }
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
 
@@ -1126,18 +1137,18 @@ public class PutGetRemoveTest implements CallBack {
                                         }
                                     }
                                 } else {
-                                    myLogger.log(Level.SEVERE, "Error received an empty value for id  [" + id + "]");
+                                    myLogger.log(Level.SEVERE, "ERROR: received an empty value for id  [" + id + "]");
                                 }
                             } else {
-                                myLogger.log(Level.SEVERE, "Error: get of id [" + id + "] resulted in a null return value");
+                                myLogger.log(Level.SEVERE, "ERROR: get of id [" + id + "] resulted in a null return value");
                             }
                         } catch (Exception e) {
-                            myLogger.log(Level.SEVERE, "Error occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
+                            myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
                         }
                     }
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
 
@@ -1151,9 +1162,11 @@ public class PutGetRemoveTest implements CallBack {
                     try {
                         ds.remove(id);
                     } catch (Exception e) {
-                        myLogger.log(Level.SEVERE, "Error occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
+                        myLogger.log(Level.SEVERE, "ERROR: occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
                     }
                 }
+                // give time for the data to be removed
+                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 for (int num = 0; num < numberOfObjects; num++) {
                     String id = memberID + ":" + num;
@@ -1161,14 +1174,14 @@ public class PutGetRemoveTest implements CallBack {
                     try {
                         Object o = ds.get(id);
                         if (o != null) {
-                            myLogger.log(Level.SEVERE, "Error: get of id [" + id + "] resulted in a non-null return value");
+                            myLogger.log(Level.SEVERE, "ERROR: get of id [" + id + "] resulted in a non-null return value");
                         }
                     } catch (Exception e) {
-                        myLogger.log(Level.SEVERE, "Error occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
+                        myLogger.log(Level.SEVERE, "ERROR: occurred while accessing [" + id + "] - " + e.getLocalizedMessage(), e);
                     }
                 }
             } else {
-                myLogger.log(Level.SEVERE, "Error DataStore is null");
+                myLogger.log(Level.SEVERE, "ERROR: DataStore is null");
             }
         }
     }
