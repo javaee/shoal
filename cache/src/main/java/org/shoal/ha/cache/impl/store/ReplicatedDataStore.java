@@ -165,6 +165,12 @@ public class ReplicatedDataStore<K, V extends Serializable>
     }
 
     @Override
+    public V get(K key)
+            throws DataStoreException {
+        return get(key, null);
+    }
+
+    @Override
     public V get(K key, String cookie)
             throws DataStoreException {
 

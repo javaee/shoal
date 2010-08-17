@@ -47,7 +47,7 @@ usage () {
 
 
 GRIZZLY_JARS=${SHOAL_DIST}/shoal-gms-tests.jar:${SHOAL_DIST}/shoal-gms.jar:${SHOAL_LIB}/grizzly-framework.jar:${SHOAL_LIB}/grizzly-utils.jar
-CACHE_JARS=${CACHE_DIST}/shoal-cache-1.5.3-SNAPSHOT.jar:${CACHE_TESTS_DIST}/cache-tests.jar
+CACHE_JARS=${CACHE_DIST}/shoal-cache.jar:${CACHE_TESTS_DIST}/cache-tests.jar
 JARS=${GRIZZLY_JARS}:${CACHE_JARS}
 
 TCPSTARTPORT=""
