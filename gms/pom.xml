@@ -43,7 +43,7 @@
     <parent>
         <groupId>org.shoal</groupId>
         <artifactId>shoal</artifactId>
-        <version>1.5.10-SNAPSHOT</version>
+        <version>1.5.10</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     
