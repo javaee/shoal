@@ -177,7 +177,7 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
-        return dataStore.removeIdleEntries(idleTime);
+        return 0; //return dataStore.removeIdleEntries(idleTime);
     }
 
     @Override

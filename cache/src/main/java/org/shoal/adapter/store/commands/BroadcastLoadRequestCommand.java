@@ -156,10 +156,14 @@ public class BroadcastLoadRequestCommand<K, V>
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
-            throw new DataStoreException(timeoutEx);
+            return null;
         } catch (ExecutionException exeEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);
             throw new DataStoreException(exeEx);
         }
+    }
+
+    public String toString() {
+        return getName() + "(" + key + ")";
     }
 }

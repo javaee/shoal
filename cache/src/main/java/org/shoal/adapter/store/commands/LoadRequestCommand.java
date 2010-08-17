@@ -161,4 +161,9 @@ public class LoadRequestCommand<K, V>
             throw new DataStoreException(exeEx);
         }
     }
+
+    public String toString() {
+        return getName() + "(" + key + ")";
+    }
+
 }

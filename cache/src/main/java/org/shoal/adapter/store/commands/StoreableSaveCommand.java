@@ -187,4 +187,8 @@ public class StoreableSaveCommand<K, V extends Storeable>
         String locationInfo = super.getKeyMappingInfo();
         return version + ":" + (locationInfo == null ? "" : locationInfo);
     }
+
+    public String toString() {
+        return getName() + "(" + k + ")";
+    }
 }

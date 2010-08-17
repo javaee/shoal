@@ -111,4 +111,8 @@ public class SaveCommand<K, V>
             entry.setV((V) v);
         }
     }
+
+    public String toString() {
+        return getName() + "(" + k + ")";
+    }
 }

@@ -148,6 +148,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     @Override
     public V load(K key, String cookie) throws BackingStoreException {
+        System.out.println("Entered load(" + key + ", " + cookie + ")");
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
         Long version = Long.MIN_VALUE;
         String[] requestHint = null;
@@ -163,6 +164,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         synchronized (entry) {
             if (!entry.isRemoved()) {
                 v = entry.getV();
+
+                System.out.println("Entered load[1](" + key + ", " + cookie + ")" + "; v: " + v
+                 + "; v.version: " + (v != null ? v._storeable_getVersion() : "null"));
                 if (v == null || v._storeable_getVersion() < version) {
                     v = null;
                 }
@@ -182,14 +186,14 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                             = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
 
                     framework.execute(command);
-                    v = command.getResult(6, TimeUnit.SECONDS);
+                    v = command.getResult(3, TimeUnit.SECONDS);
                     respondingInstance = command.getRespondingInstanceName();
                 } else {
                     StoreableLoadRequestCommand<K, V> command
                             = new StoreableLoadRequestCommand<K, V>(key, requestHint);
 
                     framework.execute(command);
-                    v = command.getResult(6, TimeUnit.SECONDS);
+                    v = command.getResult(3, TimeUnit.SECONDS);
                     respondingInstance = command.getRespondingInstanceName();
                 }
                 entry.setV(v);
@@ -262,9 +266,14 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
+        /*
         ReplicaStore<K, V> replicaStore = framework.getReplicaStore();
-
+        System.out.println("************************************************************");
+        System.out.println("**************  REMOVE EXPIRED *********************");
+        System.out.println("************************************************************");
         return replicaStore.removeExpired(idleTime);
+        */
+        return 0;
     }
 
     @Override

@@ -91,4 +91,8 @@ public class StoreableRemoveCommand<K, V>
         }
     }
 
+    public String toString() {
+        return getName() + "(" + key + ")";
+    }
+    
 }

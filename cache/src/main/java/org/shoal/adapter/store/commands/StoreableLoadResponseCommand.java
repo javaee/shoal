@@ -131,5 +131,7 @@ public class StoreableLoadResponseCommand<K, V>
         }
     }
 
-
+    public String toString() {
+        return getName() + "(" + key + ")";
+    }
 }

@@ -75,7 +75,7 @@ public final class CommandHandlerInterceptor<K, V>
     public void onReceive(Command<K, V> cmd, String initiator)
             throws DataStoreException {
 
-        _logger.log(Level.INFO, storeName + ": Received " + cmd.getName() + " from " + initiator);
+        _logger.log(Level.INFO, storeName + ": Received " + cmd + " from " + initiator);
         
         
         try {

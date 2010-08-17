@@ -91,4 +91,7 @@ public class RemoveCommand<K, V>
         dsc.getReplicaStore().remove(key);
     }
 
+    public String toString() {
+        return getName() + "(" + key + ")";
+    }
 }
