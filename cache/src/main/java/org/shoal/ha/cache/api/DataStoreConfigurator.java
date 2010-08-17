@@ -77,6 +77,8 @@ public class DataStoreConfigurator<K, V> {
 
     private List<AbstractCommandInterceptor<K, V>> interceptors;
 
+    private boolean addCommands;
+
     public String getInstanceName() {
         return instanceName;
     }
@@ -198,6 +200,15 @@ public class DataStoreConfigurator<K, V> {
 
     public void addCommand(Command<K, V> cmd) {
         commands.add(cmd);
+    }
+
+    public DataStoreConfigurator<K, V> setDoAddCommands() {
+        addCommands = true;
+        return this;
+    }
+
+    public boolean isDoAddCommands() {
+        return addCommands;
     }
 
     @Override

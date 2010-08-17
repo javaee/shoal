@@ -76,7 +76,8 @@ public class SimpleDataStoreShell {
                 .setKeyClazz(String.class)
                 .setValueClazz(String.class)
                 .setClassLoader(ClassLoader.getSystemClassLoader())
-                .setStartGMS(true);
+                .setStartGMS(true)
+                .setDoAddCommands();
         DataStore<String, String> rds = (new DataStoreFactory()).createDataStore(conf);
 
         SimpleDataStoreShell main = new SimpleDataStoreShell();

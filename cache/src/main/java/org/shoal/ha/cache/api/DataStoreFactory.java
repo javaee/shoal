@@ -37,6 +37,10 @@
 package org.shoal.ha.cache.api;
 
 import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
+import org.shoal.adapter.store.commands.*;
+import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
+import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
+import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
 import org.shoal.ha.cache.impl.util.StringKeyHelper;
 import org.shoal.ha.mapper.DefaultKeyMapper;
@@ -72,7 +76,7 @@ public class DataStoreFactory {
                 .setClassLoader(loader)
                 .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
-                //.setCacheLocally(true)
+                .setDoAddCommands()
                 .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         return createDataStore(conf);
@@ -147,6 +151,20 @@ public class DataStoreFactory {
                     conf.getClassLoader(), conf.getObjectInputOutputStreamFactory()));
         }
 
+        if (conf.isDoAddCommands()) {
+            conf.addCommand(new SaveCommand<K, V>());
+            conf.addCommand(new RemoveCommand<K, V>());
+            conf.addCommand(new LoadRequestCommand<K, V>());
+            conf.addCommand(new BroadcastLoadRequestCommand<K, V>());
+            conf.addCommand(new LoadResponseCommand<K, V>());
+            conf.addCommand(new StaleCopyRemoveCommand<K, V>());
+            conf.addCommand(new TouchCommand<K, V>());
+            conf.addCommand(new UpdateDeltaCommand<K, V>());
+
+            conf.addCommand(new ListBackingStoreConfigurationCommand());
+            conf.addCommand(new ListBackingStoreConfigurationResponseCommand());
+            conf.addCommand(new ListReplicaStoreEntriesCommand(null));
+        }
         DataStore<K, V> ds = new ReplicatedDataStore<K, V>(conf, gs);
 
         return ds;
