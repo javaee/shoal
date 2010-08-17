@@ -77,6 +77,7 @@ public class DataStoreFactory {
                 .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
                 .setDoAddCommands()
+                .setDoASyncReplication(false)
                 .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         return createDataStore(conf);

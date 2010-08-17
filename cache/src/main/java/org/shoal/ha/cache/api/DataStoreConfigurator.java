@@ -190,8 +190,9 @@ public class DataStoreConfigurator<K, V> {
         return doASyncReplication;
     }
 
-    public void setDoASyncReplication(boolean doASyncReplication) {
+    public DataStoreConfigurator<K, V> setDoASyncReplication(boolean doASyncReplication) {
         this.doASyncReplication = doASyncReplication;
+        return this;
     }
 
     public List<Command<K, ? super V>> getCommands() {

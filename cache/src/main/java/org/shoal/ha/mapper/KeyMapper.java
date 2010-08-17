@@ -46,6 +46,4 @@ public interface KeyMapper {
 
     public String[] findReplicaInstance(String groupName, Object key, String keyMappingInfo);
 
-    public String[] getKeyMappingInfo(String groupName, Object key);
-
 }

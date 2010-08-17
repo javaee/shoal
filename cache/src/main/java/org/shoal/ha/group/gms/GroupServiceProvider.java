@@ -194,10 +194,10 @@ public class GroupServiceProvider
 
                 createdAndJoinedGMSGroup = true;
             } else {
-                logger.severe("**GroupServiceProvider:: Will not start GMS module for group " + groupName + ". It should have been started by now. But GMS: " + gms);
+                logger.info("**GroupServiceProvider:: Will not start GMS module for group " + groupName + ". It should have been started by now. But GMS: " + gms);
             }
         } else {
-            logger.severe("**GroupServiceProvider:: GMS module for group " + groupName + " should have been started by now GMS: " + gms);
+            logger.info("**GroupServiceProvider:: GMS module for group " + groupName + " should have been started by now GMS: " + gms);
         }
 
         if (gms != null) {

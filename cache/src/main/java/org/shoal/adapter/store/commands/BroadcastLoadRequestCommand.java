@@ -155,7 +155,7 @@ public class BroadcastLoadRequestCommand<K, V>
             _logger.log(Level.WARNING, "LoadRequestCommand Interrupted while waiting for result", inEx);
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
-            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
+            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result " + timeoutEx);
             return null;
         } catch (ExecutionException exeEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);

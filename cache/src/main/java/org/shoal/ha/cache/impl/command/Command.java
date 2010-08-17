@@ -60,7 +60,7 @@ public abstract class Command<K, V> {
 
     private String commandName;
 
-    private String[] keyMappingInfo;
+    private String targetInstanceName;
 
     protected Command(byte opcode) {
         this.opcode = opcode;
@@ -83,11 +83,7 @@ public abstract class Command<K, V> {
     }
 
     public String getTargetName() {
-        return keyMappingInfo == null ? null : keyMappingInfo[0];
-    }
-
-    public String getAlternateTargetName() {
-        return keyMappingInfo == null ? null : keyMappingInfo.length > 1 ? keyMappingInfo[1] : null;
+        return targetInstanceName;
     }
     
     public final byte getOpcode() {
@@ -95,11 +91,7 @@ public abstract class Command<K, V> {
     }
 
     protected void setTargetName(String val) {
-        keyMappingInfo = new String[] {val, null};
-    }
-
-    protected void setTargetNames(String val1, String val2) {
-        keyMappingInfo = new String[] {val1, val2};
+        this.targetInstanceName = val;
     }
 
     public final void prepareTransmit(DataStoreContext<K, V> ctx)
@@ -128,17 +120,11 @@ public abstract class Command<K, V> {
     }
 
     protected void selectReplicaInstance(K key) {
-        keyMappingInfo = dsc.getKeyMapper().getKeyMappingInfo(dsc.getGroupName(), key);
+        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key);
     }
 
     public String getKeyMappingInfo() {
-        if (keyMappingInfo == null || keyMappingInfo[0] == null) {
-            return null;
-        } else if (keyMappingInfo[1] == null) {
-            return keyMappingInfo[0];
-        } else {
-            return keyMappingInfo[0] + ":" + keyMappingInfo[1];
-        }
+        return targetInstanceName;
     }
 
     public final String getName() {

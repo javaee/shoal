@@ -69,7 +69,7 @@ public class LoadRequestCommand<K, V>
 
     private String originatingInstance;
 
-    private String[] mappingParams;
+    private String replicaLocationHint;
 
     private int replicaIndex = 0;
 
@@ -80,9 +80,7 @@ public class LoadRequestCommand<K, V>
     public LoadRequestCommand(K key, String cookie) {
         this();
         this.key = key;
-        if (cookie != null) {
-            mappingParams = cookie.split(":");
-        }
+        replicaLocationHint = cookie;
     }
 
     @Override
@@ -95,7 +93,7 @@ public class LoadRequestCommand<K, V>
         throws IOException {
         originatingInstance = dsc.getInstanceName();
 
-        setTargetName(mappingParams == null ? null : mappingParams[0]);
+        setTargetName(replicaLocationHint);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
@@ -154,7 +152,7 @@ public class LoadRequestCommand<K, V>
             _logger.log(Level.WARNING, "LoadRequestCommand Interrupted while waiting for result", inEx);
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
-            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
+            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result " + timeoutEx);
             return null;
         } catch (ExecutionException exeEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);

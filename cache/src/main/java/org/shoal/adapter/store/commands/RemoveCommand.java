@@ -75,8 +75,7 @@ public class RemoveCommand<K, V>
 
     @Override
     public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        //super.selectReplicaInstance( key);
-
+        setTargetName(null);
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
     }
 

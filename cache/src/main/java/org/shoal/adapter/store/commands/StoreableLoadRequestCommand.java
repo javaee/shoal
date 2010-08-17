@@ -75,22 +75,23 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
 
     private String originatingInstance;
 
+    private String replicaLocationHint;
+
     public StoreableLoadRequestCommand() {
         super(ReplicationCommandOpcode.STOREABLE_UNICAST_LOAD_REQUEST);
     }
 
-    public StoreableLoadRequestCommand(K key, String[] requestHint) {
+    public StoreableLoadRequestCommand(K key, String requestHint) {
         this();
         this.key = key;
         if (requestHint != null) {
-            String version = requestHint[0];
+            String[] params = requestHint.split(":");
+            String version = params[0];
             if (version != null) {
                 minimumRequiredVersion = Long.valueOf(version);
             }
-            if (requestHint.length >= 2) {
-                super.setTargetName(requestHint[1]);
-            } else if (requestHint.length >= 3) {
-                super.setTargetNames(requestHint[1], requestHint[2]);
+            if (params.length >= 2) {
+                replicaLocationHint = params[1];
             }
         }
     }
@@ -109,8 +110,7 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         throws IOException {
         originatingInstance = dsc.getInstanceName();
 
-        //setTargetName is not called because the constructor
-        //  itself has set the target(s)
+        setTargetName(replicaLocationHint);
         
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();

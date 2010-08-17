@@ -116,6 +116,7 @@ public class DefaultKeyMapper
         }
     }
 
+    /*
     @Override
     public String[] getKeyMappingInfo(String groupName, Object key1) {
         int hc = key1.hashCode();
@@ -143,7 +144,8 @@ public class DefaultKeyMapper
             return new String[] {members[index], members[(index + 1) % members.length]};
         }
     }
-
+    */
+    
     @Override
     public String[] findReplicaInstance(String groupName, Object key1, String keyMappingInfo) {
         if (keyMappingInfo != null) {

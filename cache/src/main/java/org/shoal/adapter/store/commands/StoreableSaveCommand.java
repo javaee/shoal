@@ -80,6 +80,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
         this();
         setKey(k);
         setValue(v);
+        version = v._storeable_getVersion();
     }
 
     public void setKey(K k) {
@@ -88,6 +89,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
 
     public void setValue(V v) {
         this.v = v;
+        version = v._storeable_getVersion();
     }
 
     public DataStoreEntry<K, V> getEntry() {

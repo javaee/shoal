@@ -181,7 +181,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 String respondingInstance = null;
                 //NOTE: Be careful with LoadREquest command. Do not synchronize while executing the command
                 //  as the response may want to set the result on the entry
-                if (requestHint == null || requestHint.length == 1) {
+                if (requestHint == null || requestHint.length <= 1) {
                     StoreableBroadcastLoadRequestCommand<K, V> command
                             = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
 
@@ -190,7 +190,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     respondingInstance = command.getRespondingInstanceName();
                 } else {
                     StoreableLoadRequestCommand<K, V> command
-                            = new StoreableLoadRequestCommand<K, V>(key, requestHint);
+                            = new StoreableLoadRequestCommand<K, V>(key, cookie);
 
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
