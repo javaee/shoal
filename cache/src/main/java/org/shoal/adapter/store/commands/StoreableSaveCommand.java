@@ -161,7 +161,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
             } else {
                 V entryV = entry.getV();
                 if (entryV != null) {
-                    if (entryV._storeable_getVersion() + 1 == version) {
+                    if (entryV._storeable_getVersion()  <= version) {
                         ByteArrayInputStream bis = new ByteArrayInputStream(rawReadState);
                         try {
                             entryV._storeable_readState(bis);
@@ -170,11 +170,8 @@ public class StoreableSaveCommand<K, V extends Storeable>
                         } finally {
                             try { bis.close(); } catch (Exception ex2) {}
                         }
-                    } else if (entryV._storeable_getVersion() >= version) {
-                        //ignore ? Stale data
-                    } else {
-                        List<Command<K, V>> commands = entry.getPendingUpdates();
-                        _logger.log(Level.INFO, "Added to pending updates[1].... for key: " + k);
+                    } else if (entryV._storeable_getVersion() > version) {
+                        _logger.log(Level.INFO, "Ignoring stale data " + entryV._storeable_getVersion() + " > " + version + "; for key: " + k);
                     }
                 } else {
                     List<Command<K, V>> commands = entry.getPendingUpdates();
@@ -186,11 +183,11 @@ public class StoreableSaveCommand<K, V extends Storeable>
 
     @Override
     public String getKeyMappingInfo() {
-        String locationInfo = super.getKeyMappingInfo();
-        return version + ":" + (locationInfo == null ? "" : locationInfo);
+        return (targetInstanceName == null ? "" : targetInstanceName) + ":" + version;
     }
 
     public String toString() {
         return getName() + "(" + k + ")";
     }
+
 }

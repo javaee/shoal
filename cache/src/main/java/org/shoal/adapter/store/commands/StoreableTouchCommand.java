@@ -60,7 +60,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
 
     private K k;
 
-    private long version;
+    private long version = -1;
 
     private long accessTime;
 
@@ -133,8 +133,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
 
     @Override
     public String getKeyMappingInfo() {
-        String locationInfo = super.getKeyMappingInfo();
-        return version + ":" + (locationInfo == null ? "" : locationInfo);
+        return (targetInstanceName == null ? "" : targetInstanceName) + ":" + version;
     }
 
 }

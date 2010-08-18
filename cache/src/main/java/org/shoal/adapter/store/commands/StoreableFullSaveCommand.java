@@ -60,7 +60,7 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
     private Storeable v;
 
-    private long version;
+    private long version = -1;
 
     private transient byte[] rawReadState;
 
@@ -80,6 +80,7 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
     public void setValue(V v) {
         this.v = v;
+        version = v._storeable_getVersion();
     }
 
     @Override
@@ -129,8 +130,7 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
     @Override
     public String getKeyMappingInfo() {
-        String locationInfo = super.getKeyMappingInfo();
-        return version + ":" + (locationInfo == null ? "" : locationInfo);
+        return (targetInstanceName == null ? "" : targetInstanceName) + ":" + version;
     }
 
     public String toString() {

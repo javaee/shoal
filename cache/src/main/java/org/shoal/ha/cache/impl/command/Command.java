@@ -60,7 +60,7 @@ public abstract class Command<K, V> {
 
     private String commandName;
 
-    private String targetInstanceName;
+    protected String targetInstanceName;
 
     protected Command(byte opcode) {
         this.opcode = opcode;
@@ -124,7 +124,7 @@ public abstract class Command<K, V> {
     }
 
     public String getKeyMappingInfo() {
-        return targetInstanceName;
+        return (targetInstanceName == null ? "" : targetInstanceName) + ":-1";
     }
 
     public final String getName() {
