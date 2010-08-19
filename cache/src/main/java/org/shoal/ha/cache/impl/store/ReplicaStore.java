@@ -109,6 +109,9 @@ public class ReplicaStore<K, V> {
     public void remove(K k) {
         DataStoreEntry<K, V> entry = getOrCreateEntry(k);
         System.out.println("** ReplicaStore::remove("+k);
+        synchronized (entry) {
+            entry.markAsRemoved("Removed by ReplicaStore.remove");
+        }
     }
 
     public int size() {
