@@ -47,6 +47,7 @@ import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
+import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -136,6 +137,11 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         dsConf.addCommand(new ListBackingStoreConfigurationCommand());
         dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
         dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
+
+        KeyMapper keyMapper = (KeyMapper) vendorSpecificMap.get("key.mapper");
+        if (keyMapper != null) {
+            dsConf.setKeyMapper(keyMapper);
+        }
 
         framework = new ReplicationFramework<K, V>(dsConf);
 
