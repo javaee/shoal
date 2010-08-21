@@ -240,7 +240,7 @@ if [ $DIST = false ]; then
            echo "Not Starting ${INSTANCE_NAME}, it will be started later"
         else
            echo "Starting ${INSTANCE_NAME}"
-           ${MEMBERSTARTCMD}
+           ${MEMBERSTARTCMD} &
         fi
 
         if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
@@ -282,7 +282,7 @@ else
          echo "Not Starting ${INSTANCE_NAME}, it will be started later"
       else
          echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}"
+         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}" &
       fi
       if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
                EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
@@ -295,7 +295,7 @@ else
    TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
    MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
 fi
-
+wait
 #
 # setting up the BIA for the admin cli
 #
