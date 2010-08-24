@@ -442,12 +442,36 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * <p>This api should be called only after group join operation has completed.</p>
      *
      * @param groupName name of the group
+     * @deprecated  use reportJoinedAndReadyState()
      */
     public void reportJoinedAndReadyState(String groupName) {
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
-        logger.log(Level.INFO, "GMS:Reporting Joined and Ready state to group " + groupName);
-        gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
-        logger.log(Level.FINE, "GMS : JoinedAndReady state reported to group " + groupName);
+        if (gctx != null) {
+            logger.log(Level.INFO, "GMS:Reporting Joined and Ready state to group " + groupName);
+            gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
+        } else {
+            reportJoinedAndReadyState();
+        }
+    }
+
+    /**
+     * <p>This API is provided for the parent application to report to the group
+     * its joined and ready state to begin processing its operations.
+     * The group member that this parent application represents is now ready to
+     * process its operations at the time of this announcement to the group.
+     * GMS clients in all other group members that are interested in knowing
+     * when another member is ready to start processing operations, can subscribe
+     * to the event JoinedAndReadyEvent and be notified of this
+     * JoinedAndReadyNotificationSignal.</p>
+     * <p>This api should be called only after group join operation has completed.</p>
+     */
+    public void reportJoinedAndReadyState() {
+        if (ctx != null) {
+            logger.log(Level.INFO, "GMS:Reporting Joined and Ready state to group " + getGroupName());
+            ctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
+        } else {
+            throw new IllegalStateException("GMSContext for group name " + getGroupName() + " unexpectedly null");
+        }
     }
 
     /**
@@ -458,9 +482,14 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      *
      * @param groupName the group name
      * @return boolean
+     * @deprecated
      */
     public boolean isGroupBeingShutdown(String groupName) {
         return ctx.isGroupBeingShutdown(groupName);
+    }
+
+    public boolean isGroupBeingShutdown() {
+        return ctx.isGroupBeingShutdown(this.getGroupName());
     }
 
     public void announceWatchdogObservedFailure(String serverToken) throws GMSException {

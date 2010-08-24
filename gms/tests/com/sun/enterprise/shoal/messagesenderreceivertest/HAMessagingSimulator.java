@@ -285,7 +285,7 @@ public class HAMessagingSimulator {
         }
 
 
-        gms.reportJoinedAndReadyState(group);
+        gms.reportJoinedAndReadyState();
 
         gmsLogger.log(Level.INFO, "Waiting for all members to joined the group:" + group);
 

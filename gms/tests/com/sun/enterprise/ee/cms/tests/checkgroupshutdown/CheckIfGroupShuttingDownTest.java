@@ -93,7 +93,7 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
         joinGMSGroup(group, gms);
         
         if (serverName.equals("C1"))
-              logger.info("SHUTDOWN : Is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
+              logger.info("SHUTDOWN : Is the group shutting down ? : " + gms.isGroupBeingShutdown());
 
         try {
             waitForShutdown(10000);
@@ -113,13 +113,13 @@ public class CheckIfGroupShuttingDownTest implements CallBack{
         }
         
         if (serverName.equals("C1"))
-            logger.info("SHUTDOWN : Now is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
+            logger.info("SHUTDOWN : Now is the group shutting down ? : " + gms.isGroupBeingShutdown());
 
         leaveGroupAndShutdown(serverName, gms);
 
 
         if (serverName.equals("C1"))
-            logger.info("After leaveGroupAndShutdown : Now is the group shutting down ? : " + gms.isGroupBeingShutdown(group));
+            logger.info("After leaveGroupAndShutdown : Now is the group shutting down ? : " + gms.isGroupBeingShutdown());
 
 
         System.exit(0);

@@ -207,7 +207,7 @@ public class GroupHandleTest {
             gmsLogger.log(Level.SEVERE, "TEST1: getCurrentAliveOrReadyMembers() [before gms.reportJoinedAndReadyState()]: expected result:" + sList.toString() + ", actual result:" + members.toString());
         }
 
-        gms.reportJoinedAndReadyState(groupName);
+        gms.reportJoinedAndReadyState();
         sleep(5000);
 
         // Get the list of members that are alive or ready. Master and core102 are already
@@ -1365,7 +1365,7 @@ public class GroupHandleTest {
         }
         sleep(2000);
 
-        gms.reportJoinedAndReadyState(groupName);
+        gms.reportJoinedAndReadyState();
         gmsLogger.log(Level.INFO, "===================================================");
         gmsLogger.log(Level.INFO, "Waiting for all CORE members to send PLANNEDSHUTDOWN");
 
@@ -1483,7 +1483,7 @@ public class GroupHandleTest {
                 gmsLogger.log(Level.SEVERE, "received unknown notification type:" + notification + " from:" + notification.getMemberToken());
             } else {
                 if (notification.getMemberToken().equals("core101")) {
-                    gms.reportJoinedAndReadyState(groupName);
+                    gms.reportJoinedAndReadyState();
                     gmsLogger.log(Level.INFO, memberID + " setting state to JoinedAndReady");
                 }
             }

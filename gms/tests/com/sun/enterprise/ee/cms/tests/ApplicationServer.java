@@ -135,7 +135,7 @@ public class ApplicationServer implements Runnable, CallBack {
             Thread.sleep(3000);
         } catch (InterruptedException ie) {}
         logger.log(Level.FINE,"reporting joined and ready state...");
-        gms.reportJoinedAndReadyState(groupName);
+        gms.reportJoinedAndReadyState();
         
         logger.log(Level.INFO, "Waiting for timeout or group shutdown...");
         gaa.waitTillNotified();

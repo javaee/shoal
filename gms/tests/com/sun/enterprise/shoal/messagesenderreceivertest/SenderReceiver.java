@@ -214,7 +214,7 @@ public class SenderReceiver {
         }
 
 
-        gms.reportJoinedAndReadyState(group);
+        gms.reportJoinedAndReadyState();
 
         if (memberID.equalsIgnoreCase("server")) {
             logger.log(Level.INFO, ("==================================================="));

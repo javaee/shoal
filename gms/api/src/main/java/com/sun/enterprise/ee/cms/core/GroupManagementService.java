@@ -341,8 +341,34 @@ public interface GroupManagementService {
      * The implementation currently does not require the joined and ready notification
      * to be sent out to members joining the group after a member reported its
      * joined and ready state.</p>
+     */
+    void reportJoinedAndReadyState();
+
+    /**
+     * <p>This API is provided for the parent application to report to the group
+     * its joined and ready state to begin processing its operations.
+     * The group member that this parent application represents is now ready to
+     * process its operations at the time of this announcement to the group.
+     * GMS clients in all other group members that are interested in knowing
+     * when another member is ready to start processing operations, can subscribe
+     * to the event JoinedAndReadyEvent and be given this JoinedAndReadyNotificationSignal.
+     * Currently this API can only be used by cluster members which are of the type CORE and
+     * not the SPECTATOR members. Shoal makes the assumption that only the CORE members will
+     * act as servers for serving the client requests and not the SPECTATOR members.</p>
+     * <p/>
+     * <p> The behavioral semantics of this feature is that as each member reports its
+     * joined and ready state, the corresponding JoinedAndReadyNotificationSignal will be
+     * delivered to other cluster members who have already joined the group and have components
+     * who have registered for this event to be delivered. There may be members who may not
+     * have joined the group at the time a particular member reported its JoinedAndReady state.
+     * For these cases, those members have to rely on the <code>JoinNotificationSignal</code>
+     * of this particular member and call the <code>getMemberState()</code> api.
+     * The implementation currently does not require the joined and ready notification
+     * to be sent out to members joining the group after a member reported its
+     * joined and ready state.</p>
      *
      * @param groupName name of the group
+     * @deprecated  use method that takes no parameters.
      */
     void reportJoinedAndReadyState(String groupName);
 
@@ -351,8 +377,18 @@ public interface GroupManagementService {
      * This helps with any pre-shutdown processing that may be required to be done on the
      * application's side.</p>
      *
+     * @return boolean true if it is being shutdown
+     */
+    boolean isGroupBeingShutdown();
+
+    /**
+     * <p>This API allows applications to query GMS to see if the group is shutting down.
+     * This helps with any pre-shutdown processing that may be required to be done on the
+     * application's side.</p>
+     *
      * @param groupName The group name
      * @return boolean true if it is being shutdown
+     * @deprecated use method with same name and no method parameters.
      */
     boolean isGroupBeingShutdown(String groupName);
 

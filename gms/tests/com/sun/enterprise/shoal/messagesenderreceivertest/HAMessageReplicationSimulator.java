@@ -376,7 +376,7 @@ public class HAMessageReplicationSimulator {
             System.exit(1);
         }
         sleep(5000);
-        gms.reportJoinedAndReadyState(groupName);
+        gms.reportJoinedAndReadyState();
         sleep(5000);
         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
             myLogger.log(TESTDEFAULTLOGLEVEL, "Waiting for all members to joined the group:" + groupName);
@@ -481,7 +481,7 @@ public class HAMessageReplicationSimulator {
             long objectNum = 1;
             for (; msgNum <= msgsPerObject; msgNum++) {
                 for (objectNum = 1; objectNum <= numberOfObjects; objectNum++) {
-                    if (!gms.isGroupBeingShutdown(groupName)) {
+                    if (!gms.isGroupBeingShutdown()) {
 
                         // if replicationType is buddy, the replica and sReplica value was set earlier
                         if (replicationType.equals(CHASH)) {
@@ -516,7 +516,7 @@ public class HAMessageReplicationSimulator {
                                     try {
                                         myLogger.log(Level.WARNING, "Need to retry, sleeping " + RETRYSLEEP + " ms");
                                         sleep(RETRYSLEEP);
-                                        if (gms.isGroupBeingShutdown(groupName)) {
+                                        if (gms.isGroupBeingShutdown()) {
                                             break;// group shutdown has begun
                                         }
                                         myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + displayMsg(msg) + ")");
@@ -538,11 +538,11 @@ public class HAMessageReplicationSimulator {
                         break; // group shutdown has begun
                     }
                 }
-                if (gms.isGroupBeingShutdown(groupName)) {
+                if (gms.isGroupBeingShutdown()) {
                     break;// group shutdown has begun
                 }
             }
-            if (gms.isGroupBeingShutdown(groupName)) {
+            if (gms.isGroupBeingShutdown()) {
                 myLogger.log(Level.SEVERE, "Group Shutdown has begun, Sending of messages has terminated - objectNum=" + objectNum + ", msgNum=" + msgNum);
             } else {
                 sendEndTime = new GregorianCalendar();
@@ -564,7 +564,7 @@ public class HAMessageReplicationSimulator {
                         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                             myLogger.log(TESTDEFAULTLOGLEVEL, "Sending message (" + DONE_SENDING + ") to member:" + member);
                         }
-                        if (gms.isGroupBeingShutdown(groupName)) {
+                        if (gms.isGroupBeingShutdown()) {
                             myLogger.log(Level.SEVERE, "Group Shutdown has begun, Sending of DONE message(s) has terminated");
                             break;
                         }
@@ -578,7 +578,7 @@ public class HAMessageReplicationSimulator {
                                 myLogger.log(Level.WARNING, "Need to retry, sleeping " + RETRYSLEEP + " ms");
                                 sleep(RETRYSLEEP);
                                 myLogger.log(Level.WARNING, "Retry [" + retryCount + "] time(s) to send message (" + DONE_SENDING + ")");
-                                if (gms.isGroupBeingShutdown(groupName)) {
+                                if (gms.isGroupBeingShutdown()) {
                                     myLogger.log(Level.SEVERE, "Group Shutdown has begun, Retry of Sending of DONE message(s) has terminated");
                                     break;
                                 }
@@ -657,7 +657,7 @@ public class HAMessageReplicationSimulator {
             int count = 0;
             boolean shutdownOK = true;
             List<String> _members;
-            while (!gms.isGroupBeingShutdown(groupName)) {
+            while (!gms.isGroupBeingShutdown()) {
                 _members = gms.getGroupHandle().getAllCurrentMembers();
                 if ((count % 12) == 0) {
                     if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {

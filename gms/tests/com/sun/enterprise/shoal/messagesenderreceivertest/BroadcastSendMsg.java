@@ -216,7 +216,7 @@ public class BroadcastSendMsg {
         try {
             gms.join();
             sleep(5);
-            gms.reportJoinedAndReadyState(groupName);
+            gms.reportJoinedAndReadyState();
             sleep(5);
 
             if (memberID.equalsIgnoreCase("master")) {
