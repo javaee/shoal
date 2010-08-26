@@ -119,15 +119,15 @@ public class KeyMapperTest
     public void testEmptyMapTest() {
         DefaultKeyMapper km = new DefaultKeyMapper("n0", "g1");
         String mappedInstance = km.getMappedInstance("g1", "Key1");
-        String replicaInstance = (km.findReplicaInstance("g1", "Key1", null))[0];
+        String[] replicaInstances = (km.findReplicaInstance("g1", "Key1", null));
 
         System.out.println("test[testEmptyMapTest] => " + mappedInstance + " : " +
-                replicaInstance);
+                replicaInstances);
         assert (mappedInstance == null);
-        assert (replicaInstance != null);
+        assert (replicaInstances.length == 0);
 
         System.out.println("* Test[testEmptyMapTest] => " +
-                mappedInstance + "; " + replicaInstance + "; ");
+                mappedInstance + "; " + replicaInstances.length + "; ");
     }
 
     public void testRegisterAndTest() {
