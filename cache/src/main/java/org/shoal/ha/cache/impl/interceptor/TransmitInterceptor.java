@@ -77,8 +77,7 @@ public final class TransmitInterceptor<K, V>
                         + "; size: " + data.length);
             }
         } catch (IOException ioEx) {
-            _logger.log(Level.WARNING, "Error DURING transmit...", ioEx);
-            ioEx.printStackTrace();
+            throw new DataStoreException("Error DURING transmit...", ioEx);
         }
     }
 

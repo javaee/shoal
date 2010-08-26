@@ -127,6 +127,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
         dsConf.addCommand(new StoreableSaveCommand<K, V>());
         dsConf.addCommand(new StoreableFullSaveCommand<K, V>());
+        dsConf.addCommand(new SimpleAckCommand<K, V>());
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
         dsConf.addCommand(new StoreableTouchCommand<K, V>());
         dsConf.addCommand(new StoreableLoadRequestCommand<K, V>());
@@ -152,9 +153,52 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf, framework.getDataStoreContext());
     }
 
+
+    private boolean doLoadFromReplica(K key, long version, String replicaLocation, DataStoreEntry<K, V> entry)
+            throws BackingStoreException {
+        V v = null;
+        try {
+            String respondingInstance = null;
+            //NOTE: Be careful with LoadRequest command. Do not synchronize while executing the command
+            //  as the response may want to set the result on the entry
+            if (replicaLocation == null || replicaLocation.length() == 0) {
+                StoreableBroadcastLoadRequestCommand<K, V> command
+                        = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
+
+                framework.execute(command);
+                v = command.getResult(3, TimeUnit.SECONDS);
+                respondingInstance = command.getRespondingInstanceName();
+            } else {
+                StoreableLoadRequestCommand<K, V> command
+                        = new StoreableLoadRequestCommand<K, V>(key, replicaLocation);
+
+                framework.execute(command);
+                v = command.getResult(3, TimeUnit.SECONDS);
+                respondingInstance = command.getRespondingInstanceName();
+            }
+            entry.setV(v);
+
+            entry = replicaStore.getOrCreateEntry(key);
+
+            synchronized (entry) {
+                if (!entry.isRemoved()) {
+                    entry.setReplicaInstanceName(respondingInstance);
+
+                    if (localCachingEnabled) {
+                        entry.setV(v);
+                        return true;
+                    }
+                }
+            }
+        } catch (DataStoreException dseEx) {
+            throw new BackingStoreException("Error during load", dseEx);
+        }
+
+        return false;
+    }
+
     @Override
     public V load(K key, String cookie) throws BackingStoreException {
-        System.out.println("Entered load(" + key + ", " + cookie + ")");
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
         Long version = Long.MIN_VALUE;
         String[] requestHint = null;
@@ -183,6 +227,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         }
 
         if (v == null) {
+            KeyMapper keyMapper = framework.getDataStoreContext().getKeyMapper();
+
             try {
                 String respondingInstance = null;
                 //NOTE: Be careful with LoadREquest command. Do not synchronize while executing the command

@@ -132,10 +132,11 @@ public class ReplicationFramework<K, V extends Serializable> {
         }
 
         dsc.setADoSyncReplication(conf.isDoASyncReplication());
-        if (conf.isDoASyncReplication()) {
+        //if (conf.isDoASyncReplication()) {
             cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
             cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
-        }
+        //}
+        
         
         KeyMapper keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {

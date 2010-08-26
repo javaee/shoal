@@ -154,6 +154,7 @@ public class DataStoreFactory {
 
         if (conf.isDoAddCommands()) {
             conf.addCommand(new SaveCommand<K, V>());
+            conf.addCommand(new SimpleAckCommand<K, V>());
             conf.addCommand(new RemoveCommand<K, V>());
             conf.addCommand(new LoadRequestCommand<K, V>());
             conf.addCommand(new BroadcastLoadRequestCommand<K, V>());

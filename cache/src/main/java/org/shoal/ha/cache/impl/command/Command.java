@@ -40,9 +40,9 @@ import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.mapper.KeyMappingInfo;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Mahesh Kannan
@@ -61,6 +61,12 @@ public abstract class Command<K, V> {
     private String commandName;
 
     protected String targetInstanceName;
+
+    private int retryCount = 0;
+
+    private long retryAfterMillis = 1000;
+
+    private boolean done = true;
 
     protected Command(byte opcode) {
         this.opcode = opcode;
@@ -94,10 +100,16 @@ public abstract class Command<K, V> {
         this.targetInstanceName = val;
     }
 
+    public final boolean isRetried() {
+        return retryCount > 0;
+    }
+
     public final void prepareTransmit(DataStoreContext<K, V> ctx)
         throws IOException {
         cachedROS = new ReplicationOutputStream();
         cachedROS.write(getOpcode());
+
+        computeTarget();
 
         writeCommandPayload(cachedROS);
     }
@@ -129,6 +141,36 @@ public abstract class Command<K, V> {
 
     public final String getName() {
         return commandName + ":" + opcode;
+    }
+
+    public void computeTarget() {
+
+    }
+
+    protected final void reExecute()
+        throws DataStoreException {
+        if (retryCount++ < 3) {
+            dsc.getCommandManager().reExecute(this);
+        } else {
+            throw new DataStoreException("Too many retries...");
+        }
+    }
+
+    public void onSuccess() {
+        retryCount++;
+        done = true;
+    }
+
+    public void onError(Throwable th)
+        throws DataStoreException {
+        if ((retryCount++ < 4) && (!done)) {
+            try {Thread.sleep(retryAfterMillis);
+            } catch (Exception ex) {
+                //TODO
+            }
+
+            dsc.getCommandManager().reExecute(this);
+        }
     }
 
     protected abstract void writeCommandPayload(ReplicationOutputStream ros)

@@ -79,13 +79,17 @@ public class UpdateDeltaCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        super.selectReplicaInstance( k);
-
         int valueOffset = ros.mark();
         ros.write(Utility.intToBytes(0));
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         ros.reWrite(valueOffset, Utility.intToBytes(ros.mark()));
         dsc.getDataStoreEntryHelper().writeObject(ros, v);
+    }
+
+
+    @Override
+    public void computeTarget() {
+        super.selectReplicaInstance( k);
     }
 
     @Override

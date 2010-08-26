@@ -87,12 +87,16 @@ public class StoreableTouchCommand<K, V extends Storeable>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        super.selectReplicaInstance( k);
-
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         ros.writeLong(version);
         ros.writeLong(accessTime);
         ros.writeLong(maxIdleTime);
+    }
+
+
+    @Override
+    public void computeTarget() {
+        super.selectReplicaInstance( k);
     }
 
     @Override

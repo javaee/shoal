@@ -41,87 +41,75 @@ import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
-public class TouchCommand<K, V>
-    extends Command<K, V> {
+public abstract class AcknowledgedCommand<K, V>
+        extends Command<K, V> {
 
-    private K k;
+    CommandResponse resp;
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+    private Future future;
 
-    private long version;
+    private long tokenId;
 
-    private long accessTime;
+    private String originatingInstance;
 
-    private long maxIdleTime;
-
-    public TouchCommand() {
-        super(ReplicationCommandOpcode.TOUCH);
+    protected AcknowledgedCommand(byte opCode) {
+        super(opCode);
     }
 
-    public TouchCommand(K k, long version, long accessTime, long maxIdleTime) {
-        this();
-        setKey(k);
-        this.version = version;
-        this.accessTime = accessTime;
-        this.maxIdleTime = maxIdleTime;
+    protected void writeAcknowledgementId(ReplicationOutputStream ros)
+        throws IOException {
+        originatingInstance = dsc.getInstanceName();
+        ResponseMediator respMed = dsc.getResponseMediator();
+        resp = respMed.createCommandResponse();
+
+        future = resp.getFuture();
+
+        ros.writeLong(resp.getTokenId());
+        ros.writeLengthPrefixedString(originatingInstance);
     }
 
-    public void setKey(K k) {
-        this.k = k;
-    }
-
-    @Override
-    protected TouchCommand<K, V> createNewInstance() {
-        return new TouchCommand<K, V>();
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    public void readAcknowledgementId(ReplicationInputStream ris)
         throws IOException {
 
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
-        ros.writeLong(version);
-        ros.writeLong(accessTime);
-        ros.writeLong(maxIdleTime);
+        tokenId = ris.readLong();
+        originatingInstance = ris.readLengthPrefixedString();
     }
 
-
-    @Override
-    public void computeTarget() {
-        super.selectReplicaInstance( k);
+    protected void sendAcknowledgement() {
+        try {
+        dsc.getCommandManager().execute(new SimpleAckCommand<K, V>(originatingInstance, tokenId));  
+        } catch (DataStoreException dse) {
+            //TODO: But can safely ignore
+        }
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
-        version = ris.readLong();
-        accessTime = ris.readLong();
-        maxIdleTime = ris.readLong();
-    }
-
-    @Override
-    public void execute(String initiator)
+    protected void waitForAck()
         throws DataStoreException {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
-        }
-
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getEntry(k);
-        if (entry != null) {
-            synchronized (entry) {
-               //TODO: dsc.getDataStoreEntryHelper().updateState(k, entry, null);
-            }
+        try {
+            future.get(3, TimeUnit.SECONDS);
+        } catch (InterruptedException inEx) {
+            throw new DataStoreException(inEx);
+        } catch (ExecutionException exeEx) {
+            throw new DataStoreException(exeEx);
+        } catch (TimeoutException timEx) {
+            super.reExecute();
         }
     }
+
 }

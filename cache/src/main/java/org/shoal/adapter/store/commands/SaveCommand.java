@@ -52,7 +52,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class SaveCommand<K, V>
-    extends Command<K, V> {
+    extends AcknowledgedCommand<K, V> {
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
@@ -89,15 +89,24 @@ public class SaveCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        super.selectReplicaInstance( k);
-
+        if (! dsc.isDoASyncReplication()) {
+            super.writeAcknowledgementId(ros);
+        }
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
         dsc.getDataStoreEntryHelper().writeObject(ros, v);
     }
 
     @Override
+    public void computeTarget() {
+        super.selectReplicaInstance( k);
+    }
+
+    @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
+        if (! dsc.isDoASyncReplication()) {
+            super.readAcknowledgementId(ris);
+        }
         k = dsc.getDataStoreKeyHelper().readKey(ris);
         v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
     }
@@ -110,9 +119,26 @@ public class SaveCommand<K, V>
         synchronized (entry) {
             entry.setV((V) v);
         }
+
+        if (! dsc.isDoASyncReplication()) {
+            super.sendAcknowledgement();
+        }
     }
 
     public String toString() {
         return getName() + "(" + k + ")";
+    }
+
+
+    @Override
+    public void onSuccess() {
+        if (! dsc.isDoASyncReplication()) {
+            try {
+                super.onSuccess();
+                super.waitForAck();
+            } catch (Exception ex) {
+                System.out.println("** Got exception: " + ex);
+            }
+        }
     }
 }

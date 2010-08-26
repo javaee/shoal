@@ -102,9 +102,6 @@ public class ReplicatedDataStore<K, V extends Serializable>
         dsc.setDataStoreKeyHelper(conf.getDataStoreKeyHelper());
         dsc.setKeyMapper(conf.getKeyMapper());
         cm = dsc.getCommandManager();
-        
-//        cm.registerExecutionInterceptor(new CommandHandlerInterceptor<K, V>());
-//        cm.registerExecutionInterceptor(new TransmitInterceptor<K, V>());
 
 
         if (conf.getCommands() != null) {
@@ -113,11 +110,12 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
         }
 
-        if (conf.isDoASyncReplication()) {
+        //if (conf.isDoASyncReplication()) {
             cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
             cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
             _logger.log(Level.INFO, "ASync replication enabled...");
-        }
+        //}
+        
         
         KeyMapper keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {

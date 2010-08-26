@@ -109,12 +109,24 @@ public class CommandManager<K, V>
         executeCommand(cmd, true, myName);
     }
 
+    public final void reExecute(Command<K, V> cmd)
+        throws DataStoreException {
+        
+        cmd.computeTarget();
+        tail.onTransmit(cmd, myName);
+    }
+
     //Initiated to transmit
     public final void executeCommand(Command<K, V> cmd, boolean forward, String initiator)
         throws DataStoreException {
         cmd.initialize(dsc);
         if (forward) {
-            head.onTransmit(cmd, initiator);
+            try {
+                head.onTransmit(cmd, initiator);
+                cmd.onSuccess();
+            } catch (DataStoreException dseEx) {
+                cmd.onError(dseEx);
+            }
         } else {
             tail.onReceive(cmd, initiator);
         }
@@ -140,7 +152,6 @@ public class CommandManager<K, V>
         ReplicationInputStream ris = null;
         try {
             byte opCode = messageData[0];
-
             Command<K, V> cmd = createNewInstance(opCode);
             ris = new ReplicationInputStream(messageData);
             cmd.prepareToExecute(ris);

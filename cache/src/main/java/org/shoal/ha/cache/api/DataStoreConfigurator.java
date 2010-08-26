@@ -192,6 +192,7 @@ public class DataStoreConfigurator<K, V> {
 
     public DataStoreConfigurator<K, V> setDoASyncReplication(boolean doASyncReplication) {
         this.doASyncReplication = doASyncReplication;
+        System.out.println("**  SET  ASYNC REPLICATUION: " + doASyncReplication);
         return this;
     }
 

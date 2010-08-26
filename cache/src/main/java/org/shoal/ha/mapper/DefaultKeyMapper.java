@@ -57,8 +57,6 @@ public class DefaultKeyMapper
 
     Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_KEY_MAPPER);
 
-    private static final String[] _EMPTY_TARGETS = new String[] {null, null};
-
     private String myName;
 
     private String groupName;
@@ -71,6 +69,10 @@ public class DefaultKeyMapper
 
     private volatile String[] previuousAliveAndReadyMembers = new String[0];
 
+    private volatile String[][] replicaChoices;
+
+    private static final String[][] _EMPTY_REPLICAS = new String[][] {new String[] {}};
+
 
     public DefaultKeyMapper(String myName, String groupName) {
         this.myName = myName;
@@ -79,8 +81,6 @@ public class DefaultKeyMapper
         
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
-
-        previuousAliveAndReadyMembers = new String[] {myName};
 
         _logger.log(Level.INFO, "DefaultKeyMapper created for: myName: " + myName + "; groupName: " + groupName);
     }
@@ -111,6 +111,19 @@ public class DefaultKeyMapper
             return members.length == 0
                     ? null
                     : members[hc % (members.length)];
+        } finally {
+            rLock.unlock();
+        }
+    }
+
+    @Override
+    public String[] getReplicaChoices(String groupName, Object key) {
+        int hc = getHashCodeForKey(key);
+        try {
+            rLock.lock();
+            return members.length == 0
+                    ? _EMPTY_REPLICAS[0]
+                    : replicaChoices[hc % (members.length)];
         } finally {
             rLock.unlock();
         }
@@ -162,7 +175,7 @@ public class DefaultKeyMapper
             try {
                 rLock.lock();
                 return previuousAliveAndReadyMembers.length == 0
-                        ? null
+                        ? _EMPTY_REPLICAS[0]
                         : new String[] {previuousAliveAndReadyMembers[hc % (previuousAliveAndReadyMembers.length)]};
             } finally {
                 rLock.unlock();
@@ -184,6 +197,21 @@ public class DefaultKeyMapper
             currentMemberSet.remove(myName);
             members = currentMemberSet.toArray(new String[0]);
 
+            int memSz = members.length;
+            if (memSz == 0) {
+                this.replicaChoices = _EMPTY_REPLICAS;
+            } else {
+                this.replicaChoices = new String[memSz][];
+                for (int i=0; i<memSz; i++) {
+                    ArrayList<String> list = new ArrayList<String>(memSz);
+                    int index = i;
+                    for (int j=0; j<memSz; j++) {
+                        list.add(members[index++ % memSz]);
+                    }
+                    
+                    replicaChoices[i] = list.toArray(new String[memSz]);
+                }
+            }
 
             TreeSet<String> previousView = new TreeSet<String>();
             previousView.addAll(readOnlyPreviousAliveAndReadyMembers);
@@ -196,6 +224,16 @@ public class DefaultKeyMapper
         } finally {
             wLock.unlock();
         }
+    }
+
+    private int getHashCodeForKey(Object key1) {
+        int hc = key1.hashCode();
+        if (key1 instanceof HashableKey) {
+            HashableKey k = (HashableKey) key1;
+            hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
+        }
+
+        return Math.abs(hc);
     }
 
     private static int getDigestHashCode(String val) {
@@ -229,6 +267,18 @@ public class DefaultKeyMapper
         for (String st : previuousAliveAndReadyMembers) {
             sb.append(delim).append(st);
             delim = " : ";
+        }
+
+        sb.append("\n");
+        int memSz = members.length;
+        for (int i=0; i<memSz; i++) {
+            sb.append("\tReplicaChoices[").append(members[i]).append("]: ");
+            delim = "";
+            for (String st : replicaChoices[i]) {
+                sb.append(delim).append(st);
+                delim = ", ";
+            }
+            sb.append("\n");
         }
         _logger.log(Level.INFO, sb.toString());
     }

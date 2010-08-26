@@ -36,14 +36,13 @@
 
 package org.shoal.adapter.store.commands;
 
-import org.glassfish.ha.store.api.Storeable;
-import org.shoal.ha.cache.api.DataStoreEntry;
-import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -52,104 +51,65 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class StoreableFullSaveCommand<K, V extends Storeable>
-    extends AcknowledgedCommand<K, V> {
+public class SimpleAckCommand<K, V>
+        extends Command<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
 
-    private K k;
+    private long tokenId;
 
-    private Storeable v;
+    private String targetInstanceName;
 
-    private long version = -1;
+    private String respondingInstanceName;
 
-    private transient byte[] rawReadState;
-
-    public StoreableFullSaveCommand() {
-        super(ReplicationCommandOpcode.STOREABLE_FULL_SAVE_COMMAND);
+    public SimpleAckCommand() {
+        super(ReplicationCommandOpcode.SIMPLE_ACK_COMMAND);
     }
 
-    public StoreableFullSaveCommand(K k, V v) {
+    public SimpleAckCommand(String targetInstanceName, long tokenId) {
         this();
-        setKey(k);
-        setValue(v);
-    }
-
-    public void setKey(K k) {
-        this.k = k;
-    }
-
-    public void setValue(V v) {
-        this.v = v;
-        version = v._storeable_getVersion();
+        this.targetInstanceName = targetInstanceName;
+        this.tokenId = tokenId;
     }
 
     @Override
-    protected StoreableFullSaveCommand<K, V> createNewInstance() {
-        return new StoreableFullSaveCommand<K, V>();
+    protected SimpleAckCommand<K, V> createNewInstance() {
+        return new SimpleAckCommand<K, V>();
     }
 
     @Override
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-        if (! dsc.isDoASyncReplication()) {
-            super.writeAcknowledgementId(ros);
-        }
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
-        ros.writeLong(v._storeable_getVersion());
-        dsc.getDataStoreEntryHelper().writeObject(ros, (V) v);
+        setTargetName(targetInstanceName);
+
+        ros.writeLong(tokenId);
+        ros.writeLengthPrefixedString(targetInstanceName);
+        ros.writeLengthPrefixedString(dsc.getInstanceName());
     }
+
+
 
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        if (! dsc.isDoASyncReplication()) {
-            super.readAcknowledgementId(ris);
-        }
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
-        version = ris.readLong();
-        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+
+        tokenId = ris.readLong();
+        targetInstanceName = ris.readLengthPrefixedString();
+        respondingInstanceName = ris.readLengthPrefixedString();
     }
 
     @Override
-    public void computeTarget() {
-        super.selectReplicaInstance( k);
-    }
+    public void execute(String initiator) {
 
-    @Override
-    public void execute(String initiator)
-        throws DataStoreException {
-
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
-        synchronized (entry) {
-            V entryV = entry.getV();
-            boolean canUpdate = false;
-            if (entryV != null) {
-                if ((!entry.isRemoved()) && (entryV._storeable_getVersion() < version)) {
-                    canUpdate = true;
-                }
-            }
-            
-            if (canUpdate) {
-                entry.setV((V) v);
-            }
+        ResponseMediator respMed = getDataStoreContext().getResponseMediator();
+        CommandResponse resp = respMed.getCommandResponse(tokenId);
+        if (resp != null) {
+            resp.setRespondingInstanceName(respondingInstanceName);
+            resp.setResult(true);
         }
-
-        if (! dsc.isDoASyncReplication()) {
-
-            _logger.log(Level.INFO, getName() + " About to send ACK back to " + initiator + " for key: " + k);
-            super.sendAcknowledgement();
-        }
-    }
-
-
-    @Override
-    public String getKeyMappingInfo() {
-        return (targetInstanceName == null ? "" : targetInstanceName) + ":" + version;
     }
 
     public String toString() {
-        return getName() + "(" + k + ")";
+        return getName() + "()";
     }
-
 }

@@ -83,7 +83,7 @@ public class StoreableBackingStoreShell {
         map.put("start.gms", true);
         map.put("local.caching", true);
         map.put("class.loader", ClassLoader.getSystemClassLoader());
-        map.put("async.replication", true);
+        map.put("async.replication", false);
         StoreableReplicatedBackingStore<String, MyStoreable> ds = (StoreableReplicatedBackingStore<String, MyStoreable>)
                 (new ReplicatedBackingStoreFactory()).createBackingStore(conf);
 
@@ -146,7 +146,7 @@ public class StoreableBackingStoreShell {
 
                 System.out.println("PUT " + st);
                 ds.save(key, st, true);
-            /*
+
             for (int i=1; i<8; i++) {
                 String key1 = params[0] + ":" + i;
                 MyStoreable st1 = cache.get(key1);
@@ -165,7 +165,7 @@ public class StoreableBackingStoreShell {
                 System.out.println("PUT " + st);
                 ds.save(key1, st1, true);
             }
-            */
+            
         } else if ("get".equalsIgnoreCase(command)) {
             MyStoreable st = ds.load(params[0], params.length > 1 ? params[1] : null);
             System.out.println("get(" + params[0] + ") => " + st);

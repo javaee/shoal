@@ -56,7 +56,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class StoreableSaveCommand<K, V extends Storeable>
-    extends Command<K, V> {
+    extends AcknowledgedCommand<K, V> {
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
@@ -108,8 +108,9 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-
-        super.selectReplicaInstance( k);
+        if (! dsc.isDoASyncReplication()) {
+            super.writeAcknowledgementId(ros);
+        }
 
         version = v._storeable_getVersion();
         boolean requiresFullSave = true;
@@ -136,9 +137,19 @@ public class StoreableSaveCommand<K, V extends Storeable>
         }
     }
 
+
+    @Override
+    public void computeTarget() {
+        super.selectReplicaInstance( k);
+    }
+
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
+        if (! dsc.isDoASyncReplication()) {
+            super.readAcknowledgementId(ris);
+        }
+
         k = dsc.getDataStoreKeyHelper().readKey(ris);
         version = ris.readLong();
         wasFullWrite = ris.readBoolean();
@@ -179,6 +190,11 @@ public class StoreableSaveCommand<K, V extends Storeable>
                 }
             }
         }
+
+        if (! dsc.isDoASyncReplication()) {
+            super.sendAcknowledgement();
+        }
+        
     }
 
     @Override
@@ -188,6 +204,19 @@ public class StoreableSaveCommand<K, V extends Storeable>
 
     public String toString() {
         return getName() + "(" + k + ")";
+    }
+
+
+    @Override
+    public void onSuccess() {
+        if (! dsc.isDoASyncReplication()) {
+            try {
+                super.onSuccess();
+                super.waitForAck();
+            } catch (Exception ex) {
+                System.out.println("** Got exception: " + ex);
+            }
+        }
     }
 
 }

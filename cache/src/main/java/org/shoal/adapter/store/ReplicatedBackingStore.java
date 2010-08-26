@@ -128,6 +128,7 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         dsConf.addCommand(new SaveCommand<K, V>());
+        dsConf.addCommand(new SimpleAckCommand<K, V>());
         dsConf.addCommand(new RemoveCommand<K, V>());
         dsConf.addCommand(new LoadRequestCommand<K, V>());
         dsConf.addCommand(new BroadcastLoadRequestCommand<K, V>());

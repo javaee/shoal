@@ -41,6 +41,12 @@ package org.shoal.ha.cache.impl.command;
  */
 public class ReplicationCommandOpcode {
 
+
+
+    public static final byte REPLICATION_FRAME_PAYLOAD = 1;
+
+    public static final byte SIMPLE_ACK_COMMAND = 2;
+
     public static final byte SAVE = 33;
 
     public static final byte SAVE_DELTA = 34;
@@ -80,8 +86,6 @@ public class ReplicationCommandOpcode {
     public static final byte STOREABLE_FULL_SAVE_COMMAND = 76;
 
 
-
-    public static final byte REPLICATION_FRAME_PAYLOAD = 16;
 
 
     public static final byte MONITOR_LIST_BACKING_STORE_CONF = 84;

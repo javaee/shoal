@@ -53,16 +53,12 @@ public class StringKeyHelper
     
     @Override
     public final void writeKey(ReplicationOutputStream ros, String key) throws IOException {
-        System.out.println("About to write @ index: " + ros.mark());
         ros.writeLengthPrefixedString(key);
-        System.out.println("NEXT write will be @ index: " + ros.mark());
     }
 
     @Override
     public final String readKey(ReplicationInputStream ris) throws DataStoreException {
-        System.out.println("About to read from index: " + ris.mark());
         String str = ris.readLengthPrefixedString();
-        System.out.println("NEXT read will be from index: " + ris.mark());
 
         return str;
     }
