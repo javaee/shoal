@@ -452,7 +452,7 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "ERROR: occurred while saving [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
                 // give time for the data to persist
-                PutGetRemoveTest.sleep(1);
+//                PutGetRemoveTest.sleep(1);
                 try {
                     myLogger.log(Level.INFO, "Accessing " + onceExistedId);
                     String tmp = (String) ds.get(onceExistedId);
@@ -473,7 +473,7 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "ERROR: occurred while removing [" + onceExistedId + "] - " + e.getLocalizedMessage(), e);
                 }
                 // give time for the data to be removed
-                PutGetRemoveTest.sleep(1);
+//                PutGetRemoveTest.sleep(1);
                 //
                 // this might need to be modified the wait until remove has been sucessfully accomplished before
                 // moving on
@@ -531,7 +531,7 @@ public class PutGetRemoveTest implements CallBack {
                 }
                 value--;
                 // give time for the data to be persisted
-                PutGetRemoveTest.sleep(4);
+//                PutGetRemoveTest.sleep(4);
                 try {
                     myLogger.log(Level.INFO, "Accessing " + id);
                     Integer tmp = (Integer) ds.get(id);
@@ -552,7 +552,7 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "ERROR: occurred while removing [" + id + "] - " + e.getLocalizedMessage(), e);
                 }
                 // give time for the data to be removed
-                PutGetRemoveTest.sleep(4);
+//                PutGetRemoveTest.sleep(4);
                 try {
                     myLogger.log(Level.INFO, "Trying to access " + id + " after remove");
                     String tmp = (String) ds.get(id);
@@ -603,13 +603,13 @@ public class PutGetRemoveTest implements CallBack {
                 myLogger.log(Level.INFO, "STOPGAP - DOUBLE_MAX exists, no need to wait");
                 break;
                 }
-                PutGetRemoveTest.sleep(2);
+//                PutGetRemoveTest.sleep(2);
                 myLogger.log(Level.INFO, "STOPGAP - Waiting 2 seconds for DOUBLE_MAX to not return null before continuing");
                 }
                  */
 
                 // give time for the data to be persisted
-                PutGetRemoveTest.sleep(4);
+//                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 try {
                     myLogger.log(Level.INFO, "Accessing TRUE");
@@ -869,7 +869,7 @@ public class PutGetRemoveTest implements CallBack {
                     myLogger.log(Level.SEVERE, "ERROR: occurred while removing  [" + memberID + ":type] - " + e.getLocalizedMessage(), e);
                 }
                 // give time for the data to be removed
-                PutGetRemoveTest.sleep(4);
+//                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Verify removed data");
                 try {
                     myLogger.log(Level.INFO, "Accessing TRUE");
@@ -1059,7 +1059,7 @@ public class PutGetRemoveTest implements CallBack {
                     }
                 }
                 // give time for the data to be persisted
-                PutGetRemoveTest.sleep(4);
+//                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 for (int num = 0; num < numberOfObjects; num++) {
                     String id = memberID + ":" + num;
@@ -1166,7 +1166,7 @@ public class PutGetRemoveTest implements CallBack {
                     }
                 }
                 // give time for the data to be removed
-                PutGetRemoveTest.sleep(4);
+//                PutGetRemoveTest.sleep(4);
                 myLogger.log(Level.INFO, "Accessing persisted data");
                 for (int num = 0; num < numberOfObjects; num++) {
                     String id = memberID + ":" + num;
