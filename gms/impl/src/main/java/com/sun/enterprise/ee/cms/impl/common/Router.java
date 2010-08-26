@@ -352,9 +352,9 @@ public class Router {
     void notifyFailureNotificationAction(final FailureNotificationSignal signal) {
         FailureNotificationAction a;
         FailureNotificationSignal fns;
+        fns = new FailureNotificationSignalImpl(signal);
         for (FailureNotificationActionFactory sysjraf : systemFailureNotificationAF) {
             a = (FailureNotificationAction) sysjraf.produceAction();
-            fns = new FailureNotificationSignalImpl(signal);
             try {
                 a.consumeSignal(fns);
             }  catch (ActionException e) {
@@ -370,7 +370,7 @@ public class Router {
         synchronized (failureNotificationAF) {
             for (FailureNotificationActionFactory fnaf : failureNotificationAF) {
                 a = (FailureNotificationAction) fnaf.produceAction();
-                fns = new FailureNotificationSignalImpl(signal);
+                fns = new FailureNotificationSignalImpl(fns);
                 callAction(a, fns);
             }
         }
@@ -492,11 +492,12 @@ public class Router {
     void notifyJoinedAndReadyNotificationAction(final JoinedAndReadyNotificationSignal signal) {
         JoinedAndReadyNotificationAction a;
         JoinedAndReadyNotificationSignal jns;
+        jns = new JoinedAndReadyNotificationSignalImpl(signal);
+
         //todo: NEED to be able to predetermine the number of GMS clients
         //that would register for joined and ready notifications.
         for (JoinedAndReadyNotificationActionFactory sysjraf : systemJoinedAndReadyNotificationAF) {
             a = (JoinedAndReadyNotificationAction) sysjraf.produceAction();
-            jns = new JoinedAndReadyNotificationSignalImpl(signal);
             try {
                 a.consumeSignal(jns);
             }  catch (ActionException e) {
@@ -513,7 +514,7 @@ public class Router {
             synchronized (joinedAndReadyNotificationAF) {
                 for (JoinedAndReadyNotificationActionFactory jnaf : joinedAndReadyNotificationAF) {
                     a = (JoinedAndReadyNotificationAction) jnaf.produceAction();
-                    jns = new JoinedAndReadyNotificationSignalImpl(signal);
+                    jns = new JoinedAndReadyNotificationSignalImpl(jns);
                     callAction(a, jns);
                 }
             }
@@ -525,9 +526,9 @@ public class Router {
         PlannedShutdownSignal pss;
         logger.log(Level.INFO, "plannedshutdownsignals.send.member",
                 new Object[]{signal.getEventSubType(), signal.getMemberToken()});
+        pss = new PlannedShutdownSignalImpl(signal);
         for (PlannedShutdownActionFactory sysPsaf : systemPlannedShutdownAF) {
             a = (PlannedShutdownAction) sysPsaf.produceAction();
-            pss = new PlannedShutdownSignalImpl(signal);
             try {
                 a.consumeSignal(pss);
             }  catch (ActionException e) {
@@ -540,7 +541,7 @@ public class Router {
         synchronized (plannedShutdownAF) {
             for (PlannedShutdownActionFactory psaf : plannedShutdownAF) {
                 a = (PlannedShutdownAction) psaf.produceAction();
-                pss = new PlannedShutdownSignalImpl(signal);
+                pss = new PlannedShutdownSignalImpl(pss);
                 callAction(a, pss);
             }
         }
