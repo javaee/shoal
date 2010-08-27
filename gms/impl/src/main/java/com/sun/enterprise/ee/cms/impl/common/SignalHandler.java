@@ -122,6 +122,7 @@ public class SignalHandler implements Runnable {
             if (signal instanceof FailureRecoverySignal) {
                 router.notifyFailureRecoveryAction((FailureRecoverySignal) signal);
             } else if (signal instanceof FailureNotificationSignal) {
+                router.aliveAndReadyView.processNotification(signal);
                 router.notifyFailureNotificationAction(
                         (FailureNotificationSignal) signal);
             } else if (signal instanceof MessageSignal) {
@@ -129,10 +130,12 @@ public class SignalHandler implements Runnable {
             } else if (signal instanceof JoinNotificationSignal) {
                 router.notifyJoinNotificationAction((JoinNotificationSignal) signal);
             } else if (signal instanceof PlannedShutdownSignal) {
+                router.aliveAndReadyView.processNotification(signal);
                 router.notifyPlannedShutdownAction((PlannedShutdownSignal) signal);
             } else if (signal instanceof FailureSuspectedSignal) {
                 router.notifyFailureSuspectedAction((FailureSuspectedSignal) signal);
             } else if (signal instanceof JoinedAndReadyNotificationSignal) {
+                router.aliveAndReadyView.processNotification(signal);
                 router.notifyJoinedAndReadyNotificationAction((JoinedAndReadyNotificationSignal) signal);
             } else if (signal instanceof GroupLeadershipNotificationSignal) {
                 router.notifyGroupLeadershipNotificationAction((GroupLeadershipNotificationSignal) signal);

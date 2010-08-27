@@ -92,10 +92,6 @@ public class AliveAndReadyViewWindow {
         failureActionFactory = new FailureNotificationActionFactoryImpl(leaveCallback);
         plannedShutdownFactory = new PlannedShutdownActionFactoryImpl(leaveCallback);
 
-        router.addSystemDestination(joinedAndReadyActionFactory);
-        router.addSystemDestination(failureActionFactory);
-        router.addSystemDestination(plannedShutdownFactory);
-
         // initialize with a null initial previous and current views
         aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
         aliveAndReadyView.add(new AliveAndReadyViewImpl(new TreeSet<String>(), viewId++));
@@ -117,8 +113,7 @@ public class AliveAndReadyViewWindow {
         MAX_CLUSTER_STARTTIME_DURATION_MS = durationInMs;
     }
 
-    // junit testing only - only scope to package access
-    void junitProcessNotification(Signal signal) {
+    public void processNotification(Signal signal) {
         if (signal instanceof JoinedAndReadyNotificationSignal) {
             jrcallback.processNotification(signal);
         } else if (signal instanceof PlannedShutdownSignal || signal instanceof FailureNotificationSignal) {

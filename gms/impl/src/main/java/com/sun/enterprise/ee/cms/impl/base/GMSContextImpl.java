@@ -84,7 +84,10 @@ public class GMSContextImpl extends GMSContextBase {
         if (MAX_MSGS_IN_QUEUE != DEFAULT_INCOMING_MSG_QUEUE_SIZE && logger.isLoggable(Level.CONFIG)) {
             logger.config("INCOMING_MESSAGE_QUEUE_SIZE: " + MAX_MSGS_IN_QUEUE + " overrides default value of " + DEFAULT_INCOMING_MSG_QUEUE_SIZE);
         }
-        router = new Router(MAX_MSGS_IN_QUEUE + 100);
+        long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
+        aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
+        aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
+        router = new Router(MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow);
 
         this.configProperties = configProperties;
         groupCommunicationProvider =
@@ -105,9 +108,6 @@ public class GMSContextImpl extends GMSContextBase {
         // It should be driven independent of GMSContext through a factory as
         // other impls of this interface can exist
         createDistributedStateCache();
-        long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
-        aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
-        aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
         logger.log(Level.FINE,  "gms.init");
     }
 

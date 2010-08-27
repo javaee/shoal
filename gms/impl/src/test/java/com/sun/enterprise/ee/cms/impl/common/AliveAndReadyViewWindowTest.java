@@ -36,12 +36,9 @@
 
 package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.base.GroupHandleImpl;
 import com.sun.enterprise.ee.cms.impl.client.RejoinSubeventImpl;
-import com.sun.enterprise.ee.cms.spi.MemberStates;
 import junit.framework.TestCase;
 
-import java.text.MessageFormat;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
@@ -130,12 +127,12 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(DAS, GROUP_NAME,  IS_SPECTATOR,
                                                                  START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
-        aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+        aliveAndReadyViewWindow.processNotification(jrSignal);
 
         for (String memberName: coreClusterMembers) {
             jrSignal = this.createJoinAndReadyNotificationSignal(memberName, GROUP_NAME,  IS_CORE,
                                                                  START_TIME, GMSConstants.startupType.GROUP_STARTUP);
-            aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+            aliveAndReadyViewWindow.processNotification(jrSignal);
         }
         if (coreClusterMembers.size() > 0) {
             assertTrue("startCluster assertion failure coreClusterMembers != getCurrentView()", coreClusterMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
@@ -161,12 +158,12 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(DAS, GROUP_NAME,  IS_SPECTATOR,
                                                                  START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
-        aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+        aliveAndReadyViewWindow.processNotification(jrSignal);
 
         for (String memberName: coreClusterMembers) {
             jrSignal = this.createJoinAndReadyNotificationSignal(memberName, GROUP_NAME,  IS_CORE,
                                                                  START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
-            aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+            aliveAndReadyViewWindow.processNotification(jrSignal);
         }
         if (coreClusterMembers.size() > 0) {
             assertTrue("startCluster assertion failure coreClusterMembers != getCurrentView()", coreClusterMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
@@ -184,7 +181,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
             // verify that a stopped or killed instance has been restarted before trying to shutdown.
             if (currentMembers.contains(memberName)) {
                 shutdownSignal = createPlannedShutdownSignal(memberName, GROUP_NAME, IS_CORE,  1L, GMSConstants.shutdownType.GROUP_SHUTDOWN);
-                aliveAndReadyViewWindow.junitProcessNotification(shutdownSignal);
+                aliveAndReadyViewWindow.processNotification(shutdownSignal);
             }
         }
 
@@ -194,7 +191,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
             // verify that a stopped or killed instance has been restarted before trying to shutdown.
             if (currentMembers.contains(memberName)) {
                 shutdownSignal = createPlannedShutdownSignal(memberName, GROUP_NAME, IS_SPECTATOR,  1L, GMSConstants.shutdownType.GROUP_SHUTDOWN);
-                aliveAndReadyViewWindow.junitProcessNotification(shutdownSignal);
+                aliveAndReadyViewWindow.processNotification(shutdownSignal);
             }
         }
         // currently no assertions after group shutdown.  There is no state after shutdown is complete to verify.
@@ -219,7 +216,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         String targetedInstance = clusterMembers.first();
 
         PlannedShutdownSignal  shutdownSignal = createPlannedShutdownSignal(targetedInstance, GROUP_NAME, IS_CORE,  1L, GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
-        aliveAndReadyViewWindow.junitProcessNotification(shutdownSignal);
+        aliveAndReadyViewWindow.processNotification(shutdownSignal);
         assertTrue(coreClusterMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal() instanceof PlannedShutdownSignal);
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(shutdownSignal));
@@ -238,7 +235,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
         // simulate shutdown of target instance
         PlannedShutdownSignal  shutdownSignal = createPlannedShutdownSignal(targetedInstance, GROUP_NAME, IS_CORE,  1L, GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
-        aliveAndReadyViewWindow.junitProcessNotification(shutdownSignal);
+        aliveAndReadyViewWindow.processNotification(shutdownSignal);
         assertTrue(coreClusterMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal() instanceof PlannedShutdownSignal);
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(shutdownSignal));
@@ -256,7 +253,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(targetedInstance, GROUP_NAME,  IS_CORE,
                                                              START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
-        aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+        aliveAndReadyViewWindow.processNotification(jrSignal);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
         expectedMembers.add(targetedInstance);
@@ -275,7 +272,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
         final String killInstance = coreClusterMembers.first();
         FailureNotificationSignal  failureNotificationSignal = createFailureNotificationSignal(killInstance, GROUP_NAME, IS_CORE,  1L);
-        aliveAndReadyViewWindow.junitProcessNotification(failureNotificationSignal);
+        aliveAndReadyViewWindow.processNotification(failureNotificationSignal);
 
         TreeSet<String> expectedMembers = new TreeSet<String>(coreClusterMembers);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
@@ -299,7 +296,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
         final String killInstance = coreClusterMembers.first();
         FailureNotificationSignal  failureNotificationSignal = createFailureNotificationSignal(killInstance, GROUP_NAME, IS_CORE,  1L);
-        aliveAndReadyViewWindow.junitProcessNotification(failureNotificationSignal);
+        aliveAndReadyViewWindow.processNotification(failureNotificationSignal);
 
         TreeSet<String> expectedMembers = new TreeSet<String>(coreClusterMembers);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
@@ -318,7 +315,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(killInstance, GROUP_NAME,  IS_CORE,
                                                              START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP);
-        aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+        aliveAndReadyViewWindow.processNotification(jrSignal);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
         expectedMembers.add(killInstance);
@@ -356,7 +353,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 //           JoinedAndReadyNotificationSignal jrSignal;
 //           jrSignal = this.createJoinAndReadyNotificationSignal(targetedInstance, GROUP_NAME,  IS_CORE,
 //                                                                START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
-//           aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+//           aliveAndReadyViewWindow.processNotification(jrSignal);
 //
 //           // assert that the starting of this instance resulted in a new aliveAndReadyView, that it was not incorrectly
 //           // folded into start-cluster.
@@ -383,7 +380,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
                                                              START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP);
         RejoinSubevent rjse = new RejoinSubeventImpl(System.currentTimeMillis() - 4000);
         jrSignal.setRs(rjse);
-        aliveAndReadyViewWindow.junitProcessNotification(jrSignal);
+        aliveAndReadyViewWindow.processNotification(jrSignal);
 
         // assert that previous and current view are same when a JoinedAndReady with REJOIN subevent occurs.
         TreeSet<String> expectedMembers = new TreeSet<String>(coreClusterMembers);
