@@ -72,6 +72,7 @@ public class VirtualMulticastSender extends BlockingIOMulticastSender {
                                    PeerID localPeerID,
                                    Executor executor,
                                    NetworkManager networkManager,
+                                   int multicastTimeToLive,
                                    List<PeerID> virtualPeerIdList ) throws IOException {
         super( host, multicastAddress,
                multicastPort,
@@ -79,6 +80,7 @@ public class VirtualMulticastSender extends BlockingIOMulticastSender {
                multicastPacketSize,
                localPeerID,
                executor,
+               multicastTimeToLive,
                networkManager );
         this.networkManager = networkManager;
         if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() )

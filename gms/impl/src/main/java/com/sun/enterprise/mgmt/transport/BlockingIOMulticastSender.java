@@ -36,6 +36,7 @@
 
 package com.sun.enterprise.mgmt.transport;
 
+import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
@@ -85,6 +86,8 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
     private static final String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
     private static final int DEFAULT_MULTICAST_PACKET_SIZE = 16384;
 
+    private int multicastTimeToLive = GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE;
+
     public BlockingIOMulticastSender( String host,
                                       String multicastAddress,
                                       int multicastPort,
@@ -92,6 +95,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                                       int multicastPacketSize,
                                       PeerID localPeerID,
                                       Executor executor,
+                                      int multicastTimeToLive,
                                       NetworkManager networkManager ) throws IOException {
         if( host != null ) {
             this.localSocketAddress = new InetSocketAddress( host, multicastPort );
@@ -128,6 +132,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         this.localPeerID = localPeerID;
         this.executor = executor;
         this.networkManager = networkManager;
+        this.multicastTimeToLive = multicastTimeToLive;
     }
 
     /**
@@ -145,6 +150,14 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
             multicastSocket = new MulticastSocket( multicastPort );
         }
         multicastSocket.setLoopbackMode( false );
+        if (multicastTimeToLive > 0) {
+            try {
+                multicastSocket.setTimeToLive(this.multicastTimeToLive);
+            } catch (IOException ioe) {
+                LOG.log(Level.WARNING, "unabled to set multicast socket timeToLive to " + this.multicastTimeToLive, ioe);
+            }
+        }
+        LOG.config("MulticastSocket.getTimeToLive()=" + multicastSocket.getTimeToLive());
 
         running = true;
 

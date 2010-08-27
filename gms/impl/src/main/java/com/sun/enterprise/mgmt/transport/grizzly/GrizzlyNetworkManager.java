@@ -39,6 +39,9 @@ package com.sun.enterprise.mgmt.transport.grizzly;
 
 import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
+
+import com.sun.enterprise.ee.cms.core.GMSConstants;
+import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
 import com.sun.enterprise.mgmt.transport.AbstractNetworkManager;
 import com.sun.enterprise.mgmt.transport.BlockingIOMulticastSender;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -58,10 +61,7 @@ import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 
-import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -97,6 +97,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private MessageSender tcpSender;
     private MessageSender udpSender;
     private MulticastMessageSender multicastSender;
+    private int multicastTimeToLive;
 
     private String host;
     private int tcpPort;
@@ -161,15 +162,20 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         startTimeout = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
         writeTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );
+        multicastTimeToLive = Utility.getIntProperty(MULTICAST_TIME_TO_LIVE.toString(),
+                                      GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
         virtualUriList = Utility.getStringProperty( VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties );
         if (shoalLogger.isLoggable(Level.CONFIG)) {
+            String multicastTTLresults = multicastTimeToLive == GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE ?
+                    " default" : Integer.toString(multicastTimeToLive);
             StringBuffer buf = new StringBuffer(256);
             buf.append("\nGrizzlyNetworkManager Configuration\n");
             buf.append("BIND_INTERFACE_ADDRESS:").append(host).append("  NetworkInterfaceName:").append(networkInterfaceName).append('\n');
             buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append(" tcpPort:").append(tcpPort).append('\n');
             buf.append("MULTICAST_ADDRESS:MULTICAST_PORT:").append(multicastAddress).append(':').append(multicastPort)
-                     .append(" MULTICAST_PACKET_SIZE:").append(multicastPacketSize).append('\n');
+                     .append(" MULTICAST_PACKET_SIZE:").append(multicastPacketSize)
+                     .append(" MULTICAST_TIME_TO_LIVE:").append(multicastTTLresults).append('\n');
             buf.append("FAILURE_DETECT_TCP_RETRANSMIT_TIMEOUT(ms):").append(failTcpTimeout).append('\n');
             buf.append("ThreadPool CORE_POOLSIZE:").append(corePoolSize).
                     append(" MAX_POOLSIZE:").append(maxPoolSize).
@@ -355,6 +361,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                                                           localPeerID,
                                                           multicastSenderThreadPool,
                                                           this,
+                                                          multicastTimeToLive,
                                                           virtualPeerIdList );
         } else {
             if( GrizzlyUtil.isSupportNIOMulticast() ) {
@@ -368,6 +375,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                                                                  multicastPacketSize,
                                                                  localPeerID,
                                                                  multicastSenderThreadPool,
+                                                                 multicastTimeToLive,
                                                                  this );
             }
         }

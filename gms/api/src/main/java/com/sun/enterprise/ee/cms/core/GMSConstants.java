@@ -55,4 +55,5 @@ public class GMSConstants {
     public static enum shutdownState { INITIATED, COMPLETED }
     public static enum startupType { INSTANCE_STARTUP, GROUP_STARTUP }
     public static enum groupStartupState { INITIATED, COMPLETED_SUCCESS, COMPLETED_FAILED }
+    public static int DEFAULT_MULTICAST_TIME_TO_LIVE = -1;
 }
