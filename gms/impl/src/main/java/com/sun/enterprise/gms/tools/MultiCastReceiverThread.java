@@ -93,9 +93,11 @@ public class MultiCastReceiverThread extends Thread {
                 log(String.format("received '%s'", newData));
                 if (hosts.add(newData)) {
                     if (targetData.equals(newData)) {
-                        System.out.println(sm.get("loopback.from", newData));
+                        System.out.println(sm.get("loopback.from",
+                            MulticastTester.trimDataString(newData)));
                     } else {
-                        System.out.println(sm.get("received.from", newData));
+                        System.out.println(sm.get("received.from",
+                            MulticastTester.trimDataString(newData)));
                         receivedAnything.set(true);
                     }
                 }

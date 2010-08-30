@@ -51,17 +51,19 @@ public class MulticastSenderThread extends Thread {
     int mcPort;
     String mcAddress;
     String bindInterface;
+    int ttl;
     long msgPeriodInMillis;
     boolean debug;
     String dataString;
 
     public MulticastSenderThread(int mcPort, String mcAddress,
-        String bindInterface, long msgPeriodInMillis,
+        String bindInterface, int ttl, long msgPeriodInMillis,
         boolean debug, String dataString) {
         super("McastSender");
         this.mcPort = mcPort;
         this.mcAddress = mcAddress;
         this.bindInterface = bindInterface;
+        this.ttl = ttl;
         this.msgPeriodInMillis = msgPeriodInMillis;
         this.debug = debug;
         this.dataString = dataString;
@@ -80,12 +82,31 @@ public class MulticastSenderThread extends Thread {
             if (bindInterface != null) {
                 socket.setInterface(InetAddress.getByName(bindInterface));
             }
+            if (ttl != -1) {
+                try {
+                    socket.setTimeToLive(ttl);
+                } catch (Exception e) {
+                    System.err.println(sm.get("could.not.set.ttl",
+                        e.getLocalizedMessage()));
+                }
+            }
 
-            // 'false' means do not disable
+            // 'false' means do NOT disable
+            log("setting loopback mode false on mcast socket");
             socket.setLoopbackMode(false);
+
+            try {
+                log(String.format("socket time to live set to %s",
+                    socket.getTimeToLive()));
+            } catch (IOException ioe) {
+                log(ioe.getLocalizedMessage());
+            }
             
             log(String.format("joining group: %s", group.toString()));
             socket.joinGroup(group);
+            if (!debug) {
+                dataString = MulticastTester.trimDataString(dataString);
+            }
             System.out.println(sm.get("sending.message",
                 dataString, msgPeriodInMillis));
 

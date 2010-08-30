@@ -54,6 +54,7 @@ public class MulticastTester {
     public static final String PORT_OPTION = DASH + sm.get("port.option");
     public static final String ADDRESS_OPTION = DASH + sm.get("address.option");
     public static final String BIND_OPTION = DASH + sm.get("bind.int.option");
+    public static final String TTL_OPTION = DASH + sm.get("ttl.option");
     public static final String WAIT_PERIOD_OPTION = DASH + sm.get("period.option");
     public static final String TIMEOUT_OPTION = DASH + sm.get("timeout.option");
     public static final String DEBUG_OPTION = DASH + sm.get("debug.option");
@@ -61,6 +62,7 @@ public class MulticastTester {
     int mcPort = 2048;
     String mcAddress = "228.9.3.1";
     String bindInterface = null;
+    int ttl = -1; // will only set if specified as command line param
     long msgPeriodInMillis = 2000;
     boolean debug = false;
 
@@ -75,6 +77,9 @@ public class MulticastTester {
         out.append(sm.get("address.set", mcAddress)).append("\n");
         out.append(sm.get("bind.int.set", bindInterface)).append("\n");
         out.append(sm.get("period.set", msgPeriodInMillis)).append("\n");
+        if (ttl != -1) {
+            out.append(sm.get("ttl.set", ttl)).append("\n");
+        }
         System.out.println(out.toString());
 
         String dataString;
@@ -91,7 +96,8 @@ public class MulticastTester {
         MultiCastReceiverThread receiver = new MultiCastReceiverThread(
             mcPort, mcAddress, bindInterface, debug, dataString);
         MulticastSenderThread sender = new MulticastSenderThread(mcPort,
-            mcAddress, bindInterface, msgPeriodInMillis, debug, dataString);
+            mcAddress, bindInterface, ttl,
+            msgPeriodInMillis, debug, dataString);
         receiver.start();
         sender.start();
 
@@ -155,6 +161,14 @@ public class MulticastTester {
                     mcAddress = args[++i];
                 } else if (BIND_OPTION.equals(arg)) {
                     bindInterface = args[++i];
+                } else if (TTL_OPTION.equals(arg)) {
+                    try {
+                        arg = args[++i];
+                        ttl = Integer.parseInt(arg);
+                    } catch (NumberFormatException nfe) {
+                        printAndExit(sm.get("bad.num.param",
+                            arg, TTL_OPTION), 1);
+                    }
                 } else if (WAIT_PERIOD_OPTION.equals(arg)) {
                     try {
                         arg = args[++i];
@@ -193,6 +207,7 @@ public class MulticastTester {
         sb.append(PORT_OPTION).append("\n");
         sb.append(ADDRESS_OPTION).append("\n");
         sb.append(BIND_OPTION).append("\n");
+        sb.append(TTL_OPTION).append("\n");
         sb.append(WAIT_PERIOD_OPTION).append("\n");
         sb.append(TIMEOUT_OPTION).append("\n");
         sb.append(DEBUG_OPTION).append("\n");
@@ -219,5 +234,10 @@ public class MulticastTester {
     public static void main(String[] args) {
         MulticastTester tester = new MulticastTester();
         tester.run(args) ;
+    }
+
+    // make the output a little more readable
+    static String trimDataString(String s) {
+        return s.substring(0, s.indexOf("|")); 
     }
 }
