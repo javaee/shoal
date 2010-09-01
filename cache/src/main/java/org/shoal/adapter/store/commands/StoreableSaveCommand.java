@@ -141,6 +141,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     public void computeTarget() {
         super.selectReplicaInstance( k);
+        System.out.println("StoreableSaveCommand.computeTarget ==> " + getTargetName());
     }
 
     @Override

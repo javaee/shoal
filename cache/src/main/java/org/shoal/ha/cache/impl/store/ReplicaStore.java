@@ -107,10 +107,19 @@ public class ReplicaStore<K, V> {
     }
 
     public void remove(K k) {
+        remove(k, false);
+    }
+
+    public void remove(K k, boolean staleRemove) {
         DataStoreEntry<K, V> entry = getOrCreateEntry(k);
-        System.out.println("** ReplicaStore::remove("+k);
         synchronized (entry) {
-            entry.markAsRemoved("Removed by ReplicaStore.remove");
+            if (! staleRemove) {
+                entry.markAsRemoved("Removed by ReplicaStore.remove(" + k + ")");
+                System.out.println("** ReplicaStore::remove("+k);
+            } else {
+                map.remove(k);
+                System.out.println("** ReplicaStore::staleReplicaRemove("+k);
+            }
         }
     }
 

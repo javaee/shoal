@@ -50,11 +50,13 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class StoreableRemoveCommand<K, V>
-    extends Command<K, V> {
+        extends AcknowledgedCommand<K, V> {
 
     protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
 
     private K key;
+
+    private String target;
 
     public StoreableRemoveCommand() {
         super(ReplicationCommandOpcode.STOREABLE_REMOVE);
@@ -70,16 +72,27 @@ public class StoreableRemoveCommand<K, V>
         return new StoreableRemoveCommand<K, V>();
     }
 
+
+    public void setTarget(String t) {
+        this.target = t;
+    }
+
     @Override
     public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
         //super.selectReplicaInstance( key);
-        super.setTargetName(null);
+        if (!dsc.isDoASyncReplication()) {
+            super.writeAcknowledgementId(ros);
+        }
+        super.setTargetName(target);
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
     }
 
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
+            throws IOException {
+        if (!dsc.isDoASyncReplication()) {
+            super.readAcknowledgementId(ris);
+        }
         key = dsc.getDataStoreKeyHelper().readKey(ris);
     }
 
@@ -89,10 +102,13 @@ public class StoreableRemoveCommand<K, V>
         synchronized (entry) {
             entry.markAsRemoved("Removed by removeCommand from " + initiator);
         }
+        if (!dsc.isDoASyncReplication()) {
+            super.sendAcknowledgement();
+        }
     }
 
     public String toString() {
         return getName() + "(" + key + ")";
     }
-    
+
 }

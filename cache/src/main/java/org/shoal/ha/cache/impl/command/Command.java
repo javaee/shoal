@@ -75,7 +75,7 @@ public abstract class Command<K, V> {
         commandName = commandName.substring(index+1);
     }
 
-    public void initialize(DataStoreContext<K, V> rs) {
+    public final void initialize(DataStoreContext<K, V> rs) {
         this.dsc = rs;
         this.cm = rs.getCommandManager();
     }

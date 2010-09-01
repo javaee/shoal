@@ -50,11 +50,13 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class RemoveCommand<K, V>
-    extends Command<K, V> {
+    extends AcknowledgedCommand<K, V> {
 
     protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
 
     private K key;
+
+    private String target;
 
     public RemoveCommand() {
         super(ReplicationCommandOpcode.REMOVE);
@@ -73,21 +75,48 @@ public class RemoveCommand<K, V>
         return new RemoveCommand<K, V>();
     }
 
+
+
+    public void setTarget(String t) {
+        this.target = t;
+    }
+
     @Override
     public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        setTargetName(null);
+        if (! dsc.isDoASyncReplication()) {
+            super.writeAcknowledgementId(ros);
+        }
+        setTargetName(target);
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
     }
 
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
+        if (! dsc.isDoASyncReplication()) {
+            super.readAcknowledgementId(ris);
+        }
         key = dsc.getDataStoreKeyHelper().readKey(ris);
     }
 
     @Override
     public void execute(String initiator) {
         dsc.getReplicaStore().remove(key);
+        if (! dsc.isDoASyncReplication()) {
+            super.sendAcknowledgement();
+        }
+    }
+
+    @Override
+    public void onSuccess() {
+        if (! dsc.isDoASyncReplication()) {
+            try {
+                super.onSuccess();
+                super.waitForAck();
+            } catch (Exception ex) {
+                System.out.println("** Got exception: " + ex);
+            }
+        }
     }
 
     public String toString() {

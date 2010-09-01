@@ -91,8 +91,11 @@ public class DataStoreEntry<K, V> {
         return replicaInstanceName;
     }
 
-    public void setReplicaInstanceName(String replicaInstanceName) {
+    public String setReplicaInstanceName(String replicaInstanceName) {
+        String oldValue = this.replicaInstanceName;
         this.replicaInstanceName = replicaInstanceName;
+
+        return oldValue == null ? null : oldValue.equals(replicaInstanceName) ? null : oldValue;
     }
 
     public List<Command<K, V>> getPendingUpdates() {

@@ -129,7 +129,11 @@ public class DefaultKeyMapper
         }
     }
 
-    /*
+    @Override
+    public String[] getCurrentMembers() {
+        return members;
+    }
+/*
     @Override
     public String[] getKeyMappingInfo(String groupName, Object key1) {
         int hc = key1.hashCode();

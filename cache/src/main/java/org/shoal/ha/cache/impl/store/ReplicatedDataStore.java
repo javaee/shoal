@@ -36,11 +36,7 @@
 
 package org.shoal.ha.cache.impl.store;
 
-import org.shoal.adapter.store.commands.SaveCommand;
-import org.shoal.adapter.store.commands.UpdateDeltaCommand;
-import org.shoal.adapter.store.commands.BroadcastLoadRequestCommand;
-import org.shoal.adapter.store.commands.LoadRequestCommand;
-import org.shoal.adapter.store.commands.RemoveCommand;
+import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
 import org.shoal.ha.mapper.DefaultKeyMapper;
@@ -148,9 +144,20 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 if (conf.isCacheLocally()) {
                     entry.setV(v);
                 }
-                entry.setReplicaInstanceName(cmd.getTargetName());
+
+                String staleLocation = entry.setReplicaInstanceName(cmd.getTargetName());
+
                 result = cmd.getKeyMappingInfo();
+
+
+                if (staleLocation != null) {
+                    StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
+                    staleCmd.setKey(k);
+                    staleCmd.setStaleTargetName(staleLocation);
+                    cm.execute(staleCmd);
+                }
             } else {
+                _logger.log(Level.WARNING, "ReplicatedDataStore.put(" + k + ") AFTER remove?");
                 return "";
             }
         }
@@ -228,10 +235,18 @@ public class ReplicatedDataStore<K, V extends Serializable>
         synchronized (entry) {
             entry.markAsRemoved("Removed by ReplicatedDataStore.remove");
         }
+
+        String[] targets = dsc.getKeyMapper().getCurrentMembers();
+
+        if (targets != null) {
+            for (String target : targets) {
+                RemoveCommand<K, V> cmd = new RemoveCommand<K, V>();
+                cmd.setKey(k);
+                cmd.setTarget(target);
+                cm.execute(cmd);
+            }
+        }
         
-        RemoveCommand<K, V> cmd = new RemoveCommand<K, V>();
-        cmd.setKey(k);
-        cm.execute(cmd);
     }
 
     @Override

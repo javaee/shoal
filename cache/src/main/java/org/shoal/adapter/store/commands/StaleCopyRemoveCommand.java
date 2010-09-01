@@ -97,7 +97,9 @@ public class StaleCopyRemoveCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-        dsc.getReplicaStore().remove(key);
+        dsc.getReplicaStore().remove(key, true);
+
+        System.out.println("*********************  REMOVED STALE REPLICA: " + key + "   ** SENT BY: " + initiator);
     }
 
 }

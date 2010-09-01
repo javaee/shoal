@@ -134,6 +134,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         dsConf.addCommand(new StoreableBroadcastLoadRequestCommand<K, V>());
         dsConf.addCommand(new StoreableLoadResponseCommand<K, V>());
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
+        dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
 
         dsConf.addCommand(new ListBackingStoreConfigurationCommand());
         dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
@@ -254,11 +255,19 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
                 synchronized (entry) {
                     if (!entry.isRemoved()) {
-                        entry.setReplicaInstanceName(respondingInstance);
+                        String oldLocation = entry.setReplicaInstanceName(respondingInstance);
 
                         if (localCachingEnabled) {
                             entry.setV(v);
                         }
+                        /*
+                        if (oldLocation != null) {
+                            StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
+                            staleCmd.setKey(key);
+                            staleCmd.setStaleTargetName(oldLocation);
+                            framework.execute(staleCmd);
+                        }
+                        */
                     }
                 }
             } catch (DataStoreException dseEx) {
@@ -287,9 +296,19 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     if (localCachingEnabled) {
                         entry.setV(value);
                     }
-                    entry.setReplicaInstanceName(cmd.getTargetName());
+
+                    String oldLocation = entry.setReplicaInstanceName(cmd.getTargetName());
 
                     result = cmd.getTargetName();
+
+
+
+                    if (oldLocation != null) {
+                        StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
+                        staleCmd.setKey(key);
+                        staleCmd.setStaleTargetName(oldLocation);
+                        framework.execute(staleCmd);
+                    }
                 }
 
                 result = cmd.getKeyMappingInfo();
@@ -308,6 +327,15 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
             DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
             synchronized (entry) {
                 entry.markAsRemoved("Removed by BackingStore.remove");
+            }
+            String[] targets = framework.getDataStoreContext().getKeyMapper().getCurrentMembers();
+
+            if (targets != null) {
+                for (String target : targets) {
+                    StoreableRemoveCommand<K, V> cmd = new StoreableRemoveCommand<K, V>(key);
+                    cmd.setTarget(target);
+                    framework.execute(cmd);
+                }
             }
             StoreableRemoveCommand<K, V> cmd = new StoreableRemoveCommand<K, V>(key);
             framework.execute(cmd);

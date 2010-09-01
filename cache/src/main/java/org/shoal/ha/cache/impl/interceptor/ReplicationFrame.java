@@ -111,6 +111,7 @@ public class ReplicationFrame<K, V> {
             }
 
             int cmdDataMark = bos.size();
+            StringBuilder sb = new StringBuilder("ReplicationFrame.write ");
             for (int i = 0; i < cmdSz; i++) {
                 cmdOffsets[i] = bos.mark();
                 bos.writeInt(0);
@@ -120,6 +121,8 @@ public class ReplicationFrame<K, V> {
                 bos.moveTo(cmdOffsets[i]);
                 bos.writeInt(len);
                 bos.backToAppendMode();
+
+                sb.append("\n\t").append("\tReplicationFrame["+i+"].Wrote command of size: " + len);
             }
 
             bos.moveTo(offMark);
@@ -130,7 +133,7 @@ public class ReplicationFrame<K, V> {
             bos.flush();
             data = bos.toByteArray();
 
-            System.out.println("Wrote " + cmdSz + " commands; totalBytes: " + data.length);
+            sb.append("\n\t").append("Wrote " + cmdSz + " commands; totalBytes: " + data.length);
         } catch (IOException ioEx) {
         } finally {
             try {
@@ -168,6 +171,8 @@ public class ReplicationFrame<K, V> {
         for (int i = 0; i < numStates; i++) {
             ris.skipTo(cmdOffsets[i] + frameOffset);
             byte[] cmdData = ris.readLengthPrefixedBytes();
+
+            System.out.println("\tReplicationFrame["+i+"].Read command of size: " + cmdData.length);
             ReplicationInputStream cmdRIS = null;
             try {
                 Command<K, V> cmd = cm.createNewInstance(cmdData[0]);
