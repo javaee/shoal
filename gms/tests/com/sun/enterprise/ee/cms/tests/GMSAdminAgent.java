@@ -233,6 +233,8 @@ public class GMSAdminAgent implements CallBack {
                     for (String member : dup) {
                         try {
                             gms.getGroupHandle().sendMessage(member, GMSAdminConstants.ADMINAGENT, GMSAdminConstants.STOPINSTANCE.getBytes());
+                        } catch (MemberNotInViewException me) {
+                            // member finally shutdown.  No need to report that. Definitely not a SEVERE exception.
                         } catch (GMSException e) {
                             myLogger.log(Level.SEVERE, "Exception occurred while sending stopinstance message:" + e, e);
                         }
