@@ -585,7 +585,7 @@ class MasterNode implements MessageListener, Runnable {
 
     /**
      * Processes a cluster change event. This results in adding the new
-     * members to the cluster view, and subsequenlty in application notification.
+     * members to the cluster view, and subsequently in application notification.
      *
      * @param msg    the Message
      * @param source the source node SystemAdvertisement
@@ -661,6 +661,8 @@ class MasterNode implements MessageListener, Runnable {
                 if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                     LOG.log(Level.FINER, "Received ClusterViewManager does not contain self. Publishing Self");
                     sendSelfNodeAdvertisement(source.getID(), null);
+                    clusterViewManager.notifyListeners(cvEvent);
+
                     //update the view once the the master node includes this node
                     return true;
                 }

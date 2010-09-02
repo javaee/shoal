@@ -447,7 +447,8 @@ public class ClusterViewManager {
         if (authoritative) {
             ClusterViewEvents event = cvEvent.getEvent();
             boolean changed = addToView( newView );
-            if (changed || event == ClusterViewEvents.JOINED_AND_READY_EVENT || event == ClusterViewEvents.MASTER_CHANGE_EVENT) {
+            if (changed || event == ClusterViewEvents.JOINED_AND_READY_EVENT ||
+                event == ClusterViewEvents.MASTER_CHANGE_EVENT || event == ClusterViewEvents.FAILURE_EVENT) {
                 //only if there are changes that we notify
                 notifyListeners(cvEvent);
             } else {
