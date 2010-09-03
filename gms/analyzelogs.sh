@@ -208,6 +208,23 @@ echo "Check for issues in any members sending a GroupLeadershipNotification to s
 grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | grep -v server
 echo
 echo "*****************************************"
+
+if [ "${CMD}" = "kill" ]; then
+echo
+TMP=`grep "has failed"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+EXPECTED=`expr ${NUMOFINSTANCES}`
+
+if [ ${TMP} -eq ${EXPECTED} ];then
+   echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [PASSED]"
+   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+else
+   echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [FAILED]"
+   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+fi
+
+echo
+echo "*****************************************"
+
 echo
 TMP=`grep "Adding Join member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 # format of the expected   instance counts  +  das counts  + test count adjustments
