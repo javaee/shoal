@@ -188,19 +188,19 @@ else
        TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
        TMP=`egrep "^TCPSTARTPORT" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-       if [ ! -z ${TMP} ]; then
+       if [ ! -z "${TMP}" ]; then
            TSA="-ts `echo $TMP | awk -F= '{print $2}' ` "
        else
            TSA=""
        fi
        TMP=`egrep "^TCPENDPORT" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-       if [ ! -z ${TMP} ]; then
+       if [ ! -z "${TMP}" ]; then
            TEA="-te `echo $TMP | awk -F= '{print $2}' ` "
        else
            TEA=""
        fi
        TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-       if [ ! -z ${TMP} ]; then
+       if [ ! -z "${TMP}" ]; then
            BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
        else
            BIA=""
@@ -266,15 +266,15 @@ else
       TMP=`egrep "^WORKSPACE_HOME" ${member}`
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
       TMP=`egrep "^TCPSTARTPORT" ${member}`
-      if [ ! -z ${TMP} ]; then
+      if [ ! -z "${TMP}" ]; then
            SDTCP=`echo $TMP | awk -F= '{print $2}' `
       fi
       TMP=`egrep "^TCPENDPORT" ${member}`
-      if [ ! -z ${TMP} ]; then
+      if [ ! -z "${TMP}" ]; then
            EDTCP=`echo $TMP | awk -F= '{print $2}' `
       fi
       TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${member}`
-      if [ ! -z ${TMP} ]; then
+      if [ ! -z "${TMP}" ]; then
            BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
       fi
       MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA} ${MMH}"
