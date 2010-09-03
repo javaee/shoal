@@ -210,18 +210,18 @@ echo
 echo "*****************************************"
 
 if [ "${CMD}" = "kill" ]; then
-echo
-TMP=`grep "has failed"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
-EXPECTED=`expr ${NUMOFINSTANCES}`
+   echo
+   TMP=`grep "has failed"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+   EXPECTED=`expr ${NUMOFINSTANCES}`
 
-if [ ${TMP} -eq ${EXPECTED} ];then
-   echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [PASSED]"
-   PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
-else
-   echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [FAILED]"
-   FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+   if [ ${TMP} -eq ${EXPECTED} ];then
+       echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [PASSED]"
+       PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
+   else
+       echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [FAILED]"
+       FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
+   fi
 fi
-
 echo
 echo "*****************************************"
 
