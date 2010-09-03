@@ -69,9 +69,9 @@ public class DefaultKeyMapper
 
     private volatile String[] previuousAliveAndReadyMembers = new String[0];
 
-    private volatile String[][] replicaChoices;
+    private volatile String[] replicaChoices = new String[0];
 
-    private static final String[][] _EMPTY_REPLICAS = new String[][] {new String[] {}};
+    private static final String _EMPTY_REPLICAS = "";
 
 
     public DefaultKeyMapper(String myName, String groupName) {
@@ -117,12 +117,12 @@ public class DefaultKeyMapper
     }
 
     @Override
-    public String[] getReplicaChoices(String groupName, Object key) {
+    public String getReplicaChoices(String groupName, Object key) {
         int hc = getHashCodeForKey(key);
         try {
             rLock.lock();
             return members.length == 0
-                    ? _EMPTY_REPLICAS[0]
+                    ? _EMPTY_REPLICAS
                     : replicaChoices[hc % (members.length)];
         } finally {
             rLock.unlock();
@@ -179,7 +179,7 @@ public class DefaultKeyMapper
             try {
                 rLock.lock();
                 return previuousAliveAndReadyMembers.length == 0
-                        ? _EMPTY_REPLICAS[0]
+                        ? new String[] {_EMPTY_REPLICAS}
                         : new String[] {previuousAliveAndReadyMembers[hc % (previuousAliveAndReadyMembers.length)]};
             } finally {
                 rLock.unlock();
@@ -202,18 +202,22 @@ public class DefaultKeyMapper
             members = currentMemberSet.toArray(new String[0]);
 
             int memSz = members.length;
+            this.replicaChoices = new String[memSz];
+            
             if (memSz == 0) {
-                this.replicaChoices = _EMPTY_REPLICAS;
+                this.replicaChoices = new String[] {_EMPTY_REPLICAS};
             } else {
-                this.replicaChoices = new String[memSz][];
                 for (int i=0; i<memSz; i++) {
-                    ArrayList<String> list = new ArrayList<String>(memSz);
+                    StringBuilder sb = new StringBuilder();
                     int index = i;
-                    for (int j=0; j<memSz; j++) {
-                        list.add(members[index++ % memSz]);
+                    String delim = "";
+                    int choiceLimit = 2;
+                    for (int j=0; j<memSz && choiceLimit-- > 0; j++) {
+                        sb.append(delim).append(members[index++ % memSz]);
+                        delim = ":";
                     }
                     
-                    replicaChoices[i] = list.toArray(new String[memSz]);
+                    replicaChoices[i] = sb.toString();
                 }
             }
 
@@ -276,12 +280,7 @@ public class DefaultKeyMapper
         sb.append("\n");
         int memSz = members.length;
         for (int i=0; i<memSz; i++) {
-            sb.append("\tReplicaChoices[").append(members[i]).append("]: ");
-            delim = "";
-            for (String st : replicaChoices[i]) {
-                sb.append(delim).append(st);
-                delim = ", ";
-            }
+            sb.append("\tReplicaChoices[").append(members[i]).append("]: ").append(replicaChoices[i]);
             sb.append("\n");
         }
         _logger.log(Level.INFO, sb.toString());

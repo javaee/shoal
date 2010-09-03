@@ -61,8 +61,6 @@ public class DataStoreEntry<K, V> {
 
     private String reasonForRemoval;
 
-    private boolean localCopy;
-
     public DataStoreEntry() {
 
     }
@@ -79,12 +77,8 @@ public class DataStoreEntry<K, V> {
         return v;
     }
 
-    public boolean setV(V state) {
-        if (! removed) {
-            this.v = state;
-        }
-
-        return !removed;
+    public void setV(V state) {
+        this.v = state;
     }
 
     public String getReplicaInstanceName() {
@@ -94,7 +88,7 @@ public class DataStoreEntry<K, V> {
     public String setReplicaInstanceName(String replicaInstanceName) {
         String oldValue = this.replicaInstanceName;
         this.replicaInstanceName = replicaInstanceName;
-
+        this.removed = false; // Because we just saved the data in a replica
         return oldValue == null ? null : oldValue.equals(replicaInstanceName) ? null : oldValue;
     }
 

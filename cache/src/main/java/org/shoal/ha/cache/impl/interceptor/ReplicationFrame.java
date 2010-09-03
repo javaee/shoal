@@ -111,7 +111,7 @@ public class ReplicationFrame<K, V> {
             }
 
             int cmdDataMark = bos.size();
-            StringBuilder sb = new StringBuilder("ReplicationFrame.write ");
+            StringBuilder sb = new StringBuilder("ReplicationFrame.WRITE ==>\n");
             for (int i = 0; i < cmdSz; i++) {
                 cmdOffsets[i] = bos.mark();
                 bos.writeInt(0);
@@ -122,7 +122,8 @@ public class ReplicationFrame<K, V> {
                 bos.writeInt(len);
                 bos.backToAppendMode();
 
-                sb.append("\n\t").append("\tReplicationFrame["+i+"].Wrote command of size: " + len);
+                sb.append("\n\t").append("\tReplicationFrame[" + i + "/" + cmdSz
+                        + "].Wrote command[" + cmd.getName() + "] of size: " + len);
             }
 
             bos.moveTo(offMark);
@@ -134,6 +135,7 @@ public class ReplicationFrame<K, V> {
             data = bos.toByteArray();
 
             sb.append("\n\t").append("Wrote " + cmdSz + " commands; totalBytes: " + data.length);
+            System.out.println(sb.toString());
         } catch (IOException ioEx) {
         } finally {
             try {
@@ -167,18 +169,19 @@ public class ReplicationFrame<K, V> {
             cmdOffsets[i] = ris.readInt();
         }
 
+        StringBuffer sb = new StringBuffer("ReplicationFrame.READ ==>\n");
         CommandManager<K, V> cm = dsc.getCommandManager();
         for (int i = 0; i < numStates; i++) {
             ris.skipTo(cmdOffsets[i] + frameOffset);
             byte[] cmdData = ris.readLengthPrefixedBytes();
 
-            System.out.println("\tReplicationFrame["+i+"].Read command of size: " + cmdData.length);
             ReplicationInputStream cmdRIS = null;
             try {
                 Command<K, V> cmd = cm.createNewInstance(cmdData[0]);
                 cmdRIS = new ReplicationInputStream(cmdData);
                 cmd.prepareToExecute(cmdRIS);
                 frame.addCommand(cmd);
+                sb.append("\tReplicationFrame["+i+"/"+numStates+"].Read command[" + cmd.getName() + "] of size: " + cmdData.length);
             } catch (IOException dse) {
                 dse.printStackTrace();
             } finally {
@@ -186,6 +189,7 @@ public class ReplicationFrame<K, V> {
             }
         }
 
+        System.out.println(sb.toString());
         return frame;
     }
 

@@ -52,12 +52,17 @@ import org.shoal.ha.mapper.KeyMapper;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class StoreableReplicatedBackingStore<K extends Serializable, V extends Storeable>
         extends BackingStore<K, V> {
+
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE);
 
     private ReplicationFramework<K, V> framework;
 
@@ -292,27 +297,22 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 cmd.setEntry(entry);
                 framework.execute(cmd);
 
-                if (!entry.isRemoved()) {
-                    if (localCachingEnabled) {
-                        entry.setV(value);
-                    }
-
-                    String oldLocation = entry.setReplicaInstanceName(cmd.getTargetName());
-
-                    result = cmd.getTargetName();
-
-
-
-                    if (oldLocation != null) {
-                        StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
-                        staleCmd.setKey(key);
-                        staleCmd.setStaleTargetName(oldLocation);
-                        framework.execute(staleCmd);
-                    }
+                if (localCachingEnabled) {
+                    entry.setV(value);
                 }
 
-                result = cmd.getKeyMappingInfo();
-                System.out.println(" save cookie : " + result);
+                String oldLocation = entry.setReplicaInstanceName(cmd.getTargetName());
+
+                result = cmd.getTargetName();
+
+                if (oldLocation != null) {
+                    StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
+                    staleCmd.setKey(key);
+                    staleCmd.setStaleTargetName(oldLocation);
+                    framework.execute(staleCmd);
+                }
+
+                result = cmd.getLocationInfo();
             }
 
             return result;
@@ -337,8 +337,6 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     framework.execute(cmd);
                 }
             }
-            StoreableRemoveCommand<K, V> cmd = new StoreableRemoveCommand<K, V>(key);
-            framework.execute(cmd);
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during remove: " + key, dsEx);
         }
@@ -387,7 +385,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                                 ? cmd.getTargetName() : "";
                     }
                 } else {
-                    //entry already removed
+                    _logger.log(Level.WARNING, "Ignored updateTimeStamp as the entry is already removed. Key = " + key);
                 }
             }
 

@@ -34,20 +34,29 @@
  * holder.
  */
 
-package org.shoal.ha.mapper;
+package org.shoal.ha.cache.api;
+
+import java.io.IOException;
 
 /**
  * @author Mahesh Kannan
- * 
  */
-public interface KeyMapper {
+public class TooManyRetriesException
+    extends DataStoreException {
 
-    public String getMappedInstance(String groupName, Object key);
+    public TooManyRetriesException() {
+        super();
+    }
 
-    public String[] findReplicaInstance(String groupName, Object key, String keyMappingInfo);
+    public TooManyRetriesException(String message) {
+        super(message);
+    }
 
-    public String getReplicaChoices(String groupName, Object key);
+    public TooManyRetriesException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
-    public String[] getCurrentMembers();
-    
+    public TooManyRetriesException(Throwable cause) {
+        super(cause);
+    }
 }

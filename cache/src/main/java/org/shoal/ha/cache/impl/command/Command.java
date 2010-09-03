@@ -38,17 +38,23 @@ package org.shoal.ha.cache.impl.command;
 
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.api.TooManyRetriesException;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  * 
  */
 public abstract class Command<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
     private byte opcode;
 
@@ -64,7 +70,7 @@ public abstract class Command<K, V> {
 
     private int retryCount = 0;
 
-    private long retryAfterMillis = 1000;
+    private long retryAfterMillis = 500;
 
     private boolean done = true;
 
@@ -164,12 +170,17 @@ public abstract class Command<K, V> {
     public void onError(Throwable th)
         throws DataStoreException {
         if ((retryCount++ < 4) && (!done)) {
-            try {Thread.sleep(retryAfterMillis);
+            try {
+                Thread.sleep(retryCount * retryAfterMillis);
             } catch (Exception ex) {
                 //TODO
             }
 
             dsc.getCommandManager().reExecute(this);
+        } else {
+            String message = getName() + " giving up after " + retryCount + " retries...";
+            _logger.log(Level.WARNING, message);
+            throw new TooManyRetriesException(message);
         }
     }
 

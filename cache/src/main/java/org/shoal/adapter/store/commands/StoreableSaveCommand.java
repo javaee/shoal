@@ -141,7 +141,6 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     public void computeTarget() {
         super.selectReplicaInstance( k);
-        System.out.println("StoreableSaveCommand.computeTarget ==> " + getTargetName());
     }
 
     @Override
@@ -183,11 +182,11 @@ public class StoreableSaveCommand<K, V extends Storeable>
                             try { bis.close(); } catch (Exception ex2) {}
                         }
                     } else if (entryV._storeable_getVersion() > version) {
-                        _logger.log(Level.INFO, "Ignoring stale data " + entryV._storeable_getVersion() + " > " + version + "; for key: " + k);
+                        _logger.log(Level.WARNING, "Ignoring stale data " + entryV._storeable_getVersion() + " > " + version + "; for key: " + k);
                     }
                 } else {
                     List<Command<K, V>> commands = entry.getPendingUpdates();
-                    _logger.log(Level.INFO, "Added to pending updates[2].... for key: " + k);
+                    _logger.log(Level.WARNING, "Added to pending updates[2].... for key: " + k);
                 }
             }
         }
@@ -207,6 +206,9 @@ public class StoreableSaveCommand<K, V extends Storeable>
         return getName() + "(" + k + ")";
     }
 
+    public String getLocationInfo() {
+        return dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);   
+    }
 
     @Override
     public void onSuccess() {
@@ -215,7 +217,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
                 super.onSuccess();
                 super.waitForAck();
             } catch (Exception ex) {
-                System.out.println("** Got exception: " + ex);
+               _logger.log(Level.WARNING, "** Got exception: " + ex);
             }
         }
     }
