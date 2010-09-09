@@ -77,10 +77,10 @@ public class LoadRequestCommand<K, V>
         super(ReplicationCommandOpcode.LOAD_REQUEST);
     }
 
-    public LoadRequestCommand(K key, String cookie) {
+    public LoadRequestCommand(K key, String target) {
         this();
         this.key = key;
-        replicaLocationHint = cookie;
+        replicaLocationHint = target;
     }
 
     @Override

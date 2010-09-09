@@ -81,19 +81,11 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         super(ReplicationCommandOpcode.STOREABLE_UNICAST_LOAD_REQUEST);
     }
 
-    public StoreableLoadRequestCommand(K key, String requestHint) {
+    public StoreableLoadRequestCommand(K key, long requestHint, String targetReplicaInstance) {
         this();
         this.key = key;
-        if (requestHint != null) {
-            String[] params = requestHint.split(":");
-            String version = params[0];
-            if (version != null) {
-                minimumRequiredVersion = Long.valueOf(version);
-            }
-            if (params.length >= 2) {
-                replicaLocationHint = params[1];
-            }
-        }
+        minimumRequiredVersion = requestHint;
+        replicaLocationHint = targetReplicaInstance;
     }
 
     @Override
@@ -175,12 +167,12 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
     
     public V getResult(long waitFor, TimeUnit unit)
             throws DataStoreException {
+        V result = null;
         try {
-            Object result = future.get(waitFor, unit);
+            result = (V) future.get(waitFor, unit);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
             }
-            return (V) result;
         } catch (DataStoreException dsEx) {
             throw dsEx;
         } catch (InterruptedException inEx) {
@@ -188,11 +180,12 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
-            throw new DataStoreException(timeoutEx);
         } catch (ExecutionException exeEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);
             throw new DataStoreException(exeEx);
         }
+
+        return result;
     }
 
     @Override

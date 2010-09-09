@@ -115,9 +115,11 @@ public abstract class Command<K, V> {
         cachedROS = new ReplicationOutputStream();
         cachedROS.write(getOpcode());
 
-        computeTarget();
-
-        writeCommandPayload(cachedROS);
+        if (computeTarget()) {
+            writeCommandPayload(cachedROS);
+        } else {
+            _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because computeTarget returned false");
+        }
     }
 
     public final void write(ReplicationOutputStream globalROS)
@@ -142,15 +144,16 @@ public abstract class Command<K, V> {
     }
 
     public String getKeyMappingInfo() {
-        return (targetInstanceName == null ? "" : targetInstanceName) + ":-1";
+        return targetInstanceName == null ? "" : targetInstanceName;
     }
 
     public final String getName() {
         return commandName + ":" + opcode;
     }
 
-    public void computeTarget() {
-
+    public boolean computeTarget() {
+        //WARNING: DO NOT DO:  setTargetName(null);
+        return true;
     }
 
     protected final void reExecute()

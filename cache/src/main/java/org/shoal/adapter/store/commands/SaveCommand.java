@@ -97,8 +97,9 @@ public class SaveCommand<K, V>
     }
 
     @Override
-    public void computeTarget() {
+    public boolean computeTarget() {
         super.selectReplicaInstance( k);
+        return getTargetName() != null;
     }
 
     @Override

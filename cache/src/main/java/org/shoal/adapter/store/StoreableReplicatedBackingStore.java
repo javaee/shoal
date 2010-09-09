@@ -52,6 +52,7 @@ import org.shoal.ha.mapper.KeyMapper;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -61,6 +62,7 @@ import java.util.logging.Logger;
 public class StoreableReplicatedBackingStore<K extends Serializable, V extends Storeable>
         extends BackingStore<K, V> {
 
+    private static final int MAX_REPLICA_TRIES = 2;
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE);
 
@@ -71,6 +73,12 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     boolean localCachingEnabled;
 
     private ReplicatedBackingStoreFactory factory;
+
+    private AtomicInteger broadcastLoadRequestCount = new AtomicInteger(0);
+
+    private AtomicInteger simpleBroadcastCount = new AtomicInteger(0);
+
+    private AtomicInteger foundLocallyCount = new AtomicInteger(0);
 
     /*package*/ void setBackingStoreFactory(ReplicatedBackingStoreFactory factory) {
         this.factory = factory;
@@ -159,120 +167,67 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf, framework.getDataStoreContext());
     }
 
-
-    private boolean doLoadFromReplica(K key, long version, String replicaLocation, DataStoreEntry<K, V> entry)
-            throws BackingStoreException {
-        V v = null;
-        try {
-            String respondingInstance = null;
-            //NOTE: Be careful with LoadRequest command. Do not synchronize while executing the command
-            //  as the response may want to set the result on the entry
-            if (replicaLocation == null || replicaLocation.length() == 0) {
-                StoreableBroadcastLoadRequestCommand<K, V> command
-                        = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
-
-                framework.execute(command);
-                v = command.getResult(3, TimeUnit.SECONDS);
-                respondingInstance = command.getRespondingInstanceName();
-            } else {
-                StoreableLoadRequestCommand<K, V> command
-                        = new StoreableLoadRequestCommand<K, V>(key, replicaLocation);
-
-                framework.execute(command);
-                v = command.getResult(3, TimeUnit.SECONDS);
-                respondingInstance = command.getRespondingInstanceName();
-            }
-            entry.setV(v);
-
-            entry = replicaStore.getOrCreateEntry(key);
-
-            synchronized (entry) {
-                if (!entry.isRemoved()) {
-                    entry.setReplicaInstanceName(respondingInstance);
-
-                    if (localCachingEnabled) {
-                        entry.setV(v);
-                        return true;
-                    }
-                }
-            }
-        } catch (DataStoreException dseEx) {
-            throw new BackingStoreException("Error during load", dseEx);
-        }
-
-        return false;
+    @Override
+    public V load(K key, String versionInfo) throws BackingStoreException {
+        return doLoad(key, Long.valueOf(versionInfo), new String[0]);
     }
 
-    @Override
-    public V load(K key, String cookie) throws BackingStoreException {
-        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
-        Long version = Long.MIN_VALUE;
-        String[] requestHint = null;
-        if (cookie != null) {
-            requestHint = cookie.split(":");
-            String verStr = requestHint[0];
-            if (version != null) {
-                version = Long.valueOf(verStr);
-            }
-        }
+    public V doLoad(K key, long version, String[] replicaHint)
+            throws BackingStoreException {
 
         V v = null;
-        synchronized (entry) {
-            if (!entry.isRemoved()) {
-                v = entry.getV();
-
-                System.out.println("Entered load[1](" + key + ", " + cookie + ")" + "; v: " + v
-                 + "; v.version: " + (v != null ? v._storeable_getVersion() : "null"));
-                if (v == null || v._storeable_getVersion() < version) {
-                    v = null;
-                }
+        DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
+        if ((entry != null) && !entry.isRemoved()) {
+            v = entry.getV();
+            if (v == null || v._storeable_getVersion() < version) {
+                entry.setV(null);
+                v = null;
             } else {
-                //Because it is already removed
-                return null;
+                foundLocallyCount.incrementAndGet();
             }
+        } else {
+            return null; //Because it is already removed
         }
 
         if (v == null) {
-            KeyMapper keyMapper = framework.getDataStoreContext().getKeyMapper();
-
             try {
                 String respondingInstance = null;
-                //NOTE: Be careful with LoadREquest command. Do not synchronize while executing the command
-                //  as the response may want to set the result on the entry
-                if (requestHint == null || requestHint.length <= 1) {
+                for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
+                    simpleBroadcastCount.incrementAndGet();
+                    String target = replicaHint[replicaIndex];
+                    StoreableLoadRequestCommand<K, V> command
+                            = new StoreableLoadRequestCommand<K, V>(key, version, target);
+
+                    framework.execute(command);
+                    v = command.getResult(3, TimeUnit.SECONDS);
+                    if (v != null) {
+                        respondingInstance = command.getRespondingInstanceName();
+                        break;
+                    }
+                }
+
+                if (v == null) {
+                    broadcastLoadRequestCount.incrementAndGet();
                     StoreableBroadcastLoadRequestCommand<K, V> command
                             = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
 
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
-                    respondingInstance = command.getRespondingInstanceName();
-                } else {
-                    StoreableLoadRequestCommand<K, V> command
-                            = new StoreableLoadRequestCommand<K, V>(key, cookie);
-
-                    framework.execute(command);
-                    v = command.getResult(3, TimeUnit.SECONDS);
-                    respondingInstance = command.getRespondingInstanceName();
+                    if (v != null) {
+                        respondingInstance = command.getRespondingInstanceName();
+                    }
                 }
-                entry.setV(v);
 
-                entry = replicaStore.getOrCreateEntry(key);
-
-                synchronized (entry) {
-                    if (!entry.isRemoved()) {
-                        String oldLocation = entry.setReplicaInstanceName(respondingInstance);
-
-                        if (localCachingEnabled) {
+                if (v != null) {
+                    entry = replicaStore.getOrCreateEntry(key);
+                    synchronized (entry) {
+                        if (!entry.isRemoved()) {
+                        } else if (localCachingEnabled) {
                             entry.setV(v);
+                            entry.setReplicaInstanceName(respondingInstance);
+                            //Note: Do not remove the stale replica now. We will
+                            //  do that in save
                         }
-                        /*
-                        if (oldLocation != null) {
-                            StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
-                            staleCmd.setKey(key);
-                            staleCmd.setStaleTargetName(oldLocation);
-                            framework.execute(staleCmd);
-                        }
-                        */
                     }
                 }
             } catch (DataStoreException dseEx) {
@@ -312,7 +267,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     framework.execute(staleCmd);
                 }
 
-                result = cmd.getLocationInfo();
+                result = cmd.getKeyMappingInfo();
             }
 
             return result;
@@ -324,9 +279,11 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     @Override
     public void remove(K key) throws BackingStoreException {
         try {
-            DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
-            synchronized (entry) {
-                entry.markAsRemoved("Removed by BackingStore.remove");
+            DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
+            if (entry != null) {
+                synchronized (entry) {
+                    entry.markAsRemoved("Removed by BackingStore.remove");
+                }
             }
             String[] targets = framework.getDataStoreContext().getKeyMapper().getCurrentMembers();
 

@@ -91,6 +91,13 @@ public class StoreableBroadcastLoadRequestCommand<K, V extends Storeable>
     }
 
     @Override
+    public boolean computeTarget() {
+        //We want to broadcast the command
+        super.setTargetName(null);
+        return true;
+    }
+
+    @Override
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
         originatingInstance = dsc.getInstanceName();

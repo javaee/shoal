@@ -149,10 +149,14 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     }
 
     @Override
-    public V load(K key, String cookie) throws BackingStoreException {
+    public V load(K key, String versionInfo) throws BackingStoreException {
+        return this.doLoad(key, new String[0]);
+    }
+
+    public V doLoad(K key, String[] replicaHint)
+        throws BackingStoreException {
         try {
-            System.out.println("***** =>  load(" + key + ", " + cookie + ")");
-            return dataStore.get(key, cookie);
+            return dataStore.get(key, replicaHint);
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during load: " + key, dsEx);
         }

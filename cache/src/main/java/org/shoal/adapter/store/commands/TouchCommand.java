@@ -64,6 +64,8 @@ public class TouchCommand<K, V>
 
     private long maxIdleTime;
 
+    private String replicaChoices;
+
     public TouchCommand() {
         super(ReplicationCommandOpcode.TOUCH);
     }
@@ -97,8 +99,12 @@ public class TouchCommand<K, V>
 
 
     @Override
-    public void computeTarget() {
-        super.selectReplicaInstance( k);
+    public boolean computeTarget() {
+        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
+        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
+        super.setTargetName(replicaChoices == null ? null : choices[0]);
+
+        return getTargetName() != null;
     }
 
     @Override

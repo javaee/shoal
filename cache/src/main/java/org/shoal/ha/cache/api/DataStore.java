@@ -71,7 +71,7 @@ public interface DataStore<K, V> {
      * @param k  The key
      * @return The value if the association exists or null.
      */
-    public V get(K k, String cookie)
+    public V get(K k, String[] replicaHint)
             throws DataStoreException;
 
     /**

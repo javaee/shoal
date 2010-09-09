@@ -66,6 +66,8 @@ public class StoreableTouchCommand<K, V extends Storeable>
 
     private long maxIdleTime;
 
+    private String replicaChoices;
+
     public StoreableTouchCommand() {
         super(ReplicationCommandOpcode.STOREABLE_TOUCH);
     }
@@ -95,8 +97,12 @@ public class StoreableTouchCommand<K, V extends Storeable>
 
 
     @Override
-    public void computeTarget() {
-        super.selectReplicaInstance( k);
+    public boolean computeTarget() {
+        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
+        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
+        super.setTargetName(replicaChoices == null ? null : choices[0]);
+
+        return getTargetName() != null;
     }
 
     @Override
@@ -137,7 +143,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
 
     @Override
     public String getKeyMappingInfo() {
-        return (targetInstanceName == null ? "" : targetInstanceName) + ":" + version;
+        return replicaChoices;
     }
 
 }

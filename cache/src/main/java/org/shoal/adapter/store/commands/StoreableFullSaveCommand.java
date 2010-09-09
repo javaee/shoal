@@ -65,6 +65,8 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
     private transient byte[] rawReadState;
 
+    private String replicaChoices;
+
     public StoreableFullSaveCommand() {
         super(ReplicationCommandOpcode.STOREABLE_FULL_SAVE_COMMAND);
     }
@@ -112,8 +114,12 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
     }
 
     @Override
-    public void computeTarget() {
-        super.selectReplicaInstance( k);
+    public boolean computeTarget() {
+        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
+        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
+        super.setTargetName(replicaChoices == null ? null : choices[0]);
+
+        return getTargetName() != null;
     }
 
     @Override
@@ -145,7 +151,7 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
     @Override
     public String getKeyMappingInfo() {
-        return (targetInstanceName == null ? "" : targetInstanceName) + ":" + version;
+        return replicaChoices;
     }
 
     public String toString() {

@@ -50,6 +50,7 @@ import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,6 +59,8 @@ import java.util.logging.Logger;
  */
 public class ReplicatedDataStore<K, V extends Serializable>
         implements DataStore<K, V> {
+
+    private static final int MAX_REPLICA_TRIES = 2;
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
 
@@ -78,6 +81,12 @@ public class ReplicatedDataStore<K, V extends Serializable>
     private DataStoreConfigurator<K, V> conf;
 
     private ReplicaStore<K, V> replicaStore;
+
+    private AtomicInteger broadcastLoadRequestCount = new AtomicInteger(0);
+
+    private AtomicInteger simpleBroadcastCount = new AtomicInteger(0);
+
+    private AtomicInteger foundLocallyCount = new AtomicInteger(0);
 
     public ReplicatedDataStore(DataStoreConfigurator<K, V> conf, GroupService gs) {
         this.conf = conf;
@@ -177,52 +186,62 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public V get(K key)
             throws DataStoreException {
-        return get(key, null);
+        return get(key, new String[0]);
     }
 
     @Override
-    public V get(K key, String cookie)
+    public V get(K key, String[] replicaHint)
             throws DataStoreException {
 
-        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
         V v = null;
-        synchronized (entry) {
-            if (! entry.isRemoved()) {
-                v = entry.getV();
-            } else {
-                return null; //Because it is already removed
-            }
+        DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
+        if ((entry != null) && !entry.isRemoved()) {
+            v = entry.getV();
+            foundLocallyCount.incrementAndGet();
+        } else {
+            return null; //Because it is already removed
         }
 
         if (v == null) {
-            try {
-                String respondingInstanceName = null;
-                if (cookie == null) {
-                    BroadcastLoadRequestCommand<K, V> cmd = new BroadcastLoadRequestCommand<K, V>(key);
-                    cm.execute(cmd);
-                    v = cmd.getResult(3, TimeUnit.SECONDS);
-                    respondingInstanceName = cmd.getRespondingInstanceName();
-                } else {
-                    LoadRequestCommand<K, V> cmd = new LoadRequestCommand<K, V>(key, cookie);
-                    cm.execute(cmd);
-                    v = cmd.getResult(3, TimeUnit.SECONDS);
-                    respondingInstanceName = cmd.getRespondingInstanceName();
-                }
+            String respondingInstance = null;
+            for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
+                simpleBroadcastCount.incrementAndGet();
+                String target = replicaHint[replicaIndex];
+                LoadRequestCommand<K, V> command
+                        = new LoadRequestCommand<K, V>(key, target);
 
-                entry = replicaStore.getOrCreateEntry(key);
-                synchronized (entry) {
-                    if (! entry.isRemoved()) {
-                        entry.setReplicaInstanceName(respondingInstanceName);
-
-                        if (conf.isCacheLocally()) {
-                            entry.setV(v);
-                        }
-                    }
+                cm.execute(command);
+                v = command.getResult(3, TimeUnit.SECONDS);
+                if (v != null) {
+                    respondingInstance = command.getRespondingInstanceName();
+                    break;
                 }
-            } catch (DataStoreException dseEx) {
-                throw dseEx;
             }
 
+            if (v == null) {
+                broadcastLoadRequestCount.incrementAndGet();
+                BroadcastLoadRequestCommand<K, V> command
+                        = new BroadcastLoadRequestCommand<K, V>(key);
+
+                cm.execute(command);
+                v = command.getResult(3, TimeUnit.SECONDS);
+                if (v != null) {
+                    respondingInstance = command.getRespondingInstanceName();
+                }
+            }
+
+            if (v != null) {
+                entry = replicaStore.getOrCreateEntry(key);
+                synchronized (entry) {
+                    if (!entry.isRemoved()) {
+                    } else if (conf.isCacheLocally()) {
+                        entry.setV(v);
+                        entry.setReplicaInstanceName(respondingInstance);
+                        //Note: Do not remove the stale replica now. We will
+                        //  do that in save
+                    }
+                }
+            }
         }
 
         return v;
