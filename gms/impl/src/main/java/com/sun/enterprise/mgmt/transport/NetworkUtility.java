@@ -226,6 +226,7 @@ public class NetworkUtility {
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while( interfaces != null && interfaces.hasMoreElements() ) {
             NetworkInterface anInterface = interfaces.nextElement();
+            //LOG.info("getFirstNetworkInterface: anInterface=" + anInterface);
             if( isLoopbackNetworkInterface( anInterface ) ) {
                 loopback = anInterface;
                 continue;
@@ -256,14 +257,21 @@ public class NetworkUtility {
      * @throws IOException if an I/O error occurs or a network interface was not found
      */
     public static InetAddress getFirstInetAddress( boolean preferIPv6 ) throws IOException {
-        if( preferIPv6 && firstInetAddressV6 != null )
+//        LOG.info("enter getFirstInetAddress preferIPv6=" + preferIPv6);
+        if( preferIPv6 && firstInetAddressV6 != null ) {
+//            LOG.info("exit getFirstInetAddress cached ipv6 result=" + firstInetAddressV6);
             return firstInetAddressV6;
-        else if( !preferIPv6 && firstInetAddressV4 != null )
+        }
+        else if( !preferIPv6 && firstInetAddressV4 != null ) {
+//            LOG.info("exit getFirstInetAddress cached ipv4 result=" + firstInetAddressV4);
             return firstInetAddressV4;
+        }
         NetworkInterface anInterface = getFirstNetworkInterface();
+//        LOG.info("getFirstInetAddress: first network interface=" + anInterface);
         Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
         while( allIntfAddr.hasMoreElements() ) {
             InetAddress anAddr = allIntfAddr.nextElement();
+//            LOG.info("getFirstInetAddress: anAddr=" + anAddr);
             if( anAddr.isLoopbackAddress() || anAddr.isAnyLocalAddress() )
                 continue;
             if( firstInetAddressV6 == null && anAddr instanceof Inet6Address )
@@ -273,10 +281,13 @@ public class NetworkUtility {
             if( firstInetAddressV6 != null && firstInetAddressV4 != null )
                 break;
         }
-        if( preferIPv6 )
+        if( preferIPv6 ) {
+//            LOG.info("exit getFirstInetAddress ipv6 result=" + firstInetAddressV6);
             return firstInetAddressV6;
-        else
+        }else {
+//            LOG.info("exit getFirstInetAddress ipv4 result=" + firstInetAddressV4);
             return firstInetAddressV4;
+        }
     }
 
     /**
