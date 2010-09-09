@@ -428,6 +428,10 @@ public class MessageImpl implements Message {
         sb.append(MessageImpl.class.getSimpleName());
         sb.append("[v" + version + ":");
         sb.append(getStringType( type ) + ":");
+        Serializable seq = messages.get("SEQ");
+        if (seq != null) {
+            sb.append(" MasterViewSeqID:").append(seq);
+        }
 
         for (String elementName : messages.keySet()) {
             if (SOURCE_PEER_ID_TAG.compareTo(elementName) == 0) {
@@ -435,7 +439,7 @@ public class MessageImpl implements Message {
             } else if (TARGET_PEER_ID_TAG.compareTo(elementName) == 0) {
                 sb.append(" Target: " + messages.get(TARGET_PEER_ID_TAG) + " , ");
             } else {
-                sb.append(elementName + ", ");
+                sb.append(" ").append(elementName + ", ");
             }
         }
         return sb.toString();

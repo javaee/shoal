@@ -48,10 +48,7 @@ import java.net.DatagramPacket;
 import java.net.Inet6Address;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.List;
@@ -66,6 +63,7 @@ import java.util.List;
 public class BlockingIOMulticastSender extends AbstractMulticastMessageSender implements Runnable {
 
     private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
+    private static final Logger monitorLog = GMSLogDomain.getMonitorLogger();
 
     private final InetSocketAddress localSocketAddress;
     private final InetAddress multicastAddress;
@@ -81,12 +79,17 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
 
     private volatile boolean running;
     private CountDownLatch endGate = new CountDownLatch( 1 );
-    private long shutdownTimeout = 30 * 1000; // ms
+    private long shutdownTimeout = 5 * 1000; // ms
 
     private static final String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
     private static final int DEFAULT_MULTICAST_PACKET_SIZE = 16384;
 
     private int multicastTimeToLive = GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE;
+
+    private final ThreadPoolExecutor threadPoolExecutor;
+    private long maxExecutorQueueSize = 0;
+    private long rejectedExecution = 0;
+    private final boolean monitoringEnabled;
 
     public BlockingIOMulticastSender( String host,
                                       String multicastAddress,
@@ -131,8 +134,17 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
             this.multicastPacketSize = multicastPacketSize;
         this.localPeerID = localPeerID;
         this.executor = executor;
+        this.threadPoolExecutor = executor instanceof ThreadPoolExecutor ? (ThreadPoolExecutor) executor : null;
         this.networkManager = networkManager;
         this.multicastTimeToLive = multicastTimeToLive;
+
+        //DO NOT CHECK NEXT lines.  DEBUG ONLY
+        //if (monitorLog.getLevel() == Level.INFO) {
+        //    monitorLog.setLevel(Level.FINE);
+        //}
+        // END DO NOT CHECK IN
+
+        this.monitoringEnabled = monitorLog.isLoggable(Level.FINE);
     }
 
     /**
@@ -143,22 +155,42 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         if( running )
             return;
         super.start();
-        if( localSocketAddress != null ) {
-            multicastSocket = new MulticastSocket( localSocketAddress.getPort() );
-            multicastSocket.setInterface( localSocketAddress.getAddress() );
-        } else {
-            multicastSocket = new MulticastSocket( multicastPort );
+        multicastSocket = new MulticastSocket( multicastPort );
+        if (anInterface != null) {
+            multicastSocket.setNetworkInterface(anInterface);
+        } else if (localSocketAddress != null) {
+            multicastSocket.setInterface(localSocketAddress.getAddress());
         }
+
+        //enable loopback.
         multicastSocket.setLoopbackMode( false );
+
+        // enforce a minimum for time to live UNLESS it is explicitly set via GMS configuration property.
         if (multicastTimeToLive > 0) {
+
+            // explicitly configured. no minimum for this case.
             try {
                 multicastSocket.setTimeToLive(this.multicastTimeToLive);
+                LOG.config("set via property: MulticastSocket.getTimeToLive()=" + multicastSocket.getTimeToLive());
             } catch (IOException ioe) {
-                LOG.log(Level.WARNING, "unabled to set multicast socket timeToLive to " + this.multicastTimeToLive, ioe);
+                LOG.log(Level.WARNING, "unable to set multicast socket timeToLive to " + this.multicastTimeToLive, ioe);
+            } catch (IllegalArgumentException iae) {
+                LOG.log(Level.WARNING, "unable to set multicast socket timeToLive to " + this.multicastTimeToLive, iae);
+            }
+        } else {
+
+            // get default value and if less than MIN, then increase time to live to GMS specified MIN.
+            int timeToLive = multicastSocket.getTimeToLive();
+            if (timeToLive < GMSConstants.MINIMUM_MULTICAST_TIME_TO_LIVE) {
+                try {
+                    multicastTimeToLive = GMSConstants.MINIMUM_MULTICAST_TIME_TO_LIVE;
+                    multicastSocket.setTimeToLive(this.multicastTimeToLive);
+                    LOG.config("Set via default minimum: MulticastSocket.getTimeToLive()=" + multicastSocket.getTimeToLive());
+                } catch (IOException ioe) {
+                    LOG.log(Level.WARNING, "unable to set multicast socket timeToLive to " + this.multicastTimeToLive, ioe);
+                }
             }
         }
-        LOG.config("MulticastSocket.getTimeToLive()=" + multicastSocket.getTimeToLive());
-
         running = true;
 
         // todo need to use a thread factory?
@@ -166,6 +198,10 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         multicastThread.setDaemon( true );
         multicastThread.start();
 
+        LOG.config("MulticastSocket configuration: local socket address: " + multicastSocket.getLocalSocketAddress() +
+                   " network interface: " + multicastSocket.getNetworkInterface() +
+                   " multicast address:" + multicastAddress +
+                   " timeToLive=" + multicastSocket.getTimeToLive());
         if( anInterface != null )
             multicastSocket.joinGroup( multicastSocketAddress, anInterface );
         else
@@ -191,15 +227,33 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
             }
             multicastSocket.close();
         }
+        printStats(Level.INFO);
+
+
         boolean finished = false;
         try {
             finished = endGate.await( shutdownTimeout, TimeUnit.MILLISECONDS );
         } catch( InterruptedException e ) {
         }
-        if( !finished && multicastThread != null ){
+                   // interrupt thread that is waiting on a receive datagram.
+        if( multicastThread != null ){
             multicastThread.interrupt();
         }
     }
+
+    private void printStats(Level level) {
+        if (threadPoolExecutor != null) {
+            try {
+                StringBuffer sb = new StringBuffer();
+                sb.append("BlockingIOMulicastSender monitoring stats: ");
+                sb.append("received: ").append(threadPoolExecutor.getCompletedTaskCount()).append(" core poolsize:").append(threadPoolExecutor.getCorePoolSize());
+                sb.append(" largest pool size:").append(threadPoolExecutor.getLargestPoolSize()).append(" task count:").append(threadPoolExecutor.getTaskCount());
+                sb.append(" max queue size:").append(maxExecutorQueueSize).append(" rejected execution:").append(rejectedExecution);
+                monitorLog.log(level, sb.toString());
+            } catch (Throwable t) {}
+        }
+    }
+
 
     public void run() {
         try {
@@ -211,18 +265,34 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                     if( !running )
                         return;
                     Runnable processor = new MessageProcessTask( packet );
-                    if( executor != null )
+                    if( executor != null ) {
                         executor.execute( processor );
-                    else
+                        if (threadPoolExecutor != null) {
+                            int qsize = threadPoolExecutor.getQueue().size();
+                            if (qsize > maxExecutorQueueSize) {
+                                maxExecutorQueueSize = qsize;
+                            }
+                            if (monitoringEnabled && ((threadPoolExecutor.getCompletedTaskCount()) % 128) == 0) {
+                                printStats(Level.FINE);
+                            }
+                        }
+                    } else {
                         processor.run();
+                    }
                 } catch( InterruptedIOException iie ) {
                     Thread.interrupted();
+                    LOG.log(Level.INFO, "InterruptedIOException during multicast receive", iie);
                 } catch( IOException e ) {
-                    if( !running )
+                    if( !running ) {
                         break;
-                    if( LOG.isLoggable( Level.SEVERE ) )
-                        LOG.log( Level.SEVERE, "failure during multicast receive", e );
+                    }
+                    LOG.log( Level.SEVERE, "failure during multicast receive", e);
                     break;
+                } catch (Throwable t) {
+                    LOG.log( Level.SEVERE, "failure during multicast receive", t);
+                    if (t instanceof RejectedExecutionException) {
+                        rejectedExecution++;
+                    }
                 }
             }
         } catch( Throwable t ) {
@@ -231,6 +301,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         } finally {
             multicastThread = null;
             endGate.countDown();
+            LOG.info("Thread " + Thread.currentThread().getName() + " has completed.");
         }
     }
 
@@ -276,11 +347,12 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         }
 
         public void run() {
+            Message message = null;
             if( packet == null )
                 return;
             try {
+                message = new MessageImpl();
                 byte[] byteMessage = packet.getData();
-                Message message = new MessageImpl();
                 try {
                     int messageLen = message.parseHeader( byteMessage, 0 );
                     message.parseMessage( byteMessage, MessageImpl.HEADER_LENGTH, messageLen );
@@ -293,11 +365,22 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                         LOG.log( Level.WARNING, "damaged multicast discarded", mie );
                     return;
                 }
-                if( networkManager != null )
+                if( networkManager != null ) {
                     networkManager.receiveMessage( message, null );
+                    if (message.getType() != MessageImpl.TYPE_HEALTH_MONITOR_MESSAGE) {
+                        monitorLog.log(Level.FINE, "BlockingIOMulticastSender.receiveMessage processed multicast message " + message.toString());
+                    }
+                }
             } catch( Throwable t ) {
-                if( LOG.isLoggable( Level.WARNING ) )
-                    LOG.log( Level.WARNING, "failed to process a received message", t );
+                if( LOG.isLoggable( Level.WARNING ) ) {
+                    String msgOutput = "";
+                    try {
+                        if (message != null) {
+                            msgOutput = message.toString();
+                        }
+                    } catch (Throwable tt) {}
+                    LOG.log( Level.WARNING, "failed to process a received message " + msgOutput, t );
+                    }
             }
         }
     }

@@ -95,6 +95,7 @@ import java.util.logging.Logger;
 class MasterNode implements MessageListener, Runnable {
     private static final Logger LOG = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private static final Logger masterLogger = Logger.getLogger("ShoalLogger.MasterNode");
+    private static final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private final ClusterManager manager;
 
     private boolean masterAssigned = false;
@@ -950,6 +951,9 @@ class MasterNode implements MessageListener, Runnable {
             return;
         }
         final MasterNodeMessageEvent mnme = new MasterNodeMessageEvent(event);
+        if (monitorLogger.isLoggable(Level.FINE)) {
+            monitorLogger.fine("MasterNode.receiveMessageEvent:" + mnme.toString());
+        }
         if (mnme.seqId == -1) {
             if (LOG.isLoggable(Level.FINE)) {
                 LOG.fine("receiveMessageEvent: process master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
@@ -964,8 +968,8 @@ class MasterNode implements MessageListener, Runnable {
                 outstandingMasterNodeMessages.notify();
             }
             if (added) {
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.fine("receiveMessageEvent: added master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
+                if (monitorLogger.isLoggable(Level.FINE)) {
+                    monitorLogger.fine("receiveMessageEvent: added master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
                 }
             } else {
                 LOG.warning("receiveMessageEvent: ignored duplicate master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
@@ -1594,6 +1598,58 @@ class MasterNode implements MessageListener, Runnable {
                 throw new IllegalArgumentException();
             }
         }
+
+        @SuppressWarnings("unchecked")
+        public String toString() {
+            StringBuffer result = new StringBuffer(100);
+            try {
+                if (seqId != -1) {
+                    result.append("masterViewSeqId:").append(seqId);
+                }
+                Object msgElement = msg.getMessageElement(NODEADV);
+                String fromInstance = "";
+                if (msgElement != null && msgElement instanceof SystemAdvertisement) {
+                    fromInstance = ((SystemAdvertisement) msgElement).getName();
+                }
+
+                for (Map.Entry<String, Serializable> entry : msg.getMessageElements()) {
+                    String key = entry.getKey();
+                    if (key.equals(VIEW_CHANGE_EVENT)) {
+                        if (entry.getValue() != null && entry.getValue() instanceof ClusterViewEvent) {
+                            final ClusterViewEvent cvEvent = (ClusterViewEvent) entry.getValue();
+                            result.append(" ViewChangeEvent: ").append(cvEvent.getEvent().toString());
+                        }
+                    } else if (key.equals(MASTERQUERY)) {
+                        result.append("masterquery").append(" from ").append(fromInstance);
+                    } else if (key.equals(NODEQUERY)) {
+                        result.append("nodequery").append(" from ").append(fromInstance);
+                        ;
+                    } else if (key.equals(MASTERNODERESPONSE)) {
+                        result.append("masternoderesponse").append(" from ").append(fromInstance);
+                        ;
+                    } else if (key.equals(NODERESPONSE)) {
+                        result.append("noderesponse").append(" from ").append(fromInstance);
+                        ;
+                    }
+                }
+                msgElement = msg.getMessageElement(AMASTERVIEW);
+                if (msgElement != null && msgElement instanceof List) {
+                    result.append(" masterview: size:");
+                    final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>) msgElement;
+                    if (newLocalView != null) {
+                        result.append(newLocalView.size());
+                    } else {
+                        result.append(0);
+                    }
+                    for (SystemAdvertisement adv : newLocalView) {
+                        result.append(" ").append(adv.getName());
+                    }
+                }
+            } catch (Throwable t) {
+                // don't allow any NPEs in this debug aid to cause a failure.
+            }
+            return result.toString();
+        }
     }
 
     /**
@@ -1626,11 +1682,10 @@ class MasterNode implements MessageListener, Runnable {
 
                     if (msg != null) {
                         processNextMessageEvent(msg);
-                    }
-
-                    if (isDiscoveryInProgress() || ! isMaster()) {
-                        // delay window before processing next message. allow messages received out of order to be ordered.
-                        Thread.sleep(30);
+                        if (isDiscoveryInProgress() || ! isMaster()) {
+                            // delay window before processing next message. allow messages received out of order to be ordered.
+                            Thread.sleep(30);
+                        }
                     }
                 } catch (InterruptedException ie) {
                 } catch (Throwable t) {
