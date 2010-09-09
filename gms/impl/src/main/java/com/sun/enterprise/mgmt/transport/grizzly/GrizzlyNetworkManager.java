@@ -61,6 +61,7 @@ import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -72,13 +73,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.channels.SelectionKey;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.net.NetworkInterface;
+import java.util.regex.Pattern;
 
 /**
  * @author Bongjae Chang
@@ -120,12 +116,22 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private GrizzlyExecutorService execService;
     private ExecutorService multicastSenderThreadPool = null;
     private TCPSelectorHandler tcpSelectorHandler = null;
+    final private String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
 
     private final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
     public static final String MESSAGE_SELECTION_KEY_TAG = "selectionKey";
 
     public GrizzlyNetworkManager() {
+    }
+
+    private boolean validMulticastAddress(String multicastAddr) {
+        InetAddress validateMulticastAddress = null;
+        try {
+            validateMulticastAddress = InetAddress.getByName(multicastAddress);
+        } catch (UnknownHostException e) { }
+
+        return validateMulticastAddress != null && validateMulticastAddress.isMulticastAddress();
     }
 
     private void configure( final Map properties ) {
@@ -136,7 +142,12 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         int tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
         tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
-        multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), "230.30.1.1", properties );
+        multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), DEFAULT_MULTICAST_ADDRESS, properties );
+        if (!validMulticastAddress(multicastAddress)) {
+            shoalLogger.severe("invalid multicast address: " + multicastAddress + " defaulting to " + DEFAULT_MULTICAST_ADDRESS +
+                    ". Valid multicast address is a Class D IP address in the range 224.0.0.0-239.255.255.255 inclusive. Address 224.0.0.0 is reserved and should not be used.");
+            multicastAddress = DEFAULT_MULTICAST_ADDRESS;
+        }
         if (host != null) {
             try {
                 InetAddress inetAddr = InetAddress.getByName(host);
@@ -340,7 +351,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             }
         } else if (controllerGateIsReady) {
             // todo: make this FINE in future.
-            getLogger().config("Grizzly controller started and is ready in " + durationInMillis + " ms");
+            getLogger().config("Grizzly controller listening on " + tcpSelectorHandler.getInet() + ":" + tcpSelectorHandler.getPort() + ". Controller started in " + durationInMillis + " ms");
         }
         tcpSender = new GrizzlyTCPConnectorWrapper( controller, writeTimeout, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
@@ -352,7 +363,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         udpSender = udpConnectorWrapper;
         List<PeerID> virtualPeerIdList = getVirtualPeerIDList( virtualUriList );
         if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() ) {
-            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) );
+            final boolean FAIRNESS = true;
+            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ) );
             multicastSender = new VirtualMulticastSender( host,
                                                           multicastAddress,
                                                           multicastPort,
@@ -367,7 +379,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             if( GrizzlyUtil.isSupportNIOMulticast() ) {
                 multicastSender = udpConnectorWrapper;
             } else {
-                multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024 ) );
+                final boolean FAIRNESS = true;
+                multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ) );
                 multicastSender = new BlockingIOMulticastSender( host,
                                                                  multicastAddress,
                                                                  multicastPort,
