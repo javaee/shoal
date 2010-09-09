@@ -185,7 +185,7 @@ public class ApplicationServer implements Runnable, CallBack {
             logger.info("joined group " + gms.getGroupName()  + " groupLeader: " + gms.getGroupHandle().getGroupLeader());
             
         } catch (GMSException ge) {
-            logger.severe("failed to join gms group " + gms.getGroupName());
+            logger.log(Level.SEVERE, "failed to join gms group " + gms.getGroupName(), ge);
             throw new IllegalStateException("failed to join gms group" + gms.getGroupName());
         }
     }
@@ -356,6 +356,20 @@ public class ApplicationServer implements Runnable, CallBack {
         }
         Utility.setLogger(logger);
         Utility.setupLogHandler();
+        String monitorLogLevel = System.getProperty("MONITOR_LOG_LEVEL");
+        System.out.println("MONITOR_LOG_LEVEL = " + monitorLogLevel);
+        if (monitorLogLevel != null) {
+            Level monitorLevel = Level.INFO;
+            try {
+                monitorLevel = Level.parse(monitorLogLevel);
+                GMSLogDomain.getMonitorLogger().setLevel(monitorLevel);
+
+            } catch (Throwable t) {
+                logger.warning("invalid value for MONITOR_LOG_LEVEL: [" + monitorLogLevel+ "]");
+            }
+            System.out.println("ShoalLogger.monitor level=" + GMSLogDomain.getMonitorLogger().getLevel());
+        }
+
         final ApplicationServer applicationServer;
         final String MEMBERTYPE_STRING = System.getProperty("MEMBERTYPE", "CORE").toUpperCase();
         final GroupManagementService.MemberType memberType = GroupManagementService.MemberType.valueOf(MEMBERTYPE_STRING);
