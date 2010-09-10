@@ -109,7 +109,9 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
             } catch (Throwable io) {
                 //LOG.log(Level.WARNING, "retry once with another connectorHandler: IOException connecting to connectorHandler:" + connectorHandler.toString() + " remoteAddr:" + remoteAddress +
                 //        " message:" + message, io);
-                LOG.log(Level.INFO, "handled exception during connect to remote address: " + remoteAddress + ": workaround for shoal issue 106: retry one more time to connect", io);
+                if (LOG.isLoggable(Level.FINE)){
+                    LOG.log(Level.FINE, "handled exception during connect to remote address: " + remoteAddress + ": workaround for shoal issue 106: retry one more time to connect", io);
+                }
                 if( connectorHandler != null ) {
                     try {
                         connectorHandler.close();

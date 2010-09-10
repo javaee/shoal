@@ -144,8 +144,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), DEFAULT_MULTICAST_ADDRESS, properties );
         if (!validMulticastAddress(multicastAddress)) {
-            shoalLogger.severe("invalid multicast address: " + multicastAddress + " defaulting to " + DEFAULT_MULTICAST_ADDRESS +
-                    ". Valid multicast address is a Class D IP address in the range 224.0.0.0-239.255.255.255 inclusive. Address 224.0.0.0 is reserved and should not be used.");
+            shoalLogger.log(Level.SEVERE, "grizzlynetmgr.invalidmcastaddr",
+                    new Object[]{multicastAddress, DEFAULT_MULTICAST_ADDRESS});
             multicastAddress = DEFAULT_MULTICAST_ADDRESS;
         }
         if (host != null) {
@@ -157,9 +157,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                     networkInterfaceName = ni.getName();
                 }
             } catch (SocketException ex) {
-                shoalLogger.log(Level.WARNING, "GrizzlyNetworkManager.configure: unable to configure NetworkInterfaceName due to ", ex.getLocalizedMessage());
+                shoalLogger.log(Level.WARNING, "grizzlynetmgr.invalidbindaddr", new Object[]{ex.getLocalizedMessage()});
             } catch (UnknownHostException ex) {
-                shoalLogger.log(Level.WARNING, "GrizzlyNetworkManager.configure: unable to configure NetworkInterfaceName due to ", ex.getLocalizedMessage());
+                shoalLogger.log(Level.WARNING, "grizzlynetmgr.invalidbindaddr", new Object[]{ex.getLocalizedMessage()});
             }
         }
         failTcpTimeout = Utility.getLongProperty( FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString(), 10 * 1000, properties );
