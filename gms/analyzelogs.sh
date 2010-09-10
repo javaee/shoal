@@ -1,29 +1,24 @@
-#!/bin/sh +x
+#!/bin/sh -x
 
 usage () {
  echo "usage: [-h] [-l logdir] [add|stop|kill|rejoin|default]"
  exit 1
 }
 LOGS_DIR=LOGS
+
+# default and "" are the same value
 CMD=default
+
 while [ $# -ne 0 ]
 do
      case ${1} in
        -h)
          usage
        ;;
-       add|stop|kill|rejoin)
+       add|stop|kill|rejoin|default|"")
+         # default and "" are the same value
          CMD=${1}
          shift
-         if [ ! -z "${CMD}" ] ;then
-            if [ "${CMD}" != "add" -a "${CMD}" != "stop" -a "${CMD}" != "kill" -a "${CMD}" != "rejoin" -a "${CMD}" != "default" ]; then
-               echo "ERROR: Invalid command specified"
-               usage
-            fi
-         else
-            echo "ERROR: Missing command value"
-            usage
-         fi
        ;;
        -l)
          shift
