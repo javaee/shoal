@@ -200,10 +200,12 @@ public class ClusterView {
         try {
             final PeerID id = view.firstKey();
             final SystemAdvertisement adv = view.get(id);
-            LOG.log(Level.FINE,
-                    new StringBuffer().append("Returning Master Candidate Node :")
-                            .append(adv.getName()).append(' ').append(adv.getID())
-                            .toString());
+            if (LOG.isLoggable(Level.FINE)){
+                LOG.log(Level.FINE,
+                        new StringBuffer().append("Returning Master Candidate Node :")
+                             .append(adv.getName()).append(' ').append(adv.getID())
+                                .toString());
+            }
             return adv;
         } finally {
             viewLock.unlock();
@@ -244,7 +246,9 @@ public class ClusterView {
     }
 
     private void lockLog(String method) {
-        LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
+        if (LOG.isLoggable(Level.FINE)){
+            LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
+        }
     }
 }
 

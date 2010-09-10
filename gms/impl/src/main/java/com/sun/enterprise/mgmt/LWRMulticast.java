@@ -168,11 +168,15 @@ public class LWRMulticast implements MessageListener {
                 ackMessage(id, (Long)element);
                 try {
                     if (msgListener != null) {
-                        LOG.log(Level.FINEST, "Calling message listener");
+                        if (LOG.isLoggable(Level.FINEST)) {
+                            LOG.log(Level.FINEST, "Calling message listener");
+                        }
                         msgListener.receiveMessageEvent(event);
                     }
                 } catch (Throwable th) {
-                    LOG.log(Level.FINEST, "Exception occurred while calling message listener", th);
+                    if (LOG.isLoggable(Level.FINEST)) {
+                        LOG.log(Level.FINEST, "Exception occurred while calling message listener", th);
+                    }
                 }
             }
         }
@@ -215,7 +219,9 @@ public class LWRMulticast implements MessageListener {
         try {
             send(id, msg);
         } catch (IOException io) {
-            LOG.log(Level.FINEST, "I/O Error occured " + io.toString());
+            if (LOG.isLoggable(Level.FINEST)) {
+                LOG.log(Level.FINEST, "I/O Error occured " + io.toString());
+            }
         }
     }
 
@@ -324,7 +330,9 @@ public class LWRMulticast implements MessageListener {
         msg.addMessageElement(SEQTAG, seq);
         synchronized (ackLock) {
             ackList.clear();
-            LOG.log(Level.FINEST, "Sending message sequence #: " + seq + " Threshold :" + threshold);
+            if (LOG.isLoggable(Level.FINEST)) {
+                LOG.log(Level.FINEST, "Sending message sequence #: " + seq + " Threshold :" + threshold);
+            }
             send((PeerID) null, msg);
             if (threshold == 0) {
                 return;

@@ -128,7 +128,7 @@ public class ClusterManager implements MessageListener {
                                                                  GMSConstants.GROUP_COMMUNICATION_PROVIDER,
                                                                  props );
         this.netManager = getNetworkManager(gmsContextProviderTransport);
-        LOG.info("instantiated following NetworkManager implementation:" + netManager.getClass().getName());
+        LOG.config("instantiated following NetworkManager implementation:" + netManager.getClass().getName());
         
         this.identityMap = identityMap;
         try {
@@ -144,7 +144,9 @@ public class ClusterManager implements MessageListener {
             this.bindInterfaceAddress = (String)props.get( ConfigConstants.BIND_INTERFACE_ADDRESS.toString());
         }
         systemAdv = createSystemAdv(netManager.getLocalPeerID(), instanceName, identityMap, bindInterfaceAddress);
-        LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
+        if (LOG.isLoggable(Level.FINER)) {
+            LOG.log(Level.FINER, "Instance ID :" + getSystemAdvertisement().getID());
+        }
         if (isWatchdog()) {
             this.clusterViewManager = null;
             this.masterNode = null;
@@ -456,14 +458,17 @@ public class ClusterManager implements MessageListener {
             if (peerid != null) {
                 //check if the peerid is part of the cluster view
                 if (getClusterViewManager().containsKey(peerid, true)) {
-                    LOG.fine("ClusterManager.send : Cluster View contains " + peerid.toString());
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.fine("ClusterManager.send : Cluster View contains " + peerid.toString());
+                    }
                     sent = netManager.send( peerid, message );
                     if( !sent ) {
-                        LOG.warning("ClusterManager.send: message " + message + " not sent to " + peerid);
+                        LOG.log(Level.WARNING, "mgmt.clustermanager.send.failed", new Object[]{ message, peerid});
                     }
                 } else {
+                    LOG.log(Level.INFO, "mgmt.clustermanager.send.membernotinview", new Object[]{peerid.toString()});
 
-                    LOG.log(Level.INFO, "ClusterManager.send : Cluster View does not contain " + peerid.toString() + " hence will not send message.", new Exception("stack trace"));
+                    // todo I18N?
                     throw new MemberNotInViewException("Member " + peerid +
                             " is not in the View anymore. Hence not performing sendMessage operation");
                 }
@@ -472,7 +477,7 @@ public class ClusterManager implements MessageListener {
                 LOG.log(Level.FINER, "Broadcasting Message");
                 sent = netManager.broadcast( message );
                 if (!sent) {
-                    LOG.warning("ClusterManager.send: broadcast of message " + message + " failed");
+                    LOG.log(Level.WARNING, "mgmt.clustermanager.broadcast.failed", new Object[]{message});
                 }
             }
         }
@@ -490,7 +495,7 @@ public class ClusterManager implements MessageListener {
             try {
                 msg = event.getMessage();
                 if (msg == null) {
-                    LOG.log(Level.WARNING, "Received a null message");
+                    LOG.log(Level.WARNING, "mgmt.clustermanager.nullmessage");
                     return;
                 }
                 //JxtaUtil.printMessageStats(msg, true);
@@ -498,7 +503,7 @@ public class ClusterManager implements MessageListener {
                 msgElement = msg.getMessageElement(NODEADV);
                 if (msgElement == null) {
                     // no need to go any further
-                    LOG.log(Level.WARNING, "Received an unknown message");
+                    LOG.log(Level.WARNING, "mgmt.unknownMessage");
                     return;
                 }
 
@@ -506,7 +511,7 @@ public class ClusterManager implements MessageListener {
                 if( msgElement instanceof SystemAdvertisement ) {
                     adv = (SystemAdvertisement)msgElement;
                 } else {
-                    LOG.log(Level.WARNING, "Received an unknown message");
+                    LOG.log(Level.WARNING, "mgmt.unknownMessage");
                     return;
                 }
                 final PeerID srcPeerID = (PeerID) adv.getID();
@@ -519,8 +524,10 @@ public class ClusterManager implements MessageListener {
 
                 msgElement = msg.getMessageElement(APPMESSAGE);
                 if (msgElement != null) {
-                    LOG.log(Level.FINEST, "ClusterManager: Notifying APPMessage Listeners of " +
-                            msgElement.toString() + "and adv = " + adv.getName());
+                    if (LOG.isLoggable(Level.FINEST)) {
+                        LOG.log(Level.FINEST, "ClusterManager: Notifying APPMessage Listeners of " +
+                                msgElement.toString() + "and adv = " + adv.getName());
+                    }
                     notifyMessageListeners(adv, msgElement );
                 }
             } catch (Throwable e) {
@@ -603,9 +610,8 @@ public class ClusterManager implements MessageListener {
                     bindInterfaceEndpointAddress = TCP_SCHEME + bindInterfaceAddress + PORT;
                 }
             } catch( Exception e ) {
-                LOG.log( Level.WARNING, "invalid bindInterfaceEndpointAddress computed from property " +
-                                        ConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
-                                        " value=" + bindInterfaceAddress, e );
+                LOG.log( Level.WARNING, "mgmt.clustermanagement.invalidbindinterface",
+                                        new Object[]{ ConfigConstants.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress});
             }
         }
         if (bindInterfaceEndpointAddress != null) {

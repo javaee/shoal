@@ -111,18 +111,22 @@ public class ClusterViewManager {
         viewLock.lock();
         try {
             if (!view.containsKey(advertisement.getID())) {
-                LOG.log(Level.FINER, new StringBuffer().append("Adding ")
-                        .append(advertisement.getName())
-                        .append("   ")
-                        .append(advertisement.getID().toString())
-                        .toString());
+                if (LOG.isLoggable(Level.FINER)){
+                    LOG.log(Level.FINER, new StringBuffer().append("Adding ")
+                            .append(advertisement.getName())
+                            .append("   ")
+                            .append(advertisement.getID().toString())
+                            .toString());
+                }
                 manager.getNetworkManager().addRemotePeer(advertisement.getID());
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.log(Level.FINE, "add " + advertisement.getName() + " newViewSize=" + view.size());
                 }
                 view.put(advertisement.getID(), advertisement);
                 result = true;
-                LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
+                if (LOG.isLoggable(Level.FINER)){
+                    LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
+                }
             } else {
                 //if view does contain the same sys adv but the start time is different from what
                 //was already in the view
@@ -187,18 +191,22 @@ public class ClusterViewManager {
                 viewLock.unlock();
             }
             if (notify) {
-                LOG.log(Level.FINE, "setMaster master:" + advertisement.getName());
+                if (LOG.isLoggable(Level.FINE)){
+                    LOG.log(Level.FINE, "setMaster master:" + advertisement.getName());
+                }
                 notifyListeners(new ClusterViewEvent(
                         ClusterViewEvents.MASTER_CHANGE_EVENT,
                         advertisement));
             }
-            if (advertisement.getID().equals(this.advertisement.getID())) {
-                LOG.log(Level.FINE, "Setting MasterNode Role");
-            } else {
-                LOG.log(Level.FINE,
-                        new StringBuffer().append("Setting Master Node :")
-                                .append(advertisement.getName()).append(' ')
-                                .append(advertisement.getID()).toString());
+            if (LOG.isLoggable(Level.FINE)){
+                if (advertisement.getID().equals(this.advertisement.getID())) {
+                    LOG.log(Level.FINE, "Setting MasterNode Role");
+                } else {
+                    LOG.log(Level.FINE,
+                            new StringBuffer().append("Setting Master Node :")
+                                    .append(advertisement.getName()).append(' ')
+                                  .append(advertisement.getID()).toString());
+                }
             }
             return false;
         }
@@ -339,7 +347,9 @@ public class ClusterViewManager {
         } finally {
             viewLock.unlock();
         }
-        LOG.log(Level.FINEST, "returning new ClusterView with view size:" + view.size());
+        if (LOG.isLoggable(Level.FINEST)){
+            LOG.log(Level.FINEST, "returning new ClusterView with view size:" + view.size());
+        }
         return new ClusterView(temp, localViewId, masterViewId);
     }
 
@@ -375,10 +385,12 @@ public class ClusterViewManager {
         } finally {
             viewLock.unlock();
         }
-        LOG.log(Level.FINER,
-                new StringBuffer().append("Returning Master Candidate Node :")
-                        .append(adv.getName()).append(' ').append(adv.getID())
-                        .toString());
+        if (LOG.isLoggable(Level.FINER)){
+            LOG.log(Level.FINER,
+                    new StringBuffer().append("Returning Master Candidate Node :")
+                            .append(adv.getName()).append(' ').append(adv.getID())
+                            .toString());
+        }
         return adv;
     }
 
@@ -452,11 +464,8 @@ public class ClusterViewManager {
                 notifyListeners(cvEvent);
             } else {
                 GMSMember member = Utility.getGMSMember(cvEvent.getAdvertisement());
-                if (LOG.isLoggable(Level.INFO)) {
-                    LOG.info("no changes from previous view, skipping notification of listeners for cluster view event " +
-                             cvEvent.getEvent() + " from member: " + member.getMemberToken() +
-                             " group: " + member.getGroupName());
-                }
+                LOG.log(Level.INFO, "mgmt.clusterviewmanager.skipnotify",
+                        new Object[]{cvEvent.getEvent(), member.getMemberToken() , member.getGroupName()});
             }
         }
     }
@@ -502,8 +511,10 @@ public class ClusterViewManager {
     }
 
     void notifyListeners(final ClusterViewEvent event) {
-        LOG.log(Level.FINER, MessageFormat.format("Notifying the {0} to listeners, peer in event is {1}",
-                    event.getEvent().toString(), event.getAdvertisement().getName()));
+        if (LOG.isLoggable(Level.FINER)){
+            LOG.log(Level.FINER, MessageFormat.format("Notifying the {0} to listeners, peer in event is {1}",
+                        event.getEvent().toString(), event.getAdvertisement().getName()));
+        }
         ClusterView cv = getLocalView();
         for (ClusterViewEventListener elem : cvListeners) {
             elem.clusterViewEvent(event, cv);
@@ -546,7 +557,9 @@ public class ClusterViewManager {
         this.masterViewID.set(masterViewID);
     }
     private void lockLog(String method) {
-        LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
+        if (LOG.isLoggable(Level.FINE)){
+            LOG.log(Level.FINE, MessageFormat.format("{0} viewLock Hold count :{1}, lock queue count:{2}", method, viewLock.getHoldCount(), viewLock.getQueueLength()));
+        }
     }
 
     public void setPeerReadyState(SystemAdvertisement adv) {
