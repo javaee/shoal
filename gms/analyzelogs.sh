@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh +x
 
 usage () {
  echo "usage: [-h] [-l logdir] [add|stop|kill|rejoin|default]"
