@@ -434,8 +434,7 @@ public class NetworkUtility {
             }
         } catch( Throwable t ) {
             LOG.log(Level.WARNING,
-                    "NetworkUtility.deserialized current objects: messages=" + messages.toString() +
-                     "failed while deserializing name=" + name , t);
+                    "netutil.deserialize.failure", new Object[]{messages.toString(), name});
             throw new MessageIOException( "failed to deserialize a message : name = " + name, t );
         } finally {
             if( ois != null ) {
@@ -474,7 +473,7 @@ public class NetworkUtility {
             }
             return portInRange;
         }
-        LOG.severe("Fatal error. No available ports exist for " + host + " in range " + tcpStartPort + " to " + tcpEndPort);
+        LOG.log(Level.SEVERE, "netutil.no.available.ports", new Object[]{host,tcpStartPort,tcpEndPort});
         throw new IllegalStateException("Fatal error. No available ports exist for " + host + " in range " + tcpStartPort + " to " + tcpEndPort);
     }
 

@@ -173,9 +173,9 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                 multicastSocket.setTimeToLive(this.multicastTimeToLive);
                 LOG.config("set via property: MulticastSocket.getTimeToLive()=" + multicastSocket.getTimeToLive());
             } catch (IOException ioe) {
-                LOG.log(Level.WARNING, "unable to set multicast socket timeToLive to " + this.multicastTimeToLive, ioe);
+                LOG.log(Level.WARNING, "blockingiomcast.fail.set.timetolive", new Object[]{this.multicastTimeToLive});
             } catch (IllegalArgumentException iae) {
-                LOG.log(Level.WARNING, "unable to set multicast socket timeToLive to " + this.multicastTimeToLive, iae);
+                LOG.log(Level.WARNING, "blockingiomcast.fail.set.timetolive", new Object[]{this.multicastTimeToLive});
             }
         } else {
 
@@ -187,7 +187,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                     multicastSocket.setTimeToLive(this.multicastTimeToLive);
                     LOG.config("Set via default minimum: MulticastSocket.getTimeToLive()=" + multicastSocket.getTimeToLive());
                 } catch (IOException ioe) {
-                    LOG.log(Level.WARNING, "unable to set multicast socket timeToLive to " + this.multicastTimeToLive, ioe);
+                    LOG.log(Level.WARNING, "blockingiomcast.fail.set.timetolive", new Object[]{this.multicastTimeToLive});
                 }
             }
         }
@@ -281,23 +281,24 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                     }
                 } catch( InterruptedIOException iie ) {
                     Thread.interrupted();
-                    LOG.log(Level.INFO, "InterruptedIOException during multicast receive", iie);
                 } catch( IOException e ) {
                     if( !running ) {
                         break;
                     }
-                    LOG.log( Level.SEVERE, "failure during multicast receive", e);
+                    LOG.log( Level.SEVERE, "blockingiomcast.mcastreceivefailure",
+                            new Object[]{e.getLocalizedMessage()});
                     break;
                 } catch (Throwable t) {
-                    LOG.log( Level.SEVERE, "failure during multicast receive", t);
+                    LOG.log( Level.SEVERE, "blockingiomcast.mcastreceivefailure",
+                            new Object[]{t.getLocalizedMessage()});
                     if (t instanceof RejectedExecutionException) {
                         rejectedExecution++;
                     }
                 }
             }
         } catch( Throwable t ) {
-            if( LOG.isLoggable( Level.SEVERE ) )
-                LOG.log( Level.SEVERE, "Uncaught Throwable in thread :" + Thread.currentThread().getName(), t );
+            LOG.log( Level.SEVERE, "blockiomcast.receiveprocess.uncaughtthrowable",
+                    new Object[]{t.getLocalizedMessage(), Thread.currentThread().getName()});
         } finally {
             multicastThread = null;
             endGate.countDown();
@@ -316,8 +317,8 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         byte[] messageBytes = message.getPlainBytes();
         int numBytesInPacket = messageBytes.length;
         if( ( numBytesInPacket > multicastPacketSize ) ) {
-            if( LOG.isLoggable( Level.WARNING ) )
-                LOG.log( Level.WARNING, "Multicast datagram exceeds multicast size" );
+            LOG.log(Level.WARNING, "blockingiomcast.exceedsmaxsize",
+                    new Object[]{numBytesInPacket, multicastPacketSize});
         }
         DatagramPacket packet;
         if( localSocketAddress != null ) {
@@ -358,17 +359,19 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                     message.parseMessage( byteMessage, MessageImpl.HEADER_LENGTH, messageLen );
                 } catch( IllegalArgumentException iae ) {
                     if( LOG.isLoggable( Level.WARNING ) )
-                        LOG.log( Level.WARNING, "damaged multicast discarded", iae );
+                        LOG.log( Level.WARNING, "blockingiomcast.damaged", iae );
                     return;
                 } catch( MessageIOException mie ) {
                     if( LOG.isLoggable( Level.WARNING ) )
-                        LOG.log( Level.WARNING, "damaged multicast discarded", mie );
+                        LOG.log( Level.WARNING, "blockingiomcast.damaged", mie );
                     return;
                 }
                 if( networkManager != null ) {
                     networkManager.receiveMessage( message, null );
                     if (message.getType() != MessageImpl.TYPE_HEALTH_MONITOR_MESSAGE) {
-                        monitorLog.log(Level.FINE, "BlockingIOMulticastSender.receiveMessage processed multicast message " + message.toString());
+                        if (monitorLog.isLoggable(Level.FINE)) {
+                            monitorLog.log(Level.FINE, "BlockingIOMulticastSender.receiveMessage processed multicast message " + message.toString());
+                        }
                     }
                 }
             } catch( Throwable t ) {
@@ -378,9 +381,11 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                         if (message != null) {
                             msgOutput = message.toString();
                         }
-                    } catch (Throwable tt) {}
-                    LOG.log( Level.WARNING, "failed to process a received message " + msgOutput, t );
+                    } catch (Throwable tt) {
+                        LOG.log( Level.WARNING, "blockingiomcast.failprocessing", new Object[]{msgOutput});
+                        LOG.log(Level.WARNING, "stack trace", tt);
                     }
+                }
             }
         }
     }

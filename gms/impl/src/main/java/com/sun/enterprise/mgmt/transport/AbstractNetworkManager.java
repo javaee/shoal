@@ -125,8 +125,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         try {
             beforeDispatchingMessage( messageEvent, piggyback );
         } catch( Throwable t ) {
-            if( LOG.isLoggable( Level.WARNING ) )
-                LOG.log( Level.WARNING, "failed to execute beforeDispatchingMessage()", t );
+            LOG.log(Level.WARNING, "absnetmgr.beforefailed", t);
         }
         boolean messageEventNotProcessed = true;
         for( MessageListener listener : messageListeners ) {
@@ -135,8 +134,8 @@ public abstract class AbstractNetworkManager implements NetworkManager {
                     messageEventNotProcessed = false;
                     listener.receiveMessageEvent( messageEvent );
                 } catch( Throwable t ) {
-                    if( LOG.isLoggable( Level.WARNING ) )
-                        LOG.log( Level.WARNING, "failed to receive a message: type = " + message.getType(), t );
+                    LOG.log(Level.WARNING, "failed to receive a message: type = ", new Object[]{ message.getType()});
+                    LOG.log(Level.WARNING, "stack trace", t);
                 }
             }
         }
@@ -148,8 +147,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         try {
             afterDispatchingMessage( messageEvent, piggyback );
         } catch( Throwable t ) {
-            if( LOG.isLoggable( Level.WARNING ) )
-                LOG.log( Level.WARNING, "failed to execute afterDispatchingMessage()", t );
+            LOG.log(Level.WARNING, "absnetmgr.afterfailed", t);
         }
     }
 
