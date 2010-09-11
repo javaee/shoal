@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class GroupManagementServiceImpl implements GroupManagementService {
+public class GroupManagementServiceImpl implements GroupManagementService, Runnable {
     private GMSContext ctx;
     private Router router;
     private String memberName="";
@@ -105,6 +105,19 @@ public class GroupManagementServiceImpl implements GroupManagementService {
             ctx = GMSContextFactory.produceGMSContext(serverToken, groupName, membertype, properties);
             router = ctx.getRouter();
             memberName = serverToken;
+        }
+    }
+
+    public void run() {
+        startup();
+    }
+
+    private void startup() {
+        try {
+            logger.log(Level.INFO, "gms.joinMessage");
+            join();
+        } catch (GMSException e) {
+            logger.log(Level.FINE, "gms.joinException", e);
         }
     }
 
