@@ -79,26 +79,27 @@ public class SignalHandler implements Runnable {
 
     public void run() {
         try {
-        Signal[] signals;
-        while (!stopped.get()) {
-            SignalPacket signalPacket = null;
-            try {
-                signalPacket = signalQueue.take();
-                if (signalPacket != null) {
-                    if ((signals = signalPacket.getSignals()) != null) {
-                        handleSignals(signals);
-                    } else {
-                        handleSignal(signalPacket.getSignal());
+            Signal[] signals;
+            while (!stopped.get()) {
+                SignalPacket signalPacket = null;
+                try {
+                    signalPacket = signalQueue.take();
+                    if (signalPacket != null) {
+                        if ((signals = signalPacket.getSignals()) != null) {
+                            handleSignals(signals);
+                        } else {
+                            handleSignal(signalPacket.getSignal());
+                        }
                     }
+                } catch (InterruptedException e) {
+                    stopped.set(true);
+                } catch (Throwable e) {
+                    logger.log(Level.SEVERE, "sig.handler.unhandled", new Object[]{Thread.currentThread().getName()});
+                    logger.log(Level.WARNING, "stack trace", e);
                 }
-            } catch (InterruptedException e) {
-                stopped.set(true);
             }
-        }
-        } catch (Throwable e) {
-            logger.log(Level.SEVERE,"exiting due unhandled exception in thread " + Thread.currentThread().getName(), e);
         } finally {
-            logger.log(Level.INFO, "SignalHandler task named " + Thread.currentThread().getName() + " exiting");
+            logger.log(Level.INFO, "sig.handler.thread.terminated", new Object[]{Thread.currentThread().getName()});
         }
     }
 
@@ -116,8 +117,9 @@ public class SignalHandler implements Runnable {
         if (signal == null) {
             throw new IllegalArgumentException("Signal is null. Cannot analyze.");
         }
-
-        logger.log(Level.FINEST, "SignalHandler : processing a received signal " + signal.getClass().getName()) ;
+        if (logger.isLoggable(Level.FINEST)){
+            logger.log(Level.FINEST, "SignalHandler : processing a received signal " + signal.getClass().getName());
+        }
         try {
             if (signal instanceof FailureRecoverySignal) {
                 router.notifyFailureRecoveryAction((FailureRecoverySignal) signal);
@@ -141,7 +143,8 @@ public class SignalHandler implements Runnable {
                 router.notifyGroupLeadershipNotificationAction((GroupLeadershipNotificationSignal) signal);
             }
         } catch (Throwable t) {
-            logger.log(Level.WARNING, "Ignoring exception while running action handler. Handler should have handled following unchecked exception", t);
+            logger.log(Level.WARNING, "sig.handler.ignoring.exception", new Object[]{t.getLocalizedMessage()});
+            logger.log(Level.WARNING, t.getLocalizedMessage(), t);
         }
     }
 

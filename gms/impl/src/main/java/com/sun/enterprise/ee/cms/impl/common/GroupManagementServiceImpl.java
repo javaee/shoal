@@ -67,9 +67,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class GroupManagementServiceImpl implements GroupManagementService, Runnable {
+public class GroupManagementServiceImpl implements GroupManagementService {
     private GMSContext ctx;
     private Router router;
+    private String memberName="";
 
     private AtomicBoolean initialized = new AtomicBoolean(false);
 
@@ -91,10 +92,10 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                                       final GroupManagementService.MemberType membertype,
                                       final Properties properties) {
         initialize(serverToken, groupName, membertype, properties);
+        memberName = serverToken;
     }
 
     public GroupManagementServiceImpl() {
-
     }
 
     public void initialize(final String serverToken, final String groupName,
@@ -103,19 +104,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         if (initialized.compareAndSet(false, true)) {
             ctx = GMSContextFactory.produceGMSContext(serverToken, groupName, membertype, properties);
             router = ctx.getRouter();
-        }
-    }
-
-    public void run() {
-        startup();
-    }
-
-    private void startup() {
-        try {
-            logger.log(Level.INFO, "gms.joinMessage");
-            join();
-        } catch (GMSException e) {
-            logger.log(Level.FINE, "gms.joinException", e);
+            memberName = serverToken;
         }
     }
 
@@ -379,7 +368,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     }
 
     public void join() throws GMSException {
-        logger.log(Level.FINE, "Connecting to group......");
+        logger.log(Level.INFO, "gms.join", new Object[]{memberName, ctx.getGroupName()});
         ctx.join();
     }
 
@@ -391,7 +380,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      *                     in GMSConstants.shudownType enum.
      */
     private void leave(final GMSConstants.shutdownType shutdownType) {
-        logger.log(Level.FINE, "Deregistering ActionFactory instances...");
+        logger.log(Level.INFO, "gms.leave", new Object[]{memberName, ctx.getGroupName()});
         removeAllActionFactories();
         ctx.leave(shutdownType);
         GMSContextFactory.removeGMSContext(ctx.getGroupName());
@@ -410,7 +399,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                                       final GMSConstants.shutdownState shutdownState) {
 
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
-        logger.log(Level.INFO, "GMS:Announcing GroupShutdown to group " + groupName + " with State = " + shutdownState);
+        logger.log(Level.INFO, "gms.group.shutdown", new Object[]{groupName,shutdownState});
         gctx.announceGroupShutdown(groupName, shutdownState);
 
     }
@@ -419,14 +408,13 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
                                      GMSConstants.groupStartupState startupState,
                                      List<String> memberTokens) {
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
-        final StringBuffer sb = new StringBuffer(160);
-        sb.append("GMS:Announcing GroupStartup[").append(startupState.toString()).append("]" + " for Group:").append(groupName).append(" Members: ");
+        final StringBuffer sb = new StringBuffer(120);
         if (memberTokens != null) {
             for (String memberToken : memberTokens) {
                 sb.append(memberToken).append(",");
             }
         }
-        logger.log(Level.INFO, sb.toString());
+        logger.log(Level.INFO, "gms.group.startup", new Object[]{startupState.toString(), groupName, sb.toString()});
         gctx.announceGroupStartup(groupName, startupState, memberTokens);
     }
 
@@ -447,7 +435,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     public void reportJoinedAndReadyState(String groupName) {
         final GMSContext gctx = GMSContextFactory.getGMSContext(groupName);
         if (gctx != null) {
-            logger.log(Level.INFO, "GMS:Reporting Joined and Ready state to group " + groupName);
+            logger.log(Level.INFO, "gms.ready", new Object[]{groupName});
             gctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
         } else {
             reportJoinedAndReadyState();
@@ -467,7 +455,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      */
     public void reportJoinedAndReadyState() {
         if (ctx != null) {
-            logger.log(Level.INFO, "GMS:Reporting Joined and Ready state to group " + getGroupName());
+            logger.log(Level.INFO, "gms.ready", new Object[]{getGroupName()});
             ctx.getGroupCommunicationProvider().reportJoinedAndReadyState();
         } else {
             throw new IllegalStateException("GMSContext for group name " + getGroupName() + " unexpectedly null");

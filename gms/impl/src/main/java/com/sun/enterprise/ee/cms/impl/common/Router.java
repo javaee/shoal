@@ -383,7 +383,8 @@ public class Router {
                 logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
             } catch (Throwable t) {
                 // just in case application provides own ActionImpl.
-                logger.log(Level.WARNING, "handled unexpected exception processing message signal " + signal.toString(), t);
+                logger.log(Level.WARNING, "router.msg.handler.exception", new Object[]{t.getLocalizedMessage(), signal.toString()});
+                logger.log(Level.WARNING, "stack trace", t);
             }
         }
     }
@@ -414,9 +415,11 @@ public class Router {
         //todo: NEED to be able to predetermine the number of GMS clients
         //that would register for join notifications.
         if (isJoinNotificationAFRegistered()) {
-            logger.log(Level.FINE,
-                    MessageFormat.format("Sending JoinNotificationSignals to " +
-                            "registered Actions, Member {0}...", signal.getMemberToken()));
+            if (logger.isLoggable(Level.FINE)){
+                logger.log(Level.FINE,
+                        MessageFormat.format("Sending JoinNotificationSignals to " +
+                                "registered Actions, Member {0}...", signal.getMemberToken()));
+            }
             for (JoinNotificationActionFactory jnaf : joinNotificationAF) {
                 a = (JoinNotificationAction) jnaf.produceAction();
                 jns = new JoinNotificationSignalImpl(signal);
@@ -435,9 +438,11 @@ public class Router {
         JoinedAndReadyNotificationAction a;
         JoinedAndReadyNotificationSignal jns;
         if (isJoinedAndReadyNotificationAFRegistered()) {
-            logger.log(Level.FINE,
-                    MessageFormat.format("Sending JoinedAndReadyNotificationSignals to " +
-                            "registered Actions, Member {0}...", signal.getMemberToken()));
+            if (logger.isLoggable(Level.FINE)){
+                logger.log(Level.FINE,
+                        MessageFormat.format("Sending JoinedAndReadyNotificationSignals to " +
+                                "registered Actions, Member {0}...", signal.getMemberToken()));
+            }
             for (JoinedAndReadyNotificationActionFactory jnaf : joinedAndReadyNotificationAF) {
                 a = (JoinedAndReadyNotificationAction) jnaf.produceAction();
                 jns = new JoinedAndReadyNotificationSignalImpl(signal);
@@ -462,9 +467,11 @@ public class Router {
         GroupLeadershipNotificationAction a;
         GroupLeadershipNotificationSignal glsns;
         if (isGroupLeadershipNotificationAFRegistered()) {
-            logger.log(Level.FINE,
-                    MessageFormat.format("Sending GroupLeadershipNotificationSignals to " +
-                            "registered Actions, Member {0}...", signal.getMemberToken()));
+            if (logger.isLoggable(Level.FINE)){
+                logger.log(Level.FINE,
+                        MessageFormat.format("Sending GroupLeadershipNotificationSignals to " +
+                                "registered Actions, Member {0}...", signal.getMemberToken()));
+            }
             for (GroupLeadershipNotificationActionFactory glsnaf : groupLeadershipNotificationAFs) {
                 a = (GroupLeadershipNotificationAction) glsnaf.produceAction();
                 glsns = new GroupLeadershipNotificationSignalImpl(signal);
@@ -553,8 +560,10 @@ public class Router {
     }
 
     public Set<String> getFailureRecoveryComponents() {
-        logger.log(Level.FINEST, MessageFormat.format("Router Returning failure " +
-                "recovery components={0}", failureRecoveryAF.keySet()));
+        if (logger.isLoggable(Level.FINEST)){
+            logger.log(Level.FINEST, MessageFormat.format("Router Returning failure " +
+                    "recovery components={0}", failureRecoveryAF.keySet()));
+        }
         return failureRecoveryAF.keySet();
     }
 
@@ -570,13 +579,13 @@ public class Router {
         if( queue != null ) {
             int unprocessedEventSize = queue.size();
             if (unprocessedEventSize > 0) {
-                logger.warning("shutdown: cleared queue with " + queue.size() + " unprocessed events");
+                logger.log(Level.WARNING, "router.shutdown.unprocessed", new Object[]{queue.size()});
                 // TBD.  If shutdown has unprocessed events outstanding.
                 try {
                     LinkedList<SignalPacket> unprocessedEvents = new LinkedList<SignalPacket>();
                     queue.drainTo(unprocessedEvents);
                     for (SignalPacket sp :  unprocessedEvents) {
-                        logger.info("shutdown: unprocessed signals:" + sp.toString());
+                        logger.log(Level.INFO, "router.shutdown.unprocessed.signal", new Object[]{sp.toString()});
                     }
                 } catch (Throwable t) {}
             }

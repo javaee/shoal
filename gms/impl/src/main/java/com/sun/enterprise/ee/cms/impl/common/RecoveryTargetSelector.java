@@ -103,8 +103,8 @@ public class RecoveryTargetSelector {
                 recoveryServer = resolveWithHostSelectionAlgorithm(members, failedMemberToken,groupName);
                 break;
             default:
-                logger.log(Level.WARNING, "resolveRecoveryTarget() returning false due to unimplemented RecoverySelectorMode:" +
-                           mode.toString() + " for failed member:" + failedMemberToken + " group:" + groupName);
+                logger.log(Level.WARNING, "recovery.selector.invalid.mode",
+                        new Object[]{mode.toString() ,failedMemberToken, groupName});
                 break;
         }
         return recoveryServer;
@@ -156,9 +156,13 @@ public class RecoveryTargetSelector {
         final List<String> liveCache = getMemberTokens(viewCache,
                                                        ctx.getSuspectList(),
                                                        ctx.getGroupHandle().getAllCurrentMembers());
-        logger.log(Level.FINE, "LiveCache = "+liveCache);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "LiveCache = "+liveCache);
+        }
         final List<String> vCache = getCoreMembers(viewCache);
-        logger.log(Level.FINE, "vCache = "+vCache);
+        if (logger.isLoggable(Level.FINE)){
+            logger.log(Level.FINE, "vCache = "+vCache);
+        }
 
         for( int i=0; i<vCache.size(); i++ ) {
             final String member;
@@ -167,13 +171,13 @@ public class RecoveryTargetSelector {
                 //if this failed member is the last member
                 if( i == ( vCache.size() - 1 ) ) {
                     member = vCache.get(0);
-                    logger.log(Level.FINEST,
-                       "Failed Member was last member of the previous view, "+
-                   "The first live core member will be selected as recoverer");
-                    logger.log(Level.FINEST,
-                               "First Core Member is "+member);
-                    logger.log(Level.FINEST, "Live members are :"+
-                                             liveCache.toString());
+                    if (logger.isLoggable(Level.FINEST)){
+                        logger.log(Level.FINEST,
+                        "Failed Member was last member of the previous view, "+
+                        "The first live core member will be selected as recoverer");
+                        logger.log(Level.FINEST, "First Core Member is "+member);
+                        logger.log(Level.FINEST, "Live members are :"+ liveCache.toString());
+                    }
                     //if the first member of the view cache is a live member
                     if(liveCache.contains(member)){
                         recoverer = member;
@@ -196,8 +200,7 @@ public class RecoveryTargetSelector {
         }
         if (recoverer == null) {
             // failed member might not have been in vCache, revert to selecting first live member in view
-            logger.log(Level.WARNING, "RecoveryTargetSelection:Chronological Successor algorithm failed to select a recovery member for failed member" + failedMember + " revert to selecting first member in view as RecoveryTarget." +
-                                   " view prior to reported failure: " + getMemberTokens(viewCache));
+            logger.log(Level.WARNING, "recovery.selector.failed", new Object[]{failedMember, getMemberTokens(viewCache)});
             for (String coreMember : vCache) {
                 if (liveCache.contains(coreMember)) {
                     recoverer = coreMember;
@@ -263,7 +266,7 @@ public class RecoveryTargetSelector {
         try{
             Thread.sleep(damperWaitOnMultiFails);
         } catch ( InterruptedException e){
-            logger.log(Level.FINEST, e.getLocalizedMessage());
+            logger.log(Level.FINEST, e.getLocalizedMessage(), e);
         }
     }
 
@@ -375,13 +378,8 @@ public class RecoveryTargetSelector {
             final String failedMemberToken,
             final String groupName)
     {
-        logger.log(Level.INFO, new StringBuffer()
-                                .append( "Appointed Recovery Server:" )
-                                .append( recovererMemberToken )
-                                .append( ":for failed member:" )
-                                .append( failedMemberToken )
-                                .append( ":for group:" )
-                                .append( groupName ).toString());
+        logger.log(Level.INFO, "recovery.selector.appointed",
+                new Object[]{recovererMemberToken, failedMemberToken, groupName});
         final GMSContext ctx = GMSContextFactory.getGMSContext( groupName );
         if (ctx.isWatchdog()) {
             return;
@@ -400,7 +398,7 @@ public class RecoveryTargetSelector {
                                 );
             }
             catch ( GMSException e ) {
-                logger.log(Level.WARNING, e.getLocalizedMessage());
+                logger.log(Level.WARNING, e.getLocalizedMessage(), e);
             }
         }
     }
@@ -427,8 +425,10 @@ public class RecoveryTargetSelector {
                 temp.add( token );
             }
         }
-        logger.log(Level.FINEST, "SuspectedMembers: "+exclusionList.toString());
-        logger.log(Level.FINEST, "LiveMembers: "+temp.toString());
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "SuspectedMembers: "+exclusionList.toString());
+            logger.log(Level.FINEST, "LiveMembers: "+temp.toString());
+        }
         return temp;
     }
 

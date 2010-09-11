@@ -106,9 +106,9 @@ public class FailureRecoverySignalImpl extends FailureNotificationSignalImpl
                     .getGMSContext( groupName )
                     .getGroupHandle()
                     .lowerFence(componentName, failedMember);
-            logger.log(Level.FINE, "lowered fence for component "+
-                                     componentName+" and member "+
-                                     failedMember);
+            if (logger.isLoggable(Level.FINE)){
+                logger.log(Level.FINE, "lowered fence for component "+ componentName +" and member "+ failedMember);
+            }
             failedMember=null;
         }
         catch ( GMSException e ) {
