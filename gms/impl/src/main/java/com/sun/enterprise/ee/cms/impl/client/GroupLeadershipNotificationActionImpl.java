@@ -71,13 +71,13 @@ public class GroupLeadershipNotificationActionImpl implements GroupLeadershipNot
             s.acquire();
             callBack.processNotification( s );
         } catch( SignalAcquireException e ) {
-            logger.log( Level.SEVERE, e.getLocalizedMessage() );
+            logger.log( Level.SEVERE, e.getLocalizedMessage(), e);
         }
 
         try {
             s.release();
         } catch( SignalReleaseException e ) {
-            logger.log( Level.SEVERE, e.getLocalizedMessage() );
+            logger.log( Level.SEVERE, e.getLocalizedMessage(), e);
         }
     }
 }

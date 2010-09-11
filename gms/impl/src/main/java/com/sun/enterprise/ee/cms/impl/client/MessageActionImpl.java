@@ -68,14 +68,14 @@ public class MessageActionImpl implements MessageAction {
             signalAcquired = true;
             processMessage(signal);
         } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, "Failed to consumeSignal(" + signal + ") due to exception " + e.getLocalizedMessage());
+            logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
         } finally {
             //Always Release after completing any other processing.
             if (signalAcquired) {
                 try {
                     signal.release();
                 } catch (SignalReleaseException e) {
-                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                    logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
                 }
             }
         }
@@ -86,8 +86,8 @@ public class MessageActionImpl implements MessageAction {
             callback.processNotification(signal);
         } catch (Throwable t) {
             final String callbackClassName = callback == null ? "<null>" : callback.getClass().getName();
-            logger.log(Level.WARNING, "handled unexpected exception " + t.getClass().getName() + " when calling registered application callback method " +
-                        callbackClassName + ".processNotification.  The method should have handled this exception.", t);
+            logger.log(Level.WARNING, "msg.action.unhandled.exception",
+                        new Object[]{t.getClass().getName(), callbackClassName});
             ActionException ae = new ActionException("unhandled exception processing signal " + signal.toString());
             ae.initCause(t);
             throw ae;

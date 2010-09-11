@@ -159,7 +159,8 @@ public final class GroupHandleImpl implements GroupHandle {
                 } catch (Throwable t) {
                     lastThrowable = t;
                     failedSendToken = token;
-                    logger.warning("GroupHandleImpl.sendMesage: could not send message " + message + " for component " + targetComponentName + " to member " + token + " exception:" + t.getMessage());
+                    logger.log(Level.WARNING, "group.handle.sendmessage.failed",
+                            new Object[]{message,targetComponentName,token, t.getLocalizedMessage()});
                 }
             }
         }
@@ -279,11 +280,12 @@ public final class GroupHandleImpl implements GroupHandle {
             if (fenceForSelfRecovery(failedMemberToken)) {
                 saveRaisedFenceState(componentName, failedMemberToken);
             }
-
-            logger.log(Level.FINE, "Fence raised for member "
-                    + failedMemberToken + " by member "
-                    + getGMSContext().getServerIdentityToken()
-                    + " component " + componentName);
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "Fence raised for member "
+                        + failedMemberToken + " by member "
+                        + getGMSContext().getServerIdentityToken()
+                        + " component " + componentName);
+            }
         }
         else {
             throw new GMSException ("Could not raise fence. Fence for member "+failedMemberToken +" and Component "+ componentName+" already exists");
@@ -331,10 +333,12 @@ public final class GroupHandleImpl implements GroupHandle {
             dsc.removeFromCache(componentName,
                     getGMSContext().getServerIdentityToken(),
                     failedMemberToken);
-            logger.log(Level.FINE, "Fence lowered for member "
-                    + failedMemberToken + " by member "
-                    + getGMSContext().getServerIdentityToken()
-                    + " component " + componentName);
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "Fence lowered for member "
+                        + failedMemberToken + " by member "
+                        + getGMSContext().getServerIdentityToken()
+                        + " component " + componentName);
+            }
             //this removes any recovery appointments that were made but were
             // not exercised by the client thus leaving an orphan entry in
             // cache.
@@ -419,10 +423,10 @@ public final class GroupHandleImpl implements GroupHandle {
                     if (!memberToken.equals(c.getMemberTokenId())) {
                         if (((String) entries.get(c))
                                 .startsWith(REC_PROGRESS_STATE)) {
-                            logger.log(Level.FINER,
-                                    c.toString() + " value:" + entries.get(c));
-                            logger.log(Level.FINER,
-                                    "Returning true for isFenced query");
+                            if (logger.isLoggable(Level.FINER)){
+                                logger.log(Level.FINER, c.toString() + " value:" + entries.get(c));
+                                logger.log(Level.FINER,"Returning true for isFenced query");
+                            }
                             retval = true;
                             break;
                         }
@@ -441,14 +445,13 @@ public final class GroupHandleImpl implements GroupHandle {
             final String token = getGMSContext().getGroupCommunicationProvider()
                     .getGroupLeader();
 
-            logger.log(Level.FINE,
-                    "Force Syncing DistributedStateCache with " + token);
+            if (logger.isLoggable(Level.FINE)){
+                logger.log(Level.FINE, "Force Syncing DistributedStateCache with " + token);
+            }
             dsc.syncCache(token, true);
         }
         catch (GMSException e) {
-            logger.log(Level.WARNING,
-                    "Force Syncing of DistributedStateCache failed:"
-                            + e.getLocalizedMessage());
+            logger.log(Level.WARNING,"gh.dsc.force.sync.failed", new Object[]{e.getLocalizedMessage()});
         }
 
     }

@@ -74,9 +74,7 @@ public class Utility {
         try {
             result = sa.getCustomTagValue(tagName);
         } catch (NoSuchFieldException e) {
-            logger.log( Level.WARNING,
-                        new StringBuffer("Missing expected tag name:" + tagName + " in SystemAdvertisement for member:" + sa.getName() + ". Defaulting value to null.\n")
-                                .append( e.getLocalizedMessage() ).toString(), e);
+            logger.log( Level.WARNING,"util.sysadv.missing.custom.tag", new Object[]{tagName, sa.getName()});
         }
         return result;
     }

@@ -173,38 +173,36 @@ class ViewWindowImpl implements ViewWindow, Runnable {
     }
 
     public void run() {
-        try {
-            boolean alreadyLogged = false;
-            while (!getGMSContext().isShuttingDown()) {
-                EventPacket packet = null;
-                try {
-                    int vqSize = viewQueue.size();
-                    if (vqSize > 0) {
-                        logger.info("viewQueue size before take " + vqSize + " for group: " + groupName);
-                    }
-                    packet = viewQueue.take();
-                    if (packet != null) {
-                        logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent() + " for group:"
-                                   + groupName);
-                        newViewObserved(packet);
-                        alreadyLogged = false;
-                    } else {
-                        if (!alreadyLogged && logger.isLoggable(Level.FINER)) {
-                            logger.finer("viewQueue poll timeout after 30 seconds for group: " + groupName);
-                            alreadyLogged = true;
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    logger.log(Level.FINEST, e.getLocalizedMessage());
-                } catch (Throwable t) {
-                    final String packetInfo = (packet == null ? "<null>" : packet.toString());
-                    logger.log(Level.FINE, "handled exception processing event packet " + packetInfo, t);
+        boolean alreadyLogged = false;
+        while (!getGMSContext().isShuttingDown()) {
+            EventPacket packet = null;
+            try {
+                int vqSize = viewQueue.size();
+                if (vqSize > 0) {
+                    // todo: make Level.FINE before final release
+                    logger.log(Level.INFO, "viewQueue size before take " + vqSize + " for group: " + groupName);
                 }
+                packet = viewQueue.take();
+                if (packet != null) {
+                    logger.log(Level.FINE, "ViewWindow : processing a received view " + packet.getClusterViewEvent() + " for group:"
+                            + groupName);
+                    newViewObserved(packet);
+                    alreadyLogged = false;
+                } else {
+                    if (!alreadyLogged && logger.isLoggable(Level.FINER)) {
+                        logger.finer("viewQueue poll timeout after 30 seconds for group: " + groupName);
+                        alreadyLogged = true;
+                    }
+                }
+            } catch (InterruptedException e) {
+                logger.log(Level.FINEST, e.getLocalizedMessage());
+            } catch (Throwable t) {
+                final String packetInfo = (packet == null ? "<null>" : packet.toString());
+                logger.log(Level.WARNING, "view.window.eventhandler.exception", new Object[]{packetInfo});
+                logger.log(Level.WARNING, "stack trace", t);
             }
-            logger.info("normal termination of ViewWindow thread for group " + groupName);
-        } catch  (Throwable tOuter ) {
-            logger.log(Level.WARNING, "unexpected exception terminated ViewWindow thread for group" + groupName, tOuter);
         }
+        logger.log(Level.INFO, "view.window.thread.terminated", new Object[]{groupName});
     }
 
     private void newViewObserved(final EventPacket packet) {
@@ -214,7 +212,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             if (views.size() > MAX_VIEWS) {
                 views.remove(0);
             }
-            logger.log(Level.INFO, "membership.snapshot.analysis", new Object[]{packet.getClusterViewEvent().toString(), member.getMemberToken(), member.getGroupName()});
+            logger.log(Level.INFO, "membership.snapshot.analysis",
+                    new Object[]{packet.getClusterViewEvent().toString(),
+                                 member.getMemberToken(), member.getGroupName()});
             Signal[] activeSignals = analyzeViewChange(packet);
 
             if (activeSignals.length != 0) {
@@ -225,10 +225,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
 
     private ArrayList<GMSMember> getMemberTokens(final EventPacket packet) {
         final List<GMSMember> tokens = new ArrayList<GMSMember>(); // contain list of GMSMember objects.
-        final StringBuffer sb =
-                        new StringBuffer("GMS View Change Received for group ").append(groupName).append(" : Members in view for ").
-                                append(packet.getClusterViewEvent().toString()).
-                                append("(before change analysis) are :\n");
+        final StringBuffer sb = new StringBuffer(100);
 
         // NOTE:  always synchronize currentCoreMembers and allCurrentMembers in this order when getting both locks at same time.
         synchronized (currentCoreMembers) {
@@ -264,7 +261,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                 }
             }
         }
-        logger.log(Level.INFO, sb.toString());
+        logger.log(Level.INFO, "view.window.view.change",
+                new Object[]{groupName, packet.getClusterViewEvent().toString(), sb.toString()});
         return (ArrayList<GMSMember>) tokens;
     }
 
@@ -410,7 +408,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                 signals.add(new FailureNotificationSignalImpl(failedMember,
                                                               member.getGroupName(), member.getStartTime()));
             }
-            logger.fine("removing newly added node from the suspected list..." + failedMember);
+            if (logger.isLoggable(Level.FINE)){
+                logger.fine("removing newly added node from the suspected list..." + failedMember);
+            }
             getGMSContext().removeFromSuspectList(failedMember);
         }
     }
@@ -468,7 +468,9 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                 // server.
                 final List<String> recApptsHeldByFailedMember = getRecApptsHeldByFailedMember(token);
                 for (final String comp : router.getFailureRecoveryComponents()) {
-                    logger.log(Level.FINE, new StringBuffer("adding failure recovery signal for component=").append(comp).toString());
+                    if (logger.isLoggable(Level.FINE)){
+                        logger.log(Level.FINE, new StringBuffer("adding failure recovery signal for component=").append(comp).toString());
+                    }
                     signals.add(new FailureRecoverySignalImpl(comp, token, groupName, startTime));
                     if (!recInProgressMembers.isEmpty()) {
                         for (final String fToken : recInProgressMembers) {
@@ -495,15 +497,17 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                 final Object entry = entries.get(gmsCacheable);
                 if (entry instanceof String) {
                     if (((String) entry).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(gmsCacheable.getKey())) {
-                        //if the target member is already up dont include that
-                        logger.log(Level.FINER, new StringBuffer("Failed Member ")
-                                .append(token)
-                                .append(" was appointed for recovery of ")
-                                .append(gmsCacheable.getKey())
-                                .append(" when ").append(token)
-                                .append(" failed. ")
-                                .append("Adding to recovery-appointed list...")
-                                .toString());
+                        if (logger.isLoggable(Level.FINER)){
+                            //if the target member is already up dont include that
+                            logger.log(Level.FINER, new StringBuffer("Failed Member ")
+                                    .append(token)
+                                    .append(" was appointed for recovery of ")
+                                    .append(gmsCacheable.getKey())
+                                    .append(" when ").append(token)
+                                    .append(" failed. ")
+                                    .append("Adding to recovery-appointed list...")
+                                    .toString());
+                        }
                         tokens.add((String) gmsCacheable.getKey());
                         try {
                             dsc.removeFromCache(gmsCacheable.getComponentName(),
@@ -513,7 +517,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                                     getGMSContext().getServerIdentityToken(), (String) gmsCacheable.getKey(),
                                     getGMSContext().getGroupName());
                         } catch (GMSException e) {
-                            logger.log(Level.FINE, e.getLocalizedMessage(), e);
+                            logger.log(Level.INFO, e.getLocalizedMessage(), e);
                         }
                     }
                 }
@@ -533,10 +537,12 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                 final Object entry = entries.get(gmsCacheable);
                 if (entry instanceof String) {
                     if (((String) entry).startsWith(REC_PROGRESS_STATE)) {
-                        logger.log(Level.FINER, new StringBuffer("Failed Member ").append(token)
-                                .append(" had recovery-in-progress for ")
-                                .append(gmsCacheable.getKey()).append(" when ")
-                                .append(token).append(" failed. ").toString());
+                        if (logger.isLoggable(Level.FINER)){
+                            logger.log(Level.FINER, new StringBuffer("Failed Member ").append(token)
+                                    .append(" had recovery-in-progress for ")
+                                    .append(gmsCacheable.getKey()).append(" when ")
+                                    .append(token).append(" failed. ").toString());
+                        }
                         tokens.add((String) gmsCacheable.getKey());
                         RecoveryTargetSelector.setRecoverySelectionState(
                                 getGMSContext().getServerIdentityToken(),
@@ -657,7 +663,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
     private void addGroupLeadershipNotificationSignal( final String token,
                                                        final String groupName,
                                                        final long startTime ) {
-        logger.log( Level.INFO, "adding GroupLeadershipNotification signal leaderMember: " + token + " of group: " + groupName );
+        logger.log( Level.INFO, "view.window.groupleader.notify", new Object[]{token,groupName});
         signals.add( new GroupLeadershipNotificationSignalImpl( token,
                                                                 getPreviousView(),
                                                                 getCurrentView(),

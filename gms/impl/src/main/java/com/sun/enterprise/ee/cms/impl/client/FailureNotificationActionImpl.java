@@ -71,7 +71,7 @@ public class FailureNotificationActionImpl implements FailureNotificationAction{
             signalAcquired = true;
             notifyListeners(signal);
         } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+            logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
         } finally {
 
             //ALWAYS call Release after completing any other processing.
@@ -79,7 +79,7 @@ public class FailureNotificationActionImpl implements FailureNotificationAction{
                 try {
                     signal.release();
                 } catch (SignalReleaseException e) {
-                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                    logger.log(Level.SEVERE, e.getLocalizedMessage(),e);
                 }
             }
         }

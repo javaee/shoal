@@ -200,7 +200,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
 
             if (ctx == null) {
                 // TODO: ouch, we have received null from the factory. what to do? throwing an exception? log at least
-                logger.log(Level.WARNING, "GMSContext from GMSContextFactory is null for groupName: " + groupName);
+                logger.log(Level.WARNING, "dsc.no.ctx", new Object[]{groupName});
             } else {
                 // set our not null ctx as the new value on ctxRef, expecting its value is still null
                 boolean oldValueWasNull = ctxRef.compareAndSet(null, ctx);
@@ -327,7 +327,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
                     }
                     retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
                 } catch (GMSException e) {
-                    logger.log(Level.WARNING, "GMSException during DistributedStateCache Sync...." + e);
+                    logger.log(Level.WARNING, "dsc.sync.exception", e);
                 } catch (InterruptedException e) {
                     //ignore
                 }
@@ -501,10 +501,12 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             getGMSContext().getGroupCommunicationProvider().sendMessage(member, msg, true);
             sent = true;
         } catch (MemberNotInViewException e) {
-            logger.log(Level.WARNING, "Member " + member +
-                    " is not in the view anymore. Hence not performing sendMessage operation", e);
+            if (logger.isLoggable(Level.FINE)){
+                logger.log(Level.FINE, "Member " + member +
+                        " is not in the view anymore. Hence not performing sendMessage operation", e);
+            }
         } catch (GMSException ge) {
-            logger.log(Level.WARNING, "DistributedStateCacheImpl.sendMessage failed to " + member + " " + " message:" + msg, ge);
+            logger.log(Level.WARNING, "dsc.send.failed", new Object[]{member, msg});
         }
         return sent;
     }

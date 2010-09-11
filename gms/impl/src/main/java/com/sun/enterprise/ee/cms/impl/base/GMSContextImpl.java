@@ -202,7 +202,7 @@ public class GMSContextImpl extends GMSContextBase {
                                       final GMSConstants.shutdownState shutdownState) {
         // if not groupleader, seize it before shutting down all other members of the group.
         if (!this.getGroupCommunicationProvider().isGroupLeader()) {
-            logger.log(Level.INFO, "Assuming group leadership to shutdown group: " + groupName);
+            logger.log(Level.INFO, "gmsctx.assume.groupleader", new Object[]{groupName});
             assumeGroupLeadership();
         }
         groupCommunicationProvider.

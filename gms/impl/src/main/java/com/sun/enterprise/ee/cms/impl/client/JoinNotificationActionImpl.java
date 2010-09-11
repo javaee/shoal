@@ -66,13 +66,13 @@ public class JoinNotificationActionImpl implements JoinNotificationAction {
             signalAcquired = true;
             callBack.processNotification(s);
         } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+            logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
         } finally {
             if (signalAcquired) {
                 try {
                     s.release();
                 } catch (SignalReleaseException e) {
-                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                    logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
                 }
             }
         }

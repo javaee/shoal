@@ -96,11 +96,15 @@ public class MessageWindow implements Runnable {
                 recordMessageQueueHighWaterMark();
                 final MessagePacket packet = messageQueue.take();
                 if (packet != null) {
-                    logger.log(Level.FINER, "Processing received message .... "+ packet.getMessage());
+                    if (logger.isLoggable(Level.FINER)){
+                        logger.log(Level.FINER, "Processing received message .... "+ packet.getMessage());
+                    }
                     newMessageReceived(packet);
                 }
             } catch (InterruptedException e) {
-                logger.log(Level.FINEST, e.getLocalizedMessage());
+                logger.log(Level.FINE, e.getLocalizedMessage());
+            } catch (Throwable t) {
+                logger.log(Level.WARNING, "msg.wdw.exception.processing.msg", t);
             }
         }
         if (monitorLogger.isLoggable(Level.FINE)) {
@@ -110,24 +114,26 @@ public class MessageWindow implements Runnable {
         }
         if (messageQueue != null && messageQueue.size() > 0) {
             int messageQueueSize = messageQueue.size();
-            logger.warning("MessageWindow thread for group " + groupName + " terminated due to shutdown notification with " + messageQueueSize + " unprocessed messages");
+            logger.log(Level.WARNING, "msg.wdw.thread.shutdown", new Object[]{groupName, messageQueueSize});
             if (messageQueueSize > 0 && logger.isLoggable(Level.FINER)) {
                 Iterator<MessagePacket> mqIter = messageQueue.iterator();
-                logger.finer("Dumping received but unprocessed messages for group: " + groupName);
+                if (logger.isLoggable(Level.FINER)){
+                    logger.finer("Dumping received but unprocessed messages for group: " + groupName);
+                }
                 while (mqIter.hasNext()) {
                     MessagePacket mp = mqIter.next();
                     Object message = mp.getMessage();
                     String sender = mp.getAdvertisement().getName();
                     if (message instanceof GMSMessage) {
                         writeLog(sender, (GMSMessage)mp.getMessage());
-                    } else if (message instanceof DSCMessage) {
-                        logger.log(Level.FINER, MessageFormat.format("Unprocessed DSCMessageReceived from :{0}, Operation :{1}", sender, ((DSCMessage)message).getOperation()));
+                    } else if (message instanceof DSCMessage && logger.isLoggable(Level.FINE)) {
+                        logger.log(Level.FINE, MessageFormat.format("Unprocessed DSCMessageReceived from :{0}, Operation :{1}", sender, ((DSCMessage)message).getOperation()));
                     }
                 }
             }
 
         } else {
-            logger.info("MessageWindow thread for group " + groupName + " terminated due to shutdown notification");
+            logger.log(Level.INFO, "msg.wdw.thread.terminated", new Object[]{groupName});
         }
     }
 

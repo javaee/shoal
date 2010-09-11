@@ -76,7 +76,7 @@ public class FailureRecoveryActionImpl implements FailureRecoveryAction {
             logger.log(Level.FINE,component+":Failure Recovery Signal acquired");
             notifyListeners(signal);
         } catch (SignalAcquireException e) {
-            logger.log(Level.SEVERE, e.getLocalizedMessage());
+            logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
         } finally {
             if (signalAcquired) {
                 //Always Release after completing any other processing.This call is
@@ -85,7 +85,7 @@ public class FailureRecoveryActionImpl implements FailureRecoveryAction {
                     signal.release();
                     logger.log(Level.FINE, component+":Failure Recovery Signal released");
                 } catch (SignalReleaseException e) {
-                    logger.log(Level.SEVERE, e.getLocalizedMessage());
+                    logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
                 }
             }
         }

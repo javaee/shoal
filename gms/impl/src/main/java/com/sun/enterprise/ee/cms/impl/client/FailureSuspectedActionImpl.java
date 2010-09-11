@@ -70,14 +70,14 @@ package com.sun.enterprise.ee.cms.impl.client;
            signalAcquired = true;
            notifyListeners(signal);
        } catch (SignalAcquireException e) {
-           logger.log(Level.SEVERE, e.getLocalizedMessage());
+           logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
        } finally {
            if (signalAcquired) {
                try {
                    //ALWAYS call Release after completing any other processing.
                    signal.release();
                } catch (SignalReleaseException e) {
-                   logger.log(Level.SEVERE, e.getLocalizedMessage());
+                   logger.log(Level.SEVERE, e.getLocalizedMessage(), e);
                }
            }
        }
