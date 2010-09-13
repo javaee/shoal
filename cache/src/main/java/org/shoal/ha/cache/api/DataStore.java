@@ -65,14 +65,6 @@ public interface DataStore<K, V> {
      */
     public V get(K k)
             throws DataStoreException;
-    /**
-     * Returns the value to which the specified key is mapped in this cache.
-     *
-     * @param k  The key
-     * @return The value if the association exists or null.
-     */
-    public V get(K k, String[] replicaHint)
-            throws DataStoreException;
 
     /**
      * Removes the mapping between the key and the object.
@@ -91,44 +83,6 @@ public interface DataStore<K, V> {
             throws DataStoreException;
 
     /**
-     * Performs an incremental update of the value associated with this key. The
-     *  DataStore's DataStoreEntryHelper.updateState() method will be called with the key,
-     *  the DataStoreEnrty and the delta. If no value is associated with K, then a
-     *  hollow DataStoreEntry will be passed to DataStoreEntryHelper.updateState().
-     *
-     * @param k The key
-     * @param delta The object whose eval() method will be called.
-     *
-     * @see #{DataStoreEntryEvaluator.eval}
-     */
-    public String updateDelta(K k, V delta)
-                throws DataStoreException;
-
-    /**
-     * Finds / Retrieves values that satisfy a criteria as dictated by the evaluator.
-     *  The evaluator's eval() method will be called with both the key and the
-     *  existing value.
-     *
-     * @param evaluator The StoreEntryEvaluator whose eval() method will be called.
-     *
-     * @see #{DataStoreEntryEvaluator.eval}
-     */
-    public Collection find(DataStoreEntryEvaluator<K, V> evaluator);
-
-    //TODO: findByCriteria() will be ported from Sailfin soon.
-    
-    /**
-     * Updates all existing values associated with a key using the evaluator. The
-     *  evaluator's eval() method will be called with both the key and the
-     *  existing value.
-     *
-     * @param evaluator The StoreEntryEvaluator whose eval() method will be called.
-     *
-     * @see #{DataStoreEntryEvaluator.eval}
-     */
-    public void update(DataStoreEntryEvaluator<K, V> evaluator);
-
-    /**
      * Removes all entries that were not accessed for more than 'idlefor' millis
      *
      * @param idleFor Time in milli seconds
@@ -140,4 +94,6 @@ public interface DataStore<K, V> {
      */
     public void close();
 
+    public int size();
+    
 }

@@ -39,8 +39,10 @@ package org.shoal.adapter.store.commands;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -49,56 +51,72 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class StaleCopyRemoveCommand<K, V>
-    extends Command<K, V> {
+public class SizeResponseCommand<K, V>
+        extends Command<K, V> {
 
-    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_STALE_REMOVE_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SIZE_RESPONSE_COMMAND);
 
-    private K key;
+    private long tokenId;
 
-    private String staleTargetName;
+    private int size;
 
-    public StaleCopyRemoveCommand() {
-        super(ReplicationCommandOpcode.STALE_REMOVE);
+    private String originatingInstance;
+
+    private String respondingInstanceName;
+
+    public SizeResponseCommand() {
+        super(ReplicationCommandOpcode.SIZE_RESPONSE);
     }
 
-    public K getKey() {
-        return key;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
-    }
-
-    public String getStaleTargetName() {
-        return staleTargetName;
-    }
-
-    public void setStaleTargetName(String targetName) {
-        this.staleTargetName = targetName;
+    public SizeResponseCommand(String originatingInstance, long tokenId, int size) {
+        this();
+        this.originatingInstance = originatingInstance;
+        this.tokenId = tokenId;
+        this.size = size;
     }
 
     @Override
-    protected StaleCopyRemoveCommand<K, V> createNewInstance() {
-        return new StaleCopyRemoveCommand<K, V>();
+    protected SizeResponseCommand<K, V> createNewInstance() {
+        return new SizeResponseCommand<K, V>();
     }
 
     @Override
-    public void writeCommandPayload(ReplicationOutputStream ros)
+    protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-        setTargetName(staleTargetName);
-        dsc.getDataStoreKeyHelper().writeKey(ros, getKey());
+        setTargetName(originatingInstance);
+
+        ros.writeLong(tokenId);
+        ros.writeInt(size);
+        ros.writeLengthPrefixedString(dsc.getInstanceName());
     }
+
+
+
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+
+        tokenId = ris.readLong();
+        size = ris.readInt();
+        respondingInstanceName = ris.readLengthPrefixedString();
     }
 
     @Override
     public void execute(String initiator) {
-        dsc.getReplicaStore().remove(key);
-        System.out.println("*********************  REMOVED STALE REPLICA: " + key + "   ** SENT BY: " + initiator);
+
+        ResponseMediator respMed = getDataStoreContext().getResponseMediator();
+        CommandResponse resp = respMed.getCommandResponse(tokenId);
+        if (resp != null) {
+            if (_logger.isLoggable(Level.INFO)) {
+                _logger.log(Level.INFO, dsc.getInstanceName() + " executed size_response tokenId=" + tokenId + " value " + size);
+            }
+            
+            resp.setRespondingInstanceName(respondingInstanceName);
+            resp.setResult(size);
+        }
     }
 
+    public String toString() {
+        return getName() + "(" + tokenId + ")";
+    }
 }

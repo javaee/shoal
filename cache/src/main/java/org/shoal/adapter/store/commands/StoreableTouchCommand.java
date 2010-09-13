@@ -118,24 +118,26 @@ public class StoreableTouchCommand<K, V extends Storeable>
     public void execute(String initiator)
         throws DataStoreException {
 
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
-        synchronized (entry) {
-            if (! entry.isRemoved()) {
-                V entryV = entry.getV();
-                if (entryV != null) {
-                    if (entryV._storeable_getVersion() + 1 == version) {
-                        entryV._storeable_setVersion(version);
-                        entryV._storeable_setLastAccessTime(accessTime);
-                        entryV._storeable_setMaxIdleTime(maxIdleTime);
-                    } else if (entryV._storeable_getVersion() >= version) {
-                        //ignore ? Stale data
+        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getEntry(k);
+        if (entry != null) {
+            synchronized (entry) {
+                if (! entry.isRemoved()) {
+                    V entryV = entry.getV();
+                    if (entryV != null) {
+                        if (entryV._storeable_getVersion() + 1 == version) {
+                            entryV._storeable_setVersion(version);
+                            entryV._storeable_setLastAccessTime(accessTime);
+                            entryV._storeable_setMaxIdleTime(maxIdleTime);
+                        } else if (entryV._storeable_getVersion() >= version) {
+                            //ignore ? Stale data
+                        } else {
+                            List<Command<K, V>> commands = entry.getPendingUpdates();
+                            _logger.log(Level.INFO, "Added to pending updates.... for key: " + k);
+                        }
                     } else {
                         List<Command<K, V>> commands = entry.getPendingUpdates();
                         _logger.log(Level.INFO, "Added to pending updates.... for key: " + k);
                     }
-                } else {
-                    List<Command<K, V>> commands = entry.getPendingUpdates();
-                    _logger.log(Level.INFO, "Added to pending updates.... for key: " + k);
                 }
             }
         }

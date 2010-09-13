@@ -36,69 +36,97 @@
 
 package org.shoal.adapter.store.commands;
 
+import org.shoal.ha.cache.api.DataStoreEntry;
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
-public class StaleCopyRemoveCommand<K, V>
-    extends Command<K, V> {
+public class SizeRequestCommand<K, V>
+        extends Command<K, V> {
 
-    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_STALE_REMOVE_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SIZE_REQUEST_COMMAND);
 
-    private K key;
+    private long tokenId;
 
-    private String staleTargetName;
+    private String targetInstanceName;
 
-    public StaleCopyRemoveCommand() {
-        super(ReplicationCommandOpcode.STALE_REMOVE);
+    private Future future;
+
+    public SizeRequestCommand() {
+        super(ReplicationCommandOpcode.SIZE_REQUEST);
     }
 
-    public K getKey() {
-        return key;
-    }
+    public SizeRequestCommand(String targetInstanceName) {
+        this();
 
-    public void setKey(K key) {
-        this.key = key;
-    }
-
-    public String getStaleTargetName() {
-        return staleTargetName;
-    }
-
-    public void setStaleTargetName(String targetName) {
-        this.staleTargetName = targetName;
+        this.targetInstanceName = targetInstanceName;
     }
 
     @Override
-    protected StaleCopyRemoveCommand<K, V> createNewInstance() {
-        return new StaleCopyRemoveCommand<K, V>();
+    protected SizeRequestCommand<K, V> createNewInstance() {
+        return new SizeRequestCommand<K, V>();
     }
-
+    
     @Override
-    public void writeCommandPayload(ReplicationOutputStream ros)
+    protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-        setTargetName(staleTargetName);
-        dsc.getDataStoreKeyHelper().writeKey(ros, getKey());
+        ResponseMediator respMed = dsc.getResponseMediator();
+        CommandResponse resp = respMed.createCommandResponse();
+
+        future = resp.getFuture();
+        setTargetName(targetInstanceName);
+        
+        ros.writeLengthPrefixedString(dsc.getInstanceName());
+        ros.writeLengthPrefixedString(targetInstanceName);
+        ros.writeLong(resp.getTokenId());
     }
+
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+
+        targetInstanceName = ris.readLengthPrefixedString();
+        String myName = ris.readLengthPrefixedString();
+        tokenId = ris.readLong();
     }
 
     @Override
-    public void execute(String initiator) {
-        dsc.getReplicaStore().remove(key);
-        System.out.println("*********************  REMOVED STALE REPLICA: " + key + "   ** SENT BY: " + initiator);
+    public void execute(String initiator)
+        throws DataStoreException {
+
+        int size = dsc.getReplicaStore().size();
+        SizeResponseCommand<K, V> srCmd = new SizeResponseCommand<K, V>(targetInstanceName, tokenId, size);
+        dsc.getCommandManager().execute(srCmd);
     }
 
+    public String toString() {
+        return getName() + "; tokenId=" + tokenId;
+    }
+
+    public int getResult() {
+        int result = 0;
+        try {
+            result = (Integer) future.get(3, TimeUnit.SECONDS);
+        } catch (Exception dse) {
+           //TODO
+        }
+
+        return result;
+    }
 }

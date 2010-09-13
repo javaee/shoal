@@ -58,6 +58,12 @@ public class ResponseMediator {
 
         return resp;
     }
+    public CumulativeCommandResponse createCumulativeCommandResponse(int maxResponse, Object initialValue) {
+        CumulativeCommandResponse resp = new CumulativeCommandResponse(this, maxResponse, initialValue);
+        responses.put(resp.getTokenId(), resp);
+
+        return resp;
+    }
 
     public CommandResponse getCommandResponse(long tokenId) {
         return  responses.get(tokenId);

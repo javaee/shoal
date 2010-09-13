@@ -135,7 +135,7 @@ public class ReplicationFrame<K, V> {
             data = bos.toByteArray();
 
             sb.append("\n\t").append("Wrote " + cmdSz + " commands; totalBytes: " + data.length);
-            System.out.println(sb.toString());
+//            System.out.println(sb.toString());
         } catch (IOException ioEx) {
         } finally {
             try {
@@ -189,7 +189,7 @@ public class ReplicationFrame<K, V> {
             }
         }
 
-        System.out.println(sb.toString());
+//        System.out.println(sb.toString());
         return frame;
     }
 

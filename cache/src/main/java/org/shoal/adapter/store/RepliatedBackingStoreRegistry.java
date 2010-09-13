@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RepliatedBackingStoreRegistry {
 
+
     private static Map<String, DataStoreContext> _contexts
             = new ConcurrentHashMap<String, DataStoreContext>();
 
@@ -43,5 +44,5 @@ public class RepliatedBackingStoreRegistry {
     public static final DataStoreContext getContext(String name) {
         return _contexts.get(name);
     }
-    
+
 }

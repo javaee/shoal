@@ -36,6 +36,7 @@
 
 package org.shoal.ha.cache.impl.store;
 
+import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
@@ -88,6 +89,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     private AtomicInteger foundLocallyCount = new AtomicInteger(0);
 
+    private long defaultIdleTimeoutInMillis;
+
     public ReplicatedDataStore(DataStoreConfigurator<K, V> conf, GroupService gs) {
         this.conf = conf;
         this.storeName = conf.getStoreName();
@@ -130,6 +133,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         gs.registerGroupMessageReceiver(storeName, cm);
 
         replicaStore = dsc.getReplicaStore();
+        replicaStore.setIdleEntryDetector(conf.getIdleEntryDetector());
 
         Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
         logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
@@ -148,6 +152,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
         synchronized (entry) {
             if (! entry.isRemoved()) {
+                entry.setLastAccessedAt(System.currentTimeMillis());
                 SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
                 cm.execute(cmd);
                 if (conf.isCacheLocally()) {
@@ -175,40 +180,41 @@ public class ReplicatedDataStore<K, V extends Serializable>
     }
 
     @Override
-    public String updateDelta(K k, V obj)
-        throws DataStoreException {
-        UpdateDeltaCommand<K, V> cmd = new UpdateDeltaCommand<K, V>(k, obj);
-        cm.execute(cmd);
-
-        return cmd.getKeyMappingInfo();
-    }
-
-    @Override
     public V get(K key)
             throws DataStoreException {
-        return get(key, new String[0]);
-    }
-
-    @Override
-    public V get(K key, String[] replicaHint)
-            throws DataStoreException {
-
         V v = null;
         DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
-        if ((entry != null) && !entry.isRemoved()) {
-            v = entry.getV();
-            foundLocallyCount.incrementAndGet();
-        } else {
-            return null; //Because it is already removed
+        if (entry != null) {
+            if (!entry.isRemoved()) {
+                v = entry.getV();
+                if (v != null) {
+                    foundLocallyCount.incrementAndGet();
+                }
+            } else {
+                return null; //Because it is already removed
+            }
         }
 
         if (v == null) {
+
+            KeyMapper keyMapper = dsc.getKeyMapper();
+            String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
+            String[] replicaHint = replicachoices.split(":");
+            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                                            + "; ReplicaChoices: " + replicachoices);
+
             String respondingInstance = null;
             for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
-                simpleBroadcastCount.incrementAndGet();
                 String target = replicaHint[replicaIndex];
+                if (target == null || target.trim().length() == 0) {
+                    continue;
+                }
+                simpleBroadcastCount.incrementAndGet();
                 LoadRequestCommand<K, V> command
                         = new LoadRequestCommand<K, V>(key, target);
+
+                _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                            + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
 
                 cm.execute(command);
                 v = command.getResult(3, TimeUnit.SECONDS);
@@ -217,11 +223,14 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     break;
                 }
             }
-
+            
             if (v == null) {
                 broadcastLoadRequestCount.incrementAndGet();
                 BroadcastLoadRequestCommand<K, V> command
                         = new BroadcastLoadRequestCommand<K, V>(key);
+
+                _logger.log(Level.WARNING, "ReplicatedDataStore: For Key=" + key
+                                            + "; Performing load using broadcast ");
 
                 cm.execute(command);
                 v = command.getResult(3, TimeUnit.SECONDS);
@@ -231,14 +240,24 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
 
             if (v != null) {
-                entry = replicaStore.getOrCreateEntry(key);
-                synchronized (entry) {
-                    if (!entry.isRemoved()) {
-                    } else if (conf.isCacheLocally()) {
-                        entry.setV(v);
-                        entry.setReplicaInstanceName(respondingInstance);
-                        //Note: Do not remove the stale replica now. We will
-                        //  do that in save
+                entry = replicaStore.getEntry(key);
+                if (entry != null) {
+                    synchronized (entry) {
+                        if (!entry.isRemoved()) {
+                            if (conf.isCacheLocally()) {
+                                entry.setV(v);
+                            }
+
+                            entry.setLastAccessedAt(System.currentTimeMillis());
+                            entry.setReplicaInstanceName(respondingInstance);
+                            //Note: Do not remove the stale replica now. We will
+                            //  do that in save
+                            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                                    + "; Successfully loaded data from " + respondingInstance);
+                        } else {
+                            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                                    + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
+                        }
                     }
                 }
             }
@@ -250,11 +269,13 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public void remove(K k)
             throws DataStoreException {
-        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
-        synchronized (entry) {
-            entry.markAsRemoved("Removed by ReplicatedDataStore.remove");
+        DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
+        if (entry != null) {
+            synchronized (entry) {
+                entry.markAsRemoved("Removed by ReplicatedDataStore.remove");
+            }
         }
-
+        
         String[] targets = dsc.getKeyMapper().getCurrentMembers();
 
         if (targets != null) {
@@ -271,28 +292,52 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public String touch(K k, long version, long ts, long ttl)
             throws DataStoreException {
-        return null;
+        String location = "";
+        DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
+        if (entry != null) {
+            synchronized (entry) {
+                long now = System.currentTimeMillis();
+                entry.setLastAccessedAt(now);
+                String target = entry.getReplicaInstanceName();
+                TouchCommand<K, V> cmd = new TouchCommand<K, V>(k, version, now, defaultIdleTimeoutInMillis);
+                cm.execute(cmd);
+
+                location = cmd.getKeyMappingInfo();
+            }
+        }
+        return location;
     }
 
     @Override
     public int removeIdleEntries(long idleFor) {
-        return 0;
-    }
-
-    @Override
-    public Collection find(DataStoreEntryEvaluator<K, V> kvDataStoreEntryEvaluator) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public void update(DataStoreEntryEvaluator<K, V> kvDataStoreEntryEvaluator) {
-        //To change body of implemented methods use File | Settings | File Templates.
+        return replicaStore.removeExpired();
     }
 
     @Override
     public void close() {
-        //To change body of implemented methods use File | Settings | File Templates.
     }
 
+    public int size() {
+        int result = 0;
+        KeyMapper km = dsc.getKeyMapper();
+        String[] targets = km.getCurrentMembers();
 
+        int targetCount = targets.length;
+        SizeRequestCommand[] commands = new SizeRequestCommand[targetCount];
+
+        for (int i=0; i<targetCount; i++) {
+            commands[i] = new SizeRequestCommand(targets[i]);
+            try {
+                dsc.getCommandManager().execute(commands[i]);
+            } catch (DataStoreException dse) {
+                //TODO:
+            }
+        }
+
+        for (int i=0; i<targetCount; i++) {
+            result += commands[i].getResult();
+        }
+
+        return result;
+    }
 }

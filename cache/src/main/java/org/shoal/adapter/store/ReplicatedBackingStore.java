@@ -60,6 +60,8 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     private ReplicatedBackingStoreFactory factory;
 
+    private long defaultMaxIdleTimeInMillis;
+
     /*package*/ void setBackingStoreFactory(ReplicatedBackingStoreFactory factory) {
         this.factory = factory;
     }
@@ -136,10 +138,34 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
         dsConf.addCommand(new TouchCommand<K, V>());
         dsConf.addCommand(new UpdateDeltaCommand<K, V>());
+        dsConf.addCommand(new SizeRequestCommand<K, V>());
+        dsConf.addCommand(new SizeResponseCommand<K, V>());
         
         dsConf.addCommand(new ListBackingStoreConfigurationCommand());
         dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
         dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
+
+        try {
+            System.out.println("******* $$$$$$ max.idle.timeout.in.millis : " + vendorSpecificMap.get("max.idle.timeout.in.millis"));
+            defaultMaxIdleTimeInMillis = Long.valueOf((String) vendorSpecificMap.get("max.idle.timeout.in.millis"));
+            if (defaultMaxIdleTimeInMillis > 0) {
+                dsConf.setIdleEntryDetector(
+                    new IdleEntryDetector<K, V>() {
+                        @Override
+                        public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
+
+                            boolean result = defaultMaxIdleTimeInMillis > 0 &&
+                                    kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
+                            //_logger.log("Removing expired data: " + kvDataStoreEntry);
+                            return result;
+                        }
+                    }
+                );
+            }
+        } catch (Exception ex) {
+            //TODO
+        }
+
 
         dataStore = DataStoreFactory.createDataStore(dsConf);
 
@@ -150,13 +176,8 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public V load(K key, String versionInfo) throws BackingStoreException {
-        return this.doLoad(key, new String[0]);
-    }
-
-    public V doLoad(K key, String[] replicaHint)
-        throws BackingStoreException {
         try {
-            return dataStore.get(key, replicaHint);
+            return dataStore.get(key);
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during load: " + key, dsEx);
         }
@@ -182,12 +203,12 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
-        return 0; //return dataStore.removeIdleEntries(idleTime);
+        return dataStore.removeIdleEntries(idleTime);
     }
 
     @Override
     public int size() throws BackingStoreException {
-        return 0;
+        return dataStore.size();
     }
 
     @Override
@@ -199,9 +220,9 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     @Override
     public void updateTimestamp(K key, long time) throws BackingStoreException {
         try {
-            dataStore.touch(key, Long.MAX_VALUE - 1, time, 30 * 60 * 1000);
+            dataStore.touch(key, Long.MAX_VALUE - 1, time, defaultMaxIdleTimeInMillis);
         } catch (DataStoreException dsEx) {
-            throw new BackingStoreException("Error during load: " + key, dsEx);
+            throw new BackingStoreException("Error during updateTimestamp: " + key, dsEx);
         }
     }
 

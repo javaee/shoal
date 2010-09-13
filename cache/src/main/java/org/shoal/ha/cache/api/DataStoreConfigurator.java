@@ -79,6 +79,8 @@ public class DataStoreConfigurator<K, V> {
 
     private boolean addCommands;
 
+    private IdleEntryDetector<K, V> idleEntryDetector;
+
     public String getInstanceName() {
         return instanceName;
     }
@@ -211,6 +213,14 @@ public class DataStoreConfigurator<K, V> {
 
     public boolean isDoAddCommands() {
         return addCommands;
+    }
+
+    public IdleEntryDetector<K, V> getIdleEntryDetector() {
+        return idleEntryDetector;
+    }
+
+    public void setIdleEntryDetector(IdleEntryDetector<K, V> idleEntryDetector) {
+        this.idleEntryDetector = idleEntryDetector;
     }
 
     @Override

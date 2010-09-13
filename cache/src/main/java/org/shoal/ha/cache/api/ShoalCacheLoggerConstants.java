@@ -38,4 +38,11 @@ public class ShoalCacheLoggerConstants {
     public static final String CACHE_DATA_STORE_REMOVE = "org.shoal.ha.cache.store.remove";
 
     public static final String CACHE_MONITOR = "org.shoal.ha.monitor";
+
+    public static final String CACHE_SIZE_REQUEST_COMMAND = "org.shoal.ha.cache.command.size";
+
+    public static final String CACHE_SIZE_RESPONSE_COMMAND = "org.shoal.ha.cache.command.size";
+
+    public static final String CACHE_REMOVE_EXPIRED_COMMAND = "org.shoal.ha.cache.command.remove_expired";
+    
 }

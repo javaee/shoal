@@ -75,7 +75,8 @@ public class DataStoreShell {
                 .setClassLoader(ClassLoader.getSystemClassLoader());
         Map<String, Object> map = conf.getVendorSpecificSettings();
         map.put("start.gms", true);
-        map.put("local.caching", true);
+        map.put("max.idle.timeout.in.millis", "900000");
+        //map.put("local.caching", true);
         map.put("class.loader", ClassLoader.getSystemClassLoader());
         BackingStore<String, Serializable> ds =
                 (new ReplicatedBackingStoreFactory()).createBackingStore(conf);
@@ -130,6 +131,12 @@ public class DataStoreShell {
             System.out.println("get(" + params[0] + ") => " + ds.load(params[0], hint));
         } else if ("remove".equalsIgnoreCase(command)) {
             ds.remove(params[0]);
+        } else if ("size".equalsIgnoreCase(command)) {
+            int size = ds.size();
+            System.out.println("Size: " + size);
+        } else if ("expireIdle".equalsIgnoreCase(command)) {
+            int count = ds.removeExpired(15);
+            System.out.println("** Idle Entries Removed: " + count);
         }
     }
 }

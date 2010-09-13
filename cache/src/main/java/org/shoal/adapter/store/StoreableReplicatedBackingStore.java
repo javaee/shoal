@@ -47,6 +47,8 @@ import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
+import org.shoal.ha.cache.impl.util.CommandResponse;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
@@ -148,6 +150,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         dsConf.addCommand(new StoreableLoadResponseCommand<K, V>());
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
         dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
+        dsConf.addCommand(new SizeRequestCommand<K, V>());
+        dsConf.addCommand(new SizeResponseCommand<K, V>());
 
         dsConf.addCommand(new ListBackingStoreConfigurationCommand());
         dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
@@ -157,6 +161,25 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         if (keyMapper != null) {
             dsConf.setKeyMapper(keyMapper);
         }
+
+        dsConf.setIdleEntryDetector(
+                new IdleEntryDetector<K, V>() {
+                    @Override
+                    public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
+                        V v = kvDataStoreEntry.getV();
+                        boolean result = v != null && v._storeable_getMaxIdleTime() > 0
+                            && v._storeable_getLastAccessTime() + v._storeable_getMaxIdleTime() < nowInMillis;
+
+                        if (result) {
+                            System.out.println("**Removing expired entries: " + v);
+                        } else {
+
+                            System.out.println("**Entry " + v + " is still active...");
+                        }
+                        return result;
+                    }
+                }
+        );
 
         framework = new ReplicationFramework<K, V>(dsConf);
 
@@ -169,34 +192,54 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     @Override
     public V load(K key, String versionInfo) throws BackingStoreException {
-        return doLoad(key, Long.valueOf(versionInfo), new String[0]);
+        long version = Long.MIN_VALUE;
+        try {
+            version = Long.valueOf(versionInfo);
+        } catch (Exception ex) {
+            //TODO
+        }
+
+        return doLoad(key, Long.valueOf(versionInfo));
     }
 
-    public V doLoad(K key, long version, String[] replicaHint)
+    private V doLoad(K key, long version)
             throws BackingStoreException {
 
         V v = null;
         DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
-        if ((entry != null) && !entry.isRemoved()) {
-            v = entry.getV();
-            if (v == null || v._storeable_getVersion() < version) {
-                entry.setV(null);
-                v = null;
+        if (entry != null) {
+            if (!entry.isRemoved()) {
+                v = entry.getV();
+                if (v == null || v._storeable_getVersion() < version) {
+                    entry.setV(null);
+                    v = null;
+                } else {
+                    foundLocallyCount.incrementAndGet();
+                }
             } else {
-                foundLocallyCount.incrementAndGet();
+                return null; //Because it is already removed
             }
-        } else {
-            return null; //Because it is already removed
         }
 
         if (v == null) {
+            String replicachoices = framework.getKeyMapper().getReplicaChoices(framework.getGroupName(), key);
+            String[] replicaHint = replicachoices.split(":");
+            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                                            + "; ReplicaChoices: " + replicachoices);
             try {
                 String respondingInstance = null;
                 for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
-                    simpleBroadcastCount.incrementAndGet();
                     String target = replicaHint[replicaIndex];
+                    if (target == null || target.trim().length() == 0) {
+                        continue;
+                    }
+                    simpleBroadcastCount.incrementAndGet();
+
                     StoreableLoadRequestCommand<K, V> command
                             = new StoreableLoadRequestCommand<K, V>(key, version, target);
+
+                    _logger.log(Level.INFO, "StoreableReplicatedBackingStore: For Key=" + key
+                            + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
 
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
@@ -211,6 +254,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     StoreableBroadcastLoadRequestCommand<K, V> command
                             = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
 
+                    _logger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
+                            + "; Performing load using broadcast ");
+                    
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
                     if (v != null) {
@@ -219,14 +265,22 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 }
 
                 if (v != null) {
-                    entry = replicaStore.getOrCreateEntry(key);
-                    synchronized (entry) {
-                        if (!entry.isRemoved()) {
-                        } else if (localCachingEnabled) {
-                            entry.setV(v);
-                            entry.setReplicaInstanceName(respondingInstance);
-                            //Note: Do not remove the stale replica now. We will
-                            //  do that in save
+                    entry = replicaStore.getEntry(key);
+                    if (entry != null) {
+                        synchronized (entry) {
+                            if (!entry.isRemoved()) {
+                                if (localCachingEnabled) {
+                                    entry.setV(v);
+                                }
+                                _logger.log(Level.INFO, "StoreableReplicatedBackingStore: For Key=" + key
+                                    + "; Successfully loaded data from " + respondingInstance);
+                                entry.setReplicaInstanceName(respondingInstance);
+                                //Note: Do not remove the stale replica now. We will
+                                //  do that in save
+                            } else {
+                                _logger.log(Level.INFO, "StoreableReplicatedBackingStore: For Key=" + key
+                                    + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
+                            }
                         }
                     }
                 }
@@ -301,19 +355,33 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
-        /*
-        ReplicaStore<K, V> replicaStore = framework.getReplicaStore();
-        System.out.println("************************************************************");
-        System.out.println("**************  REMOVE EXPIRED *********************");
-        System.out.println("************************************************************");
-        return replicaStore.removeExpired(idleTime);
-        */
-        return 0;
+        return replicaStore.removeExpired();
     }
 
     @Override
     public int size() throws BackingStoreException {
-        return framework.getReplicaStore().size();
+
+        int result = 0;
+        KeyMapper km = framework.getKeyMapper();
+        String[] targets = km.getCurrentMembers();
+
+        int targetCount = targets.length;
+        SizeRequestCommand[] commands = new SizeRequestCommand[targetCount];
+
+        for (int i=0; i<targetCount; i++) {
+            commands[i] = new SizeRequestCommand(targets[i]);
+            try {
+                framework.execute(commands[i]);
+            } catch (DataStoreException dse) {
+                //TODO:
+            }
+        }
+
+        for (int i=0; i<targetCount; i++) {
+            result += commands[i].getResult();
+        }
+        
+        return result;
     }
 
     @Override
@@ -331,21 +399,22 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     public String updateTimestamp(K key, Long version, Long accessTime, Long maxIdleTime) throws BackingStoreException {
         String result = "";
         try {
-            DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(key);
-            synchronized (entry) {
-                if (! entry.isRemoved()) {
-                    if (entry.getReplicaInstanceName() != null) {
-                        StoreableTouchCommand<K, V> cmd = new StoreableTouchCommand<K, V>(key, version, accessTime, maxIdleTime);
-                        framework.execute(cmd);
+            DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
+            if (entry != null) {
+                synchronized (entry) {
+                    if (! entry.isRemoved()) {
+                        if (entry.getReplicaInstanceName() != null) {
+                            StoreableTouchCommand<K, V> cmd = new StoreableTouchCommand<K, V>(key, version, accessTime, maxIdleTime);
+                            framework.execute(cmd);
 
-                        result = entry.getReplicaInstanceName().equals(cmd.getTargetName())
-                                ? cmd.getTargetName() : "";
+                            result = entry.getReplicaInstanceName().equals(cmd.getTargetName())
+                                    ? cmd.getTargetName() : "";
+                        }
+                    } else {
+                        _logger.log(Level.WARNING, "Ignored updateTimeStamp as the entry is already removed. Key = " + key);
                     }
-                } else {
-                    _logger.log(Level.WARNING, "Ignored updateTimeStamp as the entry is already removed. Key = " + key);
                 }
             }
-
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during load: " + key, dsEx);
         }

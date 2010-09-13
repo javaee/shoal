@@ -56,7 +56,7 @@ public class CommandResponse
 
     private String respondingInstanceName;
 
-    private Object result;
+    protected Object result;
 
     private FutureTask future;
 

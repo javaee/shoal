@@ -34,69 +34,43 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.command;
+package org.shoal.ha.cache.impl.util;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicLong;
+
 
 /**
  * @author Mahesh Kannan
+ *
  */
-public class ReplicationCommandOpcode {
+public class CumulativeCommandResponse
+    extends CommandResponse {
 
+    private int maxResponse;
 
+    CountDownLatch latch;
 
-    public static final byte REPLICATION_FRAME_PAYLOAD = 1;
+    public CumulativeCommandResponse(ResponseMediator mediator, int maxResponse, Object initialValue) {
+        super(mediator);
+        this.maxResponse = maxResponse;
+        latch = new CountDownLatch(maxResponse);
 
-    public static final byte SIMPLE_ACK_COMMAND = 2;
+        //set initial value
+        result = initialValue;
+    }
 
-    public static final byte SAVE = 33;
+    public void setResult(Object v) {
+        updateResult(result, v);
+        latch.countDown();
+        if (latch.getCount() == 0) {
+            super.setResult(result);
+        }
+    }
 
-    public static final byte SAVE_DELTA = 34;
+    protected void updateResult(Object oldValue, Object newValue) {
 
-    public static final byte LOAD_REQUEST = 35;
-
-    public static final byte REMOVE = 36;
-
-    public static final byte LOAD_RESPONSE = 37;
-
-    public static final byte TOUCH = 38;
-
-    public static final byte REMOVE_EXPIRED = 39;
-
-    public static final byte STALE_REMOVE = 40;
-
-    public static final byte BROADCAST_LOAD_REQUEST = 41;
-
-    public static final byte SIZE_REQUEST = 51;
-
-    public static final byte SIZE_RESPONSE = 52;
-
-
-
-
-    public static final byte STOREABLE_SAVE = 68;
-
-    public static final byte STOREABLE_UNICAST_LOAD_REQUEST = 69;
-
-    public static final byte STOREABLE_BROADCAST_LOAD_REQUEST = 70;
-
-    public static final byte STOREABLE_REMOVE = 71;
-
-    public static final byte STOREABLE_LOAD_RESPONSE = 72;
-
-    public static final byte STOREABLE_TOUCH = 73;
-
-    public static final byte STOREABLE_REMOVE_EXPIRED = 74;
-
-    public static final byte STOREABLE_STALE_REMOVE = 75;
-
-    public static final byte STOREABLE_FULL_SAVE_COMMAND = 76;
-
-
-
-
-    public static final byte MONITOR_LIST_BACKING_STORE_CONF = 84;
-
-    public static final byte MONITOR_LIST_BACKING_STORE_CONF_RESPONSE = 86;
-
-    public static final byte MONITOR_LIST_REPLICA_STORE_ENTRIES = 87;
-
+    }
 }

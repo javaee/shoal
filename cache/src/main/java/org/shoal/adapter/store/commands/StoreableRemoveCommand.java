@@ -98,10 +98,8 @@ public class StoreableRemoveCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(key);
-        synchronized (entry) {
-            entry.markAsRemoved("Removed by removeCommand from " + initiator);
-        }
+        dsc.getReplicaStore().remove(key);
+        
         if (!dsc.isDoASyncReplication()) {
             super.sendAcknowledgement();
         }

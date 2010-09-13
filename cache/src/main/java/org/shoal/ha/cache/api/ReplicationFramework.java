@@ -146,6 +146,8 @@ public class ReplicationFramework<K, V extends Serializable> {
         gs.registerGroupMessageReceiver(storeName, cm);
 
         replicaStore = dsc.getReplicaStore();
+        replicaStore.setIdleEntryDetector(conf.getIdleEntryDetector());
+        
         _logger.log(Level.INFO, "ReplicationFramework initialized. Configuration: " + conf);
     }
 
@@ -189,4 +191,9 @@ public class ReplicationFramework<K, V extends Serializable> {
     public ReplicaStore<K, V> getReplicaStore() {
         return replicaStore;
     }
+
+    public KeyMapper getKeyMapper() {
+        return dsc.getKeyMapper();
+    }
+
 }

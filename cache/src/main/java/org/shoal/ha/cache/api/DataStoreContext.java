@@ -71,6 +71,7 @@ public class DataStoreContext<K, V> {
 
     private boolean doASyncReplication;
 
+    private IdleEntryDetector<K, V> idleDetector;
 
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
         this.serviceName = serviceName;
@@ -81,6 +82,9 @@ public class DataStoreContext<K, V> {
         this.responseMediator = new ResponseMediator();
 
         replica = new ReplicaStore<K, V>(this);
+        if (idleDetector != null) {
+            replica.setIdleEntryDetector(idleDetector);
+        }
     }
 
     public String getServiceName() {
