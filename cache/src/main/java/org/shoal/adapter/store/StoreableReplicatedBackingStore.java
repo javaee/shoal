@@ -319,6 +319,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     staleCmd.setKey(key);
                     staleCmd.setStaleTargetName(oldLocation);
                     framework.execute(staleCmd);
+                    _logger.log(Level.WARNING, "StoreableReplicatedBackingStore.save(" + key + "). "
+                            + "Just Saved data to: " +  result
+                            + "& removed stale copy from " + oldLocation);
                 }
 
                 result = cmd.getKeyMappingInfo();

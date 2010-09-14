@@ -62,6 +62,8 @@ public class SaveCommand<K, V>
 
     private transient byte[] rawReadState;
 
+    String replicaChoices;
+
     public SaveCommand() {
         super(ReplicationCommandOpcode.SAVE);
     }
@@ -98,7 +100,10 @@ public class SaveCommand<K, V>
 
     @Override
     public boolean computeTarget() {
-        super.selectReplicaInstance( k);
+        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
+        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
+        super.setTargetName(replicaChoices == null ? null : choices[0]);
+
         return getTargetName() != null;
     }
 
@@ -130,6 +135,10 @@ public class SaveCommand<K, V>
         return getName() + "(" + k + ")";
     }
 
+    @Override
+    public String getKeyMappingInfo() {
+        return replicaChoices;
+    }
 
     @Override
     public void onSuccess() {

@@ -135,8 +135,11 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
             if (e != null) {
                 synchronized (e) {
                     Storeable v = (Storeable) e.getV();
-                    if ((!e.isRemoved()) && (v._storeable_getVersion() >= minimumRequiredVersion)) {
-                        result = e.getV();
+
+                    if (!e.isRemoved()) {
+                        if (v != null && (v._storeable_getVersion() >= minimumRequiredVersion)) {
+                            result = e.getV();
+                        }
                     } else {
                         //Remove this stale / useless entry
                         e.markAsRemoved("Removed by StoreableLoadRequestCommand");
@@ -144,15 +147,15 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
                 }
             }
             if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + " RESULT load_request " + key + " => " + result);
+                _logger.log(Level.INFO, dsc.getInstanceName() + getName() + " will send " + key + " => " + result + " to " + initiator);
             }
             
-            if (!originatingInstance.equals(dsc.getInstanceName())) {
+            if (! originatingInstance.equals(dsc.getInstanceName())) {
                 StoreableLoadResponseCommand<K, V> rsp = new StoreableLoadResponseCommand<K, V>(key, result, tokenId);
                 rsp.setOriginatingInstance(originatingInstance);
                 getCommandManager().execute(rsp);
             } else {
-                resp.setResult(e);
+                resp.setResult(result);
             }
         } catch (DataStoreException dsEx) {
             resp.setException(dsEx);

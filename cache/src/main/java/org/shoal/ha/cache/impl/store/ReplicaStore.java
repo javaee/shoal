@@ -119,6 +119,8 @@ public class ReplicaStore<K, V> {
 
     public int removeExpired() {
         int result = 0;
+
+/*
         if (idleEntryDetector != null) {
             long now = System.currentTimeMillis();
             Iterator<DataStoreEntry<K, V>> iterator = map.values().iterator();
@@ -136,6 +138,7 @@ public class ReplicaStore<K, V> {
         } else {
             //System.out.println("ReplicaStore.removeExpired idleEntryDetector is EMPTY");
         }
+*/
 
         return result;
     }

@@ -98,10 +98,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
 
     @Override
     public boolean computeTarget() {
-        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
-        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
-        super.setTargetName(replicaChoices == null ? null : choices[0]);
-
+        super.selectReplicaInstance( k);
         return getTargetName() != null;
     }
 
