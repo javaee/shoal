@@ -334,5 +334,7 @@ public interface GroupHandle {
      * @return current view of AliveAndReady Core members
      */
     AliveAndReadyView getCurrentAliveAndReadyCoreView();
+
+    void removeRecoveryAppointments(String failedMemberToken, String componentName) throws GMSException;
 }
 

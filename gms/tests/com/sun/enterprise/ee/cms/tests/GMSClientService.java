@@ -100,19 +100,21 @@ public class GMSClientService implements Runnable, CallBack{
     
     public void run() {
         GroupHandle gh = gms.getGroupHandle();
-        while((gh.isFenced( serviceName, memberToken))){
-            try {
-                logger.log(Level.FINEST, "Waiting for fence to be lowered");
-                sleep(2000);
-            }
-            catch ( InterruptedException e ) {
-                logger.log(Level.WARNING, "Thread interrupted:"+
-                        e.getLocalizedMessage());
-            }
-        }
-        logger.log(Level.INFO, serviceName+":"+memberToken+
-                               ": is not fenced now, starting GMSclient:"+
-                               serviceName);
+
+        // don't test fencing anymore.
+//        while((gh.isFenced( serviceName, memberToken))){
+//            try {
+//                logger.log(Level.FINEST, "Waiting for fence to be lowered");
+//                sleep(2000);
+//            }
+//            catch ( InterruptedException e ) {
+//                logger.log(Level.WARNING, "Thread interrupted:"+
+//                        e.getLocalizedMessage());
+//            }
+//        }
+//        logger.log(Level.INFO, serviceName+":"+memberToken+
+//                               ": is not fenced now, starting GMSclient:"+
+//                               serviceName);
         logger.log(Level.INFO, "DUMPING:"+
                    gms.getAllMemberDetails(IIOP_MEMBER_DETAILS_KEY));
 /*        final Thread thisThread = Thread.currentThread();

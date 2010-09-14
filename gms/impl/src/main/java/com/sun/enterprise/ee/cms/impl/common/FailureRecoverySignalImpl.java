@@ -78,20 +78,19 @@ public class FailureRecoverySignalImpl extends FailureNotificationSignalImpl
      * @throws SignalAcquireException
      */
     @Override public void acquire() throws SignalAcquireException {
-        try {
-            final GroupHandle gh = ctx.getGroupHandle();
-            if(gh.isMemberAlive( failedMember ) ){
-                throw new GMSException ("Cannot raise fence on "+ failedMember
-                                        + " as it is already alive");
-            }
-            gh.raiseFence(componentName, failedMember);
-            logger.log(Level.FINE, "raised fence for component "+
-                                     componentName+" and member "+
-                                     failedMember);
-        }
-        catch ( GMSException e ) {
-            throw new SignalAcquireException( e );
-        }
+
+        // deprecate fencing in gms proper. transaction handling fencing itself.
+//        try {
+//            final GroupHandle gh = ctx.getGroupHandle();
+//            if(gh.isMemberAlive( failedMember ) ){
+//                throw new GMSException ("Cannot raise fence on "+ failedMember + " as it is already alive");
+//            }
+//            gh.raiseFence(componentName, failedMember);
+//            logger.log(Level.FINE, "raised fence for component "+componentName+" and member "+ failedMember);
+//        }
+//        catch ( GMSException e ) {
+//            throw new SignalAcquireException( e );
+//        }
     }
 
     /**
@@ -102,13 +101,13 @@ public class FailureRecoverySignalImpl extends FailureNotificationSignalImpl
     @Override public void release() throws SignalReleaseException
     {
         try {
-            GMSContextFactory
-                    .getGMSContext( groupName )
-                    .getGroupHandle()
-                    .lowerFence(componentName, failedMember);
-            if (logger.isLoggable(Level.FINE)){
-                logger.log(Level.FINE, "lowered fence for component "+ componentName +" and member "+ failedMember);
-            }
+            // deprecated fencining in gms proper.
+//          ctx.getGroupHandle().lowerFence(componentName, failedMember);
+//          logger.log(Level.FINE, "lowered fence for component "+ componentName +" and member "+ failedMember);
+
+            // GMS will reissue FailureRecovery if instance appointed as Recovery Agent fails before removing
+            // its appointment.
+            ctx.getGroupHandle().removeRecoveryAppointments(failedMember, componentName);
             failedMember=null;
         }
         catch ( GMSException e ) {

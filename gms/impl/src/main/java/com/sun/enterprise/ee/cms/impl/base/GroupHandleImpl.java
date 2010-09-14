@@ -343,14 +343,20 @@ public final class GroupHandleImpl implements GroupHandle {
             // not exercised by the client thus leaving an orphan entry in
             // cache.
             removeRecoveryAppointments(dsc.getFromCache(failedMemberToken),
-                    failedMemberToken);
+                    failedMemberToken, componentName);
             selfRecoveryList.remove(componentName + failedMemberToken);
         }
+    }
+    
+    public void removeRecoveryAppointments(String failedMemberToken, String componentName) throws GMSException {
+        DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
+        removeRecoveryAppointments(dsc.getFromCache(failedMemberToken),failedMemberToken, componentName);
     }
 
     private void removeRecoveryAppointments(
             final Map<GMSCacheable, Object> fromCache,
-            final String failedMemberToken) throws GMSException {
+            final String failedMemberToken,
+            final String componentName) throws GMSException {
         if (isWatchdog()) {
             return;
         }
@@ -359,9 +365,13 @@ public final class GroupHandleImpl implements GroupHandle {
                 .getDistributedStateCache();
 
         for (final GMSCacheable cKey : fromCache.keySet()) {
-            if (cKey.getKey().equals(failedMemberToken)
-                    &&
+            if (cKey.getKey().equals(failedMemberToken) &&
+                cKey.getComponentName().equals(componentName) &&
                     fromCache.get(cKey).toString().startsWith(REC_APPOINTED_STATE)) {
+                if (logger.isLoggable(Level.FINE)){
+                    logger.log(Level.FINE, "remove RecoveryAppointment componentName: " + componentName +
+                                " failedMember:" + failedMemberToken + "value="+ fromCache.get(cKey).toString());
+                }
                 dsc.removeFromCache(cKey.getComponentName(),
                         cKey.getMemberTokenId(),
                         (Serializable) cKey.getKey());
