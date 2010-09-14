@@ -47,7 +47,7 @@ public class StringManager {
     private static final StringManager instance = new StringManager();
 
     private static final ResourceBundle bundle = ResourceBundle.getBundle(
-        "com.sun.enterprise.gms.tools.LogStrings", Locale.getDefault());
+        "com.sun.enterprise.gms.tools.LocalStrings", Locale.getDefault());
 
     private StringManager() {}
 

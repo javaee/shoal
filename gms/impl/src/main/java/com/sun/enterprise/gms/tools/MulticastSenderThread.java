@@ -36,6 +36,7 @@
 
 package com.sun.enterprise.gms.tools;
 
+import static com.sun.enterprise.ee.cms.core.GMSConstants.MINIMUM_MULTICAST_TIME_TO_LIVE;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -88,6 +89,19 @@ public class MulticastSenderThread extends Thread {
                 } catch (Exception e) {
                     System.err.println(sm.get("could.not.set.ttl",
                         e.getLocalizedMessage()));
+                }
+            } else {
+                try {
+                    int defaultTTL = socket.getTimeToLive();
+                    if (defaultTTL < MINIMUM_MULTICAST_TIME_TO_LIVE) {
+                        log(String.format(
+                            "The default TTL for the socket is %d. " +
+                            "Setting it to minimum %d instead.",
+                            defaultTTL, MINIMUM_MULTICAST_TIME_TO_LIVE));
+                        socket.setTimeToLive(MINIMUM_MULTICAST_TIME_TO_LIVE);
+                    }
+                } catch (IOException ioe) {
+                    // who cares? we'll print it again a couple lines down
                 }
             }
 
