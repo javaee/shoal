@@ -200,8 +200,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
             KeyMapper keyMapper = dsc.getKeyMapper();
             String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
-            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
-                                            + "; ReplicaChoices: " + replicachoices);
+            _logger.log(Level.INFO, "ReplicatedDataStore.load(" + key
+                                            + "); ReplicaChoices: " + replicachoices);
 
             String respondingInstance = null;
             for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
@@ -213,7 +213,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 LoadRequestCommand<K, V> command
                         = new LoadRequestCommand<K, V>(key, target);
 
-                _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
                             + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
 
                 cm.execute(command);

@@ -45,11 +45,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class ReplicaStore<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
 
     private DataStoreContext<K, V> ctx;
 
@@ -123,13 +127,14 @@ public class ReplicaStore<K, V> {
                 synchronized (entry) {
                     if (idleEntryDetector.isIdle(entry, now)) {
                         entry.markAsRemoved("Idle");
+                        _logger.log(Level.WARNING, "ReplicaStore removing (idle) key: " + entry.getKey());
                         iterator.remove();
                         result++;
                     }
                 }
             }
         } else {
-            System.out.println("ReplicaStore.removeExpired idleEntryDetector is EMPTY");
+            //System.out.println("ReplicaStore.removeExpired idleEntryDetector is EMPTY");
         }
 
         return result;

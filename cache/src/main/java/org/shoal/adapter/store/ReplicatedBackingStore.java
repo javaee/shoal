@@ -49,6 +49,7 @@ import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.logging.Level;
 
 /**
  * @author Mahesh Kannan
@@ -146,18 +147,14 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
 
         try {
-            System.out.println("******* $$$$$$ max.idle.timeout.in.millis : " + vendorSpecificMap.get("max.idle.timeout.in.millis"));
-            defaultMaxIdleTimeInMillis = Long.valueOf((String) vendorSpecificMap.get("max.idle.timeout.in.millis"));
-            if (defaultMaxIdleTimeInMillis > 0) {
+            Long longVal = (Long) vendorSpecificMap.get("max.idle.timeout.in.seconds");
+            if (longVal != null && longVal > 0) {
+                defaultMaxIdleTimeInMillis = longVal * 1000;
                 dsConf.setIdleEntryDetector(
                     new IdleEntryDetector<K, V>() {
                         @Override
                         public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
-
-                            boolean result = defaultMaxIdleTimeInMillis > 0 &&
-                                    kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
-                            //_logger.log("Removing expired data: " + kvDataStoreEntry);
-                            return result;
+                            return kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
                         }
                     }
                 );

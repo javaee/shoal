@@ -102,6 +102,7 @@ public class StoreableBroadcastLoadRequestCommand<K, V extends Storeable>
         throws IOException {
         originatingInstance = dsc.getInstanceName();
 //        String targetName = ctx.getKeyMapper().findReplicaInstance(ctx.getGroupName(), key);
+
         setTargetName(null);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();

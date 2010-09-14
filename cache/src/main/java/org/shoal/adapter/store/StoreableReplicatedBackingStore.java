@@ -171,10 +171,10 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                             && v._storeable_getLastAccessTime() + v._storeable_getMaxIdleTime() < nowInMillis;
 
                         if (result) {
-                            System.out.println("**Removing expired entries: " + v);
+                            _logger.log(Level.WARNING, "**Removing expired entry: " + v);
                         } else {
 
-                            System.out.println("**Entry " + v + " is still active...");
+                            //System.out.println("**Entry " + v + " is still active...");
                         }
                         return result;
                     }
@@ -199,7 +199,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
             //TODO
         }
 
-        return doLoad(key, Long.valueOf(versionInfo));
+        return doLoad(key, version);
     }
 
     private V doLoad(K key, long version)
@@ -224,8 +224,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         if (v == null) {
             String replicachoices = framework.getKeyMapper().getReplicaChoices(framework.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
-            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
-                                            + "; ReplicaChoices: " + replicachoices);
+            _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key
+                                            + ", " + version + "); ReplicaChoices: " + replicachoices);
             try {
                 String respondingInstance = null;
                 for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
@@ -238,7 +238,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     StoreableLoadRequestCommand<K, V> command
                             = new StoreableLoadRequestCommand<K, V>(key, version, target);
 
-                    _logger.log(Level.INFO, "StoreableReplicatedBackingStore: For Key=" + key
+                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
                             + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
 
                     framework.execute(command);
@@ -254,7 +254,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     StoreableBroadcastLoadRequestCommand<K, V> command
                             = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
 
-                    _logger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
+                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
                             + "; Performing load using broadcast ");
                     
                     framework.execute(command);
@@ -278,7 +278,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                                 //Note: Do not remove the stale replica now. We will
                                 //  do that in save
                             } else {
-                                _logger.log(Level.INFO, "StoreableReplicatedBackingStore: For Key=" + key
+                                _logger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
                                     + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
                             }
                         }
@@ -322,6 +322,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 }
 
                 result = cmd.getKeyMappingInfo();
+                _logger.log(Level.INFO, "StoreableReplicatedBackingStore.save(" + key + "). Saved to " + result);
             }
 
             return result;
