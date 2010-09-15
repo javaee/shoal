@@ -194,6 +194,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     public V load(K key, String versionInfo) throws BackingStoreException {
         long version = Long.MIN_VALUE;
         try {
+            _logger.log(Level.INFO, "StoreableReplicatedBackingStore.load(" + key + ", " + versionInfo + ")");
             version = Long.valueOf(versionInfo);
         } catch (Exception ex) {
             //TODO
@@ -210,12 +211,14 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         if (entry != null) {
             if (!entry.isRemoved()) {
                 v = entry.getV();
-                if (v == null || v._storeable_getVersion() < version) {
-                    entry.setV(null);
-                    v = null;
-                } else {
-                    foundLocallyCount.incrementAndGet();
-                    _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key + "). LOCAL CACHE HIT: " + foundLocallyCount.get());
+                if (v != null) {
+                    if (v._storeable_getVersion() < version) {
+                        entry.setV(null);
+                        v = null;
+                    } else {
+                        foundLocallyCount.incrementAndGet();
+                        _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key + "). LOCAL REPLICA CACHE HIT: " + foundLocallyCount.get());
+                    }
                 }
             } else {
                 return null; //Because it is already removed
@@ -245,6 +248,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
                     if (v != null) {
+                        _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
                         respondingInstance = command.getRespondingInstanceName();
                         break;
                     }
@@ -252,16 +256,21 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
                 if (v == null) {
                     broadcastLoadRequestCount.incrementAndGet();
-                    StoreableBroadcastLoadRequestCommand<K, V> command
-                            = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
+                    String[] targetInstances = framework.getKeyMapper().getCurrentMembers();
+                    for (String targetInstance : targetInstances) {
+                        StoreableLoadRequestCommand<K, V> command
+                                = new StoreableLoadRequestCommand<K, V>(key, version, targetInstance);
 
-                    _logger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
-                            + "; Performing load using broadcast ");
-                    
-                    framework.execute(command);
-                    v = command.getResult(3, TimeUnit.SECONDS);
-                    if (v != null) {
-                        respondingInstance = command.getRespondingInstanceName();
+                        _logger.log(Level.FINE, "*StoreableReplicatedBackingStore: For Key=" + key
+                                + "; Trying to load from " + targetInstance);
+
+                        framework.execute(command);
+                        v = command.getResult(3, TimeUnit.SECONDS);
+                        if (v != null) {
+                            _logger.log(Level.INFO, "2.StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                            respondingInstance = targetInstance;
+                            break;
+                        }
                     }
                 }
 

@@ -139,10 +139,6 @@ public abstract class Command<K, V> {
         readCommandPayload(ris);
     }
 
-    protected void selectReplicaInstance(K key) {
-        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), key);
-    }
-
     public String getKeyMappingInfo() {
         return targetInstanceName == null ? "" : targetInstanceName;
     }

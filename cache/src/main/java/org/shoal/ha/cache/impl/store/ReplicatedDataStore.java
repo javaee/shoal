@@ -226,16 +226,20 @@ public class ReplicatedDataStore<K, V extends Serializable>
             
             if (v == null) {
                 broadcastLoadRequestCount.incrementAndGet();
-                BroadcastLoadRequestCommand<K, V> command
-                        = new BroadcastLoadRequestCommand<K, V>(key);
+                String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
+                for (String targetInstance : targetInstances) {
+                    LoadRequestCommand<K, V> lrCmd
+                        = new LoadRequestCommand<K, V>(key, targetInstance);
 
-                _logger.log(Level.WARNING, "ReplicatedDataStore: For Key=" + key
-                                            + "; Performing load using broadcast ");
+                    _logger.log(Level.FINE, "*ReplicatedDataStore: For Key=" + key
+                            + "; Trying to load from " + targetInstance);
 
-                cm.execute(command);
-                v = command.getResult(3, TimeUnit.SECONDS);
-                if (v != null) {
-                    respondingInstance = command.getRespondingInstanceName();
+                    cm.execute(lrCmd);
+                    v = lrCmd.getResult(3, TimeUnit.SECONDS);
+                    if (v != null) {
+                        respondingInstance = targetInstance;
+                        break;
+                    }
                 }
             }
 
