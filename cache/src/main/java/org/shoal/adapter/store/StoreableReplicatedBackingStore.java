@@ -64,7 +64,7 @@ import java.util.logging.Logger;
 public class StoreableReplicatedBackingStore<K extends Serializable, V extends Storeable>
         extends BackingStore<K, V> {
 
-    private static final int MAX_REPLICA_TRIES = 2;
+    private static final int MAX_REPLICA_TRIES = 1;
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE);
 
@@ -217,7 +217,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                         v = null;
                     } else {
                         foundLocallyCount.incrementAndGet();
-                        _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key + "). LOCAL REPLICA CACHE HIT: " + foundLocallyCount.get());
+                        _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key
+                                + "). LOCAL REPLICA CACHE HIT: " + v + "; hitCount: " + foundLocallyCount.get());
                     }
                 }
             } else {
@@ -234,7 +235,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 String respondingInstance = null;
                 for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
                     String target = replicaHint[replicaIndex];
-                    if (target == null || target.trim().length() == 0) {
+                    if (target == null || target.trim().length() == 0 || target.equals(framework.getInstanceName())) {
                         continue;
                     }
                     simpleBroadcastCount.incrementAndGet();
@@ -258,6 +259,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     broadcastLoadRequestCount.incrementAndGet();
                     String[] targetInstances = framework.getKeyMapper().getCurrentMembers();
                     for (String targetInstance : targetInstances) {
+                        if (targetInstance.equals(framework.getInstanceName())) {
+                            continue;
+                        }
                         StoreableLoadRequestCommand<K, V> command
                                 = new StoreableLoadRequestCommand<K, V>(key, version, targetInstance);
 

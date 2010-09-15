@@ -100,9 +100,8 @@ public class SaveCommand<K, V>
 
     @Override
     public boolean computeTarget() {
-        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
-        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
-        super.setTargetName(replicaChoices == null ? null : choices[0]);
+        replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        super.setTargetName(replicaChoices);
 
         return getTargetName() != null;
     }
@@ -127,6 +126,7 @@ public class SaveCommand<K, V>
         }
 
         if (! dsc.isDoASyncReplication()) {
+            _logger.log(Level.WARNING, "SaveCommand Sending SIMPLE_ACK");
             super.sendAcknowledgement();
         }
     }

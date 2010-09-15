@@ -115,9 +115,8 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
     @Override
     public boolean computeTarget() {
-        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
-        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
-        super.setTargetName(replicaChoices == null ? null : choices[0]);
+        replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        super.setTargetName(replicaChoices);
 
         return getTargetName() != null;
     }

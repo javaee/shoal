@@ -61,7 +61,7 @@ import java.util.logging.Logger;
 public class ReplicatedDataStore<K, V extends Serializable>
         implements DataStore<K, V> {
 
-    private static final int MAX_REPLICA_TRIES = 2;
+    private static final int MAX_REPLICA_TRIES = 1;
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
 
@@ -206,7 +206,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
             String respondingInstance = null;
             for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
                 String target = replicaHint[replicaIndex];
-                if (target == null || target.trim().length() == 0) {
+                if (target == null || target.trim().length() == 0 || target.equals(dsc.getInstanceName())) {
                     continue;
                 }
                 simpleBroadcastCount.incrementAndGet();
@@ -228,6 +228,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 broadcastLoadRequestCount.incrementAndGet();
                 String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
                 for (String targetInstance : targetInstances) {
+                    if (targetInstance.equals(dsc.getInstanceName())) {
+                            continue;
+                        }
                     LoadRequestCommand<K, V> lrCmd
                         = new LoadRequestCommand<K, V>(key, targetInstance);
 

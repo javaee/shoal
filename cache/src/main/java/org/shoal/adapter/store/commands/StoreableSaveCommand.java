@@ -143,9 +143,8 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     public boolean computeTarget() {
 
-        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
-        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
-        super.setTargetName(replicaChoices == null ? null : choices[0]);
+        replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        super.setTargetName(replicaChoices);
 
         return getTargetName() != null;
     }
@@ -199,6 +198,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
         }
 
         if (! dsc.isDoASyncReplication()) {
+            _logger.log(Level.WARNING, "StoreableSaveCommand Sending SIMPLE_ACK");
             super.sendAcknowledgement();
         }
         

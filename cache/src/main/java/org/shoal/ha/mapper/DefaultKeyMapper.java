@@ -211,7 +211,7 @@ public class DefaultKeyMapper
                     StringBuilder sb = new StringBuilder();
                     int index = i;
                     String delim = "";
-                    int choiceLimit = 2;
+                    int choiceLimit = 1;
                     for (int j=0; j<memSz && choiceLimit-- > 0; j++) {
                         sb.append(delim).append(members[index++ % memSz]);
                         delim = ":";

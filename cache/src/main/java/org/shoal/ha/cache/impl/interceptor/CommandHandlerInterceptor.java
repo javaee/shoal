@@ -64,7 +64,7 @@ public final class CommandHandlerInterceptor<K, V>
         }
 
         if (dsc.getInstanceName().equals(cmd.getTargetName())) {
-            _logger.log(Level.INFO, "To Me???");
+            _logger.log(Level.INFO, "To Me??? Cmd: " + cmd);
             cmd.execute(initiator);
         } else {
             super.onTransmit(cmd, initiator);
