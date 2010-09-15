@@ -215,6 +215,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     v = null;
                 } else {
                     foundLocallyCount.incrementAndGet();
+                    _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key + "). LOCAL CACHE HIT: " + foundLocallyCount.get());
                 }
             } else {
                 return null; //Because it is already removed
@@ -254,7 +255,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     StoreableBroadcastLoadRequestCommand<K, V> command
                             = new StoreableBroadcastLoadRequestCommand<K, V>(key, version);
 
-                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
+                    _logger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
                             + "; Performing load using broadcast ");
                     
                     framework.execute(command);
