@@ -147,11 +147,12 @@ public class GMSClientService implements Runnable, CallBack{
 
     public synchronized void processNotification(final Signal notification){
         final String serverToken;
+        final GroupHandle gh = gms.getGroupHandle();
         if (notification.getMemberToken().equals("admincli")) {
             return;
         }
         logger.log(Level.FINEST, new StringBuffer().append(serviceName)
-                .append(": Notification Received from:")
+                .append(": Notification Received for:")
                 .append(notification.getMemberToken())
                 .append(":[")
                 .append(notification.toString())
@@ -170,7 +171,7 @@ public class GMSClientService implements Runnable, CallBack{
         {
             serverToken =
                     notification.getMemberToken();
-            logger.info("Received JoinNotificationSignal for member " + serverToken +
+            logger.info("Received JoinNotificationSignal for member " + serverToken + " componentService:" + this.serviceName +
                     " with state set to " + ((JoinNotificationSignal) notification).getMemberState().toString());
             try {
                 gms.getGroupHandle().sendMessage(serverToken, "hello".getBytes());
@@ -192,19 +193,27 @@ public class GMSClientService implements Runnable, CallBack{
         {
             serverToken =
                     notification.getMemberToken();
+            JoinedAndReadyNotificationSignal jrSignal = (JoinedAndReadyNotificationSignal)notification;
             logger.info("Received "+ notification.toString() +" for member "+serverToken);
-            logger.info("JoinedAndReady for member:" + serverToken + "getPreviousAliveAndReadyCoreView()=" + gms.getGroupHandle().getPreviousAliveAndReadyCoreView());
-            logger.info("JoinedAndReady for member:" + serverToken + "getCurrentAliveAndReadyCoreView()=" + gms.getGroupHandle().getCurrentAliveAndReadyCoreView());
+            logger.info("JoinedAndReady for member:" + serverToken + ":" + serviceName +
+                    " getPreviousAliveAndReadyCoreView()=" + gh.getPreviousAliveAndReadyCoreView() +
+                    " getCurrentAliveAndReadyCoreView()=" + gh.getCurrentAliveAndReadyCoreView());
+            logger.info("JoinedAndReady for member:" + serverToken + ":" + serviceName +
+                    " signal.getPreviousView()=" + jrSignal.getPreviousView() +
+                    " signal.getCurrentView()=" + jrSignal.getCurrentView());
             extractMemberDetails( notification, serverToken );
 
         }
-        else if ( notification instanceof FailureNotificationSignal ||
-                    notification instanceof PlannedShutdownSignal ||
-                    notification instanceof FailureSuspectedSignal) {
+        else if ( notification instanceof FailureNotificationSignal || notification instanceof PlannedShutdownSignal) {
+            AliveAndReadySignal arSignal = (AliveAndReadySignal)notification;
             serverToken = notification.getMemberToken();
             logger.info("Received "+ notification.toString() +" for member "+serverToken);
-            logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken + "getPreviousAliveAndReadCoreViewy()=" + gms.getGroupHandle().getPreviousAliveAndReadyCoreView());
-            logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken + "getCurrentAliveAndReadyCoreView()=" + gms.getGroupHandle().getCurrentAliveAndReadyCoreView());
+            logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken +
+                    " getPreviousAliveAndReadCoreView()=" + gh.getPreviousAliveAndReadyCoreView()+
+                    " currentCoreView()=" + gh.getCurrentAliveAndReadyCoreView());
+            logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken +
+                    " signal.getPreviousView()=" + arSignal.getPreviousView() +
+                    " getCurrentView()=" + arSignal.getCurrentView());
             extractMemberDetails( notification, serverToken );
         }
     }
