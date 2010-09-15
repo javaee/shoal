@@ -95,8 +95,13 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private MulticastMessageSender multicastSender;
     private int multicastTimeToLive;
 
+
+    private String instanceName;
+    private String groupName;
     private String host;
     private int tcpPort;
+    private int tcpStartPort;
+    private int tcpEndPort;
     private int multicastPort;
     private String multicastAddress;
     private String networkInterfaceName;
@@ -138,9 +143,13 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         Logger shoalLogger = getLogger();
         GrizzlyUtil.setLogger(LOG);
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
-        int tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
-        int tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
-        tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
+        tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
+        tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
+
+        // allow grizzly to select port from port range. Grizzly will keep hold of port,
+        // preventing other gms clients running at same time from picking same port.
+        // tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
+
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), DEFAULT_MULTICAST_ADDRESS, properties );
         if (!validMulticastAddress(multicastAddress)) {
@@ -183,7 +192,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             StringBuffer buf = new StringBuffer(256);
             buf.append("\nGrizzlyNetworkManager Configuration\n");
             buf.append("BIND_INTERFACE_ADDRESS:").append(host).append("  NetworkInterfaceName:").append(networkInterfaceName).append('\n');
-            buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append(" tcpPort:").append(tcpPort).append('\n');
+            buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append('\n');
             buf.append("MULTICAST_ADDRESS:MULTICAST_PORT:").append(multicastAddress).append(':').append(multicastPort)
                      .append(" MULTICAST_PACKET_SIZE:").append(multicastPacketSize)
                      .append(" MULTICAST_TIME_TO_LIVE:").append(multicastTTLresults).append('\n');
@@ -204,30 +213,17 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     @SuppressWarnings( "unchecked" )
     public synchronized void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException {
         super.initialize(groupName, instanceName, properties);
+        this.instanceName = instanceName;
+        this.groupName = groupName;
         configure( properties );
-        if( localPeerID == null ) {
-            String uniqueHost = host;
-            if( uniqueHost == null ) {
-                // prefer IPv4
-                InetAddress firstInetAddress = NetworkUtility.getFirstInetAddress( false );
-                if( firstInetAddress == null )
-                    firstInetAddress = NetworkUtility.getFirstInetAddress( true );
-                if( firstInetAddress == null )
-                    throw new IOException( "can not find a first InetAddress" );
-                uniqueHost = firstInetAddress.getHostAddress();
-            }
-            if( uniqueHost == null )
-                throw new IOException( "can not find an unique host" );
-            localPeerID = new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( uniqueHost, tcpPort, multicastPort ), groupName, instanceName );
-            peerIDMap.put( instanceName, localPeerID );
-            if( LOG.isLoggable( Level.FINE ) )
-                LOG.log( Level.FINE, "local peer id = " + localPeerID );
-        }
-        InetAddress localInetAddress = null;
-        if( host != null )
-            localInetAddress = InetAddress.getByName( host );
 
-       ThreadPoolConfig threadPoolConfig = new ThreadPoolConfig("GMS-GrizzlyNetMgr-Group-" + groupName,
+        // moved setting of localPeerId.
+
+        InetAddress localInetAddress = null;
+        if( host != null ) {
+            localInetAddress = InetAddress.getByName( host );
+        }
+        ThreadPoolConfig threadPoolConfig = new ThreadPoolConfig("GMS-GrizzlyNetMgr-Group-" + groupName,
                 corePoolSize,
                 maxPoolSize,
                 new ArrayBlockingQueue<Runnable>( poolQueueSize ),
@@ -257,7 +253,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         controller.setConnectorHandlerPool( cacheableHandlerPool );
 
         tcpSelectorHandler = new ReusableTCPSelectorHandler();
-        tcpSelectorHandler.setPort( tcpPort );
+        tcpSelectorHandler.setPortRange(new PortRange(this.tcpStartPort, this.tcpEndPort));
         tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
         tcpSelectorHandler.setInet( localInetAddress );
 
@@ -341,8 +337,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         long durationInMillis = System.currentTimeMillis() - controllerStartTime;
 
         // do not continue if controller did not start.
-        if (!controller.isStarted()  ||  ! controllerGateIsReady) {
-            if (controllerGateStartupException != null ) {
+        if (!controller.isStarted() || !controllerGateIsReady) {
+            if (controllerGateStartupException != null) {
                 throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms",
                         controllerGateStartupException);
             } else {
@@ -352,6 +348,27 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         } else if (controllerGateIsReady) {
             // todo: make this FINE in future.
             getLogger().config("Grizzly controller listening on " + tcpSelectorHandler.getInet() + ":" + tcpSelectorHandler.getPort() + ". Controller started in " + durationInMillis + " ms");
+        }
+
+        tcpPort = tcpSelectorHandler.getPort();
+
+        if (localPeerID == null) {
+            String uniqueHost = host;
+            if (uniqueHost == null) {
+                // prefer IPv4
+                InetAddress firstInetAddress = NetworkUtility.getFirstInetAddress(false);
+                if (firstInetAddress == null)
+                    firstInetAddress = NetworkUtility.getFirstInetAddress(true);
+                if (firstInetAddress == null)
+                    throw new IOException("can not find a first InetAddress");
+                uniqueHost = firstInetAddress.getHostAddress();
+            }
+            if (uniqueHost == null)
+                throw new IOException("can not find an unique host");
+            localPeerID = new PeerID<GrizzlyPeerID>(new GrizzlyPeerID(uniqueHost, tcpPort, multicastPort), groupName, instanceName);
+            peerIDMap.put(instanceName, localPeerID);
+            if (LOG.isLoggable(Level.FINE))
+                LOG.log(Level.FINE, "local peer id = " + localPeerID);
         }
         tcpSender = new GrizzlyTCPConnectorWrapper( controller, writeTimeout, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
@@ -581,6 +598,10 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             peerID = peerIDMap.get( instanceName );
         if( peerID == null ) {
             peerID = PeerID.NULL_PEER_ID;
+            if (this.instanceName.equals(instanceName)) {
+                LOG.log(Level.WARNING, "grizzly.netmgr.localPeerId.null", new Object[]{instanceName});
+                LOG.log(Level.WARNING, "stack trace", new Exception("stack trace"));
+            }
             if (LOG.isLoggable(Level.FINE)) {
                 LOG.log(Level.FINE, "getPeerID(" + instanceName + ")" + " returning null peerIDMap=" + peerIDMap);
             }
