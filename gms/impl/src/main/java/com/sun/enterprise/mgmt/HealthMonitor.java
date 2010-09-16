@@ -1214,7 +1214,7 @@ public class HealthMonitor implements MessageListener, Runnable {
             }
             manager.getClusterViewManager().notifyListeners(cvEvent);
         }
-        LOG.log(Level.INFO, "mgmgt.healthmonitor.ready");
+        LOG.log(Level.INFO, "mgmt.heatlhmonitor.ready");
         reportMyState(READY, null);
     }
 
