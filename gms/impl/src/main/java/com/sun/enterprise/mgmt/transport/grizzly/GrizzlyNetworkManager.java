@@ -77,7 +77,7 @@ import java.nio.channels.SelectionKey;
 import java.util.regex.Pattern;
 
 /**
- * @author Bongjae Chang
+ * @author Bongjae Chang                                            Ä
  */
 public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
@@ -548,7 +548,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     public void removeRemotePeer(String instanceName) {
         for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
             if (entry.getValue().equals(instanceName)) {
-                getLogger().log(Level.INFO, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
+                if (getLogger().isLoggable(Level.FINE)) {
+                    getLogger().log(Level.FINE, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
+                }
                 tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
                 selectionKeyMap.remove(entry.getKey());
             }

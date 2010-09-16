@@ -180,7 +180,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
                 int vqSize = viewQueue.size();
                 if (vqSize > 0) {
                     // todo: make Level.FINE before final release
-                    logger.log(Level.INFO, "viewQueue size before take " + vqSize + " for group: " + groupName);
+                    logger.log(Level.FINE, "viewQueue size before take " + vqSize + " for group: " + groupName);
                 }
                 packet = viewQueue.take();
                 if (packet != null) {
