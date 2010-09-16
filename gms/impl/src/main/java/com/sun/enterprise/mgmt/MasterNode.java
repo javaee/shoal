@@ -1078,7 +1078,7 @@ class MasterNode implements MessageListener, Runnable {
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
         if(masterAssigned && isMaster()){
-            LOG.log(Level.INFO, "mgmt.masternode.announcemaster", new Object[]{clusterViewManager.getViewSize(), manager.getInstanceName(), manager.getGroupName()});
+            LOG.log(Level.INFO, "mgmt.masternode.announcemasternode", new Object[]{clusterViewManager.getViewSize(), manager.getInstanceName(), manager.getGroupName()});
             
             sendNewView(null, cvEvent, msg, true);
         }
