@@ -77,7 +77,7 @@ import java.nio.channels.SelectionKey;
 import java.util.regex.Pattern;
 
 /**
- * @author Bongjae Chang                                            Ä
+ * @author Bongjae Chang
  */
 public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
