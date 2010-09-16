@@ -601,7 +601,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         String rejoinTxt = "";
         RejoinSubevent rse = ctx.getInstanceRejoins().get(token);
         if (rse != null) {
-            rejoinTxt =  gmsRb.getString("viewwindow.rejoining") + rse.toString();
+            rejoinTxt =  gmsRb.getString("viewwindow.rejoining") + " " + rse.toString();
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine(String.format(
                     "addJoinedAndReadyNotificationSignal setting rejoin subevent for token '%s'",
