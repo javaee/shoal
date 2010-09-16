@@ -218,7 +218,7 @@ fi
 sleep 5
 
 SDTCP=`expr ${TCPENDPORT} + 1`
-EDTCP=`expr ${SDTCP} + 30`
+EDTCP=`expr ${SDTCP}`
 if [ $DIST = false ]; then
     # single machine startup
     echo "Starting ${NUMOFMEMBERS} CORE members"
@@ -248,7 +248,7 @@ if [ $DIST = false ]; then
         fi
 
         SDTCP=`expr ${EDTCP} + 1`
-        EDTCP=`expr ${SDTCP} + 30`
+        EDTCP=`expr ${SDTCP}`
         count=`expr ${count} + 1`
     done
 else
