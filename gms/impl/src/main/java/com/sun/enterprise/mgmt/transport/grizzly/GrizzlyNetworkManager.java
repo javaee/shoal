@@ -365,7 +365,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             }
             if (uniqueHost == null)
                 throw new IOException("can not find an unique host");
-            localPeerID = new PeerID<GrizzlyPeerID>(new GrizzlyPeerID(uniqueHost, tcpPort, multicastPort), groupName, instanceName);
+            localPeerID = new PeerID<GrizzlyPeerID>(new GrizzlyPeerID(uniqueHost, tcpPort, multicastAddress, multicastPort), groupName, instanceName);
             peerIDMap.put(instanceName, localPeerID);
             if (LOG.isLoggable(Level.FINE))
                 LOG.log(Level.FINE, "local peer id = " + localPeerID);
@@ -465,6 +465,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         URI virtualUri = new URI( uri );
         return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( virtualUri.getHost(),
                                                              virtualUri.getPort(),
+                                                             multicastAddress,
                                                              multicastPort ),
                                           localPeerID.getGroupName(),
                                           // the instance name is not meaningless in this case
@@ -516,7 +517,14 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             return; // lookback
         String instanceName = peerID.getInstanceName();
         if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
-            PeerID previous = peerIDMap.putIfAbsent( instanceName, peerID );
+//            PeerID<GrizzlyPeerID> previous = peerIDMap.get(instanceName);
+//            if (previous != null) {
+//                if (previous.getUniqueID().getTcpPort() != ((GrizzlyPeerID) peerID.getUniqueID()).tcpPort) {
+//                    LOG.log(Level.WARNING, "addRemotePeer(selectionKey): assertion failure: no mapping should have existed for member:"
+//                            + instanceName + " existingID=" + previous + " adding peerid=" + peerID, new Exception("stack trace"));
+//                }
+//            }
+            PeerID<GrizzlyPeerID> previous = peerIDMap.put( instanceName, peerID );
             if (previous == null) {
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.fine("addRemotePeer: " + instanceName + " peerId:" + peerID);
@@ -535,7 +543,14 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             return; // lookback
         String instanceName = peerID.getInstanceName();
         if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
-            PeerID previous = peerIDMap.putIfAbsent( instanceName, peerID );
+//            PeerID<GrizzlyPeerID> previous = peerIDMap.get(instanceName);
+//            if (previous != null) {
+//                if (previous.getUniqueID().getTcpPort() != ((GrizzlyPeerID) peerID.getUniqueID()).tcpPort) {
+//                    LOG.log(Level.WARNING, "addRemotePeer: assertion failure: no mapping should have existed for member:"
+//                            + instanceName + " existingID=" + previous + " adding peerid=" + peerID, new Exception("stack trace"));
+//                }
+//            }
+            PeerID<GrizzlyPeerID> previous = peerIDMap.put( instanceName, peerID );
             if (previous == null) {
                 Level debugLevel = Level.FINEST;
                 if (LOG.isLoggable(debugLevel)) {
@@ -617,7 +632,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         String instanceName = peerID.getInstanceName();
         if( instanceName == null )
             return;
-        Level debugLevel = Level.FINEST;
+        Level debugLevel = Level.FINE;
         if (LOG.isLoggable(debugLevel)) {
             LOG.log(debugLevel, "removePeerID peerid=" + peerID, new Exception("stack trace"));
         }

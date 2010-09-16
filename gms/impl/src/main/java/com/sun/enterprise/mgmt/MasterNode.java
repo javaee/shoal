@@ -753,7 +753,7 @@ class MasterNode implements MessageListener, Runnable {
                     LOG.fine("MasterNode.processMasterNodeQuery() : re-electing the master...");
                 }
                 // remove outdated advertisement for failed previous master (with start time of previous master)
-                manager.getClusterViewManager().remove(adv);
+                manager.getClusterViewManager().remove(oldSysAdv);
                 // add back in the restarted member with the new start time.
                 // otherwise, restarted member will receive a view without itself in it.
                 manager.getClusterViewManager().add(adv);

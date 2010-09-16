@@ -37,8 +37,10 @@
 
 package com.sun.enterprise.ee.cms.impl.base;
 
-import java.io.Serializable;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 
+import java.io.Serializable;
+                           
 /**
  * This class is representative of the identifier of a member
  *
@@ -116,11 +118,28 @@ public class PeerID<T extends Serializable> implements Serializable, Comparable<
         return uniqueIDString + ":" + groupName + ":" + instanceName;
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
     public int compareTo( PeerID other ) {
         if( this == other )
             return 0;
         if( other == null )
             return 1;
-        return toString().compareTo( other.toString() );
+        int result = groupName.compareTo(other.getGroupName());
+        if (result != 0) {
+            return result;
+        }
+        result = instanceName.compareTo(other.getInstanceName());
+        if (result != 0) {
+            return result;
+        }
+        if (uniqueID instanceof GrizzlyPeerID  && other.getUniqueID() instanceof GrizzlyPeerID) {
+
+            // do not use GrizzlyPeerID.toString() since it includes tcpport, which is not part of comparison.
+            result = ((GrizzlyPeerID)uniqueID).compareTo((GrizzlyPeerID)other.getUniqueID());
+            return result;
+        } else {
+            return uniqueID.toString().compareTo(other.getUniqueID().toString());
+        }
     }
 }

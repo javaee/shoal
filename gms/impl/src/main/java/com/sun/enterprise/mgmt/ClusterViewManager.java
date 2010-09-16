@@ -131,29 +131,32 @@ public class ClusterViewManager {
                 //if view does contain the same sys adv but the start time is different from what
                 //was already in the view
                 //then add the new sys adv
-                SystemAdvertisement adv = view.get(advertisement.getID());
-                if (manager.getMasterNode().confirmInstanceHasRestarted(adv, advertisement)) {
+                SystemAdvertisement existingAdv = view.get(advertisement.getID());
+                if (manager.getMasterNode().confirmInstanceHasRestarted(existingAdv, advertisement)) {
                     if (LOG.isLoggable(Level.FINE))  {
                         LOG.fine("ClusterViewManager .add() : Instance "+ advertisement.getName() + " has restarted. Adding it to the view.");
                     }
+                    // reminder:  peerID can be same but have different tcpport.
+                    // so this is important to remove old and add the new one.
+                    manager.getNetworkManager().removePeerID(existingAdv.getID());
                     manager.getNetworkManager().addRemotePeer(advertisement.getID());
                     view.put(advertisement.getID(), advertisement);
 
                     // this can't return NO_SUCH_TIME -- we wouldn't have
                     // entered this 'if' block
                     RejoinSubeventImpl rsi = new RejoinSubeventImpl(
-                        Utility.getStartTime(adv));
+                        Utility.getStartTime(existingAdv));
                     RejoinSubevent previous =
-                        gmsCtxt.getInstanceRejoins().put(adv.getName(), rsi);
+                        gmsCtxt.getInstanceRejoins().put(existingAdv.getName(), rsi);
                     if (previous != null && LOG.isLoggable(Level.INFO)) {
                         // todo: test this
-                        String [] params = {adv.getName(), previous.toString()};
+                        String [] params = {existingAdv.getName(), previous.toString()};
                         LOG.log(Level.INFO, "rejoin.subevent.replaced", params);
                     }
                     if (LOG.isLoggable(Level.FINE)) {
                         LOG.fine(String.format(
                             "Added rejoin subevent for '%s' to context map",
-                            adv.getName()));
+                            existingAdv.getName()));
                     }
                     result = true;
                 }

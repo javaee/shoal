@@ -17,8 +17,8 @@ TRANSPORT=grizzly
 CMD=default
 NUMOFMEMBERS=10
 
-TCPSTARTPORT=9121
-TCPENDPORT=9160
+TCPSTARTPORT=9160
+TCPENDPORT=9220
 GROUPNAME=testgroup
 MULTICASTADDRESS=229.9.1.`./randomNumber.sh`
 MULTICASTPORT=2299
@@ -216,9 +216,8 @@ fi
 #--------------------------
 # Give time for the master to startup before starting the other members
 sleep 5
-
-SDTCP=`expr ${TCPENDPORT} + 1`
-EDTCP=`expr ${SDTCP}`
+SDTCP=${TCPSTARTPORT}
+EDTCP=${TCPENDPORT}
 if [ $DIST = false ]; then
     # single machine startup
     echo "Starting ${NUMOFMEMBERS} CORE members"
@@ -247,8 +246,7 @@ if [ $DIST = false ]; then
            EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
         fi
 
-        SDTCP=`expr ${EDTCP} + 1`
-        EDTCP=`expr ${SDTCP}`
+# all instances use the exact same portrange. no more mutual exclusive range requirement.
         count=`expr ${count} + 1`
     done
 else

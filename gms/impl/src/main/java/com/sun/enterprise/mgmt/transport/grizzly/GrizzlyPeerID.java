@@ -37,22 +37,29 @@
 package com.sun.enterprise.mgmt.transport.grizzly;
 
 import java.io.Serializable;
+import java.util.Comparator;
 
 /**
  * @author Bongjae Chang
  */
-public class GrizzlyPeerID implements Serializable {
+public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
 
     static final long serialVersionUID = 9093067296675025106L;
 
-    private final String host;
-    private final int tcpPort;
-    private final int multicastPort;
+    public final String host;
+    public final int tcpPort;  // due to Grizzly transport hack, this tcpport is used to send a message to a member.
+                               // so this value must stay in the datastructure BUT is not considered part of it for
+                               // comparison's sake.
+    public final String multicastAddress;
+    public final int multicastPort;
+    private final String toStringValue;
 
-    public GrizzlyPeerID( String host, int tcpPort, int multicastPort ) {
+    public GrizzlyPeerID( String host, int tcpPort, String multicastAddress, int multicastPort ) {
         this.host = host;
+        this.multicastAddress = multicastAddress;
         this.tcpPort = tcpPort;
         this.multicastPort = multicastPort;
+        this.toStringValue = host + ":" + tcpPort + ":" + multicastAddress + ":" + multicastPort;
     }
 
     public String getHost() {
@@ -67,13 +74,19 @@ public class GrizzlyPeerID implements Serializable {
         return multicastPort;
     }
 
+    public String getMulticastAddress() {
+        return multicastAddress;
+    }
+
+    // NOTE: no longer include tcpport in this calculation nor the hash calculation.
+    //       instance should be able to use a port within a range and still be considered same instance.
     public boolean equals( Object other ) {
         if( other instanceof GrizzlyPeerID ) {
             GrizzlyPeerID otherPeerID = (GrizzlyPeerID)other;
-            if( tcpPort == otherPeerID.getTcpPort() && multicastPort == otherPeerID.getMulticastPort() ) {
-                if( host == otherPeerID.getHost() )
+            if( multicastPort == otherPeerID.multicastPort  &&  multicastAddress.equals(otherPeerID.multicastAddress)) {
+                if( host == otherPeerID.host )
                     return true;
-                if( host != null && host.equals( otherPeerID.getHost() ) )
+                if( host != null && host.equals( otherPeerID.host ) )
                     return true;
                 return false;
             } else {
@@ -84,16 +97,44 @@ public class GrizzlyPeerID implements Serializable {
         }
     }
 
+    // DO NOT INCLUDE TCP PORT in this calculation.
+    //
     public int hashCode() {
         int result = 17;
         if( host != null )
             result = 37 * result + host.hashCode();
-        result = 37 * result + tcpPort;
+        result = 37 * result + multicastAddress.hashCode();
         result = 37 * result + multicastPort;
         return result;
     }
 
+    @Override
     public String toString() {
-        return host + ":" + tcpPort + ":" + multicastPort;
+        return toStringValue;
+    }
+
+    @Override
+    public int compareTo(GrizzlyPeerID other) {
+        int result = 0;
+        if (this == other) {
+            return 0;
+        }
+        if (other == null) {
+            return 1;
+        }
+        if (host != null && other.host != null) {
+            result = host.compareTo(other.host);
+            if (result != 0) {
+                return result;
+            }
+        }
+        result = multicastPort - other.getMulticastPort();
+        if (result != 0) {
+            return result;
+        }
+        result = multicastAddress.compareTo(other.getMulticastAddress());
+        //assert (result == 0 ? hashCode() == other.hashCode() : true);
+        //assert (result == 0 ? equals(other) : !this.equals(other));
+        return result;
     }
 }
