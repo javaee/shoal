@@ -147,6 +147,9 @@
         <copy todir="${component.classes.dir}/com/sun/enterprise/ee/cms/logging"
               file="${resource.dir}/com/sun/enterprise/ee/cms/logging/LogStrings.properties"/>
 
+        <copy todir="${component.classes.dir}/com/sun/enterprise/ee/cms/core"
+              file="${api.resource.dir}/com/sun/enterprise/ee/cms/core/LogStrings.properties"/>
+
         <javac srcdir="${tests.dir}"
                destdir="${component.classes.dir}"
                debug="${javac.debug}"

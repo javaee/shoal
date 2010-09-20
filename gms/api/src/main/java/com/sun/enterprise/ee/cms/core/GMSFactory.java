@@ -37,7 +37,6 @@
 package com.sun.enterprise.ee.cms.core;
 
 
-import com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -79,7 +78,8 @@ import java.util.logging.Level;
   */
  
 public class GMSFactory {
-    static private Logger LOG = Logger.getLogger("ShoalLogger");
+    static private Logger LOG = Logger.getLogger("ShoalLogger.api", StringManager.LOG_STRINGS);
+    static private StringManager sm = StringManager.getInstance();
 
     private static Hashtable<String, GroupManagementService> groups =
             new Hashtable<String, GroupManagementService>();
@@ -123,10 +123,12 @@ public class GMSFactory {
                             final GroupManagementService.MemberType memberType,
                             final Properties properties)
     {
-        if ( serverToken == null )
-            throw new RuntimeException("Server Token was not specified and cannot be null");
-        if ( groupName == null )
-            throw new RuntimeException("Group Name was not specified and cannot be null");
+        if ( serverToken == null ) {
+            throw new RuntimeException(sm.get("ex.factory.start.missing.instance"));
+        }
+        if ( groupName == null ) {
+            throw new RuntimeException(sm.get("ex.factory.start.missing.group"));
+        }
         GroupManagementService gms = null;
         //if this method is called, GMS is enabled. It is assumed that
         //calling code made checks in configurations about the enablement
@@ -159,24 +161,15 @@ public class GMSFactory {
             throws  GMSNotEnabledException, GMSException,
                    GMSNotInitializedException {
         if(groupName == null){
-            throw new GMSException("Group Name was not specified and cannot be null");
+            throw new GMSException(sm.get("ex.factory.start.missing.group"));
         }
         final String key = getCompositeKey(groupName);
         if(groups.containsKey(key))
             return groups.get(key);
         else if(!isGMSEnabled(groupName)){
-            throw new GMSNotEnabledException(
-                            new StringBuffer()
-                            .append( "Group Management Service is not ")
-                            .append("enabled for group")
-                            .append( groupName ).toString());
-        }
-        else {
-            throw new GMSNotInitializedException(
-                            new StringBuffer()
-                            .append( "Group Management Service is not ")
-                            .append("initialized for group ")
-                            .append( groupName ).toString());
+            throw new GMSNotEnabledException(sm.get("ex.factory.get.gms.is.disabled", new Object[]{groupName}));
+        } else {
+            throw new GMSNotInitializedException(sm.get("ex.factory.get.not.init", new Object[]{groupName}));
         }
 
     }
@@ -191,10 +184,7 @@ public class GMSFactory {
         GroupManagementService gms;
         final Collection instances = getAllGMSInstancesForMember();
         if(instances.size() == 0){
-            throw new GMSNotInitializedException(
-                            new StringBuffer()
-                            .append( "Group Management Service is not ")
-                            .append("initialized for any group ").toString());
+            throw new GMSNotInitializedException(sm.get("ex.init.failure"));
         }
         gms = (GroupManagementService)instances.toArray()[0];
         return gms;
@@ -257,14 +247,16 @@ public class GMSFactory {
                try {
                    groupManagementService = iter.next().getClass().newInstance();
                } catch (Throwable t) {
-                   LOG.log(Level.WARNING, "error instantiating GroupManagementService service", t);
+                   LOG.log(Level.WARNING, "factory.load.service.error");
+                   LOG.log(Level.WARNING, "stack trace", t);
                }
            }
            if (groupManagementService == null) {
-                LOG.log(Level.SEVERE, "fatal error, no GroupManagementService implementations found");
+                LOG.log(Level.SEVERE, sm.get("factory.fatal"));
            } else {
-               if (LOG.isLoggable(Level.CONFIG)) {
-                   LOG.log(Level.CONFIG, "findByServiceLoader() loaded service " + groupManagementService.getClass().getName());
+               if (LOG.isLoggable(Level.FINE)) {
+                   LOG.log(Level.FINE,
+                           "factory.findservice", new Object[]{groupManagementService.getClass().getName()});
                }
            }
            return groupManagementService;
@@ -277,16 +269,17 @@ public class GMSFactory {
             Class GmsImplClass = Class.forName(classname);
             gmsImpl = (GroupManagementService) GmsImplClass.newInstance();
             if (gmsImpl == null) {
-                LOG.log(Level.SEVERE, "fatal error, no GroupManagementService implementations found");
+                LOG.log(Level.SEVERE, "factory.load.service.error");
             } else {
-                if (LOG.isLoggable(Level.CONFIG)) {
-                    LOG.log(Level.CONFIG, "findByClassLoader() loaded service " + gmsImpl.getClass().getName());
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "findByClassLoader() loaded service " + gmsImpl.getClass().getName());
                 }
             }
-            } catch(Throwable x){
-                LOG.log(Level.SEVERE, "fatal error instantiating GroupManagementService service", x);
-            }
-            return gmsImpl;
+        } catch(Throwable x){
+            LOG.log(Level.SEVERE, "factory.classload.failed");
+            LOG.log(Level.SEVERE, "stack trace", x);
+        }
+        return gmsImpl;
         }
 
        public static GroupManagementService getGroupManagementServiceInstance() {
@@ -294,7 +287,7 @@ public class GMSFactory {
            try {
                gmsImpl = findByServiceLoader();
            } catch (Throwable t) {
-               // jdk 5 will end up here.
+               // jdk 5 will end up here. Not a reportable error.
            }
            if (gmsImpl == null) {
                String classname = null;

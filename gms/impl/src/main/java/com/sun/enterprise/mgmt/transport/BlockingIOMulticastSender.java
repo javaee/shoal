@@ -302,7 +302,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         } finally {
             multicastThread = null;
             endGate.countDown();
-            LOG.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " has completed.", new Object[]{Thread.currentThread().getName()});
+            LOG.log(Level.INFO, "mgmt.blockingiomulticast.threadcomplete", new Object[]{Thread.currentThread().getName()});
         }
     }
 
