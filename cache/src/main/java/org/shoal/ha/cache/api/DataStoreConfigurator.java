@@ -75,7 +75,7 @@ public class DataStoreConfigurator<K, V> {
 
     private boolean cacheLocally;
 
-    private boolean doASyncReplication;
+    private boolean doSynchronousReplication;
 
     private List<Command<K, ? super V>> commands = new ArrayList<Command<K, ? super V>>();
 
@@ -192,13 +192,13 @@ public class DataStoreConfigurator<K, V> {
         return this;
     }
 
-    public boolean isDoASyncReplication() {
-        return doASyncReplication;
+    public boolean isDoSynchronousReplication() {
+        return doSynchronousReplication;
     }
 
-    public DataStoreConfigurator<K, V> setDoASyncReplication(boolean doASyncReplication) {
-        this.doASyncReplication = doASyncReplication;
-        System.out.println("**  SET  ASYNC REPLICATUION: " + doASyncReplication);
+    public DataStoreConfigurator<K, V> setDoSynchronousReplication(boolean doSynchronousReplication) {
+        this.doSynchronousReplication = doSynchronousReplication;
+        System.out.println("**  SET  ASYNC REPLICATUION: " + doSynchronousReplication);
         return this;
     }
 
@@ -241,7 +241,7 @@ public class DataStoreConfigurator<K, V> {
                 ", cacheLocally= " + cacheLocally +
                 ", clazzLoader=" + clazzLoader +
                 ", dataStoreEntryHelper=" + dataStoreEntryHelper +
-                ", doASyncReplication=" + doASyncReplication +
+                ", doSynchronousReplication=" + doSynchronousReplication +
                 ", objectInputOutputStreamFactory=" + objectInputOutputStreamFactory +
                 '}';
     }

@@ -43,7 +43,6 @@ package org.shoal.adapter.store.commands;
 import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
@@ -95,7 +94,7 @@ public class SaveCommand<K, V>
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
 
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.writeAcknowledgementId(ros);
         }
         dsc.getDataStoreKeyHelper().writeKey(ros, k);
@@ -113,7 +112,7 @@ public class SaveCommand<K, V>
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.readAcknowledgementId(ris);
         }
         k = dsc.getDataStoreKeyHelper().readKey(ris);
@@ -129,7 +128,7 @@ public class SaveCommand<K, V>
             entry.setV((V) v);
         }
 
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             _logger.log(Level.WARNING, "SaveCommand Sending SIMPLE_ACK");
             super.sendAcknowledgement();
         }
@@ -146,7 +145,7 @@ public class SaveCommand<K, V>
 
     @Override
     public void onSuccess() {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             try {
                 super.onSuccess();
                 super.waitForAck();

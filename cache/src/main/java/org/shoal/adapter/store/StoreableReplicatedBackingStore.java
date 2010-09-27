@@ -49,10 +49,7 @@ import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCom
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
 import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
-import org.shoal.ha.cache.impl.util.CommandResponse;
-import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
@@ -140,7 +137,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
         boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
                 ? true : (Boolean) vendorSpecificMap.get("async.replication");
-        dsConf.setDoASyncReplication(asyncReplication);
+        dsConf.setDoSynchronousReplication(! asyncReplication);
 
         dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 

@@ -76,7 +76,8 @@ public final class TransmitInterceptor<K, V>
             gs.sendMessage(cmd.getTargetName(),
                     ctx.getServiceName(), data);
             if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, storeName + ": TransmitInterceptor.onTransmit() Sent " + cmd + " to "
+                _logger.log(Level.INFO, storeName + ": TransmitInterceptor." + ctx.getServiceName()
+                        + ":onTransmit() Sent " + cmd + " to "
                         + (cmd.getTargetName() == null ? " ALL MEMBERS " : cmd.getTargetName())
                         + "; size: " + data.length);
             }

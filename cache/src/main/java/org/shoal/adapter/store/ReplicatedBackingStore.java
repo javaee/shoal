@@ -53,7 +53,6 @@ import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
 import java.util.Map;
-import java.util.logging.Level;
 
 /**
  * @author Mahesh Kannan
@@ -126,7 +125,7 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
         boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
                 ? true : (Boolean) vendorSpecificMap.get("async.replication");
-        dsConf.setDoASyncReplication(asyncReplication);
+        dsConf.setDoSynchronousReplication(! asyncReplication);
 
         KeyMapper keyMapper = (KeyMapper) vendorSpecificMap.get("key.mapper");
         if (keyMapper != null) {

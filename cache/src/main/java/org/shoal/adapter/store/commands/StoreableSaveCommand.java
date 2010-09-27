@@ -114,7 +114,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     protected void writeCommandPayload(ReplicationOutputStream ros)
         throws IOException {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.writeAcknowledgementId(ros);
         }
 
@@ -156,7 +156,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.readAcknowledgementId(ris);
         }
 
@@ -201,7 +201,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
             }
         }
 
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             _logger.log(Level.WARNING, "StoreableSaveCommand Sending SIMPLE_ACK");
             super.sendAcknowledgement();
         }
@@ -219,7 +219,7 @@ public class StoreableSaveCommand<K, V extends Storeable>
 
     @Override
     public void onSuccess() {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             try {
                 super.onSuccess();
                 super.waitForAck();

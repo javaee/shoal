@@ -40,7 +40,6 @@
 
 package org.shoal.ha.cache.api;
 
-import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
@@ -81,7 +80,7 @@ public class DataStoreFactory {
                 .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
                 .setDoAddCommands()
-                .setDoASyncReplication(false)
+                .setDoSynchronousReplication(false)
                 .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
 
         return createDataStore(conf);

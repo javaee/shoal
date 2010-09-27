@@ -43,11 +43,9 @@ package org.shoal.adapter.store.commands;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -87,7 +85,7 @@ public class RemoveCommand<K, V>
 
     @Override
     public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.writeAcknowledgementId(ros);
         }
         setTargetName(target);
@@ -97,7 +95,7 @@ public class RemoveCommand<K, V>
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws IOException {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.readAcknowledgementId(ris);
         }
         key = dsc.getDataStoreKeyHelper().readKey(ris);
@@ -106,14 +104,14 @@ public class RemoveCommand<K, V>
     @Override
     public void execute(String initiator) {
         dsc.getReplicaStore().remove(key);
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             super.sendAcknowledgement();
         }
     }
 
     @Override
     public void onSuccess() {
-        if (! dsc.isDoASyncReplication()) {
+        if (dsc.isDoSynchronousReplication()) {
             try {
                 super.onSuccess();
                 super.waitForAck();

@@ -73,7 +73,7 @@ public class DataStoreContext<K, V> {
 
     private boolean cacheLocally;
 
-    private boolean doASyncReplication;
+    private boolean doSynchronousReplication;
 
     private IdleEntryDetector<K, V> idleDetector;
 
@@ -151,11 +151,12 @@ public class DataStoreContext<K, V> {
         this.cacheLocally = cacheLocally;
     }
 
-    public boolean isDoASyncReplication() {
-        return doASyncReplication;
+    public boolean isDoSynchronousReplication() {
+        return doSynchronousReplication;
     }
 
-    public void setADoSyncReplication(boolean doSyncReplication) {
-        this.doASyncReplication = doSyncReplication;
+    public void setDoSyncReplication(boolean doSyncReplication) {
+        this.doSynchronousReplication = doSyncReplication;
+        System.out.println("**DataStorecontext.setDoSyncReplication = " + doSyncReplication);
     }
 }

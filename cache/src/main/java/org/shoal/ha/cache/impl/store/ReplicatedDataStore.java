@@ -40,7 +40,6 @@
 
 package org.shoal.ha.cache.impl.store;
 
-import org.shoal.adapter.store.RepliatedBackingStoreRegistry;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
@@ -50,10 +49,8 @@ import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
-import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -122,11 +119,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
         }
 
-        //if (conf.isDoASyncReplication()) {
-            cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
-            cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
-            _logger.log(Level.INFO, "ASync replication enabled...");
-        //}
+        cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
+        cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
         
         
         KeyMapper keyMapper = conf.getKeyMapper();
