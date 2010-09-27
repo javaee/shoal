@@ -96,9 +96,9 @@ echo "Logs_Dir:${LOGS_DIR}"
 APPLICATIONADMIN=admincli
 
 SERVERLOG=${LOGS_DIR}/server.log
-ALLLOGS=`ls ${LOGS_DIR}/*log | grep "[server.log|instance*.log]"`
-NUMOFMEMBERS=`ls ${LOGS_DIR}/*log | grep "[server.log|instance*.log]" | wc -l`
-NUMOFINSTANCES=`ls ${LOGS_DIR}/inst*log | wc -l`
+ALLLOGS=`ls ${LOGS_DIR}/*log | egrep "^.*\/(instance[0-9][0-9]|server).log"`
+NUMOFMEMBERS=`ls ${LOGS_DIR}/*log | egrep "^.*\/(instance[0-9][0-9]|server).log" | wc -l`
+NUMOFINSTANCES=`ls ${LOGS_DIR}/inst*log | egrep "^.*\/instance[0-9][0-9].log" | wc -l`
 
 PASS_TOTAL=0
 FAIL_TOTAL=0
