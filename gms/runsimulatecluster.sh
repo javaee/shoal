@@ -153,8 +153,9 @@ do
      esac
 done
 
-
+rm -rf ./currentMulticastAddress.txt
 echo ${MULTICASTADDRESS} > ./currentMulticastAddress.txt
+echo "The Multicast Address being used is: `cat ./currentMulticastAddress.txt`"
 
 echo Comand: ${CMD}
 echo Transport: ${TRANSPORT}
@@ -206,13 +207,60 @@ else
    wait
 fi
 
+echo "Collecting initial netstat results from server"
+echo "----------------------------------------------"
+if [ $DIST = false ]; then
+    rm -rf ${LOGS_DIR}/netstat_server.log
+    eval touch ${LOGS_DIR}/netstat_server.log
+    eval date | tee -a ${LOGS_DIR}/netstat_server.log
+    eval netstat -su | egrep "(Udp|packet)" |tee -a ${LOGS_DIR}/netstat_server.log
+else
+    TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+    MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "rm -rf ${LOGS_DIR}/netstat_server.log; touch ${LOGS_DIR}/netstat_server.log; date | tee -a ${LOGS_DIR}/netstat_server.log;  netstat -su | egrep "\(Udp|packet\)" |  tee -a ${LOGS_DIR}/netstat_server.log"
+fi
+if [ $DIST = false ]; then
+    # single machine test
+    count=1
+    while [ $count -le ${NUMOFMEMBERS} ]
+    do
+        if [  ${count} -lt 10 ]; then
+           INSTANCE_NAME="instance0${count}"
+        else
+           INSTANCE_NAME=instance${count}
+        fi
+        echo "Collecting netstat results from ${INSTANCE_NAME}"
+        echo "---------------------------------------------------"
+
+        rm -rf ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        eval touch ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        eval date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        eval netstat -su | egrep "(Udp|packet)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        count=`expr ${count} + 1`
+    done
+else
+   MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties  `
+   for member in ${MEMBERS}
+   do
+      TMP=`egrep "^MACHINE_NAME" ${member}`
+      MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^INSTANCE_NAME" ${member}`
+      INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^WORKSPACE_HOME" ${member}`
+      WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      echo "Collecting netstat results from ${INSTANCE_NAME}"
+      echo "---------------------------------------------------"
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "rm -rf ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log; touch ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log;date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log; netstat -su | egrep "\(Udp|packet\)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
+   done
+   wait
+fi
 
 #--------------------------
 # STARTING OF THE MASTER
 if [ $DIST = false ]; then
     mkdir -p ${LOGS_DIR}
-    echo "Removing old logs"
-    rm -f ${LOGS_DIR}/*.log
+    echo "Removing old server log"
+    rm -f ${LOGS_DIR}/server.log
     echo "Starting server"
     if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
        BIA="-bia ${BINDINGINTERFACEADDRESS}"
@@ -273,6 +321,10 @@ if [ $DIST = false ]; then
         else
           BIA=""
         fi
+
+        echo "Removing old instance log for ${INSTANCE_NAME}"
+        rm -f ${LOGS_DIR}/${INSTANCE_NAME}.log
+
         MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA} ${MMH}"
         if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
            echo "Not Starting ${INSTANCE_NAME}, it will be started later"
@@ -314,12 +366,12 @@ else
       if [ ! -z "${TMP}" ]; then
            BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
       fi
-      MEMBERSTARTCMD="./rungmsdemo.sh $INSTANCE_NAME ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA} ${MMH}"
+      MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${WORKSPACE_HOME}/${LOGS_DIR} ${BIA} ${MMH}"
       if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
          echo "Not Starting ${INSTANCE_NAME}, it will be started later"
       else
          echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/$INSTANCE_NAME.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}" &
+         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/${INSTANCE_NAME}.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}" &
       fi
       if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
                EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
@@ -561,3 +613,47 @@ else
     ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
 fi
 
+
+
+echo "Collecting final netstat results from server"
+echo "--------------------------------------------"
+
+if [ $DIST = false ]; then
+    eval date | tee -a ${LOGS_DIR}/netstat_server.log
+    eval netstat -su | egrep "(Udp|packet)" | tee -a ${LOGS_DIR}/netstat_server.log
+else
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "date | tee -a ${LOGS_DIR}/netstat_server.log; netstat -su | egrep "\(Udp|packet\)" | tee -a ${LOGS_DIR}/netstat_server.log"
+fi
+if [ $DIST = false ]; then
+    # single machine test
+    count=1
+    while [ $count -le ${NUMOFMEMBERS} ]
+    do
+        if [  ${count} -lt 10 ]; then
+           INSTANCE_NAME="instance0${count}"
+        else
+           INSTANCE_NAME=instance${count}
+        fi
+        echo "Collecting netstat results from ${INSTANCE_NAME}"
+        echo "---------------------------------------------------"
+
+        eval date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        eval netstat -su | egrep "(Udp|packet)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        count=`expr ${count} + 1`
+    done
+else
+   MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties" | grep -v server.properties  `
+   for member in ${MEMBERS}
+   do
+      TMP=`egrep "^MACHINE_NAME" ${member}`
+      MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^INSTANCE_NAME" ${member}`
+      INSTANCE_NAME=`echo $TMP | awk -F= '{print $2}' `
+      TMP=`egrep "^WORKSPACE_HOME" ${member}`
+      WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+      echo "Collecting netstat results from ${INSTANCE_NAME}"
+      echo "---------------------------------------------------"
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log; netstat -su | egrep "\(Udp|packet\)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
+   done
+   wait
+fi
