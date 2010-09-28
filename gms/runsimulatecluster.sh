@@ -80,7 +80,6 @@ usage () {
  exit 1
 }
 
-
 while [ $# -ne 0 ]
 do
      case ${1} in
@@ -210,14 +209,11 @@ fi
 echo "Collecting initial netstat results from server"
 echo "----------------------------------------------"
 if [ $DIST = false ]; then
-    rm -rf ${LOGS_DIR}/netstat_server.log
-    eval touch ${LOGS_DIR}/netstat_server.log
-    eval date | tee -a ${LOGS_DIR}/netstat_server.log
-    eval netstat -su | egrep "(Udp|packet)" |tee -a ${LOGS_DIR}/netstat_server.log
+    ./netstat.sh -u -r ${LOGS_DIR}/netstat_server.log
 else
     TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
     MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
-    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "rm -rf ${LOGS_DIR}/netstat_server.log; touch ${LOGS_DIR}/netstat_server.log; date | tee -a ${LOGS_DIR}/netstat_server.log;  netstat -su | egrep "\(Udp|packet\)" |  tee -a ${LOGS_DIR}/netstat_server.log"
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "./netstat.sh -u -r ${LOGS_DIR}/netstat_server.log"
 fi
 if [ $DIST = false ]; then
     # single machine test
@@ -231,11 +227,7 @@ if [ $DIST = false ]; then
         fi
         echo "Collecting netstat results from ${INSTANCE_NAME}"
         echo "---------------------------------------------------"
-
-        rm -rf ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
-        eval touch ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
-        eval date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
-        eval netstat -su | egrep "(Udp|packet)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        ./netstat.sh -u -r ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
         count=`expr ${count} + 1`
     done
 else
@@ -250,7 +242,7 @@ else
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
       echo "Collecting netstat results from ${INSTANCE_NAME}"
       echo "---------------------------------------------------"
-      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "rm -rf ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log; touch ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log;date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log; netstat -su | egrep "\(Udp|packet\)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "./netstat.sh -u -r ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
    done
    wait
 fi
@@ -619,10 +611,9 @@ echo "Collecting final netstat results from server"
 echo "--------------------------------------------"
 
 if [ $DIST = false ]; then
-    eval date | tee -a ${LOGS_DIR}/netstat_server.log
-    eval netstat -su | egrep "(Udp|packet)" | tee -a ${LOGS_DIR}/netstat_server.log
+    ./netstat.sh -u ${LOGS_DIR}/netstat_server.log
 else
-    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "date | tee -a ${LOGS_DIR}/netstat_server.log; netstat -su | egrep "\(Udp|packet\)" | tee -a ${LOGS_DIR}/netstat_server.log"
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "./netstat.sh -u  ${LOGS_DIR}/netstat_server.log"
 fi
 if [ $DIST = false ]; then
     # single machine test
@@ -636,9 +627,7 @@ if [ $DIST = false ]; then
         fi
         echo "Collecting netstat results from ${INSTANCE_NAME}"
         echo "---------------------------------------------------"
-
-        eval date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
-        eval netstat -su | egrep "(Udp|packet)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        ./netstat.sh -u  ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
         count=`expr ${count} + 1`
     done
 else
@@ -653,7 +642,7 @@ else
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
       echo "Collecting netstat results from ${INSTANCE_NAME}"
       echo "---------------------------------------------------"
-      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "date | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log; netstat -su | egrep "\(Udp|packet\)" | tee -a ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "./netstat.sh -u ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
    done
    wait
 fi
