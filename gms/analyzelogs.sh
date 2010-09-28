@@ -328,7 +328,7 @@ if [ "${CMD}" = "stop" ]; then
 elif [ "${CMD}" = "kill" ]; then
    EXPECTED=0
 elif [ "${CMD}" = "rejoin" ]; then
-   EXPECTED=${NUMOFMEMBERS}
+   EXPECTED=`expr ${NUMOFMEMBERS} - 1`
 elif [ "${CMD}" = "add" ]; then
    EXPECTED=0
 else
