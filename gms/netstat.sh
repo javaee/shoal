@@ -41,8 +41,9 @@
 
 Usage()
 {
-  echo "usage: [-h] [-u] filename"
+  echo "usage: [-h] [-u] [-r] filename"
   echo "      -u: display udp data only (default is all)"
+  echo "      -r: remove previous file"
   echo "filename: name of the file to store the output in"
 
   exit 0
@@ -53,11 +54,20 @@ if [ "${1}" = "-u" ]; then
    UDP=true
    shift
 fi
+REMOVE=false
+if [ "${1}" = "-r" ]; then
+   REMOVE=true
+   shift
+fi
 
 FILE=""
 if [ ! -z "${1}" ]; then
    FILE=${1}
    shift
+fi
+
+if [ ${REMOVE} = true ]; then
+   rm -rf ${FILE}
 fi
 
 date | tee -a ${FILE}
@@ -80,7 +90,7 @@ if [ ${UDP} = true ]; then
          then
             break
          else
-            echo "\t$line" | tee -a ${FILE}
+            echo "$line" | tee -a ${FILE}
          fi
       fi
     done  < tmp/netstat.tmp
