@@ -70,6 +70,14 @@ if [ ${REMOVE} = true ]; then
    rm -rf ${FILE}
 fi
 
+LOGDIR=`dirname ${FILE}`
+if [ ! -z "${LOGDIR}" ]; then
+   if [ ! -d ${LOGDIR} ];then
+      mkdir -p ${LOGDIR}
+   fi
+fi
+
+touch ${FILE}
 date | tee -a ${FILE}
 
 mkdir tmp > /dev/null 2>&1
