@@ -190,7 +190,7 @@ echo "LOGS_DIRS=${LOGS_DIR}"
 #--------------------------
 # killing of any previous processes
 if [ $DIST = false ]; then
-     killmembers.sh
+   killmembers.sh
 else
    MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties"  `
    for member in ${MEMBERS}
@@ -209,11 +209,13 @@ fi
 echo "Collecting initial netstat results from server"
 echo "----------------------------------------------"
 if [ $DIST = false ]; then
-    ./netstat.sh -u -r ${LOGS_DIR}/netstat_server.log
+    netstat.sh -u -r ${LOGS_DIR}/netstat_server.log
 else
     TMP=`egrep "^MACHINE_NAME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
     MASTER_MACHINE_NAME=`echo $TMP | awk -F= '{print $2}' `
-    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "./netstat.sh -u -r ${LOGS_DIR}/netstat_server.log"
+    TMP=`egrep "^WORKSPACE_HOME" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
+    MASTER_WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; netstat.sh -u -r ${LOGS_DIR}/netstat_server.log"
 fi
 if [ $DIST = false ]; then
     # single machine test
@@ -227,7 +229,7 @@ if [ $DIST = false ]; then
         fi
         echo "Collecting netstat results from ${INSTANCE_NAME}"
         echo "---------------------------------------------------"
-        ./netstat.sh -u -r ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        netstat.sh -u -r ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
         count=`expr ${count} + 1`
     done
 else
@@ -242,7 +244,7 @@ else
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
       echo "Collecting netstat results from ${INSTANCE_NAME}"
       echo "---------------------------------------------------"
-      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "./netstat.sh -u -r ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};netstat.sh -u -r ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
    done
    wait
 fi
@@ -611,9 +613,9 @@ echo "Collecting final netstat results from server"
 echo "--------------------------------------------"
 
 if [ $DIST = false ]; then
-    ./netstat.sh -u ${LOGS_DIR}/netstat_server.log
+    netstat.sh -u ${LOGS_DIR}/netstat_server.log
 else
-    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "./netstat.sh -u  ${LOGS_DIR}/netstat_server.log"
+    ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME};netstat.sh -u  ${LOGS_DIR}/netstat_server.log"
 fi
 if [ $DIST = false ]; then
     # single machine test
@@ -627,7 +629,7 @@ if [ $DIST = false ]; then
         fi
         echo "Collecting netstat results from ${INSTANCE_NAME}"
         echo "---------------------------------------------------"
-        ./netstat.sh -u  ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
+        netstat.sh -u  ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log
         count=`expr ${count} + 1`
     done
 else
@@ -642,7 +644,7 @@ else
       WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
       echo "Collecting netstat results from ${INSTANCE_NAME}"
       echo "---------------------------------------------------"
-      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "./netstat.sh -u ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
+      ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME}; netstat.sh -u ${LOGS_DIR}/netstat_${INSTANCE_NAME}.log" &
    done
    wait
 fi
