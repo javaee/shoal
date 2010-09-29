@@ -198,8 +198,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
             KeyMapper keyMapper = dsc.getKeyMapper();
             String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
-            _logger.log(Level.INFO, "ReplicatedDataStore.load(" + key
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "ReplicatedDataStore.load(" + key
                                             + "); ReplicaChoices: " + replicachoices);
+            }
 
             String respondingInstance = null;
             for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
@@ -257,11 +259,15 @@ public class ReplicatedDataStore<K, V extends Serializable>
                             entry.setReplicaInstanceName(respondingInstance);
                             //Note: Do not remove the stale replica now. We will
                             //  do that in save
-                            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                            if (_logger.isLoggable(Level.FINE)) {
+                                _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
                                     + "; Successfully loaded data from " + respondingInstance);
+                            }
                         } else {
-                            _logger.log(Level.INFO, "ReplicatedDataStore: For Key=" + key
+                            if (_logger.isLoggable(Level.FINE)) {
+                                _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
                                     + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
+                            }
                         }
                     }
                 }

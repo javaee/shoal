@@ -127,8 +127,8 @@ public class StoreableLoadResponseCommand<K, V>
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + " executed load_response " + key + " value " + v);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getInstanceName() + " executed load_response " + key + " value " + v);
             }
             resp.setRespondingInstanceName(respondingInstanceName);
             resp.setResult(v);

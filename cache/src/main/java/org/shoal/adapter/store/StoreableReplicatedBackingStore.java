@@ -195,7 +195,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     public V load(K key, String versionInfo) throws BackingStoreException {
         long version = Long.MIN_VALUE;
         try {
-            _logger.log(Level.INFO, "StoreableReplicatedBackingStore.load(" + key + ", " + versionInfo + ")");
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "StoreableReplicatedBackingStore.load(" + key + ", " + versionInfo + ")");
+            }
             version = Long.valueOf(versionInfo);
         } catch (Exception ex) {
             //TODO
@@ -218,8 +220,10 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                         v = null;
                     } else {
                         foundLocallyCount.incrementAndGet();
-                        _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key
+                        if (_logger.isLoggable(Level.FINE)) {
+                            _logger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key
                                 + "). LOCAL REPLICA CACHE HIT: " + v + "; hitCount: " + foundLocallyCount.get());
+                        }
                     }
                 }
             } else {
@@ -230,8 +234,10 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         if (v == null) {
             String replicachoices = framework.getKeyMapper().getReplicaChoices(framework.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
-            _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key
                                             + ", " + version + "); ReplicaChoices: " + replicachoices);
+            }
             try {
                 String respondingInstance = null;
                 for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
@@ -250,7 +256,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
                     if (v != null) {
-                        _logger.log(Level.INFO, "StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                        if (_logger.isLoggable(Level.FINE)) {
+                            _logger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                        }
                         respondingInstance = command.getRespondingInstanceName();
                         break;
                     }
@@ -272,7 +280,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                         framework.execute(command);
                         v = command.getResult(3, TimeUnit.SECONDS);
                         if (v != null) {
-                            _logger.log(Level.INFO, "2.StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                            if (_logger.isLoggable(Level.FINE)) {
+                                _logger.log(Level.FINE, "2.StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                            }
                             respondingInstance = targetInstance;
                             break;
                         }
@@ -287,8 +297,10 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                                 if (localCachingEnabled) {
                                     entry.setV(v);
                                 }
-                                _logger.log(Level.INFO, "StoreableReplicatedBackingStore: For Key=" + key
-                                    + "; Successfully loaded data from " + respondingInstance);
+                                if (_logger.isLoggable(Level.FINE)) {
+                                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
+                                        + "; Successfully loaded data from " + respondingInstance);
+                                }
                                 entry.setReplicaInstanceName(respondingInstance);
                                 //Note: Do not remove the stale replica now. We will
                                 //  do that in save
@@ -340,7 +352,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 }
 
                 result = cmd.getKeyMappingInfo();
-                _logger.log(Level.INFO, "StoreableReplicatedBackingStore.save(" + key + "). Saved to " + result);
+                if (_logger.isLoggable(Level.FINE)) {
+                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore.save(" + key + "). Saved to " + result);
+                }
             }
 
             return result;

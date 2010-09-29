@@ -150,8 +150,8 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
                     }
                 }
             }
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + getName() + " will send " + key + " => " + result + " to " + initiator);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " will send " + key + " => " + result + " to " + initiator);
             }
             
             if (! originatingInstance.equals(dsc.getInstanceName())) {

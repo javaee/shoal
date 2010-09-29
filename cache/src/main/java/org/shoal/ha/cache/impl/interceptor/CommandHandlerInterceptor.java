@@ -68,7 +68,7 @@ public final class CommandHandlerInterceptor<K, V>
         }
 
         if (dsc.getInstanceName().equals(cmd.getTargetName())) {
-            _logger.log(Level.INFO, "To Me??? Cmd: " + cmd);
+            _logger.log(Level.WARNING, "To Me??? Cmd: " + cmd);
             cmd.execute(initiator);
         } else {
             super.onTransmit(cmd, initiator);
@@ -78,8 +78,9 @@ public final class CommandHandlerInterceptor<K, V>
     @Override
     public void onReceive(Command<K, V> cmd, String initiator)
             throws DataStoreException {
-
-        _logger.log(Level.INFO, storeName + ": Received " + cmd + " from " + initiator);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, storeName + ": Received " + cmd + " from " + initiator);
+        }
         
         
         try {

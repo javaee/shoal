@@ -75,8 +75,8 @@ public final class TransmitInterceptor<K, V>
             GroupService gs = ctx.getGroupService();
             gs.sendMessage(cmd.getTargetName(),
                     ctx.getServiceName(), data);
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, storeName + ": TransmitInterceptor." + ctx.getServiceName()
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, storeName + ": TransmitInterceptor." + ctx.getServiceName()
                         + ":onTransmit() Sent " + cmd + " to "
                         + (cmd.getTargetName() == null ? " ALL MEMBERS " : cmd.getTargetName())
                         + "; size: " + data.length);

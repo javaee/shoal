@@ -123,8 +123,8 @@ public class LoadRequestCommand<K, V>
         try {
             DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
             V v = e == null ? null : (V) e.getV();
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + getName() + " will send " + key + " => " + v + " to " + initiator);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " will send " + key + " => " + v + " to " + initiator);
             }
             if (!originatingInstance.equals(dsc.getInstanceName())) {
                 LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);

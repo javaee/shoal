@@ -161,7 +161,7 @@ public class CommandManager<K, V>
             cmd.prepareToExecute(ris);
             this.executeCommand(cmd, false, sourceMemberName);
         } catch (IOException dse) {
-            _logger.log(Level.INFO, "Error during parsing command", dse);
+            _logger.log(Level.WARNING, "Error during parsing command", dse);
         } finally {
            try {ris.close();} catch (Exception ex) {}
         }

@@ -123,8 +123,8 @@ public class TouchCommand<K, V>
     @Override
     public void execute(String initiator)
         throws DataStoreException {
-        if (_logger.isLoggable(Level.INFO)) {
-            _logger.log(Level.INFO, dsc.getInstanceName() + " received save " + k + " from " + initiator);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, dsc.getInstanceName() + " received save " + k + " from " + initiator);
         }
 
         DataStoreEntry<K, V> entry = dsc.getReplicaStore().getEntry(k);

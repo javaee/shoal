@@ -111,8 +111,8 @@ public class SizeResponseCommand<K, V>
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
-            if (_logger.isLoggable(Level.INFO)) {
-                _logger.log(Level.INFO, dsc.getInstanceName() + " executed size_response tokenId=" + tokenId + " value " + size);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getInstanceName() + " executed size_response tokenId=" + tokenId + " value " + size);
             }
             
             resp.setRespondingInstanceName(respondingInstanceName);

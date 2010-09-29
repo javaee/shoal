@@ -145,7 +145,9 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
 
         if (dsc.isDoSynchronousReplication()) {
 
-            _logger.log(Level.INFO, getName() + " About to send ACK back to " + initiator + " for key: " + k);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, getName() + " About to send ACK back to " + initiator + " for key: " + k);
+            }
             super.sendAcknowledgement();
         }
     }

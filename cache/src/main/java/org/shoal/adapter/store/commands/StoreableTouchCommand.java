@@ -136,7 +136,7 @@ public class StoreableTouchCommand<K, V extends Storeable>
                             //ignore ? Stale data
                         } else {
                             List<Command<K, V>> commands = entry.getPendingUpdates();
-                            _logger.log(Level.INFO, "Added to pending updates.... for key: " + k);
+                            _logger.log(Level.INFO, "Added[1] to pending updates.... for key: " + k);
                         }
                     } else {
                         List<Command<K, V>> commands = entry.getPendingUpdates();
