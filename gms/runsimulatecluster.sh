@@ -316,7 +316,7 @@ if [ $DIST = false ]; then
         fi
 
         echo "Removing old instance log for ${INSTANCE_NAME}"
-        rm -f ${LOGS_DIR}/${INSTANCE_NAME}.log
+        rm -f ${LOGS_DIR}/ins*.log
 
         MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA} ${MMH}"
         if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
@@ -364,7 +364,7 @@ else
          echo "Not Starting ${INSTANCE_NAME}, it will be started later"
       else
          echo "Starting ${INSTANCE_NAME} on ${MACHINE_NAME}"
-         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/${INSTANCE_NAME}.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}" &
+         ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}/ins*.log; mkdir -p ${LOGS_DIR}; ${MEMBERSTARTCMD}" &
       fi
       if [ ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
                EFFECTED_MEMBERSTARTCMD=${MEMBERSTARTCMD}
