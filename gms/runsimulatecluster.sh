@@ -188,9 +188,11 @@ fi
 echo "LOGS_DIRS=${LOGS_DIR}"
 
 #--------------------------
-# killing of any previous processes
+# killing of any previous processes and remove and create logs dir
 if [ $DIST = false ]; then
    killmembers.sh
+   rm -rf ${LOGS_DIR}
+   mkdir -p ${LOGS_DIR}
 else
    MEMBERS=`find ${CLUSTER_CONFIGS}/${GROUPNAME} -name "*.properties"  `
    for member in ${MEMBERS}
@@ -200,7 +202,7 @@ else
        TMP=`egrep "^WORKSPACE_HOME" ${member}`
        WORKSPACE_HOME=`echo $TMP | awk -F= '{print $2}' `
        echo "Killing processes on ${MACHINE_NAME}"
-       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh" &
+       ${EXECUTE_REMOTE_CONNECT} ${MACHINE_NAME} "cd ${WORKSPACE_HOME};killmembers.sh; rm -rf ${LOGS_DIR}; mkdir -p ${LOGS_DIR}" &
    done
    echo "Waiting for remote process(es) to terminate"
    wait
@@ -314,9 +316,6 @@ if [ $DIST = false ]; then
         else
           BIA=""
         fi
-
-        echo "Removing old instance log for ${INSTANCE_NAME}"
-        rm -f ${LOGS_DIR}/ins*.log
 
         MEMBERSTARTCMD="./rungmsdemo.sh ${INSTANCE_NAME} ${GROUPNAME} CORE 0 ${SHOALGMS_LOG_LEVEL} ${TRANSPORT} -tl ${TEST_LOG_LEVEL} -ts ${SDTCP} -te ${EDTCP} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} -l ${LOGS_DIR} ${BIA} ${MMH}"
         if [ "${CMD}" = "add" -a ${INSTANCE_NAME} = ${INSTANCE_EFFECTED} ]; then
