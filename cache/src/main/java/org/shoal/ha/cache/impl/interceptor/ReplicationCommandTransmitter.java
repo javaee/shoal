@@ -70,11 +70,22 @@ public class ReplicationCommandTransmitter<K, V>
 
     private ScheduledFuture future;
 
+    private static final String TRANSMITTER_FREQUECNCY_PROP_NAME = "org.shoal.cache.transmitter.frequency.in.millis";
+
+    private static int TRANSMITTER_FREQUECNCY_IN_MILLIS = 100;
+
     public void initialize(String targetName, DataStoreContext<K, V> rsInfo, ASyncThreadPool asyncPool) {
         this.targetName = targetName;
         this.dsc = rsInfo;
 
-        future = asyncPool.scheduleAtFixedRate(this, 100, 100, TimeUnit.MILLISECONDS);
+        try {
+           TRANSMITTER_FREQUECNCY_IN_MILLIS = Integer.getInteger(System.getProperty(TRANSMITTER_FREQUECNCY_PROP_NAME, "100"));
+        } catch (Exception ex) {
+            //Ignore
+        }
+        
+        future = asyncPool.scheduleAtFixedRate(this, TRANSMITTER_FREQUECNCY_IN_MILLIS,
+                TRANSMITTER_FREQUECNCY_IN_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     public void addCommand(Command<K, V> cmd) {

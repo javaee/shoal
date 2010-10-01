@@ -69,8 +69,17 @@ public class ReplicationCommandTransmitterManager<K, V>
 
     private ASyncThreadPool asyncPool;
 
+
+    private static final String TRANSMITTER_THREAD_COUNT = "org.shoal.cache.transmitter.thread.count";
+
     public ReplicationCommandTransmitterManager() {
-        this.asyncPool = new ASyncThreadPool(7);
+        int threadCount = 32;
+        try {
+           threadCount = Integer.getInteger(System.getProperty(TRANSMITTER_THREAD_COUNT, "32"));
+        } catch (Exception ex) {
+            //Ignore
+        }
+        this.asyncPool = new ASyncThreadPool(threadCount);
     }
 
     @Override
