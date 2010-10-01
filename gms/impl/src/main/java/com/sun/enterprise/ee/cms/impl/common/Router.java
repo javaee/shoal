@@ -87,6 +87,7 @@ public class Router {
     private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private final ExecutorService actionPool;
+    private final ExecutorService messageActionPool;
     private long startupTime;
     private static final int GROUP_WARMUP_TIME = 30000;    // join notification remains in queue for this amount of time when there is no Join handler registered yet.
     private final int MAX_QUEUE_SIZE;                      // used to be 100, now it is set relative to size of msg queue.
@@ -103,6 +104,7 @@ public class Router {
         signalHandlerThread = new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread");
         signalHandlerThread.start();
         actionPool = Executors.newCachedThreadPool();
+        messageActionPool = Executors.newSingleThreadExecutor();
         startupTime = System.currentTimeMillis();
     }
 
@@ -283,6 +285,8 @@ public class Router {
         }
     }
 
+    private long lastReported = 0L;
+    final private long NEXT_REPORT_DURATION = 1000 * 60 * 30;  // 30 minutes
 
     /**
      * Adds a single signal to the queue.
@@ -301,8 +305,20 @@ public class Router {
                     queue.put(signalPacket);
                 } finally {
                     long duration = System.currentTimeMillis() - starttime;
-                    if (duration > 0) {
-                        monitorLogger.info("signal processing blocked due to signal queue being full for " + duration + " ms. Router signal queue capacity: " + fullcapacity);
+                    if (duration > 2000) {
+                        if (lastReported + NEXT_REPORT_DURATION < System.currentTimeMillis()) {
+                            monitorLogger.info("signal processing blocked due to signal queue being full for " +
+                                               duration + " ms. Router signal queue capacity: " + fullcapacity);
+                            lastReported = System.currentTimeMillis();
+                        }
+                    } else if (duration > 50) {
+                        if (lastReported + NEXT_REPORT_DURATION < System.currentTimeMillis()) {
+                            if (monitorLogger.isLoggable(Level.FINE)) {
+                                monitorLogger.fine("signal processing blocked due to signal queue being full for " +
+                                                   duration + " ms. Router signal queue capacity: " + fullcapacity);
+                                lastReported = System.currentTimeMillis();
+                            }
+                        }
                     }
                 }
             }
@@ -379,17 +395,9 @@ public class Router {
 //            }
         } else {
             MessageAction a = (MessageAction) maf.produceAction();
-            try {
-                //due to message ordering requirements,
-                //this call is not delegated to a the thread pool
-                a.consumeSignal(signal);
-            } catch (ActionException e) {
-                logger.log(Level.WARNING, "action.exception", new Object[]{e.getLocalizedMessage()});
-            } catch (Throwable t) {
-                // just in case application provides own ActionImpl.
-                logger.log(Level.WARNING, "router.msg.handler.exception", new Object[]{t.getLocalizedMessage(), signal.toString()});
-                logger.log(Level.WARNING, "stack trace", t);
-            }
+            //due to message ordering requirements,
+            //this call is delegated to a singleton thread pool
+            callMessageAction(a, signal);
         }
     }
 
@@ -493,6 +501,15 @@ public class Router {
         }
     }
 
+    private void callMessageAction(final Action a, final Signal signal) {
+        try {
+            final CallableAction task = new CallableAction(a, signal);
+            messageActionPool.submit(task);
+        } catch (RejectedExecutionException e) {
+            logger.log(Level.WARNING, e.getMessage());
+        }
+    }
+
     public boolean isFailureNotificationAFRegistered() {
         boolean retval = true;
         if (failureNotificationAF.isEmpty()){
@@ -576,9 +593,10 @@ public class Router {
         if( signalHandlerThread != null ) {
             signalHandler.stop(signalHandlerThread);
         }
-        if (monitorLogger.isLoggable(Level.FINE)) {
-            monitorLogger.log(Level.FINE, "router signal queue high water mark:" + queueHighWaterMark.get()
-                                        + " signal queue capacity:" + MAX_QUEUE_SIZE);
+        // consider WARNING to tell user to increase size of INCOMING_MSG_QUEUE_SIZE for their application's messaging load.
+        if (monitorLogger.isLoggable(Level.INFO)) {
+            monitorLogger.log(Level.INFO, "router.stats.monitor.msgqueue.high.water",
+                              new Object[]{ queueHighWaterMark.get(), MAX_QUEUE_SIZE});
         }
         if( queue != null ) {
             int unprocessedEventSize = queue.size();
@@ -599,6 +617,9 @@ public class Router {
         if( actionPool != null ) {
             actionPool.shutdownNow();
         }
+        if (messageActionPool != null) {
+            messageActionPool.shutdown();
+        }                                   
     }
 
     /**

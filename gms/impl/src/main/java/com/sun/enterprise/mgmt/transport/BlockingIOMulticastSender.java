@@ -68,6 +68,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
 
     private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
     private static final Logger monitorLog = GMSLogDomain.getMonitorLogger();
+    private static final Logger mcastLog = GMSLogDomain.getMcastLogger();
 
     private final InetSocketAddress localSocketAddress;
     private final InetAddress multicastAddress;
@@ -276,8 +277,8 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                             if (qsize > maxExecutorQueueSize) {
                                 maxExecutorQueueSize = qsize;
                             }
-                            if (monitoringEnabled && ((threadPoolExecutor.getCompletedTaskCount()) % 128) == 0) {
-                                printStats(Level.FINE);
+                            if (monitoringEnabled && ((threadPoolExecutor.getCompletedTaskCount()) % 2560) == 0) {
+                                printStats(Level.FINER);
                             }
                         }
                     } else {
@@ -373,8 +374,8 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                 if( networkManager != null ) {
                     networkManager.receiveMessage( message, null );
                     if (message.getType() != MessageImpl.TYPE_HEALTH_MONITOR_MESSAGE) {
-                        if (monitorLog.isLoggable(Level.FINE)) {
-                            monitorLog.log(Level.FINE, "BlockingIOMulticastSender.receiveMessage processed multicast message " + message.toString());
+                        if (mcastLog.isLoggable(Level.FINER)) {
+                            mcastLog.log(Level.FINER, "BlockingIOMulticastSender.receiveMessage processed multicast message " + message.toString());
                         }
                     }
                 }

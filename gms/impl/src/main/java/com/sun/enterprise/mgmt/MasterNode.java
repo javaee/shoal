@@ -47,7 +47,6 @@ import com.sun.enterprise.ee.cms.core.RejoinSubevent;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
-import com.sun.enterprise.ee.cms.impl.client.RejoinSubeventImpl;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
@@ -63,6 +62,8 @@ import java.io.Serializable;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -99,7 +100,8 @@ import java.util.logging.Logger;
  */
 class MasterNode implements MessageListener, Runnable {
     private static final Logger LOG = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
-    private static final Logger masterLogger = Logger.getLogger("ShoalLogger.MasterNode");
+    private static final Logger mcastLogger = GMSLogDomain.getMcastLogger();
+    private static final Logger masterLogger = GMSLogDomain.getMasterNodeLogger();
     private static final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private final ClusterManager manager;
 
@@ -125,15 +127,21 @@ class MasterNode implements MessageListener, Runnable {
     private static final String NODEADV = "NAD";
     private static final String AMASTERVIEW = "AMV";
     private static final String AMASTERVIEWSTATES = "AMVS";
-    private static final String MASTERVIEWSEQ = "SEQ";
+    static final String MASTERVIEWSEQ = "SEQ";
     private static final String GROUPSTARTING = "GS";
     private static final String GROUPMEMBERS = "GN";
     private static final String GROUPSTARTUPCOMPLETE = "GSC";
+    private static final String RESENDREQUEST ="RR";
+    private static final String LATESTMASTERVIEWID ="LMWID";
+
+
+    private static final boolean NOTIFY_LISTENERS = true;
+    private static final boolean DONOT_NOTIFY_LISTENERS = false;
 
     private int interval = 6;
     // Default master node discovery timeout
     private long timeout = 10 * 1000L;
-    private static final String VIEW_CHANGE_EVENT = "VCE";
+    static final String VIEW_CHANGE_EVENT = "VCE";
     private static final String REJOIN_SUBEVENT = "RJSE";
 
     private boolean groupStarting = false;
@@ -150,6 +158,10 @@ class MasterNode implements MessageListener, Runnable {
     private Thread processOutstandingMessagesThread = null;
     private ConcurrentHashMap<String, Object> pendingGroupStartupMembers = new ConcurrentHashMap<String, Object>();
     private SortedSet<String> groupMembers = new TreeSet<String>();
+    private ReliableMulticast reliableMulticast;
+    private ExecutorService checkForMissedMasterMsgSingletonExecutor = Executors.newSingleThreadExecutor();
+    final TreeSet<ProcessedMasterViewId> processedChangeEvents = new TreeSet<ProcessedMasterViewId>();
+
 
     /**
      * Constructor for the MasterNode object
@@ -183,6 +195,10 @@ class MasterNode implements MessageListener, Runnable {
         return timeout * interval;
     }
 
+    public long getMasterViewID() {
+        return masterViewID.get();
+    }
+
     /**
      * Sets the Master Node peer ID, also checks for collisions at which event
      * A Conflict Message is sent to the conflicting node, and master designation
@@ -196,42 +212,40 @@ class MasterNode implements MessageListener, Runnable {
               LOG.log(Level.FINE,"checkMaster : clusterStopping() = " + clusterStopping);
             if (clusterStopping) {
                 //accept the DAS as the new Master
-                LOG.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
-                LOG.log(Level.FINE, "Accepting DAS as new master in the event of cluster stopping...");
-                synchronized(this) {
-                    clusterViewManager.setMaster(systemAdv, false);
-                    masterAssigned = true;
-                }
+                masterLogger.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
+                masterLogger.log(Level.FINE, "Accepting DAS as new master in the event of cluster stopping...");
+                setMaster(systemAdv, DONOT_NOTIFY_LISTENERS);
                 return false;
             }
-            LOG.log(Level.FINE,
-                    "Master node role collision with " + systemAdv.getName() +
-                            " .... attempting to resolve");
+            LOG.log(Level.INFO, "mgmt.masternode.collision", new Object[]{systemAdv.getName() });
             send(systemAdv.getID(), systemAdv.getName(),
                     createMasterCollisionMessage());
 
             //TODO add code to ensure whether this node should remain as master or resign (basically noop)
             if (manager.getPeerID().compareTo(systemAdv.getID()) >= 0) {
-                LOG.log(Level.FINE, "Affirming Master Node role");
+                masterLogger.log(Level.FINE, "Affirming Master Node role");
             } else {
-                LOG.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
-                clusterViewManager.setMaster(systemAdv, false);
+                masterLogger.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
+                setMaster(systemAdv, DONOT_NOTIFY_LISTENERS);
             }
 
             return false;
         } else {
-            synchronized(this) {
-                clusterViewManager.setMaster(systemAdv, true);
-                masterAssigned = true;
-            }
+            setMaster(systemAdv, NOTIFY_LISTENERS);
             synchronized (MASTERLOCK) {
                 MASTERLOCK.notifyAll();
             }
-            if (LOG.isLoggable(Level.FINE)){
-                LOG.log(Level.FINE, "Discovered a Master node :" + systemAdv.getName());
+            if (masterLogger.isLoggable(Level.FINE)){
+                masterLogger.log(Level.FINE, "Discovered a Master node :" + systemAdv.getName());
             }
         }
         return true;
+    }
+
+    public Message createResendRequest(PeerID master, List<Long> missed) {
+        final Message msg = createSelfNodeAdvertisement();
+        msg.addMessageElement(RESENDREQUEST, (Serializable)missed);
+        return msg;
     }
 
     /**
@@ -310,7 +324,6 @@ class MasterNode implements MessageListener, Runnable {
         }
         msg.addMessageElement(type, masterID);
         if (groupStarting) {
-            // note that we are currently not sending static list of known group members in MasterNodeResponse at this time
             msg.addMessageElement(GROUPSTARTING, Boolean.valueOf(groupStarting));
             msg.addMessageElement(GROUPMEMBERS, (Serializable)groupMembers);
         }
@@ -531,26 +544,17 @@ class MasterNode implements MessageListener, Runnable {
         }
         msgElement = msg.getMessageElement(AMASTERVIEW);
         if ( msgElement == null || !(msgElement instanceof List) ) {
-            synchronized(this) {
-                clusterViewManager.setMaster( source, true );
-                masterAssigned = true;
-            }
+            setMaster(source, NOTIFY_LISTENERS);
             return true;
         }
         final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>) msgElement;
         msgElement = msg.getMessageElement(VIEW_CHANGE_EVENT);
         if ( msgElement == null || !(msgElement instanceof ClusterViewEvent)) {
-            synchronized(this) {
-                clusterViewManager.setMaster( source, true );
-                masterAssigned = true;
-            }
+            setMaster(source, NOTIFY_LISTENERS);
             return true;
         }
         if (!isDiscoveryInProgress() && seqID <= clusterViewManager.getMasterViewID()) {
-            synchronized(this) {
-                clusterViewManager.setMaster(source, true);
-                masterAssigned = true;
-            }
+            setMaster(source, NOTIFY_LISTENERS);
             LOG.log(Level.WARNING, "mgmt.masternode.staleview",
                     new Object[]{seqID, newLocalView.size(), clusterViewManager.getMasterViewID()});
             return true;
@@ -563,10 +567,12 @@ class MasterNode implements MessageListener, Runnable {
             masterChanged = clusterViewManager.setMaster( newLocalView, source );
             masterAssigned = true;
         }
-        if ( masterChanged )
+        if ( masterChanged ) {
             clusterViewManager.notifyListeners( cvEvent );
-        else
+            clearChangeEventsNotFromCurrentMaster(source.getID());
+        } else {
             clusterViewManager.addToView(newLocalView, true, cvEvent);
+        }
         synchronized (MASTERLOCK) {
             MASTERLOCK.notifyAll();
         }
@@ -683,6 +689,21 @@ class MasterNode implements MessageListener, Runnable {
                 clusterViewManager.setMasterViewID(seqID);
                 masterViewID.set(seqID);
                 clusterViewManager.addToView(newLocalView, true, cvEvent);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    boolean processResendRequest(final Message msg, final SystemAdvertisement adv) throws IOException {
+        if (isMaster() && masterAssigned) {
+            Object element = msg.getMessageElement(RESENDREQUEST);
+            if (element != null && element instanceof List) {
+                List<Long> missedList = (List<Long>)element;
+                for (Long missed : missedList) {
+                    reliableMulticast.resend(adv.getID(), missed);
+                }
                 return true;
             }
         }
@@ -967,6 +988,31 @@ class MasterNode implements MessageListener, Runnable {
         }
     }
 
+    private boolean injectSimulatedFailure(MasterNodeMessageEvent mnme) {
+        boolean result = false;
+        if ((manager.getInstanceName().equals("instance02") ||
+             manager.getInstanceName().equals("instance04") ||
+             manager.getInstanceName().equals("instance06")) &&
+             (((mnme.seqId) % 5) == 0)) {
+
+            Object element = mnme.msg.getMessageElement("RESEND");
+            if (element != null && element instanceof Boolean) {
+                // don't drop the resend.
+                result = false;
+            } else {
+                // testing only. do not i18n.
+                // simulated drop of UDP message.
+                if (mcastLogger.isLoggable(Level.FINE)) {
+                    mcastLogger.fine("simulated drop of receiving UDP broadcast for member:" +
+                                     manager.getInstanceName() + " masterViewSequenceId:" + mnme.seqId);
+                }
+                // purposely return w/o processing this message.
+                result = true;
+            }
+        }
+        return result;
+    }
+
     public void receiveMessageEvent(final MessageEvent event) throws MessageIOException {
         final Message msg = event.getMessage();
         if (msg == null) {
@@ -976,13 +1022,38 @@ class MasterNode implements MessageListener, Runnable {
         if (monitorLogger.isLoggable(Level.FINE)) {
             monitorLogger.fine("MasterNode.receiveMessageEvent:" + mnme.toString());
         }
+        if (mcastLogger.isLoggable(Level.FINE)) {
+            mcastLogger.fine("receiveMessageEvent: process master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
+        }
         if (mnme.seqId == -1) {
-            if (LOG.isLoggable(Level.FINE)) {
-                LOG.fine("receiveMessageEvent: process master node message masterViewSeqId:" + mnme.seqId + " from member:" + event.getSourcePeerID());
-            }
             processNextMessageEvent(mnme);
         } else {
             final boolean added;
+
+            if (masterAssigned && !isMaster() && !isDiscoveryInProgress()) {
+
+                // TODO: do not allow this in final release. injecting test failures via logging config is short term only.
+                if (mcastLogger.isLoggable(Level.FINEST)) {
+                    if (injectSimulatedFailure(mnme)) {
+                         return;
+                    }
+                }
+                // TODO: do not allow in final release.
+
+                ProcessedMasterViewId processed = new ProcessedMasterViewId((PeerID)msg.getMessageElement(Message.SOURCE_PEER_ID_TAG), mnme.seqId);
+                boolean result;
+                synchronized(processedChangeEvents) {
+                    result = processedChangeEvents.add(processed);
+                }
+                if (!result) {
+                    // TODO: decide whether to leave INFO or to demote to FINE logging.
+                    if (mcastLogger.isLoggable(Level.FINE)) {
+                        mcastLogger.log(Level.FINE, "dropping master node message with masterViewID=" + mnme.seqId + " it was already processed.");
+                    }
+                    return;
+                }
+            }
+
             synchronized(outstandingMasterNodeMessages) {
 
                 //place message into set ordered via MasterViewSequenceId.
@@ -1004,12 +1075,9 @@ class MasterNode implements MessageListener, Runnable {
      */
     public void processNextMessageEvent(final MasterNodeMessageEvent masterNodeMessage) throws MessageIOException {
         boolean result = false;
-        if (LOG.isLoggable(Level.FINEST)) {
-            LOG.log(Level.FINEST, "Received a message inside  pipeMsgEvent");
-        }
         if (manager.isStopping()) {
-            if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "Since this Peer is Stopping, returning without processing incoming master node message. ");
+            if (mcastLogger.isLoggable(Level.FINE)) {
+                mcastLogger.log(Level.FINE, "Since this Peer is Stopping, returning without processing incoming master node message. ");
             }
             return;
         }
@@ -1037,6 +1105,9 @@ class MasterNode implements MessageListener, Runnable {
                         result = false;  // never report Join event during discovery mode.
                         discoveryView.add(adv);
                     }
+                }
+                if (processResendRequest(msg, adv)) {
+                    return;
                 }
                 if (processMasterNodeQuery(msg, adv, result)) {
                     return;
@@ -1080,6 +1151,7 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     private void announceMaster(SystemAdvertisement adv) {
+        reliableMulticast = new ReliableMulticast(manager);
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
         if(masterAssigned && isMaster()){
@@ -1171,11 +1243,7 @@ class MasterNode implements MessageListener, Runnable {
         if (LOG.isLoggable(Level.FINER)){
             LOG.log(Level.FINER, "MasterNode: Master Candidate="+madv.getName());
         }
-        //avoid notifying listeners
-        synchronized(this) {
-            clusterViewManager.setMaster(madv, false);
-            masterAssigned = true;
-        }
+        setMaster(madv, DONOT_NOTIFY_LISTENERS);
         if (madv.getID().equals(localNodeID)) {
             LOG.log(Level.FINER, "MasterNode: Setting myself as MasterNode ");
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
@@ -1281,7 +1349,11 @@ class MasterNode implements MessageListener, Runnable {
         if (LOG.isLoggable(Level.FINER)) {
             LOG.log(Level.FINER, "Sending new authoritative cluster view to group, event :" + event.getEvent().toString()+" viewSeqId: "+clusterViewManager.getMasterViewID());
         }
-        send(toID, null, msg);
+        if (toID != null) {
+            send(toID, null, msg);
+        } else {
+            reliableBroadcastSend(msg);
+        }
         if (rjse != null && event.getEvent() == JOINED_AND_READY_EVENT) {
             ctx.getInstanceRejoins().remove(rjse);
         }
@@ -1349,6 +1421,10 @@ class MasterNode implements MessageListener, Runnable {
         }
         manager.getNetworkManager().removeMessageListener( this );
         processOutstandingMessagesThread.interrupt();
+        if (reliableMulticast != null) {
+            reliableMulticast.stop();  // stop reaper TimerTask.
+        }
+        this.checkForMissedMasterMsgSingletonExecutor.shutdownNow();
     }
 
     /**
@@ -1428,11 +1504,7 @@ class MasterNode implements MessageListener, Runnable {
                 LOG.log(Level.FINER, "MasterNode: Forcefully becoming the Master..." + madv.getName());
             }
             //avoid notifying listeners
-            synchronized(this) {
-                clusterViewManager.setMaster(madv, false);
-                masterAssigned = true;
-            }
-
+            setMaster(madv, DONOT_NOTIFY_LISTENERS);
             clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
             if (LOG.isLoggable(Level.FINER)) {
                 LOG.log(Level.FINER, "MasterNode: becomeMaster () : masterViewId ="+masterViewID );
@@ -1635,6 +1707,9 @@ class MasterNode implements MessageListener, Runnable {
             if (o instanceof MasterNodeMessageEvent) {
                 MasterNodeMessageEvent e = (MasterNodeMessageEvent)o;
                 int peerCompareToResult = event.getSourcePeerID().compareTo(e.event.getSourcePeerID());
+
+                // CAUTION: note that comparison should include which peerid that the master view sequence id is from.
+                //          does not make sense to compare between instances.
                 //return peerCompareToResult + (int)(seqId - ((MasterNodeMessageEvent)o).seqId);
                 return (int)(seqId - ((MasterNodeMessageEvent)o).seqId);
             } else {
@@ -1740,6 +1815,302 @@ class MasterNode implements MessageListener, Runnable {
                     new Object[]{manager.getInstanceName(), manager.getGroupName(),
                                  outstandingMasterNodeMessages.size()});
         }
+    }
+
+    private void reliableBroadcastSend(Message msg) {
+        if (reliableMulticast != null) {
+            try {
+                reliableMulticast.broadcast(msg);
+            } catch (IOException ioe) {
+                if (mcastLogger.isLoggable(Level.FINE)){
+                    mcastLogger.log(Level.FINE, "unexpected exception in reliablceBroadcastSend", ioe);
+                }
+            }
+        } else {
+            send(null, null, msg);
+        }
+    }
+
+    private void processChangeEventsExpirations() {
+        synchronized (processedChangeEvents) {
+            Iterator<ProcessedMasterViewId> iter = processedChangeEvents.descendingIterator();
+            if (iter.hasNext()) {
+                iter.next();  // leave last one always.
+            }
+            while (iter.hasNext()) {
+                ProcessedMasterViewId current = iter.next();
+                if (current.isExpired()) {
+                    iter.remove();
+                }
+            }
+        }
+    }
+
+    private void clearChangeEventsNotFromCurrentMaster(PeerID currentMaster) {
+        synchronized (processedChangeEvents) {
+            Iterator<ProcessedMasterViewId> iter = processedChangeEvents.iterator();
+            while (iter.hasNext()) {
+                ProcessedMasterViewId current = iter.next();
+                if (!current.master.equals(currentMaster)) {
+                    if (mcastLogger.isLoggable(Level.FINE)) {
+                        mcastLogger.log(Level.FINE,
+                                        "expire due to new master: drop history of processing past master change event " +
+                                        current + " due to new master:" + currentMaster);
+                    }
+                    iter.remove();
+                }
+            }
+        }
+    }
+
+    private PeerID lastCheckedMaster = null;
+    private long   lastCheckedMasterViewID = -1;
+
+    static final Level DEBUG_TRACE = Level.FINE;
+
+    public List<Long> checkForMissedMasterChangeEvents(PeerID master, long latestMasterViewID) {
+        List<Long> missed = new LinkedList<Long>();
+        PeerID masterId = getMasterNodeID();
+        ProcessedMasterViewId current = null;
+
+        // NOTE: have caller check if this is not the master. junit simulation testing tests this code when junit instance is running as master.
+        if (isMasterAssigned() && masterId != null && masterId.equals(master)) {
+            boolean entered = false;
+            if (lastCheckedMaster == null || lastCheckedMasterViewID != latestMasterViewID) {
+                entered = true;
+                if (mcastLogger.isLoggable(DEBUG_TRACE)) {
+                    mcastLogger.log(DEBUG_TRACE, "enter checkForMissedMasterChangeEvents master:" + master.getInstanceName() + " latestMasterViewSeqID=" + latestMasterViewID);
+                }
+            }
+            
+            // check over all processed master view ids from this sender.
+            // can request sender to rebroadcast missing ones.
+
+            // must be ready to receive multiple copies of same MasterViewIdSeq.
+            // only the first one received should be processed, repeat ones must be discarded.
+            long validateIdx = -1;
+            synchronized(this.processedChangeEvents) {
+
+                // check for missed messages by checking for gaps in unchecked processed master view messages.
+                SortedSet<ProcessedMasterViewId> tailToProcess;
+                if (lastCheckedMasterViewID == -1) {
+                    tailToProcess = processedChangeEvents;  // initial time use whole array
+                    try {
+                        validateIdx = processedChangeEvents.first().masterViewIdSeq;
+                    } catch (NoSuchElementException e) {}
+                } else {
+                    final boolean INCLUSIVE_FALSE = false;
+                    ProcessedMasterViewId lastProcessed = new ProcessedMasterViewId(master, lastCheckedMasterViewID);
+                    tailToProcess = processedChangeEvents.tailSet(lastProcessed, INCLUSIVE_FALSE);
+                    validateIdx = lastCheckedMasterViewID + 1;
+                }
+                Iterator<ProcessedMasterViewId> iter = tailToProcess.iterator();
+                while (iter.hasNext() ) {
+                    current = iter.next();
+                    if (current.masterViewIdSeq > latestMasterViewID) {
+                        break;
+                    }
+                    if (mcastLogger.isLoggable(DEBUG_TRACE)) {
+                        mcastLogger.log(DEBUG_TRACE, "processedMasterViewID=" + current + " validateIdx=" + validateIdx);
+                    }
+                    if (validateIdx == current.masterViewIdSeq) {
+                        validateIdx++;
+                    } else {
+                        if (validateIdx > current.masterViewIdSeq) {
+                            if (mcastLogger.isLoggable(Level.FINER)) {
+                                mcastLogger.log(Level.FINER, "skipping:  validateIdx=" + validateIdx + " greater than current.masterViewIdSeq:" + current.masterViewIdSeq + " lastCheckedMasterViewID:" + lastCheckedMasterViewID);
+                            }
+                            continue;
+                        }
+                        while (validateIdx < current.masterViewIdSeq) {
+                            if (mcastLogger.isLoggable(DEBUG_TRACE)) {
+                                mcastLogger.fine("first add validateIdx="+ validateIdx + " current.masterViewIdSeq="+ current.masterViewIdSeq);
+                            }
+                            missed.add(validateIdx);
+                            validateIdx++;
+                        }
+                        validateIdx++;
+                    }
+                }
+            }
+            if (validateIdx != -1) {
+                while (validateIdx <= latestMasterViewID) {
+                    missed.add(validateIdx);
+                    if (mcastLogger.isLoggable(DEBUG_TRACE)) {
+                        mcastLogger.fine("after add validateIdx="+ validateIdx + " latestMasterViewID=" + latestMasterViewID + " last processed=" + current);
+                    }
+                    validateIdx++;
+                }
+            }
+            lastCheckedMaster = master;
+            if (validateIdx != -1) {
+                lastCheckedMasterViewID = latestMasterViewID;
+            }
+
+            if (entered) {
+                if (missed.size() > 0) {
+                    // TODO: considering making this fine before final release.
+                    // stats monitor needs to count the number of dropped master change events sent over UDP.
+                    mcastLogger.log(Level.INFO, "mgmt.masternode.missed.change.events",
+                            new Object[]{ master.getInstanceName(), latestMasterViewID ,
+                                          missed, lastCheckedMasterViewID});
+                } else {
+                    if (mcastLogger.isLoggable(DEBUG_TRACE)){
+                        mcastLogger.log(DEBUG_TRACE, "exit checkForMissedMasterChangeEvents master:" +
+                                                    master.getInstanceName() +
+                                                    " latestMasterViewSeqID=" + latestMasterViewID+
+                                                    " lastCheckedMasterViewID:" + lastCheckedMasterViewID );
+                    }
+                }
+            }
+        }
+        return missed;
+    }
+
+    public void sendResendRequest(PeerID master, List<Long> missed) {
+        Message msg = createResendRequest(master, missed);
+        send(master, null, msg);
+    }
+
+    static public class ProcessedMasterViewId implements Comparable {
+        public final PeerID master;
+        public final long   masterViewIdSeq;
+        public final long   receivedTime;
+        public final long   expirationTime;
+
+        public static final long EXPIRATION_DURATION_MS = 30 * 1000;
+
+        public String toString() {
+            return "ProcessedMasterViewId master:" + master.getInstanceName() + " masterViewSequenceID=" + masterViewIdSeq + " receivedTime=" + new Date(receivedTime);
+        }
+
+        public ProcessedMasterViewId(PeerID master, long seqId) {
+            this(master, seqId, EXPIRATION_DURATION_MS);
+        }
+
+        public ProcessedMasterViewId(PeerID master, long seqId, long expire_duration_ms) {
+            this.master = master;
+            this.masterViewIdSeq = seqId;
+            receivedTime = System.currentTimeMillis();
+            expirationTime = receivedTime + expire_duration_ms;    
+        }
+
+        public boolean isExpired() {
+            return System.currentTimeMillis() > expirationTime;
+        }
+
+        @Override
+        public int compareTo(Object o) {
+            int result;
+            if (o instanceof ProcessedMasterViewId) {
+                ProcessedMasterViewId e = (ProcessedMasterViewId)o;
+                result = master.compareTo(e.master);
+                if (result == 0) {
+                    result = (int)(masterViewIdSeq - e.masterViewIdSeq);
+                }
+                return result;
+            } else {
+                throw new IllegalArgumentException();
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            int result = master != null ? master.hashCode() : 0;
+            result = 31 * result + (int) (masterViewIdSeq ^ (masterViewIdSeq >>> 32));
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            ProcessedMasterViewId that = (ProcessedMasterViewId) o;
+
+            if (masterViewIdSeq != that.masterViewIdSeq) return false;
+            if (master != null ? !master.equals(that.master) : that.master != null) return false;
+
+            return true;
+        }
+    }
+
+    static private class CheckForMissedMasterMessages implements Runnable {
+        private final PeerID master;
+        private final long masterViewSeqId;
+        private final MasterNode masterNode;
+        private final long EXPIRE_REAPER_FREQUENCY_MS = 20 * 1000;
+        private long nextExpireReaperTime;
+
+        CheckForMissedMasterMessages(MasterNode masterNode, PeerID master, long masterViewSeqId) {
+            this.masterNode = masterNode;
+            this.master = master;
+            this.masterViewSeqId = masterViewSeqId;
+            this.nextExpireReaperTime = System.currentTimeMillis() + EXPIRE_REAPER_FREQUENCY_MS;
+        }
+
+        public void run() {
+            if (!masterNode.isMaster() && masterNode.isMasterAssigned()) {
+                List<Long> missed = masterNode.checkForMissedMasterChangeEvents(master, masterViewSeqId);
+                if (missed.size() > 0) {
+                    masterNode.sendResendRequest(master, missed);
+                }
+            }
+            long currentTime = System.currentTimeMillis();
+            if (currentTime > nextExpireReaperTime) {
+                masterNode.processChangeEventsExpirations();
+                nextExpireReaperTime = currentTime + EXPIRE_REAPER_FREQUENCY_MS;
+            }
+        }
+    }
+
+    private void setMaster(SystemAdvertisement adv, boolean notify){
+        boolean newMaster = false;
+        synchronized(this) {
+            newMaster = clusterViewManager.setMaster(adv, notify);
+            masterAssigned = true;
+        }
+        if (newMaster) {
+            clearChangeEventsNotFromCurrentMaster(adv.getID());
+        }
+    }
+
+    // only the master adds its latest master view sequence id to its heartbeat 
+    void addMasterViewSeqId(Message msg) {
+        if (isMaster() && isMasterAssigned() && !isDiscoveryInProgress()) {
+            // have master include its current MasterViewSeqID.
+            // this allows other members in cluster to check if they have received all master change events.
+            // if they have not, they can request a rebroadcast.
+            msg.addMessageElement(LATESTMASTERVIEWID, getMasterViewID());
+        }
+    }
+
+    // the master broadcasts its latest masterViewSeqId to its group members via its heartbeat.
+    // thus, check if this heartbeat message has the LATESTMASTERVIEWSEQID on it.
+    // if it does, then all none masters will calculate from their cache of processed master change events if they
+    // missed any messages.
+    void processForLatestMasterViewId(Message msg, PeerID source) {
+        if (!isMaster() && masterAssigned && !isDiscoveryInProgress()) {
+            Object element = msg.getMessageElement(this.LATESTMASTERVIEWID);
+            if (element != null && element instanceof Long) {
+                checkForMissedMasterMsgSingletonExecutor.submit(new CheckForMissedMasterMessages(this, source, (Long)element));
+            }
+        }
+    }
+
+    /**
+     * returns the source peer id of a message
+     *
+     * @param msg message
+     * @return The source value
+     */
+    static long getMasterViewSequenceID( Message msg) {
+        long result = -1;
+        Object value = msg.getMessageElement(MasterNode.MASTERVIEWSEQ);
+        if (value instanceof Long) {
+            result = (Long)value;
+        }
+        return result;
     }
 }
 

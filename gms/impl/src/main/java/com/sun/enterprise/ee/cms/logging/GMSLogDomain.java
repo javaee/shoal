@@ -57,6 +57,8 @@ public class GMSLogDomain  {
     public static final String GMS_MONITOR_LOGGER = GMS_LOGGER + ".monitor";
     public static final String RESOURCE_BUNDLE = "LogStrings";     
     public static final String LOG_STRINGS = "com.sun.enterprise.ee.cms.logging." + RESOURCE_BUNDLE;
+    public static final String MCAST_LOGGER_NAME = GMS_LOGGER + ".mcast";
+    public static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
     
     private static Logger gmsLogger = null;
     
@@ -69,5 +71,13 @@ public class GMSLogDomain  {
 
     public static Logger getMonitorLogger() {
         return Logger.getLogger(GMS_MONITOR_LOGGER, LOG_STRINGS);
+    }
+
+    public static Logger getMcastLogger() {
+        return Logger.getLogger(MCAST_LOGGER_NAME, LOG_STRINGS);
+    }
+
+    public static Logger getMasterNodeLogger() {
+        return Logger.getLogger(MASTER_LOGGER_NAME, LOG_STRINGS);
     }
 }

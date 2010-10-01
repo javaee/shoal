@@ -56,14 +56,13 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
                                // comparison's sake.
     public final String multicastAddress;
     public final int multicastPort;
-    private final String toStringValue;
+    transient private String toStringValue = null;
 
     public GrizzlyPeerID( String host, int tcpPort, String multicastAddress, int multicastPort ) {
         this.host = host;
         this.multicastAddress = multicastAddress;
         this.tcpPort = tcpPort;
         this.multicastPort = multicastPort;
-        this.toStringValue = host + ":" + tcpPort + ":" + multicastAddress + ":" + multicastPort;
     }
 
     public String getHost() {
@@ -84,6 +83,7 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
 
     // NOTE: no longer include tcpport in this calculation nor the hash calculation.
     //       instance should be able to use a port within a range and still be considered same instance.
+    @Override
     public boolean equals( Object other ) {
         if( other instanceof GrizzlyPeerID ) {
             GrizzlyPeerID otherPeerID = (GrizzlyPeerID)other;
@@ -103,6 +103,7 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
 
     // DO NOT INCLUDE TCP PORT in this calculation.
     //
+    @Override
     public int hashCode() {
         int result = 17;
         if( host != null )
@@ -114,6 +115,9 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
 
     @Override
     public String toString() {
+       if (toStringValue == null) {
+            toStringValue = host + ":" + tcpPort + ":" + multicastAddress + ":" + multicastPort;
+        }
         return toStringValue;
     }
 

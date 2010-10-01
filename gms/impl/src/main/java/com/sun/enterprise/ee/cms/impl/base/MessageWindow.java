@@ -48,7 +48,7 @@ import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 
 import java.text.MessageFormat;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,17 +65,22 @@ import java.util.Iterator;
  * @version $Revision$
  */
 public class MessageWindow implements Runnable {
-    private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    static private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private GMSContext ctx;
     private ArrayBlockingQueue<MessagePacket> messageQueue;
     private AtomicInteger messageQueueHighWaterMark = new AtomicInteger(0);
     private final String groupName;
+    private ExecutorService dscExecutor = Executors.newSingleThreadExecutor();
 
     public MessageWindow(final String groupName, final ArrayBlockingQueue<MessagePacket> messageQueue) {
         this.groupName = groupName;
         this.messageQueue = messageQueue;
     }
+
+   void stop() {
+        dscExecutor.shutdown();
+   }
 
     private GMSContext getGMSContext() {
         if (ctx == null) {
@@ -149,7 +154,12 @@ public class MessageWindow implements Runnable {
         if (message instanceof GMSMessage) {
             handleGMSMessage((GMSMessage) message, sender);
         } else if (message instanceof DSCMessage) {
-            handleDSCMessage((DSCMessage) message, sender);
+            try {
+                dscExecutor.submit(new ProcessDSCMessageTask(this, (DSCMessage)message, sender));
+            } catch (RejectedExecutionException ree) {
+                logger.log(Level.WARNING, "failed to schedule processDSCMessageTask for mesasge " + message);
+
+            }
         }
     }
 
@@ -223,6 +233,26 @@ public class MessageWindow implements Runnable {
         if (logger.isLoggable(Level.FINER)) {
             logger.log(Level.FINER, MessageFormat.format("Sender:{0}, Receiver :{1}, TargetComponent :{2}, Message :{3}",
                     sender, localId, message.getComponentName(), new String(message.getMessage())));
+        }
+    }
+
+    private static class ProcessDSCMessageTask implements Runnable {
+        final private MessageWindow mw;
+        final private DSCMessage dMsg;
+        final private String fromMember;
+
+        public ProcessDSCMessageTask(MessageWindow mw, final DSCMessage dMsg, final String token  ) {
+            this.mw = mw;
+            this.dMsg = dMsg;
+            this.fromMember = token;
+        }
+
+        public void run() {
+            try {
+                mw.handleDSCMessage(dMsg, fromMember);
+            } catch (Throwable t) {
+                mw.logger.log(Level.SEVERE, "failed to handleDSCMessage", t);
+            }
         }
     }
 }

@@ -189,7 +189,11 @@ public class ClusterManager implements MessageListener {
         if (props != null && !props.isEmpty()) {
             Object dt = props.get( ConfigConstants.DISCOVERY_TIMEOUT.toString());
             if (dt != null) {
-                discTimeout = Long.parseLong((String) dt);
+                if (dt instanceof Long) {
+                   discTimeout = (Long)dt;
+                } else if (dt instanceof String) {
+                    discTimeout = Long.parseLong((String) dt);
+                }
             }
         }
         return discTimeout;

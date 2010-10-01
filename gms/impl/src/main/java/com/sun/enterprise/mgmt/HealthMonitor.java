@@ -307,6 +307,9 @@ public class HealthMonitor implements MessageListener, Runnable {
                             if( value instanceof HealthMessage ) {
                                 HealthMessage hm = (HealthMessage)value;
                                 updateHealthMessage( hm );
+
+                                // check if this message has latestMasterViewId from master.
+                                masterNode.processForLatestMasterViewId(msg, hm.getSrcID());
                                 process( hm );
                             } else {
                                 LOG.log(Level.WARNING, "mgmt.unknownMessage");
@@ -730,14 +733,19 @@ public class HealthMonitor implements MessageListener, Runnable {
         boolean sent = true;
         IOException ioe = null;
         try {
+            Message msg = null;
             if (state == ALIVE) {
-                sent = send(id, getAliveMessage());
+                msg = getAliveMessage();
+            } else if (state == ALIVEANDREADY) {
+                msg = getAliveAndReadyMessage();
             } else {
-                if (state == ALIVEANDREADY) {
-                    sent = send(id, getAliveAndReadyMessage());
-                } else
-                    sent = send(id, createHealthMessage(state));
-                }
+                msg = createHealthMessage(state);
+            }
+
+            // if the master of gms group, add an element to the heartbeat that has latest master view id.
+            // instances use this info to calculate if they have missed any master change view events.
+            masterNode.addMasterViewSeqId(msg);
+            sent = send(id, msg);
         } catch (IOException e) {
             ioe = e;
             sent = false;
@@ -760,6 +768,7 @@ public class HealthMonitor implements MessageListener, Runnable {
 
     private void reportOtherPeerState(final HealthMessage.Entry entry) {
         final Message msg = createHealthMessageForOtherPeer(entry);
+        masterNode.addMasterViewSeqId(msg);
         LOG.log(Level.FINEST, MessageFormat.format("Reporting {0} health state as {1}", entry.adv.getName(), entry.state));
         boolean sent = false;
         IOException ioe = null;

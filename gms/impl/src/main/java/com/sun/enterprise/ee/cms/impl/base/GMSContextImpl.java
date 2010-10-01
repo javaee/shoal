@@ -79,6 +79,7 @@ public class GMSContextImpl extends GMSContextBase {
     private AliveAndReadyViewWindow aliveAndReadyViewWindow = null;
     private static final Map<String, RejoinSubevent> instanceRejoins =
         new ConcurrentHashMap<String, RejoinSubevent>();
+    private MessageWindow messageWindow = null;
 
     public GMSContextImpl(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -146,7 +147,7 @@ public class GMSContextImpl extends GMSContextBase {
     @Override
     public void join() throws GMSException {
         viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "ViewWindowThread:" + groupName);
-        MessageWindow messageWindow = new MessageWindow(groupName, messageQueue);
+        messageWindow = new MessageWindow(groupName, messageQueue);
 
         messageWindowThread = new Thread(messageWindow, "MessageWindowThread:" + groupName);
         messageWindowThread.start();
@@ -190,6 +191,9 @@ public class GMSContextImpl extends GMSContextBase {
         }
         if( messageWindowThread != null ) {
             messageWindowThread.interrupt();
+        }
+        if (messageWindow != null) {
+            messageWindow.stop();
         }
         if( router != null ) {
             router.shutdown();
