@@ -58,6 +58,9 @@ public class ObjectKeyHelper<K>
 
     public ObjectKeyHelper(ClassLoader loader, ObjectInputOutputStreamFactory factory) {
         this.loader = loader;
+        if (this.loader == null) {
+            this.loader = ClassLoader.getSystemClassLoader(); 
+        }
         this.factory = factory;
     }
 
