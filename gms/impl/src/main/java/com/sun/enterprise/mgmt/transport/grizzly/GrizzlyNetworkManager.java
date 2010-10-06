@@ -619,8 +619,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( peerID == null ) {
             peerID = PeerID.NULL_PEER_ID;
             if (this.instanceName.equals(instanceName)) {
-                LOG.log(Level.WARNING, "grizzly.netmgr.localPeerId.null", new Object[]{instanceName});
-                LOG.log(Level.WARNING, "stack trace", new Exception("stack trace"));
+                LOG.log(Level.FINE, "grizzly.netmgr.localPeerId.null", new Object[]{instanceName});
+                LOG.log(Level.FINE, "stack trace", new Exception("stack trace"));
             }
             if (LOG.isLoggable(Level.FINE)) {
                 LOG.log(Level.FINE, "getPeerID(" + instanceName + ")" + " returning null peerIDMap=" + peerIDMap);

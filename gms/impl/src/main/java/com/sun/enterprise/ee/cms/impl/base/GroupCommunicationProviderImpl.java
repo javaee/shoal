@@ -371,8 +371,15 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public MemberStates getMemberState(String member, long threshold, long timeout) {
-        String state = (clusterManager.getNodeState(clusterManager.getID(member), threshold, timeout)).toUpperCase();
-        return MemberStates.valueOf(state);
+        MemberStates result = MemberStates.UNKNOWN;
+        if (clusterManager != null) {
+            PeerID id = clusterManager.getID(member);
+            if (! id.equals(PeerID.NULL_PEER_ID)) {
+                String state = clusterManager.getNodeState(id, threshold, timeout).toUpperCase();
+                result = MemberStates.valueOf(state);
+            }
+        }
+        return result;
     }
 
     public MemberStates getMemberState(final String memberIdentityToken) {

@@ -47,19 +47,7 @@ package com.sun.enterprise.ee.cms.impl.common;
  * @version $Revision$
  */
 
-import com.sun.enterprise.ee.cms.core.FailureNotificationActionFactory;
-import com.sun.enterprise.ee.cms.core.FailureRecoveryActionFactory;
-import com.sun.enterprise.ee.cms.core.FailureSuspectedActionFactory;
-import com.sun.enterprise.ee.cms.core.GroupLeadershipNotificationActionFactory;
-import com.sun.enterprise.ee.cms.core.GMSCacheable;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.GroupHandle;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
-import com.sun.enterprise.ee.cms.core.JoinNotificationActionFactory;
-import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationActionFactory;
-import com.sun.enterprise.ee.cms.core.MessageActionFactory;
-import com.sun.enterprise.ee.cms.core.PlannedShutdownActionFactory;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.io.Serializable;
@@ -77,6 +65,8 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     private String memberName="";
 
     private AtomicBoolean initialized = new AtomicBoolean(false);
+    private AtomicBoolean hasLeftGroup = new AtomicBoolean(false);
+    private AtomicBoolean hasJoinedGroup = new AtomicBoolean(false);
 
 
     //Logging related stuff
@@ -385,8 +375,12 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
     }
 
     public void join() throws GMSException {
-        logger.log(Level.INFO, "gms.join", new Object[]{memberName, ctx.getGroupName()});
-        ctx.join();
+        //ensure that only join the group once.
+        if (hasJoinedGroup.compareAndSet(false, true)) {
+            logger.log(Level.INFO, "gms.join", new Object[]{memberName, ctx.getGroupName()});
+            ctx.join();
+            hasLeftGroup.set(false);
+        }
     }
 
     /**
@@ -397,10 +391,18 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      *                     in GMSConstants.shudownType enum.
      */
     private void leave(final GMSConstants.shutdownType shutdownType) {
-        logger.log(Level.INFO, "gms.leave", new Object[]{memberName, ctx.getGroupName()});
-        removeAllActionFactories();
-        ctx.leave(shutdownType);
-        GMSContextFactory.removeGMSContext(ctx.getGroupName());
+        // ensure that only leave the group once.
+        if (hasLeftGroup.compareAndSet(false, true)) {
+            try {
+                logger.log(Level.INFO, "gms.leave", new Object[]{memberName, ctx.getGroupName()});
+                ctx.leave(shutdownType);
+                removeAllActionFactories();
+            } finally {
+                hasJoinedGroup.set(false);
+                GMSFactory.removeGMSModule(ctx.getGroupName());
+                GMSContextFactory.removeGMSContext(ctx.getGroupName());
+            }
+        }
     }
 
     private void removeAllActionFactories() {
