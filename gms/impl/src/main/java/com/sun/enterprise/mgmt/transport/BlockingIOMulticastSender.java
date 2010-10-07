@@ -302,8 +302,9 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                 }
             }
         } catch( Throwable t ) {
-            LOG.log( Level.SEVERE, "blockiomcast.receiveprocess.uncaughtthrowable",
+            LOG.log( Level.SEVERE, "blockingiomcast.receiveprocess.uncaughtthrowable",
                     new Object[]{t.getLocalizedMessage(), Thread.currentThread().getName()});
+            LOG.log(Level.SEVERE, "stack trace", t);
         } finally {
             multicastThread = null;
             endGate.countDown();
