@@ -181,7 +181,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         poolQueueSize = Utility.getIntProperty( POOL_QUEUE_SIZE.toString(), 1024 * 4, properties );
         highWaterMark = Utility.getIntProperty( HIGH_WATER_MARK.toString(), 1024, properties );
         numberToReclaim = Utility.getIntProperty( NUMBER_TO_RECLAIM.toString(), 10, properties );
-        maxParallel = Utility.getIntProperty( MAX_PARALLEL.toString(), 1, properties );
+        maxParallel = Utility.getIntProperty( MAX_PARALLEL.toString(), 15, properties );
         startTimeout = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
         writeTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );

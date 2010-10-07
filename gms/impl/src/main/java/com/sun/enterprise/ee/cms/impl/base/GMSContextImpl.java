@@ -66,7 +66,9 @@ public class GMSContextImpl extends GMSContextBase {
     private static final int MAX_VIEWS_IN_QUEUE = 200;
     private ArrayBlockingQueue<MessagePacket> messageQueue;
     private static final int DEFAULT_INCOMING_MSG_QUEUE_SIZE = 500;
-    private static int MAX_MSGS_IN_QUEUE = DEFAULT_INCOMING_MSG_QUEUE_SIZE;
+    private int MAX_MSGS_IN_QUEUE = DEFAULT_INCOMING_MSG_QUEUE_SIZE;
+    private int DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE = 10;
+    private int INCOMING_MSG_THREAD_POOL_SIZE = DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE;
     private ViewWindowImpl viewWindow;
     private GroupCommunicationProvider groupCommunicationProvider;
     private DistributedStateCache distributedStateCache;
@@ -89,10 +91,14 @@ public class GMSContextImpl extends GMSContextBase {
         if (MAX_MSGS_IN_QUEUE != DEFAULT_INCOMING_MSG_QUEUE_SIZE && logger.isLoggable(Level.CONFIG)) {
             logger.config("INCOMING_MESSAGE_QUEUE_SIZE: " + MAX_MSGS_IN_QUEUE + " overrides default value of " + DEFAULT_INCOMING_MSG_QUEUE_SIZE);
         }
+        INCOMING_MSG_THREAD_POOL_SIZE = Utility.getIntProperty(ServiceProviderConfigurationKeys.INCOMING_MESSAGE_THREAD_POOL_SIZE.toString(), DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE, configProperties);
+        if (INCOMING_MSG_THREAD_POOL_SIZE != DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE && logger.isLoggable(Level.CONFIG)) {
+            logger.config("INCOMING_MSG_THREAD_POOL_SIZE: " + INCOMING_MSG_THREAD_POOL_SIZE + " overrides default value of " + DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE);
+        }
         long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
         aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
         aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
-        router = new Router(MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow);
+        router = new Router(MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow, INCOMING_MSG_THREAD_POOL_SIZE);
 
         this.configProperties = configProperties;
         groupCommunicationProvider =

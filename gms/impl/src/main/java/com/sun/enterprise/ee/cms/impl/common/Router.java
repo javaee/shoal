@@ -95,7 +95,7 @@ public class Router {
     private SignalHandler signalHandler;
     public final AliveAndReadyViewWindow aliveAndReadyView;
 
-    public Router(int queueSize, AliveAndReadyViewWindow viewWindow) {
+    public Router(int queueSize, AliveAndReadyViewWindow viewWindow, int incomingMsgThreadPoolSize) {
         aliveAndReadyView = viewWindow;
         MAX_QUEUE_SIZE = queueSize;
         queue = new ArrayBlockingQueue<SignalPacket>(MAX_QUEUE_SIZE);
@@ -104,7 +104,7 @@ public class Router {
         signalHandlerThread = new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread");
         signalHandlerThread.start();
         actionPool = Executors.newCachedThreadPool();
-        messageActionPool = Executors.newSingleThreadExecutor();
+        messageActionPool = Executors.newFixedThreadPool(incomingMsgThreadPoolSize);
         startupTime = System.currentTimeMillis();
     }
 

@@ -170,5 +170,10 @@ public enum ServiceProviderConfigurationKeys {
      * Max message length.  This length is not just application payload but includes message overhead (such as headers)
      * that is implementation and transport dependent.
      */
-    MAX_MESSAGE_LENGTH
+    MAX_MESSAGE_LENGTH,
+
+    /**
+     * Configure number of threads for incoming message processing.
+     */
+    INCOMING_MESSAGE_THREAD_POOL_SIZE
 }
