@@ -98,10 +98,6 @@ public class StoreableSaveCommand<K, V extends Storeable>
         version = v._storeable_getVersion();
     }
 
-    public DataStoreEntry<K, V> getEntry() {
-        return entry;
-    }
-
     public void setEntry(DataStoreEntry<K, V> entry) {
         this.entry = entry;
     }
@@ -192,11 +188,11 @@ public class StoreableSaveCommand<K, V extends Storeable>
                             try { bis.close(); } catch (Exception ex2) {}
                         }
                     } else if (entryV._storeable_getVersion() > version) {
-                        _logger.log(Level.WARNING, "Ignoring stale data " + entryV._storeable_getVersion() + " > " + version + "; for key: " + k);
+                        _logger.log(Level.FINE, "Ignoring stale data " + entryV._storeable_getVersion() + " > " + version + "; for key: " + k);
                     }
                 } else {
                     List<Command<K, V>> commands = entry.getPendingUpdates();
-                    _logger.log(Level.WARNING, "Added to pending updates[2].... for key: " + k);
+                    _logger.log(Level.FINE, "Added to pending updates[2].... for key: " + k);
                 }
             }
         }

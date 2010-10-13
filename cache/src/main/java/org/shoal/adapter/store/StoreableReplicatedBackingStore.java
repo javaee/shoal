@@ -153,6 +153,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
         dsConf.addCommand(new SizeRequestCommand<K, V>());
         dsConf.addCommand(new SizeResponseCommand<K, V>());
+        dsConf.addCommand(new NoOpCommand<K, V>());
 
         dsConf.addCommand(new ListBackingStoreConfigurationCommand());
         dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
@@ -366,12 +367,15 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     @Override
     public void remove(K key) throws BackingStoreException {
         try {
-            DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
-            if (entry != null) {
-                synchronized (entry) {
-                    entry.markAsRemoved("Removed by BackingStore.remove");
-                }
-            }
+            replicaStore.remove(key);
+            /*
+                    DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
+                    if (entry != null) {
+                        synchronized (entry) {
+                            entry.markAsRemoved("Removed by BackingStore.remove");
+                        }
+                    }
+            */
             String[] targets = framework.getDataStoreContext().getKeyMapper().getCurrentMembers();
 
             if (targets != null) {

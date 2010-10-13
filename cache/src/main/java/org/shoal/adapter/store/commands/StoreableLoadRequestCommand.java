@@ -186,7 +186,8 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
             _logger.log(Level.WARNING, "LoadRequestCommand Interrupted while waiting for result", inEx);
             throw new DataStoreException(inEx);
         } catch (TimeoutException timeoutEx) {
-            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result", timeoutEx);
+            _logger.log(Level.WARNING, "LoadRequestCommand timed out while waiting for result" + timeoutEx);
+            _logger.log(Level.FINE, "LoadRequestCommand timed out while waiting for result", timeoutEx);
         } catch (ExecutionException exeEx) {
             _logger.log(Level.WARNING, "LoadRequestCommand got an exception while waiting for result", exeEx);
             throw new DataStoreException(exeEx);

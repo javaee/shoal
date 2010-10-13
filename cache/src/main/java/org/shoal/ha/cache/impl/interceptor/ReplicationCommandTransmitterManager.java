@@ -46,11 +46,8 @@ import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.api.AbstractCommandInterceptor;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
-import org.shoal.ha.cache.impl.util.ASyncThreadPool;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
@@ -60,33 +57,21 @@ import java.util.logging.Logger;
 public class ReplicationCommandTransmitterManager<K, V>
         extends AbstractCommandInterceptor<K, V> {
 
-    private static final Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
 
-    private ConcurrentHashMap<String, ReplicationCommandTransmitter<K, V>> transmitters
-            = new ConcurrentHashMap<String, ReplicationCommandTransmitter<K, V>>();
+    private ConcurrentHashMap<String, ReplicationCommandTransmitterWithList<K, V>> transmitters
+            = new ConcurrentHashMap<String, ReplicationCommandTransmitterWithList<K, V>>();
 
-    private ReplicationCommandTransmitter<K, V> broadcastTransmitter;
-
-    private ASyncThreadPool asyncPool;
-
-
-    private static final String TRANSMITTER_THREAD_COUNT = "org.shoal.cache.transmitter.thread.count";
+    private ReplicationCommandTransmitterWithList<K, V> broadcastTransmitter;
 
     public ReplicationCommandTransmitterManager() {
-        int threadCount = 32;
-        try {
-           threadCount = Integer.getInteger(System.getProperty(TRANSMITTER_THREAD_COUNT, "32"));
-        } catch (Exception ex) {
-            //Ignore
-        }
-        this.asyncPool = new ASyncThreadPool(threadCount);
     }
 
     @Override
     public void initialize(DataStoreContext<K, V> dsc) {
         super.initialize(dsc);
-        broadcastTransmitter = new ReplicationCommandTransmitter<K, V>();
-        broadcastTransmitter.initialize(null, dsc, asyncPool);
+        broadcastTransmitter = new ReplicationCommandTransmitterWithList<K, V>();
+        broadcastTransmitter.initialize(null, dsc);
     }
 
     @Override
@@ -94,18 +79,17 @@ public class ReplicationCommandTransmitterManager<K, V>
         throws DataStoreException {
         switch (cmd.getOpcode()) {
             case ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD:
-            case ReplicationCommandOpcode.REMOVE:
                 super.onTransmit(cmd, initiator);
                 break;
             
             default:
                 String target = cmd.getTargetName();
                 if (target != null) {
-                    ReplicationCommandTransmitter<K, V> rft = transmitters.get(target);
+                    ReplicationCommandTransmitterWithList<K, V> rft = transmitters.get(target);
                     if (rft == null) {
-                        rft = new ReplicationCommandTransmitter<K, V>();
-                        rft.initialize(target, getDataStoreContext(), asyncPool);
-                        ReplicationCommandTransmitter oldRCT = transmitters.putIfAbsent(target, rft);
+                        rft = new ReplicationCommandTransmitterWithList<K, V>();
+                        rft.initialize(target, getDataStoreContext());
+                        ReplicationCommandTransmitterWithList oldRCT = transmitters.putIfAbsent(target, rft);
                         if (oldRCT != null) {
                             rft = oldRCT;
                         }

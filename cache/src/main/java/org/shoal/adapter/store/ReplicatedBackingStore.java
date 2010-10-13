@@ -144,6 +144,7 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         dsConf.addCommand(new UpdateDeltaCommand<K, V>());
         dsConf.addCommand(new SizeRequestCommand<K, V>());
         dsConf.addCommand(new SizeResponseCommand<K, V>());
+        dsConf.addCommand(new NoOpCommand<K, V>());
         
         dsConf.addCommand(new ListBackingStoreConfigurationCommand());
         dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());

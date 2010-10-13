@@ -96,11 +96,11 @@ public class ReplicationCommandOpcode {
 
 
 
-
     public static final byte MONITOR_LIST_BACKING_STORE_CONF = 84;
 
     public static final byte MONITOR_LIST_BACKING_STORE_CONF_RESPONSE = 86;
 
     public static final byte MONITOR_LIST_REPLICA_STORE_ENTRIES = 87;
-
+    
+    public static final byte NOOP_COMMAND = 102;
 }

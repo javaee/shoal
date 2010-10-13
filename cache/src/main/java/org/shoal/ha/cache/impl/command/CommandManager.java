@@ -76,7 +76,6 @@ public class CommandManager<K, V>
     private static Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
 
     public CommandManager(DataStoreContext<K, V> dsc) {
-        super(dsc.getServiceName());
         this.dsc = dsc;
         this.myName = dsc.getInstanceName();
 
@@ -161,7 +160,9 @@ public class CommandManager<K, V>
             cmd.prepareToExecute(ris);
             this.executeCommand(cmd, false, sourceMemberName);
         } catch (IOException dse) {
-            _logger.log(Level.WARNING, "Error during parsing command", dse);
+            _logger.log(Level.WARNING, "Error during parsing command- opcode: " + messageData[0], dse);
+        } catch (Throwable th) {
+            _logger.log(Level.WARNING, "Error[2] during parsing command - opcode: " + messageData[0], th);
         } finally {
            try {ris.close();} catch (Exception ex) {}
         }

@@ -62,6 +62,8 @@ public abstract class Command<K, V> {
 
     private byte opcode;
 
+    private K key;
+
     protected DataStoreContext<K, V> dsc;
 
     private CommandManager<K, V> cm;
@@ -88,6 +90,14 @@ public abstract class Command<K, V> {
     public final void initialize(DataStoreContext<K, V> rs) {
         this.dsc = rs;
         this.cm = rs.getCommandManager();
+    }
+
+    public void setKey(K key) {
+        this.key = key;
+    }
+
+    public K getKey() {
+        return key;
     }
 
     protected final DataStoreContext<K, V> getDataStoreContext() {
@@ -124,6 +134,10 @@ public abstract class Command<K, V> {
         } else {
             _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because computeTarget returned false");
         }
+    }
+
+    public byte[] getSerializedState() {
+        return cachedROS.toByteArray();
     }
 
     public final void write(ReplicationOutputStream globalROS)
@@ -182,7 +196,7 @@ public abstract class Command<K, V> {
             dsc.getCommandManager().reExecute(this);
         } else {
             String message = getName() + " giving up after " + retryCount + " retries...";
-            _logger.log(Level.WARNING, message);
+            _logger.log(Level.WARNING, message, th);
             throw new TooManyRetriesException(message);
         }
     }

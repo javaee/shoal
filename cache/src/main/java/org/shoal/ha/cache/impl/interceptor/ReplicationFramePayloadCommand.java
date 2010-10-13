@@ -47,6 +47,7 @@ import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -55,14 +56,22 @@ import java.util.List;
 public class ReplicationFramePayloadCommand<K, V>
     extends Command<K, V> {
 
-    private ReplicationFrame<K, V> frame;
+    private String sentFrom;
+
+    private String targetInstanceName;
+
+    private List<Command<K, V>> list = new ArrayList<Command<K, V>>();
 
     public ReplicationFramePayloadCommand() {
         super(ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD);
     }
 
-    public void setReplicationFrame(ReplicationFrame<K, V> frame) {
-        this.frame = frame;
+    public void addComamnd(Command<K, V> cmd) {
+        list.add(cmd);
+    }
+
+    public void setTargetInstance(String target) {
+        targetInstanceName = target;
     }
 
     @Override
@@ -73,28 +82,44 @@ public class ReplicationFramePayloadCommand<K, V>
     @Override
     public void writeCommandPayload(ReplicationOutputStream ros)
             throws IOException {
-        setTargetName(frame.getTargetInstanceName());
-        ros.write(frame.getSerializedData());
+        setTargetName(targetInstanceName);
+        ros.writeInt(list.size());
+        for (Command<K, V> cmd : list) {
+            byte[] payload = cmd.getSerializedState();
+            ros.writeLengthPrefixedBytes(payload);
+        }
     }
 
     @Override
     public void readCommandPayload(ReplicationInputStream ris)
         throws DataStoreException {
-        ReplicationFrame<K, V> frame = ReplicationFrame.toReplicationFrame(dsc, ris);
-        setReplicationFrame(frame);
+        int size = ris.readInt();
+        list = new ArrayList<Command<K, V>>(size);
+        for (int i=0; i<size; i++) {
+            byte[] cmdData = ris.readLengthPrefixedBytes();
+
+            ReplicationInputStream cmdRIS;
+            try {
+                Command<K, V> cmd = getCommandManager().createNewInstance(cmdData[0]);
+                cmdRIS = new ReplicationInputStream(cmdData);
+                cmd.prepareToExecute(cmdRIS);
+                list.add(cmd);
+            } catch (IOException dse) {
+                dse.printStackTrace();
+            }
+        }
     }
 
     @Override
     public void execute(String initiator)
         throws DataStoreException {
 
-        List<Command<K, V>> commands = frame.getCommands();
-        for (Command<K, V> cmd : commands) {
-            getCommandManager().executeCommand(cmd, false, frame.getSourceInstanceName());
+        for (Command<K, V> cmd : list) {
+            getCommandManager().executeCommand(cmd, false, sentFrom);
         }
     }
 
     public String toString() {
-        return "ReplicationFramePayloadCommand: contains " + frame.getCommands().size() + " commands";
+        return "ReplicationFramePayloadCommand: contains " + list.size() + " commands";
     }
 }

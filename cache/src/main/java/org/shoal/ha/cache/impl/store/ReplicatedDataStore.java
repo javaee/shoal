@@ -98,7 +98,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         this.gs = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
-        
+
         initialize(conf);
     }
 
@@ -121,8 +121,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
         cm.registerExecutionInterceptor(new ReplicationCommandTransmitterManager<K, V>());
         cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
-        
-        
+
+
         KeyMapper keyMapper = conf.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
@@ -149,7 +149,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         String result = null;
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
         synchronized (entry) {
-            if (! entry.isRemoved()) {
+            if (!entry.isRemoved()) {
                 entry.setLastAccessedAt(System.currentTimeMillis());
                 SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
                 cm.execute(cmd);
@@ -200,7 +200,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
             String[] replicaHint = replicachoices.split(":");
             if (_logger.isLoggable(Level.FINE)) {
                 _logger.log(Level.FINE, "ReplicatedDataStore.load(" + key
-                                            + "); ReplicaChoices: " + replicachoices);
+                        + "); ReplicaChoices: " + replicachoices);
             }
 
             String respondingInstance = null;
@@ -214,7 +214,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                         = new LoadRequestCommand<K, V>(key, target);
 
                 _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
-                            + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
+                        + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
 
                 cm.execute(command);
                 v = command.getResult(3, TimeUnit.SECONDS);
@@ -223,16 +223,16 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     break;
                 }
             }
-            
+
             if (v == null) {
                 broadcastLoadRequestCount.incrementAndGet();
                 String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
                 for (String targetInstance : targetInstances) {
                     if (targetInstance.equals(dsc.getInstanceName())) {
-                            continue;
-                        }
+                        continue;
+                    }
                     LoadRequestCommand<K, V> lrCmd
-                        = new LoadRequestCommand<K, V>(key, targetInstance);
+                            = new LoadRequestCommand<K, V>(key, targetInstance);
 
                     _logger.log(Level.FINE, "*ReplicatedDataStore: For Key=" + key
                             + "; Trying to load from " + targetInstance);
@@ -261,12 +261,12 @@ public class ReplicatedDataStore<K, V extends Serializable>
                             //  do that in save
                             if (_logger.isLoggable(Level.FINE)) {
                                 _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
-                                    + "; Successfully loaded data from " + respondingInstance);
+                                        + "; Successfully loaded data from " + respondingInstance);
                             }
                         } else {
                             if (_logger.isLoggable(Level.FINE)) {
                                 _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
-                                    + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
+                                        + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
                             }
                         }
                     }
@@ -280,13 +280,15 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public void remove(K k)
             throws DataStoreException {
-        DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
-        if (entry != null) {
-            synchronized (entry) {
-                entry.markAsRemoved("Removed by ReplicatedDataStore.remove");
-            }
-        }
-        
+
+        replicaStore.remove(k);
+//        DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
+//        if (entry != null) {
+//            synchronized (entry) {
+//                entry.markAsRemoved("Removed by ReplicatedDataStore.remove");
+//            }
+//        }
+
         String[] targets = dsc.getKeyMapper().getCurrentMembers();
 
         if (targets != null) {
@@ -297,7 +299,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 cm.execute(cmd);
             }
         }
-        
+
     }
 
     @Override
@@ -336,7 +338,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         int targetCount = targets.length;
         SizeRequestCommand[] commands = new SizeRequestCommand[targetCount];
 
-        for (int i=0; i<targetCount; i++) {
+        for (int i = 0; i < targetCount; i++) {
             commands[i] = new SizeRequestCommand(targets[i]);
             try {
                 dsc.getCommandManager().execute(commands[i]);
@@ -345,7 +347,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
         }
 
-        for (int i=0; i<targetCount; i++) {
+        for (int i = 0; i < targetCount; i++) {
             result += commands[i].getResult();
         }
 

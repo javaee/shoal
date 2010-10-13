@@ -53,12 +53,6 @@ public abstract class MessageReceiver
 
     private final static Logger logger = Logger.getLogger("ReplicationLogger");
 
-    private String storeName;
-
-    protected MessageReceiver(String storeName) {
-        this.storeName = storeName;
-    }
-
     @Override
     public void processNotification(Signal signal) {
         Object message = null;

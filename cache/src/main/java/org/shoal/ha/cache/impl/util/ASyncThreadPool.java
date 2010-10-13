@@ -44,12 +44,20 @@ import java.util.concurrent.*;
 
 /**
  * @author Mahesh Kannan
- *
  */
 public class ASyncThreadPool
-    extends ScheduledThreadPoolExecutor {
+    extends ThreadPoolExecutor {
 
-    public ASyncThreadPool(int corePoolSize) {
-        super(corePoolSize);
+    private static final Object _lock = new Object();
+
+    private static LinkedBlockingQueue _queue;
+
+    private static ThreadPoolExecutor _executor;
+
+    private static ScheduledThreadPoolExecutor _scheduledExecutor;
+
+    public ASyncThreadPool(int corePoolSize, int maximumPoolSize, long keepAliveTime, BlockingQueue<Runnable> workQueue) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, TimeUnit.SECONDS, workQueue);
     }
+
 }
