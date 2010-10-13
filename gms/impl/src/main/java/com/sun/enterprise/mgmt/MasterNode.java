@@ -44,6 +44,7 @@ import static com.sun.enterprise.mgmt.ClusterViewEvents.*;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.core.RejoinSubevent;
+import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -159,7 +160,7 @@ class MasterNode implements MessageListener, Runnable {
     private ConcurrentHashMap<String, Object> pendingGroupStartupMembers = new ConcurrentHashMap<String, Object>();
     private SortedSet<String> groupMembers = new TreeSet<String>();
     private ReliableMulticast reliableMulticast;
-    private ExecutorService checkForMissedMasterMsgSingletonExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService checkForMissedMasterMsgSingletonExecutor;
     final TreeSet<ProcessedMasterViewId> processedChangeEvents = new TreeSet<ProcessedMasterViewId>();
 
 
@@ -184,6 +185,8 @@ class MasterNode implements MessageListener, Runnable {
         discoveryView = new ClusterView(sysAdv);
         timer = new Timer(true);
         outstandingMasterNodeMessages = new TreeSet<MasterNodeMessageEvent>();
+        checkForMissedMasterMsgSingletonExecutor =
+            Executors.newSingleThreadExecutor(new GMSThreadFactory("GMS-validateMasterChangeEvents-Group-" + manager.getGroupName() + "-thread"));
     }
 
     /**
@@ -1436,10 +1439,11 @@ class MasterNode implements MessageListener, Runnable {
         started = true;
         manager.getNetworkManager().addMessageListener( this );
         LOG.log(Level.INFO, "mgmt.masternode.registeredlistener", new Object[]{ manager.getInstanceName(), manager.getGroupName()});
-        processOutstandingMessagesThread = new Thread(new ProcessOutstandingMessagesTask(), "MasterNode processOutStandingMessages");
+        processOutstandingMessagesThread = new Thread(new ProcessOutstandingMessagesTask(), "GMS MasterNode processOutstandingChangeEvents Group-" +
+        manager.getGroupName());
         processOutstandingMessagesThread.setDaemon(true);
         processOutstandingMessagesThread.start();
-        thread = new Thread(this, "MasterNode");
+        thread = new Thread(this, "GMS MasterNode Group-" + manager.getGroupName());
         thread.setDaemon(true);
         thread.start();
     }

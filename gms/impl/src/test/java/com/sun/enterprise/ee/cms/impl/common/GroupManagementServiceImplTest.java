@@ -137,7 +137,7 @@ public class GroupManagementServiceImplTest extends TestCase {
         synchronized(joinedAndReady) {
             if (!joinedAndReady.get()) {
                 try {
-                    joinedAndReady.wait();
+                    joinedAndReady.wait(2000);
                 } catch (InterruptedException ie) {}
             }
             assertTrue(joinedAndReady.get());

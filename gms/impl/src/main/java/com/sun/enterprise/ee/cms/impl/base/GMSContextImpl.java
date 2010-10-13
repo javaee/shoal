@@ -98,7 +98,7 @@ public class GMSContextImpl extends GMSContextBase {
         long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
         aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
         aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
-        router = new Router(MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow, INCOMING_MSG_THREAD_POOL_SIZE);
+        router = new Router(groupName, MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow, INCOMING_MSG_THREAD_POOL_SIZE);
 
         this.configProperties = configProperties;
         groupCommunicationProvider =
@@ -152,10 +152,12 @@ public class GMSContextImpl extends GMSContextBase {
 
     @Override
     public void join() throws GMSException {
-        viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "ViewWindowThread:" + groupName);
+        viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "GMS ViewWindowThread Group-" + groupName);
+        viewWindowThread.setDaemon(true);
         messageWindow = new MessageWindow(groupName, messageQueue);
 
-        messageWindowThread = new Thread(messageWindow, "MessageWindowThread:" + groupName);
+        messageWindowThread = new Thread(messageWindow, "GMS MessageWindowThread Group-" + groupName);
+        messageWindowThread.setDaemon(true);
         messageWindowThread.start();
 
         if (viewWindowThread != null) {

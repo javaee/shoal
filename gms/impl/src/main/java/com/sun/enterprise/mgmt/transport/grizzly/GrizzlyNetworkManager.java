@@ -44,7 +44,7 @@ import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys;
+import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.mgmt.transport.AbstractNetworkManager;
 import com.sun.enterprise.mgmt.transport.BlockingIOMulticastSender;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -66,15 +66,10 @@ import com.sun.enterprise.ee.cms.impl.base.Utility;
 
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.util.regex.Pattern;
@@ -226,7 +221,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         if( host != null ) {
             localInetAddress = InetAddress.getByName( host );
         }
-        ThreadPoolConfig threadPoolConfig = new ThreadPoolConfig("GMS-GrizzlyNetMgr-Group-" + groupName,
+        ThreadPoolConfig threadPoolConfig = new ThreadPoolConfig("GMS-GrizzlyControllerThreadPool-Group-" + groupName,
                 corePoolSize,
                 maxPoolSize,
                 new ArrayBlockingQueue<Runnable>( poolQueueSize ),
@@ -239,18 +234,6 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
 
         execService = GrizzlyExecutorService.createInstance(threadPoolConfig);
         controller.setThreadPool( execService );
-
-        //commented out the following when upgrading from grizzly 1.9.18 to 1.9.19-beta1
-        //TODO : remove when all tests pass
-       /* threadPool = new DefaultThreadPool( "GMS-GrizzlyNetMgr-Group-" + groupName,
-                                                              corePoolSize,
-                                                              maxPoolSize,
-                                                              keepAliveTime,
-                                                              TimeUnit.MILLISECONDS,
-                                                              null,
-                                                              new ArrayBlockingQueue<Runnable>( poolQueueSize ) );
-        threadPool.setInitialByteBufferSize( MessageImpl.MAX_TOTAL_MESSAGE_LENGTH );
-        controller.setThreadPool( threadPool );  */
 
         ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallel );
         controller.setConnectorHandlerPool( cacheableHandlerPool );
@@ -384,7 +367,10 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         List<PeerID> virtualPeerIdList = getVirtualPeerIDList( virtualUriList );
         if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() ) {
             final boolean FAIRNESS = true;
-            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ) );
+            ThreadFactory tf = new GMSThreadFactory("GMS-mcastSenderThreadPool-thread");
+
+            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS,
+                                                                new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ), tf);
             multicastSender = new VirtualMulticastSender( host,
                                                           multicastAddress,
                                                           multicastPort,
@@ -400,7 +386,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                 multicastSender = udpConnectorWrapper;
             } else {
                 final boolean FAIRNESS = true;
-                multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ) );
+                ThreadFactory tf = new GMSThreadFactory("GMS-McastMsgProcessor-Group-" + groupName + "-thread");                          
+                multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ), tf );
                 multicastSender = new BlockingIOMulticastSender( host,
                                                                  multicastAddress,
                                                                  multicastPort,

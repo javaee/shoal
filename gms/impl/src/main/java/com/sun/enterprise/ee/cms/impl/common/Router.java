@@ -41,6 +41,7 @@
 package com.sun.enterprise.ee.cms.impl.common;
 
 import com.sun.enterprise.ee.cms.core.*;
+import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import java.text.MessageFormat;
@@ -94,17 +95,21 @@ public class Router {
     final private Thread signalHandlerThread;
     private SignalHandler signalHandler;
     public final AliveAndReadyViewWindow aliveAndReadyView;
+    public final String groupName;
 
-    public Router(int queueSize, AliveAndReadyViewWindow viewWindow, int incomingMsgThreadPoolSize) {
+    public Router(String groupName, int queueSize, AliveAndReadyViewWindow viewWindow, int incomingMsgThreadPoolSize) {
+        this.groupName = groupName;
         aliveAndReadyView = viewWindow;
         MAX_QUEUE_SIZE = queueSize;
         queue = new ArrayBlockingQueue<SignalPacket>(MAX_QUEUE_SIZE);
         signalHandler = new SignalHandler(queue, this);
-        //todo: there's no lifecycle handling here.  it would be good to add it deal with a graceful shutdown
-        signalHandlerThread = new Thread(signalHandler, this.getClass().getCanonicalName() + " Thread");
+        signalHandlerThread = new Thread(signalHandler, "GMS SignalHandler for Group-" + groupName +  " thread");
+        signalHandlerThread.setDaemon(true);
         signalHandlerThread.start();
-        actionPool = Executors.newCachedThreadPool();
-        messageActionPool = Executors.newFixedThreadPool(incomingMsgThreadPoolSize);
+        GMSThreadFactory tf = new GMSThreadFactory("GMS-processNotify-Group-" + groupName + "-thread");
+        actionPool = Executors.newFixedThreadPool(5, tf);
+        tf = new GMSThreadFactory("GMS-processInboundMsg-Group-" + groupName + "-thread");;
+        messageActionPool = Executors.newFixedThreadPool(incomingMsgThreadPoolSize, tf);
         startupTime = System.currentTimeMillis();
     }
 

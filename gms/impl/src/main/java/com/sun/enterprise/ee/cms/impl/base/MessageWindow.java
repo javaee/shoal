@@ -71,11 +71,13 @@ public class MessageWindow implements Runnable {
     private ArrayBlockingQueue<MessagePacket> messageQueue;
     private AtomicInteger messageQueueHighWaterMark = new AtomicInteger(0);
     private final String groupName;
-    private ExecutorService dscExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService dscExecutor;
 
     public MessageWindow(final String groupName, final ArrayBlockingQueue<MessagePacket> messageQueue) {
         this.groupName = groupName;
         this.messageQueue = messageQueue;
+        GMSThreadFactory gtf = new GMSThreadFactory("GMS-DistributedStateCache-Group-" + groupName + "-thread");
+        this.dscExecutor = Executors.newSingleThreadExecutor(gtf);
     }
 
    void stop() {

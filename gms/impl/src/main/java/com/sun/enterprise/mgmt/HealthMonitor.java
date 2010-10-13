@@ -910,7 +910,8 @@ public class HealthMonitor implements MessageListener, Runnable {
             // no indoubt peer detector needed for HeatlhMonitor associated with a GMS WatchDog membertype.
             if (!isWatchDog())  {
                 manager.getNetworkManager().addMessageListener( this );
-                this.healthMonitorThread = new Thread(this, "HealthMonitor for Group:" + manager.getGroupName());
+                this.healthMonitorThread = new Thread(this, "GMS HealthMonitor for Group-" + manager.getGroupName());
+                this.healthMonitorThread.setDaemon(true);
                 healthMonitorThread.start();
                 inDoubtPeerDetector = new InDoubtPeerDetector();
                 inDoubtPeerDetector.start();
@@ -1242,11 +1243,13 @@ public class HealthMonitor implements MessageListener, Runnable {
 
         void start() {
             final String GROUPNAME = manager.getGroupName();
-            failureDetectorThread = new Thread(this, "InDoubtPeerDetector Thread for Group:" + GROUPNAME);
+            failureDetectorThread = new Thread(this, "GMS InDoubtPeerDetector Thread for Group-" + GROUPNAME);
+            failureDetectorThread.setDaemon(true);
             LOG.log(Level.FINE, "Starting InDoubtPeerDetector Thread");
             failureDetectorThread.start();
             FailureVerifier fverifier = new FailureVerifier();
-            fvThread = new Thread(fverifier, "FailureVerifier Thread for Group:" + GROUPNAME);
+            fvThread = new Thread(fverifier, "GMS FailureVerifier Thread for Group-" + GROUPNAME);
+            fvThread.setDaemon(true);
             LOG.log(Level.FINE, "Starting FailureVerifier Thread");
             fvThread.start();
         }
@@ -1800,7 +1803,7 @@ public class HealthMonitor implements MessageListener, Runnable {
                     } else {
                         reason = "send returned false";
                     }
-                    LOG.log(Level.WARNING, "mgmt.heatlhmonitor.failedwatchdognotify",
+                    LOG.log(Level.WARNING, "mgmt.healthmonitor.failedwatchdognotify",
                             new Object[]{failedMemberToken, manager.getGroupName(), reason});
 
                 }

@@ -277,9 +277,9 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                             if (qsize > maxExecutorQueueSize) {
                                 maxExecutorQueueSize = qsize;
                             }
-                            if (monitoringEnabled && ((threadPoolExecutor.getCompletedTaskCount()) % 2560) == 0) {
-                                printStats(Level.FINER);
-                            }
+//                            if (monitoringEnabled && ((threadPoolExecutor.getCompletedTaskCount()) % 2560) == 0) {
+//                                printStats(Level.FINER);
+//                            }
                         }
                     } else {
                         processor.run();
