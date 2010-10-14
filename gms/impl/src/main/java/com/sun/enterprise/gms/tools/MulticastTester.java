@@ -73,8 +73,14 @@ public class MulticastTester {
     // this is more useful for development, but there is a param for it
     long testerTimeoutInSeconds = 20;
 
-    private void run(String [] args) {
-        parseArgs(args);
+    /*
+     * Called by main or external tool wrapper (such as asadmin
+     * in GlassFish). Returns the exit value.
+     */
+    public int run(String [] args) {
+        if (!parseArgs(args)) {
+            return 1;
+        }
 
         StringBuilder out = new StringBuilder();
         out.append(sm.get("port.set", mcPort)).append("\n");
@@ -94,7 +100,7 @@ public class MulticastTester {
                 UUID.randomUUID().toString();
         } catch (UnknownHostException uhe) {
             System.err.println(sm.get("whoops", uhe.getMessage()));
-            return;
+            return 1;
         }
 
         MultiCastReceiverThread receiver = new MultiCastReceiverThread(
@@ -109,25 +115,28 @@ public class MulticastTester {
 
             Thread.sleep(1000 * testerTimeoutInSeconds);
 
+            receiver.done = true;
+            sender.done = true;
+
+            log("joining receiver thread");
+            receiver.interrupt();
+            receiver.join(500);
+            if (receiver.isAlive()) {
+                log("could not join receiver thread (expected)");
+            } else {
+                log("joined receiver thread");
+            }
+
             log("interrupting sender thread");
             sender.interrupt();
             log("joining sender thread");
-            sender.join(1000);
+            sender.join(500);
             if (sender.isAlive()) {
-                log("could not join sender thread. exiting");
+                log("could not join sender thread");
             } else {
                 log("joined sender thread");
             }
 
-            log("interrupting receiver thread");
-            receiver.interrupt();
-            log("joining receiver thread");
-            receiver.join(1000);
-            if (receiver.isAlive()) {
-                log("could not join receiver thread. exiting");
-            } else {
-                log("joined receiver thread");
-            }
         } catch (InterruptedException ie) {
             System.err.println(sm.get("whoops", ie.getMessage()));
             ie.printStackTrace();
@@ -135,31 +144,39 @@ public class MulticastTester {
 
         System.out.println(sm.get("timeout.exit", testerTimeoutInSeconds,
             TIMEOUT_OPTION));
+
         if (!receiver.receivedAnything.get()) {
             System.out.println(sm.get("no.data.for.you"));
+            return 1;
         }
-        printAndExit(null, 0);
+
+        return 0;
     }
 
     /*
      * Can't catch every random input the user can throw
      * at us, but let's at least make an attempt to correct
      * honest mistakes.
+     *
+     * Return true if we should keep processing.
      */
-    private void parseArgs(String [] args) {
+    private boolean parseArgs(String [] args) {
         String arg;
         try {
             for (int i=0; i<args.length; i++) {
                 arg = args[i];
                 if (HELP_OPTION.equals(arg)) {
-                    doHelpAndExit(0);
+                    // yes, this will return a non-zero exit code
+                    printHelp();
+                    return false;
                 } else if (PORT_OPTION.equals(arg)) {
                     try {
                         arg = args[++i];
                         mcPort = Integer.parseInt(arg);
                     } catch (NumberFormatException nfe) {
-                        printAndExit(sm.get("bad.num.param",
-                            arg, PORT_OPTION), 1);
+                        System.err.println(sm.get("bad.num.param",
+                            arg, PORT_OPTION));
+                        return false;
                     }
                 } else if (ADDRESS_OPTION.equals(arg)) {
                     mcAddress = args[++i];
@@ -170,24 +187,27 @@ public class MulticastTester {
                         arg = args[++i];
                         ttl = Integer.parseInt(arg);
                     } catch (NumberFormatException nfe) {
-                        printAndExit(sm.get("bad.num.param",
-                            arg, TTL_OPTION), 1);
+                        System.err.println(sm.get("bad.num.param",
+                            arg, TTL_OPTION));
+                        return false;
                     }
                 } else if (WAIT_PERIOD_OPTION.equals(arg)) {
                     try {
                         arg = args[++i];
                         msgPeriodInMillis = Long.parseLong(arg);
                     } catch (NumberFormatException nfe) {
-                        printAndExit(sm.get("bad.num.param",
-                            arg, WAIT_PERIOD_OPTION), 1);
+                        System.err.println(sm.get("bad.num.param",
+                            arg, WAIT_PERIOD_OPTION));
+                        return false;
                     }
                 } else if (TIMEOUT_OPTION.equals(arg)) {
                     try {
                         arg = args[++i];
                         testerTimeoutInSeconds = Long.parseLong(arg);
                     } catch (NumberFormatException nfe) {
-                        printAndExit(sm.get("bad.num.param",
-                            arg, TIMEOUT_OPTION), 1);
+                        System.err.println(sm.get("bad.num.param",
+                            arg, TIMEOUT_OPTION));
+                        return false;
                     }
                     System.out.println(sm.get("timeout.set",
                         testerTimeoutInSeconds));
@@ -195,16 +215,20 @@ public class MulticastTester {
                     System.err.println(sm.get("debug.set"));
                     debug = true;
                 } else {
-                    printAndExit(sm.get("unknown.option", arg, HELP_OPTION), 1);
+                    System.err.println(sm.get(
+                        "unknown.option", arg, HELP_OPTION));
+                    return false;
                 }
             }
         } catch (ArrayIndexOutOfBoundsException badUser) {
             System.err.println(sm.get("bad.user.param"));
-            doHelpAndExit(1);
+            printHelp();
+            return false;
         }
+        return true;
     }
 
-    private void doHelpAndExit(int status) {
+    private void printHelp() {
         StringBuilder sb = new StringBuilder();
         sb.append(sm.get("help.message")).append("\n");
         sb.append(HELP_OPTION).append("\n");
@@ -215,18 +239,6 @@ public class MulticastTester {
         sb.append(WAIT_PERIOD_OPTION).append("\n");
         sb.append(TIMEOUT_OPTION).append("\n");
         sb.append(DEBUG_OPTION).append("\n");
-        printAndExit(sb.toString(), status);
-    }
-
-    private void printAndExit(String msg, int status) {
-        if (msg != null) {
-            if (status == 0) {
-                System.out.println(msg);
-            } else {
-                System.err.println(msg);
-            }
-        }
-        System.exit(status);
     }
 
     private void log(String msg) {
@@ -237,7 +249,7 @@ public class MulticastTester {
 
     public static void main(String[] args) {
         MulticastTester tester = new MulticastTester();
-        tester.run(args) ;
+        System.exit(tester.run(args));
     }
 
     // make the output a little more readable

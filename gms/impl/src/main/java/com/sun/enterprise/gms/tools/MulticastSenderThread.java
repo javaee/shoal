@@ -53,6 +53,8 @@ public class MulticastSenderThread extends Thread {
 
     static final StringManager sm = StringManager.getInstance();
 
+    volatile boolean done = false;
+
     int mcPort;
     String mcAddress;
     String bindInterface;
@@ -128,7 +130,7 @@ public class MulticastSenderThread extends Thread {
             System.out.println(sm.get("sending.message",
                 dataString, msgPeriodInMillis));
 
-            while (!interrupted()) {
+            while (!done) {
                 socket.send(datagramPacket);
                 try {
                     Thread.sleep(msgPeriodInMillis);

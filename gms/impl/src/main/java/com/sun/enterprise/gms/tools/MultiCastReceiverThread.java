@@ -41,7 +41,6 @@
 package com.sun.enterprise.gms.tools;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -58,15 +57,26 @@ public class MultiCastReceiverThread extends Thread {
 
     final AtomicBoolean receivedAnything = new AtomicBoolean(false);
 
+    volatile boolean done = false;
+
     int mcPort;
     String mcAddress;
     String bindInterface;
     boolean debug;
     String targetData;
 
+    /*
+     * Since the run() method of this class will block on
+     * MulticastSocket#receive() until a datagram comes in,
+     * the tester won't usually be able to stop this thread
+     * normally. So we make it a daemon thread and code the
+     * finally block in run(), even though it will almost
+     * never happen.
+     */
     public MultiCastReceiverThread(int mcPort, String mcAddress,
         String bindInterface, boolean debug, String targetData) {
         super("McastReceiver");
+        setDaemon(true);
         this.mcPort = mcPort;
         this.mcAddress = mcAddress;
         this.bindInterface = bindInterface;
@@ -90,7 +100,15 @@ public class MultiCastReceiverThread extends Thread {
 
             System.out.println(sm.get("listening.info"));
             Set<String> hosts = new HashSet<String>();
-            while (!interrupted()) {
+
+            /*
+             * 'done' will almost never be read as true here unless
+             * there is some unusual timing. But we have leaveGroup
+             * and socket closing code here anyway to be polite. Maybe
+             * the thread interrupt call will interrupt the receive call
+             * in a different JDK impl/version.
+             */
+            while (!done) {
                 DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
                 ms.receive(dp);
                 String newData = new String(dp.getData()).trim();
@@ -99,6 +117,7 @@ public class MultiCastReceiverThread extends Thread {
                     if (targetData.equals(newData)) {
                         System.out.println(sm.get("loopback.from",
                             MulticastTester.trimDataString(newData)));
+                        receivedAnything.set(true);
                     } else {
                         System.out.println(sm.get("received.from",
                             MulticastTester.trimDataString(newData)));
@@ -106,9 +125,6 @@ public class MultiCastReceiverThread extends Thread {
                     }
                 }
             }
-        } catch (InterruptedIOException iioe) {
-            // this is fine. time to exit
-            log(iioe.getMessage());
         } catch (Exception e) {
             System.err.println(sm.get("whoops", e.toString()));
         } finally {
