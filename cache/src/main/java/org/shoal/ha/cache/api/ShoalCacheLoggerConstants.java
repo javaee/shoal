@@ -71,12 +71,6 @@ public class ShoalCacheLoggerConstants {
 
     public static final String CACHE_DATA_STORE = "org.shoal.ha.cache.store";
 
-    public static final String CACHE_DATA_STORE_SAVE = "org.shoal.ha.cache.store.save";
-
-    public static final String CACHE_DATA_STORE_LOAD = "org.shoal.ha.cache.store.load";
-
-    public static final String CACHE_DATA_STORE_REMOVE = "org.shoal.ha.cache.store.remove";
-
     public static final String CACHE_MONITOR = "org.shoal.ha.monitor";
 
     public static final String CACHE_SIZE_REQUEST_COMMAND = "org.shoal.ha.cache.command.size";

@@ -117,6 +117,9 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         ros.writeLong(minimumRequiredVersion);
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + key + "to " + replicaLocationHint);
+        }
     }
 
     @Override
@@ -135,7 +138,9 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         try {
             DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
             V result = null;
-
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " received load_request command for " + key + "from " + initiator);
+            }
             if (e != null) {
                 synchronized (e) {
                     Storeable v = (Storeable) e.getV();

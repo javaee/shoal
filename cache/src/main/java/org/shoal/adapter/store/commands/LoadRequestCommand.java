@@ -106,6 +106,9 @@ public class LoadRequestCommand<K, V>
         ros.writeLong(resp.getTokenId());
         dsc.getDataStoreKeyHelper().writeKey(ros, key);
         ros.writeLengthPrefixedString(originatingInstance);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + key + "to " + replicaLocationHint);
+        }
     }
 
     @Override
@@ -121,11 +124,12 @@ public class LoadRequestCommand<K, V>
     public void execute(String initiator) {
 
         try {
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " received load_request command for " + key + "from " + initiator);
+            }
             DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
             V v = e == null ? null : (V) e.getV();
-            if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " will send " + key + " => " + v + " to " + initiator);
-            }
+
             if (!originatingInstance.equals(dsc.getInstanceName())) {
                 LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);
                 rsp.setOriginatingInstance(originatingInstance);

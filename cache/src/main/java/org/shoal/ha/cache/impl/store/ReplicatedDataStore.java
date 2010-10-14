@@ -64,7 +64,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     private static final int MAX_REPLICA_TRIES = 1;
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_DATA_STORE);
+
+    private static final Logger _loadLogger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
 
     private String storeName;
 
@@ -133,8 +135,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         replicaStore = dsc.getReplicaStore();
         replicaStore.setIdleEntryDetector(conf.getIdleEntryDetector());
 
-        Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_CONFIG);
-        logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
+        _logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
 
     }
 
@@ -187,6 +188,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 v = entry.getV();
                 if (v != null) {
                     foundLocallyCount.incrementAndGet();
+                    if (_loadLogger.isLoggable(Level.FINE)) {
+                        _loadLogger.log(Level.FINE, "ReplicatedDataStore.load(" + key
+                                + "); FOUND IN LOCAL CACHE!!");
+                    }
                 }
             } else {
                 return null; //Because it is already removed
@@ -194,12 +199,11 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
 
         if (v == null) {
-
             KeyMapper keyMapper = dsc.getKeyMapper();
             String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
-            if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "ReplicatedDataStore.load(" + key
+            if (_loadLogger.isLoggable(Level.FINE)) {
+                _loadLogger.log(Level.FINE, "ReplicatedDataStore.load(" + key
                         + "); ReplicaChoices: " + replicachoices);
             }
 
@@ -212,9 +216,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 simpleBroadcastCount.incrementAndGet();
                 LoadRequestCommand<K, V> command
                         = new LoadRequestCommand<K, V>(key, target);
-
-                _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
+                if (_loadLogger.isLoggable(Level.FINE)) {
+                    _loadLogger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
                         + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
+                }
 
                 cm.execute(command);
                 v = command.getResult(3, TimeUnit.SECONDS);
@@ -225,6 +230,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
 
             if (v == null) {
+                if (_loadLogger.isLoggable(Level.FINE)) {
+                    _loadLogger.log(Level.FINE, "*ReplicatedDataStore: For Key=" + key
+                        + "; Performing broadcast load");
+                }
                 broadcastLoadRequestCount.incrementAndGet();
                 String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
                 for (String targetInstance : targetInstances) {
@@ -233,9 +242,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     }
                     LoadRequestCommand<K, V> lrCmd
                             = new LoadRequestCommand<K, V>(key, targetInstance);
-
-                    _logger.log(Level.FINE, "*ReplicatedDataStore: For Key=" + key
+                    if (_loadLogger.isLoggable(Level.FINE)) {
+                        _loadLogger.log(Level.FINE, "*ReplicatedDataStore: For Key=" + key
                             + "; Trying to load from " + targetInstance);
+                    }
 
                     cm.execute(lrCmd);
                     v = lrCmd.getResult(3, TimeUnit.SECONDS);
@@ -259,13 +269,13 @@ public class ReplicatedDataStore<K, V extends Serializable>
                             entry.setReplicaInstanceName(respondingInstance);
                             //Note: Do not remove the stale replica now. We will
                             //  do that in save
-                            if (_logger.isLoggable(Level.FINE)) {
-                                _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
+                            if (_loadLogger.isLoggable(Level.FINE)) {
+                                _loadLogger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
                                         + "; Successfully loaded data from " + respondingInstance);
                             }
                         } else {
-                            if (_logger.isLoggable(Level.FINE)) {
-                                _logger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
+                            if (_loadLogger.isLoggable(Level.FINE)) {
+                                _loadLogger.log(Level.FINE, "ReplicatedDataStore: For Key=" + key
                                         + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
                             }
                         }
@@ -274,6 +284,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
         }
 
+        if (_loadLogger.isLoggable(Level.FINE)) {
+            _loadLogger.log(Level.FINE, "ReplicatedDataStore.load(" + key
+                    + ") Final result: " + v);
+        }
         return v;
     }
 

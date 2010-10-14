@@ -100,6 +100,10 @@ public class LoadResponseCommand<K, V>
         if (v != null) {
             dsc.getDataStoreEntryHelper().writeObject(ros, v);
         }
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_response command for "
+                    + key + " to " + originatingInstance + "; " + v);
+        }
     }
 
 
@@ -125,7 +129,8 @@ public class LoadResponseCommand<K, V>
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, dsc.getInstanceName() + " executed load_response " + key + " value " + v);
+                _logger.log(Level.FINE, dsc.getInstanceName() + " received load_response key=" + key + "; value=" + v
+                + "; from " + respondingInstanceName);
             }
             
             resp.setRespondingInstanceName(respondingInstanceName);

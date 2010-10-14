@@ -67,7 +67,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     private static final int MAX_REPLICA_TRIES = 1;
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE);
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_DATA_STORE);
+
+    private static final Logger _loadLogger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
 
     private ReplicationFramework<K, V> framework;
 
@@ -221,8 +223,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                         v = null;
                     } else {
                         foundLocallyCount.incrementAndGet();
-                        if (_logger.isLoggable(Level.FINE)) {
-                            _logger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key
+                        if (_loadLogger.isLoggable(Level.FINE)) {
+                            _loadLogger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key
                                 + "). LOCAL REPLICA CACHE HIT: " + v + "; hitCount: " + foundLocallyCount.get());
                         }
                     }
@@ -235,8 +237,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         if (v == null) {
             String replicachoices = framework.getKeyMapper().getReplicaChoices(framework.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
-            if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key
+            if (_loadLogger.isLoggable(Level.FINE)) {
+                _loadLogger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key
                                             + ", " + version + "); ReplicaChoices: " + replicachoices);
             }
             try {
@@ -250,15 +252,16 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
                     StoreableLoadRequestCommand<K, V> command
                             = new StoreableLoadRequestCommand<K, V>(key, version, target);
-
-                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
+                    if (_loadLogger.isLoggable(Level.FINE)) {
+                        _loadLogger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
                             + "; Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
+                    }
 
                     framework.execute(command);
                     v = command.getResult(3, TimeUnit.SECONDS);
                     if (v != null) {
-                        if (_logger.isLoggable(Level.FINE)) {
-                            _logger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                        if (_loadLogger.isLoggable(Level.FINE)) {
+                            _loadLogger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
                         }
                         respondingInstance = command.getRespondingInstanceName();
                         break;
@@ -266,6 +269,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                 }
 
                 if (v == null) {
+                    if (_loadLogger.isLoggable(Level.FINE)) {
+                        _loadLogger.log(Level.FINE, "StoreableReplicatedBackingStore.doLoad(" + key + ") Performing broadcast load");
+                    }
                     broadcastLoadRequestCount.incrementAndGet();
                     String[] targetInstances = framework.getKeyMapper().getCurrentMembers();
                     for (String targetInstance : targetInstances) {
@@ -274,15 +280,16 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                         }
                         StoreableLoadRequestCommand<K, V> command
                                 = new StoreableLoadRequestCommand<K, V>(key, version, targetInstance);
-
-                        _logger.log(Level.FINE, "*StoreableReplicatedBackingStore: For Key=" + key
+                        if (_loadLogger.isLoggable(Level.FINE)) {
+                            _loadLogger.log(Level.FINE, "*StoreableReplicatedBackingStore: For Key=" + key
                                 + "; Trying to load from " + targetInstance);
+                        }
 
                         framework.execute(command);
                         v = command.getResult(3, TimeUnit.SECONDS);
                         if (v != null) {
-                            if (_logger.isLoggable(Level.FINE)) {
-                                _logger.log(Level.FINE, "2.StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
+                            if (_loadLogger.isLoggable(Level.FINE)) {
+                                _loadLogger.log(Level.FINE, "2.StoreableReplicatedBackingStore.doLoad(" + key + ") ==> GOT:  " + v);
                             }
                             respondingInstance = targetInstance;
                             break;
@@ -298,15 +305,15 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
                                 if (localCachingEnabled) {
                                     entry.setV(v);
                                 }
-                                if (_logger.isLoggable(Level.FINE)) {
-                                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
+                                if (_loadLogger.isLoggable(Level.FINE)) {
+                                    _loadLogger.log(Level.FINE, "StoreableReplicatedBackingStore: For Key=" + key
                                         + "; Successfully loaded data from " + respondingInstance);
                                 }
                                 entry.setReplicaInstanceName(respondingInstance);
                                 //Note: Do not remove the stale replica now. We will
                                 //  do that in save
                             } else {
-                                _logger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
+                                _loadLogger.log(Level.WARNING, "StoreableReplicatedBackingStore: For Key=" + key
                                     + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
                             }
                         }
@@ -317,6 +324,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
             }
         }
 
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, "StoreableReplicatedBackingStore.load(" + key + ") Final result: " + v);
+        }
         return v;
     }
 

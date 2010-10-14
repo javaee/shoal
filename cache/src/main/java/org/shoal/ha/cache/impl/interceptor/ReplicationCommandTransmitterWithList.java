@@ -158,7 +158,6 @@ public class ReplicationCommandTransmitterWithList<K, V>
             while (batch.addCommand(noop)) {
                 ;
             }
-            System.out.println("ReplicationCommandTransmitterWithList::flushAndTransmit");
         }
         timeStamp = batch.getBatchCreationTime();
     }

@@ -56,8 +56,6 @@ import java.util.List;
 public class ReplicationFramePayloadCommand<K, V>
     extends Command<K, V> {
 
-    private String sentFrom;
-
     private String targetInstanceName;
 
     private List<Command<K, V>> list = new ArrayList<Command<K, V>>();
@@ -115,7 +113,7 @@ public class ReplicationFramePayloadCommand<K, V>
         throws DataStoreException {
 
         for (Command<K, V> cmd : list) {
-            getCommandManager().executeCommand(cmd, false, sentFrom);
+            getCommandManager().executeCommand(cmd, false, initiator);
         }
     }
 
