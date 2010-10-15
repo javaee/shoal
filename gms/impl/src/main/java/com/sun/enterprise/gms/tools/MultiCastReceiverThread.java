@@ -41,6 +41,7 @@
 package com.sun.enterprise.gms.tools;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -125,6 +126,8 @@ public class MultiCastReceiverThread extends Thread {
                     }
                 }
             }
+        } catch (InterruptedIOException iioe) {
+            log("received: " + iioe);
         } catch (Exception e) {
             System.err.println(sm.get("whoops", e.toString()));
         } finally {
