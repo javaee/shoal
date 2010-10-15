@@ -383,7 +383,7 @@ public class NetworkUtility {
     }
 
     public static int serialize( final ByteArrayOutputStream baos, final Map<String, Serializable> messages ) throws MessageIOException {
-        return serialize( baos, messages, true );
+        return serialize( baos, messages, false);
     }
 
     public static int serialize( final ByteArrayOutputStream baos, final Map<String, Serializable> messages, final boolean debug ) throws MessageIOException {
@@ -393,10 +393,11 @@ public class NetworkUtility {
         String name = null;
         ObjectOutputStream oos = null;
         try {
-            if( debug )
+            if( debug ) {
                 oos = new DebuggingObjectOutputStream( baos );
-            else
+            } else {
                 oos = new ObjectOutputStream( baos );
+            }
             for( Map.Entry<String, Serializable> entry : messages.entrySet() ) {
                 name = entry.getKey();
                 Serializable obj = entry.getValue();
