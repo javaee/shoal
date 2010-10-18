@@ -43,6 +43,7 @@ package org.shoal.adapter.store;
 import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
+import org.glassfish.ha.store.api.BackingStoreFactory;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
@@ -70,6 +71,9 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         this.factory = factory;
     }
 
+    public BackingStoreFactory getBackingStoreFactory() {
+        return factory;
+    }
 
     public DataStoreContext<K, V> getDataStoreContext() {
         return null;//dataStore.get();

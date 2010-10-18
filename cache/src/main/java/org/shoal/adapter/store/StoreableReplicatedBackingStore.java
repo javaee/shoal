@@ -40,10 +40,7 @@
 
 package org.shoal.adapter.store;
 
-import org.glassfish.ha.store.api.BackingStore;
-import org.glassfish.ha.store.api.BackingStoreConfiguration;
-import org.glassfish.ha.store.api.BackingStoreException;
-import org.glassfish.ha.store.api.Storeable;
+import org.glassfish.ha.store.api.*;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
 import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
@@ -87,6 +84,10 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     /*package*/ void setBackingStoreFactory(ReplicatedBackingStoreFactory factory) {
         this.factory = factory;
+    }
+
+    public BackingStoreFactory getBackingStoreFactory() {
+        return factory;
     }
     
     @Override
