@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2007-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,48 +40,29 @@
 
 package com.sun.enterprise.mgmt.transport;
 
-import java.io.IOException;
-import java.io.InputStream;
-
 /**
- * {@link InputStream} implementation over {@link Buffer}.
- * 
+ * Set of utility methods to work with Arrays.
+ *
  * @author Alexey Stashok
  */
-public class BufferInputStream extends InputStream {
+public class ArrayUtils {
+    // Reworked the java.util.Arrays's binarySearch
+    public static int binarySearch(final int[] a, final int fromIndex, final int toIndex,
+				     final int key) {
+	int low = fromIndex;
+	int high = toIndex - 1;
 
-    private final Buffer buffer;
+	while (low <= high) {
+	    int mid = (low + high) >>> 1;
+	    int midVal = a[mid];
 
-    public BufferInputStream(Buffer buffer) {
-        this.buffer = buffer;
+	    if (midVal < key)
+		low = mid + 1;
+	    else if (midVal > key)
+		high = mid - 1;
+	    else
+		return mid; // key found
+	}
+	return low;  // key not found.
     }
-    
-    @Override
-    public int read() throws IOException {
-        return buffer.get() & 0xFF;
-    }
-
-    @Override
-    public int read(byte[] b, int off, int len) throws IOException {
-        int length = Math.min(len, available());
-        
-        buffer.get(b, off, length);
-        
-        return length;
-    }
-
-    @Override
-    public int available() throws IOException {
-        return buffer.remaining();
-    }
-
-    @Override
-    public long skip(long n) throws IOException {
-        int skipped = (int) Math.min(n, available());
-
-        buffer.position(buffer.position() + skipped);
-        return skipped;
-    }
-
-
 }

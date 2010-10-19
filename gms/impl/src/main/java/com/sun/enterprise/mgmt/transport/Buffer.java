@@ -59,7 +59,7 @@ public interface Buffer extends Comparable<Buffer> {
      * different values, than before, by still point to the same <tt>Buffer</tt>
      * elements.
      */
-    public boolean disposeUnused();
+    public ByteBuffer trimLeft();
 
     /**
      * Notify the allocator that the space for this <tt>Buffer</tt> is no

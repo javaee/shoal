@@ -40,6 +40,7 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.enterprise.mgmt.transport.BufferUtils;
 import com.sun.enterprise.mgmt.transport.ByteBuffersBuffer;
 import com.sun.grizzly.ProtocolParser;
 import com.sun.grizzly.SSLConfig;
@@ -171,10 +172,10 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
             workBuffer.dispose();  // after error,  drop entire buffer.
         } else {
             nextMsg= message;
-            workBuffer.disposeUnused();
-            if (!workBuffer.hasRemaining()) {
-                lastBuffer = null;
-            }
+//            workBuffer.trimLeft();
+//            if (!workBuffer.hasRemaining()) {
+//                lastBuffer = null;
+//            }
             justParsedMessage = true;
         }
 
@@ -265,7 +266,7 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
         if (bb == lastBuffer) {
             // If coming bb is already in the workBuffer
             // recalc workBuffer capacity
-            workBuffer.recalcCapacity();
+            workBuffer.calcCapacity();
             workBuffer.limit(workBuffer.capacity());
         } else {
             // If coming bb is not in the workBuffer - add it
@@ -315,22 +316,11 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
     }
 
     private void compactBuffers() {
-        workBuffer.disposeUnused();
-        if (workBuffer.remaining() < lastBuffer.remaining()) {
-            // We've parsed a message, and part of the part of the next message
-            // is ready in the workBuffer.
-            // But next message, which workerBuffer refers, starts in the
-            // midle of lastBuffer. So in order to prepare last buffer for the
-            // next read - we need to compact it
+        workBuffer.trimLeft();
+        final int workerBufferRemaining = workBuffer.remaining();
+        final int lastBufferRemaining = lastBuffer.remaining();
 
-            lastBuffer.position(lastBuffer.limit() - workBuffer.remaining());
-            lastBuffer.compact();
-            lastBuffer.flip();
-            workBuffer.dispose();
-            workBuffer.append(lastBuffer);
-        }
-
-        int lastBufferFreeSpace = lastBuffer.capacity() - lastBuffer.remaining();
+        final int lastBufferFreeSpace = lastBuffer.capacity() - lastBufferRemaining;
 
         if (lastBufferFreeSpace < MIN_BUFFER_FREE_SPACE) {
             // if lastBuffer has less than min buffer size available for the
@@ -338,6 +328,21 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
             // allocate a new buffer
             ((WorkerThread) Thread.currentThread()).setByteBuffer(null);
         } else {
+            if (workerBufferRemaining < lastBufferRemaining) {
+            // We've parsed a message, and part of the part of the next message
+            // is ready in the workBuffer.
+            // But next message, which workerBuffer refers, starts in the
+            // midle of lastBuffer. So in order to prepare last buffer for the
+            // next read - we need to compact it
+
+                lastBuffer.position(lastBuffer.limit() - workerBufferRemaining);
+            lastBuffer.compact();
+            lastBuffer.flip();
+                BufferUtils.setPositionLimit(workBuffer, 0, workerBufferRemaining);
+                workBuffer.calcCapacity();
+
+//            workBuffer.append(lastBuffer);
+            }
             // prepare lastBuffer for the next read operation
             lastBuffer.position(lastBuffer.limit());
             lastBuffer.limit(lastBuffer.capacity());
