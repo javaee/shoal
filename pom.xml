@@ -98,7 +98,7 @@
         <junit.group.id>junit</junit.group.id>
         <junit.version>3.8.1</junit.version>
 
-        <ha.api.version>3.1-b05</ha.api.version>
+        <ha.api.version>3.1.5</ha.api.version>
     </properties>
 
     <modules>
