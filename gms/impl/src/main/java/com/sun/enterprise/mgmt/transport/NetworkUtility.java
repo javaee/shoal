@@ -434,8 +434,9 @@ public class NetworkUtility {
             for( int i = 0; i < count; i++ ) {
                 name = (String)ois.readObject();
                 obj = ois.readObject();
-                if( obj instanceof Serializable )
+                if( obj instanceof Serializable ) {
                     messages.put( name, (Serializable)obj );
+                }
             }
         } catch( Throwable t ) {
             LOG.log(Level.WARNING,

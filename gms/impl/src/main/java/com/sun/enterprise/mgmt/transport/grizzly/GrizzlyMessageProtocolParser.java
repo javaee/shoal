@@ -100,12 +100,16 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
         }
     }
 
-    public static ParserProtocolFilter createParserProtocolFilter( final SSLConfig sslConfig ) {
-        return new ParserProtocolFilter() {
+    public static ParserFilter createParserProtocolFilter( final SSLConfig sslConfig ) {
+        return new ParserFilter() {
             public ProtocolParser newProtocolParser() {
                 return new GrizzlyMessageProtocolParser( sslConfig );
             }
         };
+    }
+
+    public boolean isError() {
+        return error;
     }
 
     /**
@@ -122,7 +126,7 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
      *		 return false.
      */
     public boolean isExpectingMoreData() {
-        final boolean isExpectingMoreData = workBuffer.hasRemaining() && !justParsedMessage;
+        final boolean isExpectingMoreData = workBuffer.hasRemaining() && !justParsedMessage && !error;
 
         if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
             LOG.log( DEBUG_LEVEL, logState( "isExpectingMoreData() return " + isExpectingMoreData));
@@ -142,7 +146,7 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
      *         Otherwise <tt>false</tt>.
      */
     public boolean hasMoreBytesToParse() {
-        final boolean hasMoreBytesToParse = workBuffer.hasRemaining() && justParsedMessage;
+        final boolean hasMoreBytesToParse = workBuffer.hasRemaining() && justParsedMessage && !error;
         if( DEBUG_ENABLED && LOG.isLoggable(DEBUG_LEVEL ) ) {
             LOG.log( DEBUG_LEVEL, logState(
                     "hasMoreBytesToParse() return " + hasMoreBytesToParse));
@@ -218,7 +222,9 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
             }
             if(message != null && messageLength > 0 ) {
                 if( messageLength + MessageImpl.HEADER_LENGTH > MessageImpl.getMaxMessageLength() ){
-                    throw new Exception( "too large message" );
+                    throw new Exception( "too large message."
+                            + " request-size=" + (messageLength + MessageImpl.HEADER_LENGTH) +
+                            " max-size=" +  MessageImpl.getMaxMessageLength());
                 }
                 int totalMsgLength = MessageImpl.HEADER_LENGTH + messageLength;
                 if( workBuffer.remaining() <  totalMsgLength) {
