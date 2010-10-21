@@ -78,54 +78,25 @@ public class GrizzlyParserTest extends TestCase {
 
     private static final int THREAD_LOCAL_BUFFER_SIZE = WorkerThreadImpl.DEFAULT_BYTE_BUFFER_SIZE;
 
-    public void testAll() throws IOException {
+    private Controller controller;
+
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+
         enableDebug(false);
 
-        Controller controller = initializeServer();
-
-        try {
-            System.out.println("testSimpleMessage: " + testSimpleMessage());
-            System.out.println("testChunkedMessage: " + testChunkedMessage());
-            System.out.println("testOneAndHalfMessage: " + testOneAndHalfMessage());
-            System.out.println("testBigMessage: " + testBigMessage());
-            System.out.println("testOneAndHalfBigMessage: " + testOneAndHalfBigMessage());
-            System.out.println("testTinyRemainder: " + testTinyRemainder());
-        } finally {
-            controller.stop();
+        controller = initializeServer();
         }
+
+    @Override
+    protected void tearDown() throws Exception {
+        controller.stop();
+
+        super.tearDown();
     }
 
-    private static Controller initializeServer() {
-        final ProtocolFilter resultFilter = new ResultFilter();
-        final ParserProtocolFilter parserProtocolFilter = createParserProtocolFilter();
-        TCPSelectorHandler selectorHandler = new TCPSelectorHandler();
-        selectorHandler.setPort(PORT);
-
-        final Controller controller = new Controller();
-
-        controller.setSelectorHandler(selectorHandler);
-
-        controller.setProtocolChainInstanceHandler(
-                new DefaultProtocolChainInstanceHandler() {
-
-                    @Override
-                    public ProtocolChain poll() {
-                        ProtocolChain protocolChain = protocolChains.poll();
-                        if (protocolChain == null) {
-                            protocolChain = new DefaultProtocolChain();
-                            protocolChain.addFilter(parserProtocolFilter);
-                            protocolChain.addFilter(resultFilter);
-                        }
-                        return protocolChain;
-                    }
-                });
-
-        ControllerUtils.startController(controller);
-
-        return controller;
-    }
-
-    private static boolean testSimpleMessage() throws IOException {
+    public void ttestSimpleMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -138,18 +109,10 @@ public class GrizzlyParserTest extends TestCase {
         int result = is.read();
 
         s.close();
-        assertTrue(result == 1);
-
-        if (result == 1) {
-            return true;
-        } else if (result == 0) {
-            return false;
+        assertEquals(1, result);
         }
 
-        throw new IllegalStateException("Unexpected result: " + result);
-    }
-
-    private static boolean testChunkedMessage() throws IOException {
+    public void ttestChunkedMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -182,19 +145,10 @@ public class GrizzlyParserTest extends TestCase {
         int result = is.read();
 
         s.close();
-        assertTrue("expect result of 1: result=" + result, result == 1);
-
-
-        if (result == 1) {
-            return true;
-        } else if (result == 0) {
-            return false;
+        assertEquals(1, result);
         }
 
-        throw new IllegalStateException("Unexpected result: " + result);
-    }
-
-    private static boolean testOneAndHalfMessage() throws IOException {
+    public void ttestOneAndHalfMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -220,22 +174,11 @@ public class GrizzlyParserTest extends TestCase {
 
         s.close();
 
-        assertTrue("expect result1 of 1: result1=" + result1, result1 == 1);
-        assertTrue("expect result2 of 1: result2=" + result2, result2 == 1);
-
-
-
-
-        if (result1 == 1 && result2 == 1) {
-            return true;
-        } else if (result1 == 0 || result2 == 0) {
-            return false;
+        assertEquals(1, result1);
+        assertEquals(1, result2);
         }
 
-        throw new IllegalStateException("Unexpected result1: " + result1 + " result2: " + result2);
-    }
-
-    private static boolean testBigMessage() throws IOException {
+    public void ttestBigMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -250,18 +193,10 @@ public class GrizzlyParserTest extends TestCase {
 
         s.close();
 
-        assertTrue("expect result of 1: result=" + result, result == 1);
-
-        if (result == 1) {
-            return true;
-        } else if (result == 0) {
-            return false;
+        assertEquals(1, result);
         }
 
-        throw new IllegalStateException("Unexpected result: " + result);
-    }
-
-    private static boolean testOneAndHalfBigMessage() throws IOException {
+    public void ttestOneAndHalfBigMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -287,19 +222,11 @@ public class GrizzlyParserTest extends TestCase {
 
         s.close();
 
-        assertTrue("expect result1 of 1: result1=" + result1, result1 == 1);
-        assertTrue("expect result2 of 1: result2=" + result2, result2 == 1);
-
-        if (result1 == 1 && result2 == 1) {
-            return true;
-        } else if (result1 == 0 || result2 == 0) {
-            return false;
+        assertEquals(1, result1);
+        assertEquals(1, result2);
         }
 
-        throw new IllegalStateException("Unexpected result1: " + result1 + " result2: " + result2);
-    }
-
-    private static boolean testTinyRemainder() throws IOException {
+    public void ttestTinyRemainder() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -325,31 +252,53 @@ public class GrizzlyParserTest extends TestCase {
         int result2 = is.read();
 
         s.close();
-        assertTrue("expect result1 of 1: result1=" + result1, result1 == 1);
-        assertTrue("expect result2 of 1: result2=" + result2, result2 == 1);
 
-
-        if (result1 == 1 && result2 == 1) {
-            return true;
-        } else if (result1 == 0 || result2 == 0) {
-            return false;
+        assertEquals(1, result1);
+        assertEquals(1, result2);
         }
 
-        throw new IllegalStateException("Unexpected result1: " + result1 + " result2: " + result2);
+    public void test100KMessages() throws IOException {
+        Socket s = new Socket("localhost", PORT);
+        s.setSoTimeout(5000);
+        OutputStream os = s.getOutputStream();
+
+        byte[] message1 = createMessage(4096);
+        byte[] message2 = createMessage(4096);
+
+        byte[] totalMessage = Arrays.copyOf(message1, message1.length + message2.length);
+        System.arraycopy(message2, 0, totalMessage, message1.length, message2.length);
+
+        int oneAndHalf = message1.length + message2.length / 2;
+
+        os.write(totalMessage, 0, oneAndHalf);  // 2/3 MESSAGE
+        sleep(os, 4000);
+
+        os.write(totalMessage, oneAndHalf, totalMessage.length - oneAndHalf);  // 1/3 MESSAGE
+
+        os.flush();
+
+        InputStream is = s.getInputStream();
+        int result1 = is.read();
+        int result2 = is.read();
+
+        s.close();
+
+        assertEquals(1, result1);
+        assertEquals(1, result2);
     }
 
-    private static byte[] createMessage(int count) throws IOException {
+    private static byte[] createMessage(int objectsCount) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
 
-        byte[] body = createBody(count);
+        byte[] body = createBody(objectsCount);
 
         dos.writeInt(MAGIC_NUMBER);
         dos.writeInt(VERSION);
         dos.writeInt(3);
         dos.writeInt(body.length + 4);
 
-        dos.writeInt(count);
+        dos.writeInt(objectsCount);
         dos.write(body);
         dos.flush();
 
@@ -358,11 +307,11 @@ public class GrizzlyParserTest extends TestCase {
         return message;
     }
 
-    private static byte[] createBody(int count) throws IOException {
+    private static byte[] createBody(int objectsCount) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(baos);
 
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < objectsCount; i++) {
             oos.writeObject("Param #" + i);
             oos.writeObject("Value #" + i);
         }
@@ -375,8 +324,8 @@ public class GrizzlyParserTest extends TestCase {
         return body;
     }
 
-    private static ParserProtocolFilter createParserProtocolFilter() {
-        return new ParserProtocolFilter() {
+    private static ParserFilter createParserProtocolFilter() {
+        return new ParserFilter() {
 
             @Override
             public ProtocolParser newProtocolParser() {
@@ -416,8 +365,39 @@ public class GrizzlyParserTest extends TestCase {
 
     private static void enableDebug(boolean b) {
         if (b) {
-            GrizzlyMessageProtocolParser.DEBUG_ENABLED = false;
+            GrizzlyMessageProtocolParser.DEBUG_ENABLED = true;
             GrizzlyMessageProtocolParser.DEBUG_LEVEL = Level.INFO;
         }
+    }
+
+
+    private static Controller initializeServer() {
+        final ProtocolFilter resultFilter = new ResultFilter();
+        final ParserProtocolFilter parserProtocolFilter = createParserProtocolFilter();
+        TCPSelectorHandler selectorHandler = new TCPSelectorHandler();
+        selectorHandler.setPort(PORT);
+
+        final Controller controller = new Controller();
+
+        controller.setSelectorHandler(selectorHandler);
+
+        controller.setProtocolChainInstanceHandler(
+                new DefaultProtocolChainInstanceHandler() {
+
+                    @Override
+                    public ProtocolChain poll() {
+                        ProtocolChain protocolChain = protocolChains.poll();
+                        if (protocolChain == null) {
+                            protocolChain = new DefaultProtocolChain();
+                            protocolChain.addFilter(parserProtocolFilter);
+                            protocolChain.addFilter(resultFilter);
+}
+                        return protocolChain;
+                    }
+                });
+
+        ControllerUtils.startController(controller);
+
+        return controller;
     }
 }
