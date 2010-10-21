@@ -96,6 +96,8 @@ public class Router {
     private SignalHandler signalHandler;
     public final AliveAndReadyViewWindow aliveAndReadyView;
     public final String groupName;
+    private final GMSContext ctx;
+    private final boolean isSpectator;
 
     public Router(String groupName, int queueSize, AliveAndReadyViewWindow viewWindow, int incomingMsgThreadPoolSize) {
         this.groupName = groupName;
@@ -111,6 +113,9 @@ public class Router {
         tf = new GMSThreadFactory("GMS-processInboundMsg-Group-" + groupName + "-thread");;
         messageActionPool = Executors.newFixedThreadPool(incomingMsgThreadPoolSize, tf);
         startupTime = System.currentTimeMillis();
+        ctx = GMSContextFactory.getGMSContext(groupName);
+        isSpectator = ctx != null ? ctx.getMemberType() == GroupManagementService.MemberType.SPECTATOR : false;
+
     }
 
     /**
@@ -386,18 +391,21 @@ public class Router {
             // this action factory could do something like the following to register that message was not handled.
 
             // following commented out code did report messages that were not delivered to any target component.
-//            int missedMessagesInt = 0;
-//            AtomicInteger missedMessages = undeliveredMessages.get(targetComponent);
-//            if (missedMessages == null) {
-//                missedMessages = new AtomicInteger(1);
-//                missedMessagesInt = 1;
-//                undeliveredMessages.put(targetComponent, missedMessages);
-//            } else {
-//                missedMessagesInt = missedMessages.incrementAndGet();
-//            }
-//            if ((missedMessagesInt % 100) == 1) {
-//                logger.info("unable to deliver message to non-existent target component " + targetComponent + ". " + missedMessagesInt + " missed messages to target component");
-//            }
+            if (!isSpectator) {
+                int missedMessagesInt = 0;
+                AtomicInteger missedMessages = undeliveredMessages.get(targetComponent);
+                if (missedMessages == null) {
+                    missedMessages = new AtomicInteger(1);
+                    missedMessagesInt = 1;
+                    undeliveredMessages.put(targetComponent, missedMessages);
+                } else {
+                    missedMessagesInt = missedMessages.incrementAndGet();
+                }
+                // remove next line when gms stats monitoring fully implemented.
+                if ((missedMessagesInt % 1000) == 1) {
+                    logger.log(Level.INFO, "router.no.msghandler.for.targetcomponent",new Object[]{targetComponent, missedMessagesInt});
+                }
+            }
         } else {
             MessageAction a = (MessageAction) maf.produceAction();
             //due to message ordering requirements,
