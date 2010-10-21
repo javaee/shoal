@@ -133,17 +133,21 @@ public class GroupManagementServiceImplTest extends TestCase {
         System.out.println("memberState after join is " + memberState.name());
         assertTrue(memberState == MemberStates.STARTING || memberState == MemberStates.ALIVE);
         assertTrue(gms.getGroupHandle().isMemberAlive(instanceName) == true);
+        long startTime = System.currentTimeMillis();
         gms.reportJoinedAndReadyState();
         synchronized(joinedAndReady) {
             if (!joinedAndReady.get()) {
                 try {
-                    joinedAndReady.wait(2000);
+                    joinedAndReady.wait(4000);
                 } catch (InterruptedException ie) {}
             }
             assertTrue(joinedAndReady.get());
         }
+        long readynotifyduration = System.currentTimeMillis() - startTime;
+        System.out.println("joinedAndReady = " + joinedAndReady.get() + " wait duration(ms)=" + readynotifyduration);
         memberState = gms.getGroupHandle().getMemberState(instanceName, 10000, 0);
-        assertTrue(memberState == MemberStates.READY || memberState == MemberStates.ALIVEANDREADY);
+        assertTrue("expected READY, observed "+ memberState.toString(),
+                   memberState == MemberStates.READY || memberState == MemberStates.ALIVEANDREADY);
 
         // The Master never receives its own join.
         //assertTrue(numJoinsReceived==1);
