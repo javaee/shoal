@@ -49,6 +49,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -85,23 +87,21 @@ public class StoreableLoadResponseCommand<K, V>
         this.originatingInstance = originatingInstance;
     }
 
-    @Override
-    protected StoreableLoadResponseCommand<K, V> createNewInstance() {
-        return new StoreableLoadResponseCommand<K, V>();
+    protected boolean beforeTransmit() {
+        setTargetName(originatingInstance);
+        return originatingInstance != null;
     }
 
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
-        setTargetName(originatingInstance);
 
         ros.writeLong(tokenId);
-        ros.writeLengthPrefixedString(originatingInstance);
-        ros.writeLengthPrefixedString(dsc.getInstanceName());
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        ros.writeUTF(originatingInstance);
+        ros.writeUTF(dsc.getInstanceName());
+        ros.writeObject(key);
         ros.writeBoolean(v != null);
         if (v != null) {
-            dsc.getDataStoreEntryHelper().writeObject(ros, v);
+            ros.writeObject(v);
         }
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_response command for "
@@ -109,19 +109,16 @@ public class StoreableLoadResponseCommand<K, V>
         }
     }
 
-
-
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
 
         tokenId = ris.readLong();
-        originatingInstance = ris.readLengthPrefixedString();
-        respondingInstanceName = ris.readLengthPrefixedString();
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+        originatingInstance = ris.readUTF();
+        respondingInstanceName = ris.readUTF();
+        key = (K) ris.readObject();
         boolean notNull = ris.readBoolean();
         if (notNull) {
-            v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+            v = (V) ris.readObject();
         }
     }
 

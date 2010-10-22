@@ -48,6 +48,7 @@ import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -57,15 +58,13 @@ import java.util.logging.Logger;
 public class SaveCommand<K, V>
     extends AcknowledgedCommand<K, V> {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+    private transient static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
     private K k;
 
     private V v;
 
-    private transient byte[] rawReadState;
-
-    String replicaChoices;
+    private String targetInstanceName;
 
     public SaveCommand() {
         super(ReplicationCommandOpcode.SAVE);
@@ -85,44 +84,20 @@ public class SaveCommand<K, V>
         this.v = v;
     }
 
-    @Override
-    protected SaveCommand<K, V> createNewInstance() {
-        return new SaveCommand<K, V>();
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
-
-        if (dsc.isDoSynchronousReplication()) {
-            super.writeAcknowledgementId(ros);
-        }
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
-        dsc.getDataStoreEntryHelper().writeObject(ros, v);
-    }
-
-    @Override
-    public boolean computeTarget() {
-        replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
-        super.setTargetName(replicaChoices);
-
+    public boolean beforeTransmit() {
+        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        super.setTargetName(targetInstanceName);
+        super.beforeTransmit();
         return getTargetName() != null;
-    }
-
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.readAcknowledgementId(ris);
-        }
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
-        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
     }
 
     @Override
     public void execute(String initiator)
         throws DataStoreException {
 
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received save_command for " + k + " from " + initiator);
+        }
         DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
         synchronized (entry) {
             entry.setV((V) v);
@@ -140,18 +115,26 @@ public class SaveCommand<K, V>
 
     @Override
     public String getKeyMappingInfo() {
-        return replicaChoices;
+        return targetInstanceName;
     }
 
-    @Override
-    public void onSuccess() {
-        if (dsc.isDoSynchronousReplication()) {
-            try {
-                super.onSuccess();
-                super.waitForAck();
-            } catch (Exception ex) {
-                System.out.println("** Got exception: " + ex);
-            }
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        out.writeObject(k);
+        out.writeObject(v);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, dsc.getServiceName() + " sending save_command for " + k + "; v = " + v + "; to " + getTargetName());
         }
     }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        k = (K) in.readObject();
+        v = (V) in.readObject();
+
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, "==> read data for key " + k + " => " + v + " using " + in.getClass().getCanonicalName());
+        }
+    }
+    
 }

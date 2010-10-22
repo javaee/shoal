@@ -75,6 +75,8 @@ public class DataStoreContext<K, V> {
 
     private boolean doSynchronousReplication;
 
+    private ClassLoader loader;
+
     private IdleEntryDetector<K, V> idleDetector;
 
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
@@ -89,6 +91,8 @@ public class DataStoreContext<K, V> {
         if (idleDetector != null) {
             replica.setIdleEntryDetector(idleDetector);
         }
+
+        setClassLoader(loader);
     }
 
     public String getServiceName() {
@@ -149,6 +153,14 @@ public class DataStoreContext<K, V> {
 
     public void setCacheLocally(boolean cacheLocally) {
         this.cacheLocally = cacheLocally;
+    }
+
+    public ClassLoader getClassLoader() {
+        return loader;
+    }
+
+    public void setClassLoader(ClassLoader loader) {
+        this.loader = loader;
     }
 
     public boolean isDoSynchronousReplication() {

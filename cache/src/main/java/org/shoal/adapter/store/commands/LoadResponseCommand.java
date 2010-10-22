@@ -46,6 +46,8 @@ import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.*;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -82,23 +84,23 @@ public class LoadResponseCommand<K, V>
         this.originatingInstance = originatingInstance;
     }
 
-    @Override
-    protected LoadResponseCommand<K, V> createNewInstance() {
-        return new LoadResponseCommand<K, V>();
+    protected boolean beforeTransmit() {
+        setTargetName(originatingInstance);
+        return originatingInstance != null;
     }
 
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    private void writeObject(ObjectOutputStream out)
         throws IOException {
-        setTargetName(originatingInstance);
 
-        ros.writeLong(tokenId);
-        ros.writeLengthPrefixedString(originatingInstance);
-        ros.writeLengthPrefixedString(dsc.getInstanceName());
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
-        ros.writeBoolean(v != null);
+
+        out.writeLong(tokenId);
+        out.writeUTF(originatingInstance);
+        out.writeUTF(dsc.getInstanceName());
+
+        out.writeObject(key);
+        out.writeBoolean(v != null);
         if (v != null) {
-            dsc.getDataStoreEntryHelper().writeObject(ros, v);
+            out.writeObject(v);
         }
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_response command for "
@@ -108,17 +110,19 @@ public class LoadResponseCommand<K, V>
 
 
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
+    private void readObject(ObjectInputStream ris)
         throws IOException {
-
-        tokenId = ris.readLong();
-        originatingInstance = ris.readLengthPrefixedString();
-        respondingInstanceName = ris.readLengthPrefixedString();
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
-        boolean notNull = ris.readBoolean();
-        if (notNull) {
-            v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+        try {
+            tokenId = ris.readLong();
+            originatingInstance = ris.readUTF();
+            respondingInstanceName = ris.readUTF();
+            key = (K) ris.readObject();
+            boolean notNull = ris.readBoolean();
+            if (notNull) {
+                v = (V) ris.readObject();
+            }
+        } catch (ClassNotFoundException cnfEx) {
+            throw new IOException(cnfEx);
         }
     }
 
@@ -132,7 +136,7 @@ public class LoadResponseCommand<K, V>
                 _logger.log(Level.FINE, dsc.getInstanceName() + " received load_response key=" + key + "; value=" + v
                 + "; from " + respondingInstanceName);
             }
-            
+
             resp.setRespondingInstanceName(respondingInstanceName);
             resp.setResult(v);
         }

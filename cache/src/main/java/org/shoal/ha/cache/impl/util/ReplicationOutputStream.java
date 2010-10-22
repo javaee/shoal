@@ -49,6 +49,10 @@ import java.io.IOException;
 public class ReplicationOutputStream
     extends ByteArrayOutputStream {
 
+    public ReplicationOutputStream() {
+        super();
+    }
+
     private int maxCount;
 
     public int mark() {

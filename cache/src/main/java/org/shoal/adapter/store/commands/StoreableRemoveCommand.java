@@ -46,6 +46,8 @@ import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Logger;
 
 /**
@@ -69,33 +71,24 @@ public class StoreableRemoveCommand<K, V>
         this.key = key;
     }
 
-    @Override
-    protected StoreableRemoveCommand<K, V> createNewInstance() {
-        return new StoreableRemoveCommand<K, V>();
-    }
-
 
     public void setTarget(String t) {
         this.target = t;
     }
 
-    @Override
-    public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        //super.selectReplicaInstance( key);
-        if (dsc.isDoSynchronousReplication()) {
-            super.writeAcknowledgementId(ros);
-        }
+    protected boolean beforeTransmit() {
         super.setTargetName(target);
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        super.beforeTransmit();
+        return target != null;
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-            throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.readAcknowledgementId(ris);
-        }
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+    private void writeObject(ObjectOutputStream ros) throws IOException {
+        ros.writeObject(key);
+    }
+
+    private void readObject(ObjectInputStream ris)
+            throws IOException, ClassNotFoundException {
+        key = (K) ris.readObject();
     }
 
     @Override

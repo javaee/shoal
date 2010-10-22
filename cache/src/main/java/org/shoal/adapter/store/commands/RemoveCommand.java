@@ -46,6 +46,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Logger;
 
 /**
@@ -72,33 +74,23 @@ public class RemoveCommand<K, V>
         this.key = key;
     }
 
-    @Override
-    protected RemoveCommand<K, V> createNewInstance() {
-        return new RemoveCommand<K, V>();
-    }
-
-
-
     public void setTarget(String t) {
         this.target = t;
     }
 
-    @Override
-    public void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.writeAcknowledgementId(ros);
-        }
+    public boolean beforeTransmit() {
         setTargetName(target);
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
+        super.beforeTransmit();
+        return target != null;
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.readAcknowledgementId(ris);
-        }
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+    private void writeObject(ObjectOutputStream ros) throws IOException {
+        ros.writeObject(key);
+    }
+
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        key = (K) ris.readObject();
     }
 
     @Override
@@ -106,18 +98,6 @@ public class RemoveCommand<K, V>
         dsc.getReplicaStore().remove(key);
         if (dsc.isDoSynchronousReplication()) {
             super.sendAcknowledgement();
-        }
-    }
-
-    @Override
-    public void onSuccess() {
-        if (dsc.isDoSynchronousReplication()) {
-            try {
-                super.onSuccess();
-                super.waitForAck();
-            } catch (Exception ex) {
-                System.out.println("** Got exception: " + ex);
-            }
         }
     }
 

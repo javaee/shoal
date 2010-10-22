@@ -47,6 +47,8 @@ import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -83,20 +85,19 @@ public class StaleCopyRemoveCommand<K, V>
     }
 
     @Override
-    protected StaleCopyRemoveCommand<K, V> createNewInstance() {
-        return new StaleCopyRemoveCommand<K, V>();
+    protected boolean beforeTransmit() {
+        setTargetName(staleTargetName);
+        return staleTargetName != null;
     }
 
-    @Override
-    public void writeCommandPayload(ReplicationOutputStream ros)
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
-        setTargetName(staleTargetName);
-        dsc.getDataStoreKeyHelper().writeKey(ros, getKey());
+        ros.writeObject(key);
     }
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
+
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        key = (K) ris.readObject();
     }
 
     @Override

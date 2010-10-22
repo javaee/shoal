@@ -58,31 +58,18 @@ import java.util.logging.Logger;
 public class NoOpCommand<K, V>
     extends Command<K, V> {
 
-    private static final byte[] rawReadState = new byte[] {
+    private transient static final byte[] rawReadState = new byte[] {
             (byte) ReplicationCommandOpcode.NOOP_COMMAND,
             (byte) 123};
 
-    private static final NoOpCommand _noopCommand = new NoOpCommand();
+    private transient static final NoOpCommand _noopCommand = new NoOpCommand();
 
     public NoOpCommand() {
         super(ReplicationCommandOpcode.NOOP_COMMAND);
     }
 
-    @Override
-    protected NoOpCommand createNewInstance() {
-        return _noopCommand;
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
-        ros.writeBoolean(true);
-    }
-
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        ris.readBoolean();
+    public boolean beforeTransmit() {
+        return true;
     }
 
     @Override
@@ -97,11 +84,6 @@ public class NoOpCommand<K, V>
     @Override
     public String getKeyMappingInfo() {
         return null;
-    }
-
-    @Override
-    public byte[] getSerializedState() {
-        return rawReadState;
     }
     
 }

@@ -43,13 +43,13 @@ package org.shoal.ha.group.gms;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
-import com.sun.enterprise.ee.cms.spi.MemberStates;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -224,9 +224,9 @@ public class GroupServiceProvider
             try {
                 gms.join();
                 Thread.sleep(3000);
-                gms.reportJoinedAndReadyState(groupName);
+                gms.reportJoinedAndReadyState();
             } catch (Exception ex) {
-                //TODO
+                logger.log(Level.WARNING, "Got an exception during reportJoinedAndReadyState?", ex);
             }
         }
     }
@@ -254,8 +254,22 @@ public class GroupServiceProvider
         try {
             groupHandle.sendMessage(targetMemberName, token, data);
             return true;
+        } catch (MemberNotInViewException memEx) {
+            logger.log(Level.WARNING, "Error during groupHandle.sendMessage(" + targetMemberName + ") failed because "
+            + targetMemberName + " is not alive?");
         } catch (GMSException gmsEx) {
-            //TODO Log
+            try {
+                groupHandle.sendMessage(targetMemberName, token, data);
+                return true;
+            } catch (MemberNotInViewException memEx2) {
+                logger.log(Level.WARNING, "Error during groupHandle.sendMessage(" + targetMemberName + ") failed because "
+                + targetMemberName + " is not alive?");
+            } catch (GMSException gmsEx2) {
+                logger.log(Level.WARNING, "Error during groupHandle.sendMessage(" + targetMemberName + ", " + token + "; size="
+                        + (data == null ? -1 : data.length));
+                logger.log(Level.FINE, "Error during groupHandle.sendMessage(" + targetMemberName + ", " + token + "; size="
+                        + (data == null ? -1 : data.length), gmsEx2);
+            }
         }
 
         return false;

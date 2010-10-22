@@ -51,6 +51,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -82,31 +84,29 @@ public class SizeRequestCommand<K, V>
         this.targetInstanceName = targetInstanceName;
     }
 
-    @Override
-    protected SizeRequestCommand<K, V> createNewInstance() {
-        return new SizeRequestCommand<K, V>();
-    }
-    
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
+    protected boolean beforeTransmit() {
         ResponseMediator respMed = dsc.getResponseMediator();
         CommandResponse resp = respMed.createCommandResponse();
-
+        tokenId = resp.getTokenId();
         future = resp.getFuture();
-        setTargetName(targetInstanceName);
-        
-        ros.writeLengthPrefixedString(dsc.getInstanceName());
-        ros.writeLengthPrefixedString(targetInstanceName);
-        ros.writeLong(resp.getTokenId());
-    }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
+        setTargetName(targetInstanceName);
+        return targetInstanceName != null;
+    }
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
 
-        targetInstanceName = ris.readLengthPrefixedString();
-        String myName = ris.readLengthPrefixedString();
+        
+        ros.writeUTF(dsc.getInstanceName());
+        ros.writeUTF(targetInstanceName);
+        ros.writeLong(tokenId);
+    }
+
+    private void readObject(ObjectInputStream ris)
+        throws IOException {
+
+        targetInstanceName = ris.readUTF();
+        String myName = ris.readUTF();  //Don't remove
         tokenId = ris.readLong();
     }
 

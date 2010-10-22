@@ -64,9 +64,9 @@ import java.util.logging.Logger;
 public abstract class AcknowledgedCommand<K, V>
         extends Command<K, V> {
 
-    CommandResponse resp;
+    private transient CommandResponse resp;
 
-    private Future future;
+    private transient Future future;
 
     private long tokenId;
 
@@ -76,23 +76,14 @@ public abstract class AcknowledgedCommand<K, V>
         super(opCode);
     }
 
-    protected void writeAcknowledgementId(ReplicationOutputStream ros)
-        throws IOException {
+    protected boolean beforeTransmit() {
         originatingInstance = dsc.getInstanceName();
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
 
-        ros.writeLong(resp.getTokenId());
-        ros.writeLengthPrefixedString(originatingInstance);
-    }
-
-    public void readAcknowledgementId(ReplicationInputStream ris)
-        throws IOException {
-
-        tokenId = ris.readLong();
-        originatingInstance = ris.readLengthPrefixedString();
+        return true;
     }
 
     protected void sendAcknowledgement() {
@@ -103,17 +94,47 @@ public abstract class AcknowledgedCommand<K, V>
         }
     }
 
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        out.writeBoolean(dsc.isDoSynchronousReplication());
+
+        if (dsc.isDoSynchronousReplication()) {
+            out.writeLong(tokenId);
+            out.writeUTF(originatingInstance);
+        }
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+
+        boolean doSync = in.readBoolean();
+        if (doSync) {
+            tokenId = in.readLong();
+            originatingInstance = in.readUTF();
+        }
+    }
+
+    @Override
+    public final void onSuccess() {
+        if (dsc.isDoSynchronousReplication()) {
+            try {
+                //super.onSuccess();
+                waitForAck();
+            } catch (Exception ex) {
+                System.out.println("** Got exception: " + ex);
+            }
+        }
+    }
+
     protected void waitForAck()
-        throws DataStoreException {
+        throws DataStoreException, TimeoutException {
         try {
             future.get(3, TimeUnit.SECONDS);
-        } catch (InterruptedException inEx) {
+        } catch (TimeoutException tEx) {
+            throw tEx;
+        } catch (Exception inEx) {
             throw new DataStoreException(inEx);
-        } catch (ExecutionException exeEx) {
-            throw new DataStoreException(exeEx);
-        } catch (TimeoutException timEx) {
-            super.reExecute();
-        }
+        } 
     }
 
 }

@@ -49,6 +49,8 @@ import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -89,39 +91,26 @@ public class StoreableFullSaveCommand<K, V extends Storeable>
         version = v._storeable_getVersion();
     }
 
-    @Override
-    protected StoreableFullSaveCommand<K, V> createNewInstance() {
-        return new StoreableFullSaveCommand<K, V>();
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.writeAcknowledgementId(ros);
-        }
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
-        ros.writeLong(v._storeable_getVersion());
-        dsc.getDataStoreEntryHelper().writeObject(ros, (V) v);
-    }
-
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.readAcknowledgementId(ris);
-        }
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
-        version = ris.readLong();
-        v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
-    }
-
-    @Override
-    public boolean computeTarget() {
+    protected boolean beforeTransmit() {
         replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        super.beforeTransmit();
         super.setTargetName(replicaChoices);
 
         return getTargetName() != null;
+    }
+
+    private void writeObject(ObjectOutputStream ros)
+        throws IOException {
+        ros.writeObject(k);
+        ros.writeLong(version);
+        ros.writeObject(v);
+    }
+
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        k = (K) ris.readObject();
+        version = ris.readLong();
+        v = (V) ris.readObject();
     }
 
     @Override

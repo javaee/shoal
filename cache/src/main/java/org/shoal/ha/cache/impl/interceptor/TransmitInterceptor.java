@@ -48,7 +48,9 @@ import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.group.GroupService;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -67,10 +69,14 @@ public final class TransmitInterceptor<K, V>
     public void onTransmit(Command<K, V> cmd, String initiator)
         throws DataStoreException {
         DataStoreContext<K, V> ctx = getDataStoreContext();
-        ReplicationOutputStream ros = new ReplicationOutputStream();
+        ByteArrayOutputStream bos = null;
+        ObjectOutputStream oos = null;
         try {
-            cmd.write(ros);
-            byte[] data = ros.toByteArray();
+            bos = new ByteArrayOutputStream();
+            oos = new ObjectOutputStream(bos);
+            oos.writeObject(cmd);
+            oos.close();
+            byte[] data = bos.toByteArray();
 
             GroupService gs = ctx.getGroupService();
             gs.sendMessage(cmd.getTargetName(),
@@ -83,6 +89,9 @@ public final class TransmitInterceptor<K, V>
             }
         } catch (IOException ioEx) {
             throw new DataStoreException("Error DURING transmit...", ioEx);
+        } finally {
+            try {oos.close();} catch (Exception ex) {}
+            try {bos.close();} catch (Exception ex) {}
         }
     }
 

@@ -52,6 +52,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -92,44 +94,42 @@ public class StoreableLoadRequestCommand<K, V extends Storeable>
         replicaLocationHint = targetReplicaInstance;
     }
 
-    @Override
-    protected StoreableLoadRequestCommand<K, V> createNewInstance() {
-        return new StoreableLoadRequestCommand<K, V>();
-    }
-
     public void setKey(K key) {
         this.key = key;
     }
 
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
+    protected boolean beforeTransmit() {
+        setTargetName(replicaLocationHint);
         originatingInstance = dsc.getInstanceName();
 
-        setTargetName(replicaLocationHint);
-        
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
 
+        return replicaLocationHint != null;
+    }
+
+    private void writeObject(ObjectOutputStream ros)
+        throws IOException {
+
+
         ros.writeLong(resp.getTokenId());
         ros.writeLong(minimumRequiredVersion);
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
-        ros.writeLengthPrefixedString(originatingInstance);
+        ros.writeObject(key);
+        ros.writeUTF(originatingInstance);
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + key + "to " + replicaLocationHint);
         }
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
 
         tokenId = ris.readLong();
         minimumRequiredVersion = ris.readLong();
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
-        originatingInstance = ris.readLengthPrefixedString();
+        key = (K) ris.readObject();
+        originatingInstance = ris.readUTF();
     }
 
     @Override

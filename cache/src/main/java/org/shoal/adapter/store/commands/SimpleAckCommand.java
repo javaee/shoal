@@ -49,6 +49,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -76,30 +78,25 @@ public class SimpleAckCommand<K, V>
         this.tokenId = tokenId;
     }
 
-    @Override
-    protected SimpleAckCommand<K, V> createNewInstance() {
-        return new SimpleAckCommand<K, V>();
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
         setTargetName(targetInstanceName);
 
         ros.writeLong(tokenId);
-        ros.writeLengthPrefixedString(targetInstanceName);
-        ros.writeLengthPrefixedString(dsc.getInstanceName());
+        ros.writeUTF(targetInstanceName);
+        ros.writeUTF(dsc.getInstanceName());
     }
 
+    protected boolean beforeTransmit() {
+        return targetInstanceName != null;
+    }
 
-
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
+    private void readObject(ObjectInputStream ris)
         throws IOException {
 
         tokenId = ris.readLong();
-        targetInstanceName = ris.readLengthPrefixedString();
-        respondingInstanceName = ris.readLengthPrefixedString();
+        targetInstanceName = ris.readUTF();
+        respondingInstanceName = ris.readUTF();
     }
 
     @Override

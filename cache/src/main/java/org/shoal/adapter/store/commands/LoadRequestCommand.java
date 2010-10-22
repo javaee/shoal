@@ -65,59 +65,52 @@ public class LoadRequestCommand<K, V>
 
     private K key;
 
-    CommandResponse resp;
+    private transient CommandResponse resp;
 
-    private Future future;
+    private transient Future future;
 
     private long tokenId;
 
     private String originatingInstance;
 
-    private String replicaLocationHint;
-
-    private int replicaIndex = 0;
+    private String target;
 
     public LoadRequestCommand() {
         super(ReplicationCommandOpcode.LOAD_REQUEST);
     }
 
-    public LoadRequestCommand(K key, String target) {
+    public LoadRequestCommand(K key, String t) {
         this();
         this.key = key;
-        replicaLocationHint = target;
+        this.target = t;
     }
 
-    @Override
-    protected LoadRequestCommand<K, V> createNewInstance() {
-        return new LoadRequestCommand<K, V>();
-    }
-    
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
+    protected boolean beforeTransmit() {
+        setTargetName(target);
         originatingInstance = dsc.getInstanceName();
-
-        setTargetName(replicaLocationHint);
         ResponseMediator respMed = dsc.getResponseMediator();
         resp = respMed.createCommandResponse();
 
         future = resp.getFuture();
 
-        ros.writeLong(resp.getTokenId());
-        dsc.getDataStoreKeyHelper().writeKey(ros, key);
-        ros.writeLengthPrefixedString(originatingInstance);
+        return target != null;
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        out.writeLong(resp.getTokenId());
+        out.writeObject(key);
+        out.writeUTF(originatingInstance);
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + key + "to " + replicaLocationHint);
+            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + key + "to " + target);
         }
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-
-        tokenId = ris.readLong();
-        key = dsc.getDataStoreKeyHelper().readKey(ris);
-        originatingInstance = ris.readLengthPrefixedString();
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        tokenId = in.readLong();
+        key = (K) in.readObject();
+        originatingInstance = in.readUTF();
     }
 
     @Override
@@ -133,6 +126,9 @@ public class LoadRequestCommand<K, V>
             if (!originatingInstance.equals(dsc.getInstanceName())) {
                 LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);
                 rsp.setOriginatingInstance(originatingInstance);
+                if (_logger.isLoggable(Level.FINE)) {
+                    _logger.log(Level.FINE, dsc.getServiceName() + " executed load_request command for " + key + " from " + initiator + "; v = " + v);
+                }
                 getCommandManager().execute(rsp);
             } else {
                 resp.setResult(v);

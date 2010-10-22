@@ -55,6 +55,8 @@ public class ShoalCacheLoggerConstants {
 
     public static final String CACHE_SAVE_COMMAND = "org.shoal.ha.cache.command.save";
 
+    public static final String CACHE_REPLICATION_FRAME_COMMAND = "org.shoal.ha.cache.command.frame";
+
     public static final String CACHE_REMOVE_COMMAND = "org.shoal.ha.cache.command.remove";
 
     public static final String CACHE_STALE_REMOVE_COMMAND = "org.shoal.ha.cache.command.remove";

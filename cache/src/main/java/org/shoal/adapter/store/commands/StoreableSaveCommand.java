@@ -49,9 +49,7 @@ import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -102,18 +100,15 @@ public class StoreableSaveCommand<K, V extends Storeable>
         this.entry = entry;
     }
 
-    @Override
-    protected StoreableSaveCommand<K, V> createNewInstance() {
-        return new StoreableSaveCommand<K, V>();
+    protected boolean beforeTransmit() {
+        replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        super.setTargetName(replicaChoices);
+        super.beforeTransmit();
+        return getTargetName() != null;
     }
 
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.writeAcknowledgementId(ros);
-        }
-
         version = v._storeable_getVersion();
         boolean requiresFullSave = true;
         if (entry.getReplicaInstanceName() != null) {
@@ -121,11 +116,11 @@ public class StoreableSaveCommand<K, V extends Storeable>
             requiresFullSave = ! (entry.getReplicaInstanceName().equals(getTargetName()));
         }
 
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
+        ros.writeObject(k);
         ros.writeLong(v._storeable_getVersion());
         ros.writeBoolean(requiresFullSave);
         if (requiresFullSave) {
-            dsc.getDataStoreEntryHelper().writeObject(ros, (V) v);
+            ros.writeObject(v);
         } else {
             byte[] data = new byte[0];
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -135,34 +130,23 @@ public class StoreableSaveCommand<K, V extends Storeable>
             } finally {
                 try {bos.close(); } catch (Exception ex) {}
             }
-            ros.writeLengthPrefixedBytes(data);
+            ros.writeInt(data.length);
+            ros.write(data);
         }
     }
 
-
-    @Override
-    public boolean computeTarget() {
-
-        replicaChoices = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
-        super.setTargetName(replicaChoices);
-
-        return getTargetName() != null;
-    }
-
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws IOException {
-        if (dsc.isDoSynchronousReplication()) {
-            super.readAcknowledgementId(ris);
-        }
-
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        k = (K) ris.readObject();
         version = ris.readLong();
         wasFullWrite = ris.readBoolean();
         if (wasFullWrite) {
-            v = (V) dsc.getDataStoreEntryHelper().readObject(ris);
+            v = (V) ris.readObject();
         } else {
-            rawReadState = ris.readLengthPrefixedBytes();
+            int sz = ris.readInt();
+            rawReadState = new byte[sz];
+            ris.readFully(rawReadState);
+
         }
     }
 
@@ -211,18 +195,6 @@ public class StoreableSaveCommand<K, V extends Storeable>
     @Override
     public String getKeyMappingInfo() {
         return replicaChoices;
-    }
-
-    @Override
-    public void onSuccess() {
-        if (dsc.isDoSynchronousReplication()) {
-            try {
-                super.onSuccess();
-                super.waitForAck();
-            } catch (Exception ex) {
-               _logger.log(Level.WARNING, "** Got exception: " + ex);
-            }
-        }
     }
 
 }

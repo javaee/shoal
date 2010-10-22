@@ -41,78 +41,92 @@
 package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ObjectInputStreamWithLoader;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class ReplicationFramePayloadCommand<K, V>
-    extends Command<K, V> {
+        extends Command<K, V> {
+
+    private transient static final Logger _logger =
+            Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REPLICATION_FRAME_COMMAND);
 
     private String targetInstanceName;
 
-    private List<Command<K, V>> list = new ArrayList<Command<K, V>>();
+    private transient List<Command<K, V>> commands = new ArrayList<Command<K, V>>();
+
+    private transient List<byte[]> list = new ArrayList<byte[]>();
 
     public ReplicationFramePayloadCommand() {
         super(ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD);
     }
 
     public void addComamnd(Command<K, V> cmd) {
-        list.add(cmd);
+        commands.add(cmd);
     }
 
     public void setTargetInstance(String target) {
         targetInstanceName = target;
     }
 
-    @Override
-    protected ReplicationFramePayloadCommand<K, V> createNewInstance() {
-        return new ReplicationFramePayloadCommand<K, V>();
-    }
-
-    @Override
-    public void writeCommandPayload(ReplicationOutputStream ros)
-            throws IOException {
+    protected boolean beforeTransmit() {
         setTargetName(targetInstanceName);
-        ros.writeInt(list.size());
-        for (Command<K, V> cmd : list) {
-            byte[] payload = cmd.getSerializedState();
-            ros.writeLengthPrefixedBytes(payload);
+        for (int i = 0; i < commands.size(); i++) {
+            list.add(commands.get(i).getSerializedState());
         }
+        return targetInstanceName != null;
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
-        throws DataStoreException {
-        int size = ris.readInt();
-        list = new ArrayList<Command<K, V>>(size);
-        for (int i=0; i<size; i++) {
-            byte[] cmdData = ris.readLengthPrefixedBytes();
+    private void writeObject(ObjectOutputStream ros)
+            throws IOException {
+        ros.writeObject(list);
+    }
 
-            ReplicationInputStream cmdRIS;
-            try {
-                Command<K, V> cmd = getCommandManager().createNewInstance(cmdData[0]);
-                cmdRIS = new ReplicationInputStream(cmdData);
-                cmd.prepareToExecute(cmdRIS);
-                list.add(cmd);
-            } catch (IOException dse) {
-                dse.printStackTrace();
-            }
-        }
+    private void readObject(ObjectInputStream ris)
+            throws IOException, ClassNotFoundException {
+
+        list = (List<byte[]>) ris.readObject();
     }
 
     @Override
     public void execute(String initiator)
-        throws DataStoreException {
+            throws DataStoreException {
+        int sz = list.size();
+        commands = new ArrayList<Command<K, V>>();
+        for (int i = 0; i < sz; i++) {
+            ByteArrayInputStream bis = null;
+            ObjectInputStreamWithLoader ois = null;
+            try {
+                bis = new ByteArrayInputStream(list.get(i));
+                ois = new ObjectInputStreamWithLoader(bis, dsc.getClassLoader());
+                Command<K, V> cmd = (Command<K, V>) ois.readObject();
 
-        for (Command<K, V> cmd : list) {
+                commands.add(cmd);
+                cmd.initialize(dsc);
+            } catch (Exception ex) {
+                _logger.log(Level.WARNING, "Error during execute ", ex);
+            } finally {
+                try { ois.close(); } catch (Exception ex) {}
+                try { bis.close(); } catch (Exception ex) {}
+            }
+        }
+
+        for (Command<K, V> cmd : commands) {
             getCommandManager().executeCommand(cmd, false, initiator);
         }
     }

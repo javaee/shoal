@@ -49,6 +49,8 @@ import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -79,30 +81,28 @@ public class SizeResponseCommand<K, V>
         this.size = size;
     }
 
-    @Override
-    protected SizeResponseCommand<K, V> createNewInstance() {
-        return new SizeResponseCommand<K, V>();
+
+    protected boolean beforeTransmit() {
+        setTargetName(originatingInstance);
+        return originatingInstance != null;
     }
 
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
-        setTargetName(originatingInstance);
 
         ros.writeLong(tokenId);
         ros.writeInt(size);
-        ros.writeLengthPrefixedString(dsc.getInstanceName());
+        ros.writeUTF(dsc.getInstanceName());
     }
 
 
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
+    private void readObject(ObjectInputStream ris)
         throws IOException {
 
         tokenId = ris.readLong();
         size = ris.readInt();
-        respondingInstanceName = ris.readLengthPrefixedString();
+        respondingInstanceName = ris.readUTF();
     }
 
     @Override

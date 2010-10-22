@@ -58,19 +58,8 @@ public class BatchedNoopCommand
         super((byte) 121);
     }
 
-    @Override
-    protected BatchedNoopCommand createNewInstance() {
-        return new BatchedNoopCommand();
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    protected void readCommandPayload(ReplicationInputStream ris) throws IOException, DataStoreException {
-        //To change body of implemented methods use File | Settings | File Templates.
+    public boolean beforeTransmit() {
+        return true;
     }
 
     @Override

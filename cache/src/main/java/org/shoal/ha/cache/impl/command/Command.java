@@ -47,7 +47,10 @@ import org.shoal.ha.cache.api.TooManyRetriesException;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,40 +59,36 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  * 
  */
-public abstract class Command<K, V> {
+public abstract class Command<K, V>
+    implements Serializable {
 
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+    private transient static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
     private byte opcode;
 
     private K key;
 
-    protected DataStoreContext<K, V> dsc;
+    protected transient DataStoreContext<K, V> dsc;
 
-    private CommandManager<K, V> cm;
+    private transient CommandManager<K, V> cm;
 
-    private ReplicationOutputStream cachedROS;
+    private transient byte[] cachedSerializedState;
 
-    private String commandName;
+    private transient String commandName;
 
-    protected String targetInstanceName;
-
-    private int retryCount = 0;
-
-    private long retryAfterMillis = 500;
-
-    private boolean done = true;
+    protected transient String targetInstanceName;
 
     protected Command(byte opcode) {
         this.opcode = opcode;
-        this.commandName = this.getClass().getName();
-        int index = commandName.lastIndexOf('.');
-        commandName = commandName.substring(index+1);
     }
 
     public final void initialize(DataStoreContext<K, V> rs) {
         this.dsc = rs;
         this.cm = rs.getCommandManager();
+        
+        this.commandName = this.getClass().getName();
+        int index = commandName.lastIndexOf('.');
+        commandName = commandName.substring(index+1);
     }
 
     public void setKey(K key) {
@@ -120,41 +119,32 @@ public abstract class Command<K, V> {
         this.targetInstanceName = val;
     }
 
-    public final boolean isRetried() {
-        return retryCount > 0;
-    }
-
     public final void prepareTransmit(DataStoreContext<K, V> ctx)
-        throws IOException {
-        cachedROS = new ReplicationOutputStream();
-        cachedROS.write(getOpcode());
+            throws IOException {
 
-        if (computeTarget()) {
-            writeCommandPayload(cachedROS);
+        if (beforeTransmit()) {
+            ByteArrayOutputStream bos = null;
+            ObjectOutputStream oos = null;
+            try {
+                bos = new ByteArrayOutputStream();
+                oos = new ObjectOutputStream(bos);
+                oos.writeObject(this);
+                oos.close();
+
+                cachedSerializedState = bos.toByteArray();
+            } catch (Exception ex) {
+                throw new DataStoreException("Error during prepareToTransmit()", ex);
+            } finally {
+                try { oos.close(); } catch (Exception ex) {}
+                try { bos.close(); } catch (Exception ex) {}
+            }
         } else {
-            _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because computeTarget returned false");
+            _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because beforeTransmit returned false");
         }
     }
 
-    public byte[] getSerializedState() {
-        return cachedROS.toByteArray();
-    }
-
-    public final void write(ReplicationOutputStream globalROS)
-        throws IOException {
-        try {
-            byte[] data = cachedROS.toByteArray();
-            globalROS.write(data);
-            globalROS.flush();
-        } catch (IOException ex) {
-           ex.printStackTrace();
-        }
-    }
-
-    public final void prepareToExecute(ReplicationInputStream ris)
-        throws IOException, DataStoreException {
-        ris.read(); //Don't remove this
-        readCommandPayload(ris);
+    public final byte[] getSerializedState() {
+        return cachedSerializedState;
     }
 
     public String getKeyMappingInfo() {
@@ -165,51 +155,23 @@ public abstract class Command<K, V> {
         return commandName + ":" + opcode;
     }
 
-    public boolean computeTarget() {
-        //WARNING: DO NOT DO:  setTargetName(null);
-        return true;
-    }
-
-    protected final void reExecute()
-        throws DataStoreException {
-        if (retryCount++ < 3) {
-            dsc.getCommandManager().reExecute(this);
-        } else {
-            throw new DataStoreException("Too many retries...");
-        }
-    }
-
-    public void onSuccess() {
-        retryCount++;
-        done = true;
-    }
-
-    public void onError(Throwable th)
-        throws DataStoreException {
-        if ((retryCount++ < 4) && (!done)) {
-            try {
-                Thread.sleep(retryCount * retryAfterMillis);
-            } catch (Exception ex) {
-                //TODO
-            }
-
-            dsc.getCommandManager().reExecute(this);
-        } else {
-            String message = getName() + " giving up after " + retryCount + " retries...";
-            _logger.log(Level.WARNING, message, th);
-            throw new TooManyRetriesException(message);
-        }
-    }
-
-    protected abstract void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException;
-
-    protected abstract void readCommandPayload(ReplicationInputStream ris)
-        throws IOException;
-
-    protected abstract Command<K, V> createNewInstance();
-
     public abstract void execute(String initiator)
             throws DataStoreException;
 
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        out.writeByte(opcode);
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        opcode = in.readByte();
+    }
+
+    public void onSuccess() {
+
+    }
+
+    protected abstract boolean beforeTransmit();
+    
 }

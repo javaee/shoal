@@ -40,10 +40,7 @@
 
 package org.shoal.ha.cache.impl.command;
 
-import org.shoal.ha.cache.api.AbstractCommandInterceptor;
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.interceptor.CommandHandlerInterceptor;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
@@ -51,7 +48,9 @@ import org.shoal.ha.cache.impl.interceptor.TransmitInterceptor;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.lang.reflect.Array;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -105,66 +104,47 @@ public class CommandManager<K, V>
         tail.setPrev(interceptor);
     }
 
-    //Initiated to transmit
-
     public void execute(Command<K, V> cmd)
         throws DataStoreException {
         executeCommand(cmd, true, myName);
     }
 
-    public final void reExecute(Command<K, V> cmd)
-        throws DataStoreException {
-        
-        cmd.computeTarget();
-        tail.onTransmit(cmd, myName);
-    }
-
-    //Initiated to transmit
     public final void executeCommand(Command<K, V> cmd, boolean forward, String initiator)
         throws DataStoreException {
         cmd.initialize(dsc);
         if (forward) {
             try {
                 head.onTransmit(cmd, initiator);
-                cmd.onSuccess();
+                //cmd.onSuccess();
             } catch (DataStoreException dseEx) {
-                cmd.onError(dseEx);
+                //cmd.onError(dseEx);
             }
         } else {
             tail.onReceive(cmd, initiator);
         }
     }
 
-    public Command<K, V> createNewInstance(byte opcode)
-            throws IOException {
-        Command<K, V> cmd2 = commands[opcode];
-        Command<K, V> cmd = null;
-        if (cmd2 != null) {
-            cmd = cmd2.createNewInstance();
-            cmd.initialize(dsc);
-        } else {
-            throw new IOException("Illegal opcode: " + opcode);
-        }
-
-        return cmd;
-    }
-
     @Override
     protected void handleMessage(String sourceMemberName, String token, byte[] messageData) {
 
-        ReplicationInputStream ris = null;
+        ObjectInputStream ois = null;
+        ByteArrayInputStream bis = null;
         try {
-            byte opCode = messageData[0];
-            Command<K, V> cmd = createNewInstance(opCode);
-            ris = new ReplicationInputStream(messageData);
-            cmd.prepareToExecute(ris);
+            bis = new ByteArrayInputStream(messageData);
+            ois = new ObjectInputStreamWithLoader(bis, dsc.getClassLoader());
+            Command<K, V> cmd = (Command<K, V>) ois.readObject();
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, dsc.getServiceName() + " RECEIVED " + cmd);
+            }
+            cmd.initialize(dsc);
             this.executeCommand(cmd, false, sourceMemberName);
         } catch (IOException dse) {
             _logger.log(Level.WARNING, "Error during parsing command- opcode: " + messageData[0], dse);
         } catch (Throwable th) {
             _logger.log(Level.WARNING, "Error[2] during parsing command - opcode: " + messageData[0], th);
         } finally {
-           try {ris.close();} catch (Exception ex) {}
+           try {bis.close();} catch (Exception ex) {}
+           try {ois.close();} catch (Exception ex) {}
         }
     }
     

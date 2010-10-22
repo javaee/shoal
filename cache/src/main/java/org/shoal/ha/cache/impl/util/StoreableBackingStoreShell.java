@@ -45,8 +45,6 @@ import org.glassfish.ha.store.api.BackingStoreException;
 import org.glassfish.ha.store.api.Storeable;
 import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
 import org.shoal.adapter.store.StoreableReplicatedBackingStore;
-import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
-import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.DataStoreKeyHelper;
 import org.shoal.ha.cache.api.ReplicationFramework;
@@ -184,7 +182,7 @@ public class StoreableBackingStoreShell {
             System.out.println("Result of touch: " + result);
         } else if ("remove".equalsIgnoreCase(command)) {
             ds.remove(params[0]);
-        } else if ("list-backing-store-config".equalsIgnoreCase(command)) {
+        } /* else if ("list-backing-store-config".equalsIgnoreCase(command)) {
             ReplicationFramework framework = ds.getFramework();
             ListBackingStoreConfigurationCommand cmd = new ListBackingStoreConfigurationCommand();
             try {
@@ -208,7 +206,7 @@ public class StoreableBackingStoreShell {
             } catch (DataStoreException dse) {
                 System.err.println(dse);
             }
-        }
+        } */
     }
 
     public static class MyStoreable

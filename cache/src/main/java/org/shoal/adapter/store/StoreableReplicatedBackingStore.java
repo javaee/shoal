@@ -42,9 +42,6 @@ package org.shoal.adapter.store;
 
 import org.glassfish.ha.store.api.*;
 import org.shoal.adapter.store.commands.*;
-import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
-import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
-import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.mapper.KeyMapper;
@@ -81,6 +78,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
     private AtomicInteger simpleBroadcastCount = new AtomicInteger(0);
 
     private AtomicInteger foundLocallyCount = new AtomicInteger(0);
+
+    private String debugName = "StoreableReplicatedBackingStore";
 
     /*package*/ void setBackingStoreFactory(ReplicatedBackingStoreFactory factory) {
         this.factory = factory;
@@ -150,17 +149,12 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
         dsConf.addCommand(new StoreableTouchCommand<K, V>());
         dsConf.addCommand(new StoreableLoadRequestCommand<K, V>());
-        dsConf.addCommand(new StoreableBroadcastLoadRequestCommand<K, V>());
         dsConf.addCommand(new StoreableLoadResponseCommand<K, V>());
         dsConf.addCommand(new StoreableRemoveCommand<K, V>());
         dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
         dsConf.addCommand(new SizeRequestCommand<K, V>());
         dsConf.addCommand(new SizeResponseCommand<K, V>());
         dsConf.addCommand(new NoOpCommand<K, V>());
-
-        dsConf.addCommand(new ListBackingStoreConfigurationCommand());
-        dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
-        dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
 
         KeyMapper keyMapper = (KeyMapper) vendorSpecificMap.get("key.mapper");
         if (keyMapper != null) {
@@ -193,6 +187,8 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         localCachingEnabled = framework.getDataStoreConfigurator().isCacheLocally();
         
         RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf, framework.getDataStoreContext());
+
+        debugName = dsConf.getStoreName();
     }
 
     @Override
@@ -365,7 +361,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
                 result = cmd.getKeyMappingInfo();
                 if (_logger.isLoggable(Level.FINE)) {
-                    _logger.log(Level.FINE, "StoreableReplicatedBackingStore.save(" + key + "). Saved to " + result);
+                    _logger.log(Level.FINE, debugName + "save(" + key + "). Saved to " + result);
                 }
             }
 

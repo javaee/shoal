@@ -49,6 +49,8 @@ import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -86,24 +88,8 @@ public class TouchCommand<K, V>
         this.k = k;
     }
 
-    @Override
-    protected TouchCommand<K, V> createNewInstance() {
-        return new TouchCommand<K, V>();
-    }
 
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros)
-        throws IOException {
-
-        dsc.getDataStoreKeyHelper().writeKey(ros, k);
-        ros.writeLong(version);
-        ros.writeLong(accessTime);
-        ros.writeLong(maxIdleTime);
-    }
-
-
-    @Override
-    public boolean computeTarget() {
+    protected boolean beforeTransmit() {
         replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), k);
         String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
         super.setTargetName(replicaChoices == null ? null : choices[0]);
@@ -111,10 +97,18 @@ public class TouchCommand<K, V>
         return getTargetName() != null;
     }
 
-    @Override
-    public void readCommandPayload(ReplicationInputStream ris)
+    private void writeObject(ObjectOutputStream ros)
         throws IOException {
-        k = dsc.getDataStoreKeyHelper().readKey(ris);
+
+        ros.writeObject(k);
+        ros.writeLong(version);
+        ros.writeLong(accessTime);
+        ros.writeLong(maxIdleTime);
+    }
+
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        k = (K) ris.readObject();
         version = ris.readLong();
         accessTime = ris.readLong();
         maxIdleTime = ris.readLong();

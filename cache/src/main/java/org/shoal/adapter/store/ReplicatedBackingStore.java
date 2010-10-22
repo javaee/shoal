@@ -45,9 +45,6 @@ import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.glassfish.ha.store.api.BackingStoreFactory;
 import org.shoal.adapter.store.commands.*;
-import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationCommand;
-import org.shoal.adapter.store.commands.monitor.ListBackingStoreConfigurationResponseCommand;
-import org.shoal.adapter.store.commands.monitor.ListReplicaStoreEntriesCommand;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
 import org.shoal.ha.mapper.KeyMapper;
@@ -141,18 +138,12 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         dsConf.addCommand(new SimpleAckCommand<K, V>());
         dsConf.addCommand(new RemoveCommand<K, V>());
         dsConf.addCommand(new LoadRequestCommand<K, V>());
-        dsConf.addCommand(new BroadcastLoadRequestCommand<K, V>());
         dsConf.addCommand(new LoadResponseCommand<K, V>());
         dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
         dsConf.addCommand(new TouchCommand<K, V>());
-        dsConf.addCommand(new UpdateDeltaCommand<K, V>());
         dsConf.addCommand(new SizeRequestCommand<K, V>());
         dsConf.addCommand(new SizeResponseCommand<K, V>());
         dsConf.addCommand(new NoOpCommand<K, V>());
-        
-        dsConf.addCommand(new ListBackingStoreConfigurationCommand());
-        dsConf.addCommand(new ListBackingStoreConfigurationResponseCommand());
-        dsConf.addCommand(new ListReplicaStoreEntriesCommand(null));
 
         try {
             Long longVal = (Long) vendorSpecificMap.get("max.idle.timeout.in.seconds");

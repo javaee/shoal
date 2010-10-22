@@ -58,19 +58,8 @@ public class NoopCommand
         super((byte) 123);
     }
 
-    @Override
-    protected NoopCommand createNewInstance() {
-        return new NoopCommand();
-    }
-
-    @Override
-    protected void writeCommandPayload(ReplicationOutputStream ros) throws IOException {
-        setTargetName(dsc.getInstanceName());
-    }
-
-    @Override
-    protected void readCommandPayload(ReplicationInputStream ris) throws IOException, DataStoreException {
-        //To change body of implemented methods use File | Settings | File Templates.
+    protected boolean beforeTransmit() {
+        return true;
     }
 
     @Override
