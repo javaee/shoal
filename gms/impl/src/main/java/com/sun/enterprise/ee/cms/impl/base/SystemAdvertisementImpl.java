@@ -77,50 +77,6 @@ public class SystemAdvertisementImpl implements SystemAdvertisement {
     public SystemAdvertisementImpl() {
     }
 
-    public SystemAdvertisementImpl(final Map<String, Serializable> information) {
-        if (information == null) {
-            throw new IllegalArgumentException("information map must be initialized");
-        }
-        initialize(information);
-    }
-
-    /**
-     * Intialize a System advertisement from a portion of a information map.
-     *
-     * @param information information map to initialize object from
-     */
-    private void initialize(final Map<String, Serializable> information) {
-        Set<Map.Entry<String, Serializable>> entrySet = information.entrySet();
-        for (Map.Entry<String, Serializable> entry : entrySet) {
-            handleElement(entry.getKey(), entry.getValue());
-        }
-        if (getID() == null) {
-            throw new IllegalArgumentException("id must be initialized");
-        }
-    }
-
-    private void handleElement(final String key, final Serializable value) {
-        if (idTag.equals(key) && value instanceof Integer) {
-            setID((PeerID) value);
-        } else if (nameTag.equals(key) && value instanceof String) {
-            setName((String) value);
-        } else if (OSNameTag.equals(key) && value instanceof String) {
-            setOSName((String) value);
-        } else if (OSVersionTag.equals(key) && value instanceof String) {
-            setOSVersion((String) value);
-        } else if (OSarchTag.equals(key) && value instanceof String) {
-            setOSArch((String) value);
-        } else if (ipTag.equals(key) && value instanceof String) {
-            addEndpointAddress((String) value);
-        } else if (hwarchTag.equals(key) && value instanceof String) {
-            setHWArch((String) value);
-        } else if (hwvendorTag.equals(key) && value instanceof String) {
-            setHWVendor((String) value);
-        } else if (value instanceof String) {
-            setCustomTag(key, (String) value);
-        }
-    }
-
     /**
      * Sets the hWArch attribute of the SystemAdvertisement object
      *

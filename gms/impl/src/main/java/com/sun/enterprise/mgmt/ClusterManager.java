@@ -522,7 +522,7 @@ public class ClusterManager implements MessageListener {
                     LOG.log(Level.WARNING, "mgmt.unknownMessage");
                     return;
                 }
-                final PeerID srcPeerID = (PeerID) adv.getID();
+                final PeerID srcPeerID = adv.getID();
                 if (!loopbackMessages) {
                     if (srcPeerID.equals(getPeerID())) {
                         LOG.log(Level.FINEST, "CLUSTERMANAGER:Discarding loopback message");
@@ -594,13 +594,13 @@ public class ClusterManager implements MessageListener {
         final SystemAdvertisement sysAdv = new SystemAdvertisementImpl();
         sysAdv.setID(peerID);
         sysAdv.setName(name);
-        setBindInterfaceAddress(sysAdv, bindInterfaceAddress);
         sysAdv.setOSName(System.getProperty("os.name"));
         sysAdv.setOSVersion(System.getProperty("os.version"));
         sysAdv.setOSArch(System.getProperty("os.arch"));
         sysAdv.setHWArch(System.getProperty("HOSTTYPE", System.getProperty("os.arch")));
         sysAdv.setHWVendor(System.getProperty("java.vm.vendor"));
         sysAdv.setCustomTags(customTags);
+        setBindInterfaceAddress(sysAdv, bindInterfaceAddress);
         return sysAdv;
     }
 

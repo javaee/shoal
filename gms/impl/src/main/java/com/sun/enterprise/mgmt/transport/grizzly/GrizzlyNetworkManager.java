@@ -563,14 +563,17 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     public void removeRemotePeer( SelectionKey selectionKey ) {
-        if( selectionKey == null )
+        if(selectionKey == null) {
             return;
-        String instanceName = selectionKeyMap.remove( selectionKey );
+        }
+        selectionKeyMap.remove(selectionKey);
 
         // Bug Fix. DO NOT REMOVE member name to peerid mapping when selection key is being removed.
         // THIS HAPPENS TOO FREQUENTLY.  Only remove this mapping when member fails or planned shutdown.\
         // This method was getting called by GrizzlyCacheableSelectionKeyHandler.cancel(SelectionKey).
 
+        // use following line instead of remove call above if uncommenting the rest
+//        String instanceName = selectionKeyMap.remove( selectionKey );
 //      if( instanceName != null ) {
 //          Level level = Level.FINEST;
 //          if (LOG.isLoggable(level)) {

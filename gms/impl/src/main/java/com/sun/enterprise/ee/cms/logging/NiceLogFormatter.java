@@ -68,8 +68,8 @@ public class NiceLogFormatter extends Formatter {
 
     // loggerResourceBundleTable caches references to all the ResourceBundle
     // and can be searched using the LoggerName as the key
+
     private HashMap<String, ResourceBundle> loggerResourceBundleTable;
-    private LogManager logManager;
     // A Dummy Container Date Object is used to format the date
     private Date date = new Date();
     private static boolean LOG_SOURCE_IN_KEY_VALUE = true;
@@ -116,7 +116,6 @@ public class NiceLogFormatter extends Formatter {
     public NiceLogFormatter() {
         super();
         loggerResourceBundleTable = new HashMap<String, ResourceBundle>();
-        logManager = LogManager.getLogManager();
     }
 
 
@@ -245,7 +244,7 @@ public class NiceLogFormatter extends Formatter {
                 loggerName);
 
         if (rb == null) {
-            rb = logManager.getLogger(loggerName).getResourceBundle();
+            rb = LogManager.getLogManager().getLogger(loggerName).getResourceBundle();
             loggerResourceBundleTable.put(loggerName, rb);
         }
         return rb;

@@ -153,7 +153,6 @@ public class GMSContextImpl extends GMSContextBase {
     @Override
     public void join() throws GMSException {
         viewWindowThread = isWatchdog() ? null : new Thread(viewWindow, "GMS ViewWindowThread Group-" + groupName);
-        viewWindowThread.setDaemon(true);
         messageWindow = new MessageWindow(groupName, messageQueue);
 
         messageWindowThread = new Thread(messageWindow, "GMS MessageWindowThread Group-" + groupName);
@@ -161,6 +160,7 @@ public class GMSContextImpl extends GMSContextBase {
         messageWindowThread.start();
 
         if (viewWindowThread != null) {
+            viewWindowThread.setDaemon(true);
             viewWindowThread.start();
         }
 

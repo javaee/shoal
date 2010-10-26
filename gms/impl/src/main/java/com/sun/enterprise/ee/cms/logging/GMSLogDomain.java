@@ -53,20 +53,20 @@ import java.util.logging.Logger;
  * @version $Revision$
  */
 public class GMSLogDomain  {
+
     public static final String GMS_LOGGER = "ShoalLogger";
-    public static final String GMS_MONITOR_LOGGER = GMS_LOGGER + ".monitor";
-    public static final String RESOURCE_BUNDLE = "LogStrings";     
-    public static final String LOG_STRINGS = "com.sun.enterprise.ee.cms.logging." + RESOURCE_BUNDLE;
-    public static final String MCAST_LOGGER_NAME = GMS_LOGGER + ".mcast";
-    public static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
-    
-    private static Logger gmsLogger = null;
-    
+
+    private static final String LOG_STRINGS =
+        "com.sun.enterprise.ee.cms.logging.LogStrings";
+
+    private static final String GMS_MONITOR_LOGGER = GMS_LOGGER + ".monitor";
+    private static final String MCAST_LOGGER_NAME = GMS_LOGGER + ".mcast";
+    private static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
+
+    private GMSLogDomain() { /* you can't have me */}
+
     public static Logger getLogger(final String loggerName){
-        if(gmsLogger == null ){
-            gmsLogger =  Logger.getLogger( loggerName,  LOG_STRINGS);
-        }
-        return gmsLogger;
+        return Logger.getLogger(loggerName,  LOG_STRINGS);
     }
 
     public static Logger getMonitorLogger() {
