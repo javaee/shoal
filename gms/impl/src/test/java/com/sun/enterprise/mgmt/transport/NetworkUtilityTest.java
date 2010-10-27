@@ -79,8 +79,8 @@ public class NetworkUtilityTest extends TestCase {
             "127.0.0.1",
             "127.0.1", // same as 127.0.0.1
             "127.1",   // ditto
-            "localhost",
-            "::1" // ipv6 version of 127.0.0.1
+            "localhost"
+//            "::1" // ipv6 version of 127.0.0.1
         };
         final String notLocalOrValid [] = {
             "_",
