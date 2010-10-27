@@ -88,6 +88,25 @@ public class GMSMessage implements Serializable {
     }
 
     public long getStartTime () {
+        if (startTime == null) {
+            return 0;
+        }
         return startTime;
+    }
+
+    public String toString() {
+        StringBuffer sb = new StringBuffer(30);
+        sb.append("GMSMessage to componentName:").append(componentName);
+        sb.append(" message size:" + message.length);
+        sb.append(" message(0..4):");
+        int i = 0;
+        int max = 5;
+        for (Byte b : message) {
+            if (i++ < max) {
+                sb.append(b);
+            }
+        }
+        sb.append(" group:").append(groupName);
+        return sb.toString();
     }
 }
