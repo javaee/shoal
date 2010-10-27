@@ -542,6 +542,38 @@ public class NetworkUtility {
         }
     }
 
+    public static boolean isBindAddressValid(String addressString) {
+        ServerSocket socket = null;
+        try {
+            InetAddress ia = Inet4Address.getByName(addressString);
+
+            // port 0 means any free port
+            // backlog 0 means use default
+            socket = new ServerSocket(0, 0, ia);
+
+            // make extra sure
+            boolean retVal = socket.isBound();
+            if (!retVal) {
+                LOG.log(Level.WARNING, "netutil.validate.bind.not.bound",
+                    addressString);
+            }
+            return retVal;
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "netutil.validate.bind.address.exception",
+                new Object [] {addressString, e.toString()});
+            return false;
+        } finally {
+            if (socket != null) {
+                try {
+                    socket.close();
+                } catch (IOException ioe) {
+                    LOG.log(Level.FINE,
+                        "Could not close socket used to validate address.");
+                }
+            }
+        }
+    }
+
     public static void main( String[] args ) throws IOException {
         System.out.println( "AllLocalAddresses() = " + getAllLocalAddresses() );
         System.out.println( "getFirstNetworkInterface() = " +getFirstNetworkInterface() );
