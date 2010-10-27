@@ -130,6 +130,9 @@ if [ ${TMP} -eq ${EXPECTED} ];then
    PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
 else
    echo "Check for JOIN in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
+   echo "-----------------"
+   grep "Adding Join member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}
+   echo "-----------------"
    FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
 
@@ -151,6 +154,9 @@ if [ ${TMP} -eq ${EXPECTED} ];then
    PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
 else
    echo "Check for JOINED_AND_READY_EVENT in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
+   echo "-----------------"
+   grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}
+   echo "-----------------"
    FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
 
@@ -172,6 +178,9 @@ if [ ${TMP} -eq ${EXPECTED} ];then
      PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
 else
      echo "Check for REJOIN(addJoinNotificationSignal) in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
+     echo "-----------------"
+     grep "rejoining: missed reporting past" ${SERVERLOG} | grep "addJoinNotificationSignal" | grep -v ${APPLICATIONADMIN}
+     echo "-----------------"
      FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
 
@@ -193,6 +202,9 @@ if [ ${TMP} -eq ${EXPECTED} ];then
      PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
 else
      echo "Check for REJOIN(addJoinedAndReadyNotificationSignal) in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
+     echo "-----------------"
+     grep "rejoining: missed reporting past" ${SERVERLOG} | grep "addJoinedAndReadyNotificationSignal" | grep -v ${APPLICATIONADMIN}
+     echo "-----------------"
      FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
 
@@ -214,6 +226,9 @@ if [ ${TMP} -eq ${EXPECTED} ];then
    PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
 else
    echo "PlannedShutdownEvent in DAS log. Expect: ${EXPECTED},   Found: ${TMP} [FAILED]"
+   echo "-----------------"
+   grep "Received PlannedShutdownEvent"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}
+   echo "-----------------"
    FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
 
@@ -235,6 +250,9 @@ if [ ${TMP} -eq ${EXPECTED} ];then
    PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
 else
    echo "Check for GroupLeadershipNotifications in DAS log. Expect: ${EXPECTED},   from server. Found: ${TMP} [FAILED]"
+   echo "-----------------"
+   grep "adding GroupLeadershipNotification"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}
+   echo "-----------------"
    FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
 
@@ -253,6 +271,9 @@ if [ "${CMD}" = "kill" ]; then
        PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
    else
        echo "Check for failure of killed instance over all logs.  Expect: ${EXPECTED},   Found: ${TMP} [FAILED]"
+       echo "-----------------"
+       grep "has failed"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
+       echo "-----------------"
        FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
    fi
 fi
