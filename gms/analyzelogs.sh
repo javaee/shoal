@@ -73,7 +73,7 @@ do
          fi
        ;;
        *)
-         echo "ERROR: Invalid argument"
+         echo "ERROR: Invalid argument [${1}]"
          usage         
        ;;
      esac
