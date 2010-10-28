@@ -62,6 +62,7 @@ public class GMSLogDomain  {
     private static final String GMS_MONITOR_LOGGER = GMS_LOGGER + ".monitor";
     private static final String MCAST_LOGGER_NAME = GMS_LOGGER + ".mcast";
     private static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
+    private static final String GMS_SEND = GMS_LOGGER + ".send";
 
     private GMSLogDomain() { /* you can't have me */}
 
@@ -79,5 +80,9 @@ public class GMSLogDomain  {
 
     public static Logger getMasterNodeLogger() {
         return Logger.getLogger(MASTER_LOGGER_NAME, LOG_STRINGS);
+    }
+    
+    public static Logger getSendLogger() {
+        return Logger.getLogger(GMS_SEND, LOG_STRINGS);
     }
 }
