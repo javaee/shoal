@@ -65,6 +65,8 @@ public class ReplicationCommandOpcode {
 
     public static final byte REMOVE_EXPIRED = 39;
 
+    public static final byte REMOVE_EXPIRED_RESULT = 44;
+
     public static final byte STALE_REMOVE = 40;
 
     public static final byte BROADCAST_LOAD_REQUEST = 41;

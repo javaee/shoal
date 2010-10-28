@@ -77,18 +77,21 @@ public abstract class AcknowledgedCommand<K, V>
     }
 
     protected boolean beforeTransmit() {
-        originatingInstance = dsc.getInstanceName();
-        ResponseMediator respMed = dsc.getResponseMediator();
-        resp = respMed.createCommandResponse();
+        if (dsc.isDoSynchronousReplication()) {
+            originatingInstance = dsc.getInstanceName();
+            ResponseMediator respMed = dsc.getResponseMediator();
+            resp = respMed.createCommandResponse();
 
-        future = resp.getFuture();
+            future = resp.getFuture();
+        }
 
         return true;
     }
 
     protected void sendAcknowledgement() {
         try {
-        dsc.getCommandManager().execute(new SimpleAckCommand<K, V>(originatingInstance, tokenId));  
+            dsc.getCommandManager().execute(
+                    new SimpleAckCommand<K, V>(originatingInstance, tokenId));
         } catch (DataStoreException dse) {
             //TODO: But can safely ignore
         }
@@ -118,7 +121,6 @@ public abstract class AcknowledgedCommand<K, V>
     public final void onSuccess() {
         if (dsc.isDoSynchronousReplication()) {
             try {
-                //super.onSuccess();
                 waitForAck();
             } catch (Exception ex) {
                 System.out.println("** Got exception: " + ex);
@@ -126,7 +128,15 @@ public abstract class AcknowledgedCommand<K, V>
         }
     }
 
-    protected void waitForAck()
+    @Override
+    public final void onFailure() {
+        if (dsc.isDoSynchronousReplication()) {
+            ResponseMediator respMed = dsc.getResponseMediator();
+            respMed.removeCommandResponse(tokenId);
+        }
+    }
+
+    private void waitForAck()
         throws DataStoreException, TimeoutException {
         try {
             future.get(3, TimeUnit.SECONDS);
@@ -134,7 +144,10 @@ public abstract class AcknowledgedCommand<K, V>
             throw tEx;
         } catch (Exception inEx) {
             throw new DataStoreException(inEx);
-        } 
+        } finally {
+            ResponseMediator respMed = dsc.getResponseMediator();
+            respMed.removeCommandResponse(tokenId);
+        }
     }
 
 }

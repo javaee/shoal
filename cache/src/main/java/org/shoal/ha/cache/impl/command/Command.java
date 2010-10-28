@@ -172,6 +172,10 @@ public abstract class Command<K, V>
 
     }
 
+    public void onFailure() {
+        
+    }
+
     protected abstract boolean beforeTransmit();
     
 }

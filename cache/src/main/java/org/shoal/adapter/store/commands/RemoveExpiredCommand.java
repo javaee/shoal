@@ -38,89 +38,74 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.util;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.impl.util.ResponseMediator;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
+import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.CommandResponse;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.atomic.AtomicLong;
-
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
- *
  */
-public class CommandResponse
-    implements Callable {
+public class RemoveExpiredCommand<K, V>
+    extends Command<K, V> {
 
-    private static final AtomicLong tokenCounter = new AtomicLong(0);
+    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
+
+    private long maxIdleInMillis;
 
     private long tokenId;
 
-    private String respondingInstanceName;
+    private String target;
 
-    protected Object result;
-
-    protected int expectedUpdateCount;
-
-    private FutureTask future;
-
-    private ResponseMediator mediator;
-
-    public CommandResponse(ResponseMediator mediator) {
-        this.mediator = mediator;
-        this.tokenId = tokenCounter.incrementAndGet();
-        this.future = new FutureTask(this);
+    public RemoveExpiredCommand(long maxIdleInMillis, long tokenId) {
+        super(ReplicationCommandOpcode.REMOVE_EXPIRED);
+        this.maxIdleInMillis = maxIdleInMillis;
+        this.tokenId = tokenId;
     }
 
-    public void setExpectedUpdateCount(int value) {
-        this.expectedUpdateCount = value;
+    public void setTarget(String t) {
+        this.target = t;
     }
 
-    public int getExpectedUpdateCount() {
-        return expectedUpdateCount;
+    public boolean beforeTransmit() {
+        setTargetName(target);
+        return target != null;
     }
 
-    public int decrementAndGetExpectedUpdateCount() {
-        return --expectedUpdateCount;
+    private void writeObject(ObjectOutputStream ros) throws IOException {
+        ros.writeLong(maxIdleInMillis);
+        ros.writeLong(tokenId);
+        ros.writeUTF(dsc.getInstanceName());
     }
 
-    public long getTokenId() {
-        return tokenId;
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        maxIdleInMillis = ris.readLong();
+        tokenId = ris.readLong();
+        target = ris.readUTF();
     }
 
-    public FutureTask getFuture() {
-        return future;
+    @Override
+    public void execute(String initiator) {
+        int localResult = dsc.getReplicaStore().removeExpired();
+        RemoveExpiredResultCommand<K, V> resultCmd = new RemoveExpiredResultCommand<K, V>(target, tokenId, localResult);
+        try {
+            dsc.getCommandManager().execute(resultCmd);
+        } catch (Exception ex) {
+            _logger.log(Level.WARNING, "Exception while trying to send result for remove_expired", ex);
+        }
     }
 
-    public void setResult(Object v) {
-        this.result = v;
-        mediator.removeCommandResponse(tokenId);
-        future.run(); //Which calls our call()
-    }
-
-    public Object getTransientResult() {
-        return result;
-    }
-
-    public void setTransientResult(Object temp) {
-        result = temp;
-    }
-
-    public void setException(Exception ex) {
-        setResult(ex);
-    }
-
-    public String getRespondingInstanceName() {
-        return respondingInstanceName;
-    }
-
-    public void setRespondingInstanceName(String respondingInstanceName) {
-        this.respondingInstanceName = respondingInstanceName;
-    }
-
-    public Object call() {
-        return result;
+    public String toString() {
+        return getName() + "(" + maxIdleInMillis + ")";
     }
 }

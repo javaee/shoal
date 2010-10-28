@@ -43,6 +43,8 @@ package org.shoal.ha.cache.impl.store;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
+import org.shoal.ha.cache.impl.util.CommandResponse;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
@@ -51,6 +53,7 @@ import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
 
 import java.io.Serializable;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -159,7 +162,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
         synchronized (entry) {
             if (!entry.isRemoved()) {
                 entry.setLastAccessedAt(System.currentTimeMillis());
-                SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v);
+                entry.incrementAndGetVersion();
+                SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v,
+                        entry.getVersion(), entry.getLastAccessedAt());
                 cm.execute(cmd);
                 if (conf.isCacheLocally()) {
                     entry.setV(v);
@@ -170,7 +175,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 result = cmd.getKeyMappingInfo();
 
 
-                if (staleLocation != null) {
+                if ((staleLocation != null) && (! staleLocation.equals(cmd.getTargetName()))) {
                     StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
                     staleCmd.setKey(k);
                     staleCmd.setStaleTargetName(staleLocation);
@@ -340,7 +345,47 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     @Override
     public int removeIdleEntries(long idleFor) {
-        return replicaStore.removeExpired();
+
+        String[] targets = dsc.getKeyMapper().getCurrentMembers();
+
+        ResponseMediator respMed = dsc.getResponseMediator();
+        CommandResponse resp = respMed.createCommandResponse();
+        long tokenId = resp.getTokenId();
+        Future<Integer> future = resp.getFuture();
+        resp.setTransientResult(new Integer(0));
+
+        int finalResult = 0;
+        try {
+            if (targets != null) {
+                resp.setExpectedUpdateCount(targets.length);
+                for (String target : targets) {
+                    RemoveExpiredCommand<K, V> cmd = new RemoveExpiredCommand<K, V>(idleFor, tokenId);
+                    cmd.setTarget(target);
+                    try {
+                        cm.execute(cmd);
+                    } catch (DataStoreException dse) {
+                        _logger.log(Level.INFO, "Exception during removeIdleEntries...",dse);
+                    }
+                }
+            }
+
+            int localResult = replicaStore.removeExpired();
+            synchronized (resp) {
+                Integer existingValue = (Integer) resp.getTransientResult();
+                Integer newResult = new Integer(existingValue.intValue() + localResult);
+                resp.setTransientResult(newResult);
+            }
+
+            finalResult = (Integer) resp.getTransientResult();
+
+            finalResult = future.get(6, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            //TODO
+        } finally {
+            respMed.removeCommandResponse(tokenId);
+        }
+
+        return finalResult;
     }
 
     @Override

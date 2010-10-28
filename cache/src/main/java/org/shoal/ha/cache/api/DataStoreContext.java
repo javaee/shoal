@@ -163,7 +163,7 @@ public class DataStoreContext<K, V> {
         this.loader = loader;
     }
 
-    public boolean isDoSynchronousReplication() {
+    public final boolean isDoSynchronousReplication() {
         return doSynchronousReplication;
     }
 

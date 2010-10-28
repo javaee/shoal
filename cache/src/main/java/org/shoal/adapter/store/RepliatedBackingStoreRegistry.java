@@ -71,6 +71,7 @@ public class RepliatedBackingStoreRegistry {
 
     public static synchronized final void unregisterStore(String name) {
         _contexts.remove(name);
+        _confs.remove(name);
     }
 
     public static final Collection<String> getStoreNames() {

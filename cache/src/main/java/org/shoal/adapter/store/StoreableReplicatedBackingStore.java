@@ -44,10 +44,13 @@ import org.glassfish.ha.store.api.*;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
+import org.shoal.ha.cache.impl.util.CommandResponse;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -186,7 +189,7 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
         localCachingEnabled = framework.getDataStoreConfigurator().isCacheLocally();
         
-        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf, framework.getDataStoreContext());
+//        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf, framework.getDataStoreContext());
 
         debugName = dsConf.getStoreName();
     }
@@ -399,7 +402,48 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
 
     @Override
     public int removeExpired(long idleTime) throws BackingStoreException {
-        return replicaStore.removeExpired();
+        //TODO We really need to keep this in sync with DataStore.removeExpired()
+        
+        String[] targets = framework.getKeyMapper().getCurrentMembers();
+
+        ResponseMediator respMed = framework.getResponseMediator();
+        CommandResponse resp = respMed.createCommandResponse();
+        long tokenId = resp.getTokenId();
+        resp.setTransientResult(new Integer(0));
+        Future<Integer> future = resp.getFuture();
+
+        int finalResult = 0;
+        try {
+            if (targets != null) {
+                resp.setExpectedUpdateCount(targets.length);
+                for (String target : targets) {
+                    RemoveExpiredCommand<K, V> cmd = new RemoveExpiredCommand<K, V>(idleTime, tokenId);
+                    cmd.setTarget(target);
+                    try {
+                        framework.execute(cmd);
+                    } catch (DataStoreException dse) {
+                        _logger.log(Level.FINE, "Exception during removeIdleEntries...",dse);
+                    }
+                }
+            }
+
+            int localResult = replicaStore.removeExpired();
+            synchronized (resp) {
+                Integer existingValue = (Integer) resp.getTransientResult();
+                Integer newResult = new Integer(existingValue.intValue() + localResult);
+                resp.setTransientResult(newResult);
+            }
+
+            finalResult = (Integer) resp.getTransientResult();
+
+            return future.get(2, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            //TODO
+        } finally {
+            respMed.removeCommandResponse(tokenId);
+        }
+
+        return finalResult;
     }
 
     @Override

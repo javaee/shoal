@@ -79,7 +79,7 @@ public class DataStoreShell {
                 .setClassLoader(ClassLoader.getSystemClassLoader());
         Map<String, Object> map = conf.getVendorSpecificSettings();
         map.put("start.gms", true);
-        map.put("max.idle.timeout.in.seconds", 900L);
+        map.put("max.idle.timeout.in.seconds", 90L);
         //map.put("local.caching", true);
         map.put("class.loader", ClassLoader.getSystemClassLoader());
         BackingStore<String, Serializable> ds =

@@ -38,67 +38,84 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.interceptor;
+package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.AbstractCommandInterceptor;
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-import org.shoal.ha.group.GroupService;
+import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.util.CommandResponse;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 /**
  * @author Mahesh Kannan
- *
  */
-public final class TransmitInterceptor<K, V>
-    extends AbstractCommandInterceptor<K, V> {
+public class RemoveExpiredResultCommand<K, V>
+    extends Command<K, V> {
 
-    private static final Logger _logger =
-            Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TRANSMIT_INTERCEPTOR);
+    protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
+
+    private String target;
+
+    private long tokenId;
+
+    private int result = 0;
+
+    public RemoveExpiredResultCommand(String target, long tokenId, int result) {
+        super(ReplicationCommandOpcode.REMOVE_EXPIRED_RESULT);
+        this.target = target;
+        this.tokenId = tokenId;
+        this.result = result;
+    }
+
+    public boolean beforeTransmit() {
+        setTargetName(target);
+        return target != null;
+    }
+
+    private void writeObject(ObjectOutputStream ros) throws IOException {
+        ros.writeLong(tokenId);
+        ros.writeInt(result);
+    }
+
+    private void readObject(ObjectInputStream ris)
+        throws IOException, ClassNotFoundException {
+        tokenId = ris.readLong();
+        result = ris.readInt();
+    }
 
     @Override
-    public void onTransmit(Command<K, V> cmd, String initiator)
-        throws DataStoreException {
-        DataStoreContext<K, V> ctx = getDataStoreContext();
-        ByteArrayOutputStream bos = null;
-        ObjectOutputStream oos = null;
-        boolean transmitted = false;
-        try {
-            bos = new ByteArrayOutputStream();
-            oos = new ObjectOutputStream(bos);
-            oos.writeObject(cmd);
-            oos.close();
-            byte[] data = bos.toByteArray();
-
-            GroupService gs = ctx.getGroupService();
-            gs.sendMessage(cmd.getTargetName(),
-                    ctx.getServiceName(), data);
+    public void execute(String initiator) {
+        ResponseMediator respMed = getDataStoreContext().getResponseMediator();
+        CommandResponse resp = respMed.getCommandResponse(tokenId);
+        if (resp != null) {
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, storeName + ": TransmitInterceptor." + ctx.getServiceName()
-                        + ":onTransmit() Sent " + cmd + " to "
-                        + (cmd.getTargetName() == null ? " ALL MEMBERS " : cmd.getTargetName())
-                        + "; size: " + data.length);
+                _logger.log(Level.FINE, dsc.getInstanceName() + "For tokenId = " + tokenId + " received remove_expired_response value=" + result);
             }
-            cmd.onSuccess();
-            transmitted = true;
-        } catch (IOException ioEx) {
-            throw new DataStoreException("Error DURING transmit...", ioEx);
-        } finally {
-            if (! transmitted) {
-                cmd.onFailure();   
+
+            int pendingUpdates = 0;
+            synchronized (resp) {
+                Integer existingValue = (Integer) resp.getTransientResult();
+                Integer newResult = new Integer(existingValue.intValue() + result);
+                resp.setTransientResult(newResult);
+                pendingUpdates = resp.decrementAndGetExpectedUpdateCount();
             }
-            try {oos.close();} catch (Exception ex) {}
-            try {bos.close();} catch (Exception ex) {}
+
+            if (pendingUpdates == 0) {
+                resp.setResult(resp.getTransientResult());
+            }
+        } else {
+            _logger.log(Level.INFO, "RemoveExpiredResult: TOKEN already removed for tokenId = " + tokenId);
         }
     }
 
+    public String toString() {
+        return getName() + "(result=" + result + ")";
+    }
 }

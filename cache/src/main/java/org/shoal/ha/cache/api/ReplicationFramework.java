@@ -46,6 +46,7 @@ import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
+import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
@@ -198,4 +199,7 @@ public class ReplicationFramework<K, V extends Serializable> {
         return dsc.getKeyMapper();
     }
 
+    public ResponseMediator getResponseMediator() {
+        return dsc.getResponseMediator();
+    }
 }

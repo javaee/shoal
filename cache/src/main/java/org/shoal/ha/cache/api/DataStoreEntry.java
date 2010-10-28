@@ -63,6 +63,8 @@ public class DataStoreEntry<K, V> {
 
     private long lastAccessedAt;
 
+    private long version;
+
     private String reasonForRemoval;
 
     public DataStoreEntry() {
@@ -132,4 +134,13 @@ public class DataStoreEntry<K, V> {
     public void setLastAccessedAt(long lastAccessedAt) {
         this.lastAccessedAt = lastAccessedAt;
     }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public long incrementAndGetVersion() {
+        return ++version;
+    }
+
 }

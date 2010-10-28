@@ -131,6 +131,24 @@ public class ReplicationFramePayloadCommand<K, V>
         }
     }
 
+    @Override
+    public void onSuccess() {
+        int sz = commands.size();
+        for (int i = 0; i < sz; i++) {
+            Command cmd = commands.get(i);
+            cmd.onSuccess();
+        }
+    }
+
+    @Override
+    public void onFailure() {
+        int sz = commands.size();
+        for (int i = 0; i < sz; i++) {
+            Command cmd = commands.get(i);
+            cmd.onFailure();
+        }
+    }
+
     public String toString() {
         return "ReplicationFramePayloadCommand: contains " + list.size() + " commands";
     }

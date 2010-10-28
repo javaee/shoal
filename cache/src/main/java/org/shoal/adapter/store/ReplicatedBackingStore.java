@@ -153,6 +153,9 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
                     new IdleEntryDetector<K, V>() {
                         @Override
                         public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
+//                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
+//                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
+//                                    + " < now=" +nowInMillis);
                             return kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
                         }
                     }
@@ -165,9 +168,8 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
         dataStore = DataStoreFactory.createDataStore(dsConf);
 
-
-        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf,
-                ((ReplicatedDataStore) dataStore).getDataStoreContext());
+//        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf,
+//                ((ReplicatedDataStore) dataStore).getDataStoreContext());
     }
 
     @Override

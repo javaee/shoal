@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -67,6 +68,8 @@ public class ReplicaStore<K, V> {
     private AtomicInteger replicaEntries = new AtomicInteger(0);
 
     private IdleEntryDetector<K, V> idleEntryDetector;
+
+    private AtomicBoolean expiredEntryRemovalInProgress = new AtomicBoolean(false);
 
     public ReplicaStore(DataStoreContext<K, V> ctx) {
         this.ctx = ctx;
@@ -124,24 +127,32 @@ public class ReplicaStore<K, V> {
     public int removeExpired() {
         int result = 0;
 
-        if (idleEntryDetector != null) {
-            long now = System.currentTimeMillis();
-            Iterator<DataStoreEntry<K, V>> iterator = map.values().iterator();
-            while (iterator.hasNext()) {
-                DataStoreEntry<K, V> entry = iterator.next();
-                synchronized (entry) {
-                    if (idleEntryDetector.isIdle(entry, now)) {
-                        entry.markAsRemoved("Idle");
-                        _logger.log(Level.WARNING, "ReplicaStore removing (idle) key: " + entry.getKey());
-                        iterator.remove();
-                        result++;
+        if (expiredEntryRemovalInProgress.compareAndSet(false, true)) {
+            try {
+                if (idleEntryDetector != null) {
+                    long now = System.currentTimeMillis();
+                    Iterator<DataStoreEntry<K, V>> iterator = map.values().iterator();
+                    while (iterator.hasNext()) {
+                        DataStoreEntry<K, V> entry = iterator.next();
+                        synchronized (entry) {
+                            if (idleEntryDetector.isIdle(entry, now)) {
+                                entry.markAsRemoved("Idle");
+                                _logger.log(Level.WARNING, "ReplicaStore removing (idle) key: " + entry.getKey());
+                                iterator.remove();
+                                result++;
+                            }
+                        }
                     }
+                } else {
+                    //System.out.println("ReplicaStore.removeExpired idleEntryDetector is EMPTY");
                 }
+            } finally {
+                expiredEntryRemovalInProgress.set(false);
             }
         } else {
-            //System.out.println("ReplicaStore.removeExpired idleEntryDetector is EMPTY");
+            _logger.log(Level.FINE, "ReplicaStore.removeExpired(). Skipping since there is already another thread running");
         }
-        
+
         return result;
     }
 

@@ -64,16 +64,22 @@ public class SaveCommand<K, V>
 
     private V v;
 
+    private long version;
+
+    private long lastAccessedAt;
+
     private String targetInstanceName;
 
     public SaveCommand() {
         super(ReplicationCommandOpcode.SAVE);
     }
 
-    public SaveCommand(K k, V v) {
+    public SaveCommand(K k, V v, long version, long lastAccessedAt) {
         this();
         setKey(k);
         setValue(v);
+        this.version = version;
+        this.lastAccessedAt = lastAccessedAt;
     }
 
     public void setKey(K k) {
@@ -101,6 +107,7 @@ public class SaveCommand<K, V>
         DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
         synchronized (entry) {
             entry.setV((V) v);
+            entry.setLastAccessedAt(lastAccessedAt);
         }
 
         if (dsc.isDoSynchronousReplication()) {
@@ -122,6 +129,8 @@ public class SaveCommand<K, V>
             throws IOException {
         out.writeObject(k);
         out.writeObject(v);
+        out.writeLong(version);
+        out.writeLong(lastAccessedAt);
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, dsc.getServiceName() + " sending save_command for " + k + "; v = " + v + "; to " + getTargetName());
         }
@@ -131,6 +140,8 @@ public class SaveCommand<K, V>
             throws IOException, ClassNotFoundException {
         k = (K) in.readObject();
         v = (V) in.readObject();
+        version = in.readLong();
+        lastAccessedAt = in.readLong();
 
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, "==> read data for key " + k + " => " + v + " using " + in.getClass().getCanonicalName());
