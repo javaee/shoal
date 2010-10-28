@@ -440,7 +440,7 @@ public class NetworkUtility {
             }
         } catch( Throwable t ) {
             LOG.log(Level.WARNING,
-                    "netutil.deserialize.failure", new Object[]{messages.toString(), name});
+                    "netutil.deserialize.failure", new Object[]{messages.toString(), name, Thread.currentThread().getName()});
             throw new MessageIOException( "failed to deserialize a message : name = " + name, t );
         } finally {
             if( ois != null ) {
