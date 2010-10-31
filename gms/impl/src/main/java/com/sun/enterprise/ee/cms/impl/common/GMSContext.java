@@ -88,6 +88,8 @@ public interface GMSContext {
 
     DistributedStateCache getDistributedStateCache();
 
+    GMSMonitor getGMSMonitor();
+
     void join() throws GMSException ;
 
     void leave(final GMSConstants.shutdownType shutdownType) ;

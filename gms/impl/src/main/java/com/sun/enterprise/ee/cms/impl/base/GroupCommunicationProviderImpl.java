@@ -44,11 +44,13 @@ import com.sun.enterprise.ee.cms.core.GMSException;
 import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.*;
+import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageIOException;
 
 import java.io.IOException;
@@ -80,6 +82,7 @@ public class GroupCommunicationProviderImpl implements
     private GMSContextImpl ctx;
     private Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
     private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
+    private GMSMonitor gmsMonitor = null;
 
     // TBD:  Reintroduce this in future. Comment out unused field for now.
     // private final ExecutorService msgSendPool;
@@ -95,6 +98,7 @@ public class GroupCommunicationProviderImpl implements
     private GMSContextImpl getGMSContext() {
         if (ctx == null) {
             ctx = (GMSContextImpl) GMSContextFactory.getGMSContext(groupName);
+            gmsMonitor = ctx.getGMSMonitor();
         }
         return ctx;
     }
@@ -235,6 +239,14 @@ public class GroupCommunicationProviderImpl implements
                             final Serializable message,
                             final boolean synchronous) throws GMSException, MemberNotInViewException {
         boolean sent = false;
+        long duration;
+        long startTime = System.currentTimeMillis();
+        GMSMessage gmsMessage = null;
+        if (gmsMonitor != null && gmsMonitor.ENABLED) {
+            if (message instanceof GMSMessage) {
+                gmsMessage = (GMSMessage)message;
+            }
+        }
         try {
             if (targetMemberIdentityToken == null) {
                 if (synchronous) {
@@ -305,10 +317,16 @@ public class GroupCommunicationProviderImpl implements
                             }
                         }
                     }
+                    duration = System.currentTimeMillis() - startTime;
+                    monitorDoSend(gmsMessage, duration, true, null);
                 } else {
                     sent = clusterManager.send(null, message);//sends to whole group
+                    duration = System.currentTimeMillis() - startTime;
                     if (!sent) {
-                        throw new GMSException("message " + message + " not sent to group, send returned false");
+                        GMSException ge = new GMSException("message " + message + " not sent to group, send returned false");
+                        monitorDoSend(gmsMessage, duration, false, ge);
+                    } else {
+                        monitorDoSend(gmsMessage, duration, true, null);
                     }
                 }
             } else {
@@ -321,8 +339,13 @@ public class GroupCommunicationProviderImpl implements
                 if (clusterManager.getClusterViewManager().containsKey(id)) {
                     logger.log(Level.FINE, "sending message to PeerID: " + id);
                     sent = clusterManager.send(id, message);
-                    if (!sent) {
-                        throw new GMSException("message " + message + " not sent to " + id + ", send returned false");
+                    duration =  System.currentTimeMillis() - startTime;
+                    if (sent) {
+                        monitorDoSend(gmsMessage, duration, sent, null);
+                    } else {
+                        GMSException ge = new GMSException("message " + message + " not sent to " + id + ", send returned false");
+                        monitorDoSend(gmsMessage, duration, sent, ge);
+                        throw ge;
                     }
                 } else {
                     logger.log(Level.FINE, "message not sent to  " + targetMemberIdentityToken +
@@ -335,12 +358,48 @@ public class GroupCommunicationProviderImpl implements
             if (logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, "exception in sendMessage", e);
             }
+            String theMsgOutput = null;
+            if (gmsMessage != null) {
+                theMsgOutput = gmsMessage.toString();
+            }
+            duration = startTime - System.currentTimeMillis();
+            logSendMessageException("sendMessage msg:" + theMsgOutput + " duration(ms):" + duration + " failed with handled IOException", e);
+            monitorDoSend(gmsMessage, duration, false, e);
             throw new GMSException(e);
         }
     }
 
+    protected void monitorDoSend(final GMSMessage msg, final long sendDuration, final boolean sendSucceeded, final Exception e) {
+        if (gmsMonitor != null && gmsMonitor.ENABLED  && msg != null) {
+                String targetComponent = msg.getComponentName();
+                GMSMonitor.MessageStats stats = gmsMonitor.getGMSMessageMonitorStats(targetComponent);
+                if (sendSucceeded) {
+                    stats.incrementNumMsgsSent();
+                    stats.addBytesSent(msg.getMessage().length);
+                }
+                stats.addSendDuration(sendDuration);
+                if (e instanceof IOException && e.getMessage().contains("Client is busy or timed out")) {
+                    stats.incrementSendWriteTimeout();
+                } else if (sendDuration > gmsMonitor.getSendWriteTimeout()) {
+                    stats.incrementSendWriteTimeout();
+                }
+        }
+    }
+
+
     public void sendMessage(Serializable message) throws GMSException, MemberNotInViewException {
         sendMessage(null, message, false);
+    }
+
+    private void logSendMessageException(String comment, Throwable t) {
+        Logger sendLogger = GMSLogDomain.getSendLogger();
+        if (sendLogger.isLoggable(Level.FINE)) {
+            if (t == null) {
+                sendLogger.fine(comment);
+            } else {
+                sendLogger.log(Level.FINE, comment + ": sendMessage failed with following internal exception", t);
+            }
+        }
     }
 
     /**
@@ -367,7 +426,7 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public boolean isGroupLeader() {
-        return clusterManager.isMaster();
+        return clusterManager != null ? clusterManager.isMaster() : false;
     }
 
     public MemberStates getMemberState(String member, long threshold, long timeout) {
@@ -383,8 +442,11 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public MemberStates getMemberState(final String memberIdentityToken) {
-        String state =  (clusterManager.getNodeState(clusterManager.getID(memberIdentityToken), 0, 0)).toUpperCase();
-        return MemberStates.valueOf(state);
+        String result = "UNKNOWN";
+        if (clusterManager != null) {
+            result =  (clusterManager.getNodeState(clusterManager.getID(memberIdentityToken), 0, 0)).toUpperCase();
+        }
+        return MemberStates.valueOf(result);
     }
 
     public String getGroupLeader() {
@@ -443,6 +505,9 @@ public class GroupCommunicationProviderImpl implements
     }
 
     public void reportJoinedAndReadyState() {
+        if (clusterManager == null) {
+            throw new IllegalStateException("attempt to report joined and ready when joining group " + groupName + " failed");
+        }
         clusterManager.reportJoinedAndReadyState();
     }
 

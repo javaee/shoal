@@ -379,6 +379,7 @@ public class ApplicationServer implements Runnable, CallBack {
         final GroupManagementService.MemberType memberType = GroupManagementService.MemberType.valueOf(MEMBERTYPE_STRING);
         
         Properties configProps = new Properties();
+        configProps.put(ServiceProviderConfigurationKeys.MONITORING.toString(), "5"); //seconds
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
                                     System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(),

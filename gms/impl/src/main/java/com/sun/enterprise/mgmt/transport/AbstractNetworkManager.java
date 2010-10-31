@@ -239,7 +239,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
      */
     protected abstract void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback );
 
-    static protected Logger getLogger() {
+    static public Logger getLogger() {
         return LOG;
     }
 

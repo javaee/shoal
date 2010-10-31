@@ -40,7 +40,11 @@
 
 package com.sun.enterprise.mgmt.transport;
 
+import com.sun.enterprise.ee.cms.impl.common.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.spi.GMSMessage;
 
 import java.nio.ByteBuffer;
 import java.io.ByteArrayOutputStream;
@@ -240,6 +244,9 @@ public class MessageImpl implements Message {
      * {@inheritDoc}
      */
     public void parseMessage( final Buffer buffer, final int offset, final int length ) throws IllegalArgumentException, MessageIOException {
+        long receiveDuration = 0L;
+        long receiveStartTime = 0L;
+        boolean calledMonitor = false;
         if( buffer == null )
             throw new IllegalArgumentException( "byte buffer must be initialized" );
         if( offset < 0 )
@@ -262,11 +269,64 @@ public class MessageImpl implements Message {
                     throw new IllegalArgumentException( "byte buffer's remaining() is too small" );
 
                 buffer.limit(offset + length);
+                receiveStartTime = System.currentTimeMillis();
                 readMessagesInputStream(new BufferInputStream(buffer));
+                receiveDuration = System.currentTimeMillis() - receiveStartTime;
+                calledMonitor = true;
+                monitorReceive(receiveDuration);
+            } catch (MessageIOException mioe) {
+                receiveDuration = System.currentTimeMillis() - receiveStartTime;
+                calledMonitor = true;
+                monitorReceive(receiveDuration, true);
             } finally {
                 BufferUtils.setPositionLimit(buffer, restorePosition, restoreLimit);
+                if (!calledMonitor) {
+                    // an error occurred in receiving the message since receiveDuration never got set.
+                    receiveDuration = System.currentTimeMillis() - receiveStartTime;
+                    monitorReceive(receiveDuration, true);
+                }
             }
         }
+    }
+
+    private GMSMonitor gmsMonitor = null;
+    private boolean checkForGmsMonitor = true;
+
+    private void monitorReceive(long receiveDuration) {
+        monitorReceive(receiveDuration, false);
+    }
+
+    private void monitorReceive(long receiveDuration, boolean receiveError) {
+        GMSMessage msg = null;
+
+        if (gmsMonitor == null && checkForGmsMonitor) {
+            Object element = messages.get("APPMESSAGE");
+            if (element instanceof GMSMessage) {
+                msg = (GMSMessage)element;
+                GMSContext ctx = GMSContextFactory.getGMSContext(msg.getGroupName());
+                if (ctx != null) {
+                    gmsMonitor = ctx.getGMSMonitor();
+                }
+                checkForGmsMonitor = false;
+            }
+        }
+
+        if (gmsMonitor != null && gmsMonitor.ENABLED) {
+            if (msg == null) {
+                Object element = messages.get("APPMESSAGE");
+                if (element instanceof GMSMessage) {
+                    msg = (GMSMessage)element;
+                }
+            }
+            if (msg != null) {
+                GMSMonitor.MessageStats stats = gmsMonitor.getGMSMessageMonitorStats(msg.getComponentName());
+                stats.addBytesReceived(msg.getMessage().length);
+                stats.incrementNumMsgsReceived();
+                stats.addReceiveDuration(receiveDuration);
+            } else if (receiveError) {
+                GMSMonitor.MessageStats stats = gmsMonitor.getGMSMessageMonitorStats("unknown-component-due-to-receive-side-error");
+                stats.addReceiveDuration(receiveDuration);            }
+            }
     }
 
     private void readMessagesInputStream(InputStream is) throws IllegalArgumentException, MessageIOException {

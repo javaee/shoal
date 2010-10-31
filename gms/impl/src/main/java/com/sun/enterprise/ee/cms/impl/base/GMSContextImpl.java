@@ -41,10 +41,7 @@
 package com.sun.enterprise.ee.cms.impl.base;
 
 import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.common.AliveAndReadyViewWindow;
-import com.sun.enterprise.ee.cms.impl.common.GMSContextBase;
-import com.sun.enterprise.ee.cms.impl.common.Router;
-import com.sun.enterprise.ee.cms.impl.common.ShutdownHelper;
+import com.sun.enterprise.ee.cms.impl.common.*;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 import com.sun.enterprise.ee.cms.spi.GroupCommunicationProvider;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
@@ -82,6 +79,11 @@ public class GMSContextImpl extends GMSContextBase {
     private static final Map<String, RejoinSubevent> instanceRejoins =
         new ConcurrentHashMap<String, RejoinSubevent>();
     private MessageWindow messageWindow = null;
+    private GMSMonitor gmsMonitor;
+
+    public GMSMonitor getGMSMonitor() {
+        return gmsMonitor;
+    }
 
     public GMSContextImpl(final String serverToken, final String groupName,
                       final GroupManagementService.MemberType memberType,
@@ -96,9 +98,10 @@ public class GMSContextImpl extends GMSContextBase {
             logger.config("INCOMING_MSG_THREAD_POOL_SIZE: " + INCOMING_MSG_THREAD_POOL_SIZE + " overrides default value of " + DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE);
         }
         long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
+        this.gmsMonitor = new GMSMonitor(configProperties);
         aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
         aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
-        router = new Router(groupName, MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow, INCOMING_MSG_THREAD_POOL_SIZE);
+        router = new Router(groupName, MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow, INCOMING_MSG_THREAD_POOL_SIZE, gmsMonitor);
 
         this.configProperties = configProperties;
         groupCommunicationProvider =
@@ -205,6 +208,9 @@ public class GMSContextImpl extends GMSContextBase {
         }
         if( router != null ) {
             router.shutdown();
+        }
+        if (gmsMonitor != null) {
+            gmsMonitor.stop();
         }
     }
 

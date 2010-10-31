@@ -135,10 +135,13 @@ public class Utility {
             String value = null;
             if( props != null ) {
                 Object obj = props.get( propertyName );
-                if( obj instanceof String )
+                if( obj instanceof String ) {
                     value = (String)obj;
-                else if( obj instanceof Long )
+                } else if( obj instanceof Long ) {
                     return (Long)obj;
+                } else if (obj instanceof Integer) {
+                    return ((Integer)obj).longValue();
+                }
             }
             if( value == null )
                 value = System.getProperty( propertyName );

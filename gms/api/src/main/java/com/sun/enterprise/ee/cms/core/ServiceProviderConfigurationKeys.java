@@ -175,5 +175,10 @@ public enum ServiceProviderConfigurationKeys {
     /**
      * Configure number of threads for incoming message processing.
      */
-    INCOMING_MESSAGE_THREAD_POOL_SIZE
+    INCOMING_MESSAGE_THREAD_POOL_SIZE,
+
+    /**
+     * Set MONITORING frequency in seconds.
+     */
+    MONITORING
 }

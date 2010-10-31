@@ -44,12 +44,21 @@ package com.sun.enterprise.ee.cms.impl.common;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
 import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
+import com.sun.enterprise.mgmt.ConfigConstants;
 import junit.framework.TestCase;
 
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
+
 
 public class GroupManagementServiceImplTest extends TestCase {
     final private String instanceName = this.getClass().getSimpleName() + "_instance01";
@@ -60,6 +69,7 @@ public class GroupManagementServiceImplTest extends TestCase {
     private int numPlannedShutdownReceived = 0;
     final private AtomicBoolean joinedAndReady = new AtomicBoolean(false);
     final private AtomicBoolean isShutdown = new AtomicBoolean(false);
+    private AtomicLong numMsgReceived = new AtomicLong(0);
 
     public GroupManagementServiceImplTest( String testName ) {
         super( testName );
@@ -70,6 +80,8 @@ public class GroupManagementServiceImplTest extends TestCase {
         Properties props = new Properties();
         // do not wait default of 5 seconds to make yourself the master.
         props.put(ServiceProviderConfigurationKeys.DISCOVERY_TIMEOUT.toString(), 5L);
+        props.put(ServiceProviderConfigurationKeys.MONITORING.toString(), 2L); // in seconds
+        props.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
         gms = (GroupManagementService)
                 GMSFactory.startGMSModule(instanceName, groupName, GroupManagementService.MemberType.CORE, props);
         assertTrue(gms != null);
@@ -85,6 +97,13 @@ public class GroupManagementServiceImplTest extends TestCase {
             }
 
         }));
+        numMsgReceived = new AtomicLong(0);
+        gms.addActionFactory(new MessageActionFactoryImpl(new CallBack() {
+            public void processNotification(Signal sig) {
+                MessageSignal mSig = (MessageSignal)sig;
+                numMsgReceived.incrementAndGet();
+            }
+        }), "testTargetComponent");
         numJoinedAndReadyReceived = 0;
         joinedAndReady.set(false);
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(new CallBack() {
@@ -117,6 +136,37 @@ public class GroupManagementServiceImplTest extends TestCase {
             }
 
         }));
+    }
+
+    public void testGMSMessageSend() throws GMSException {
+        Logger log = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+        log.setLevel(Level.FINEST);
+        System.out.println("beginTestGMSMessageSend");
+        mySetUp();
+        gms.join();
+        GMSContext ctx = GMSContextFactory.getGMSContext(groupName);
+        GMSMonitor monitor = ctx.getGMSMonitor();
+
+         try {
+            Thread.sleep(3000);
+        } catch(InterruptedException ie) {}
+        for (int i =0; i < 10; i++) {
+            gms.getGroupHandle().sendMessage(instanceName, "NotRegisteredtestTargetComponent", "hello".getBytes());
+            gms.getGroupHandle().sendMessage(instanceName, "NotRegistered2testTargetComponent", "goodbye".getBytes());          
+        }
+        for (int i =0; i < 20; i++) {
+            gms.getGroupHandle().sendMessage(instanceName, "testTargetComponent", "hello".getBytes());
+            gms.getGroupHandle().sendMessage(instanceName, "testTargetComponent", "goodbye".getBytes());
+        }
+        try {
+            Thread.sleep(1000);
+        } catch(InterruptedException ie) {}
+        assertTrue("expected to receive 40 messages, only received " + numMsgReceived.get(), numMsgReceived.get() == 40);
+        assertTrue(monitor.getGMSMessageMonitorStats("NotRegisteredtestTargetComponent").getNumMsgsNoListener() == 10);
+        assertTrue(monitor.getGMSMessageMonitorStats("NotRegistered2testTargetComponent").getNumMsgsNoListener() == 10);            
+        monitor.report();
+        gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
+        log.setLevel(Level.INFO);                                                
     }
 
     public void testMultipleJoinsLeaves() throws GMSException {

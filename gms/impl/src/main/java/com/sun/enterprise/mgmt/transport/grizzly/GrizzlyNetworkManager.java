@@ -45,6 +45,9 @@ import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
+import com.sun.enterprise.ee.cms.impl.common.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
+import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
 import com.sun.enterprise.mgmt.transport.AbstractNetworkManager;
 import com.sun.enterprise.mgmt.transport.BlockingIOMulticastSender;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -59,7 +62,6 @@ import com.sun.grizzly.*;
 import com.sun.grizzly.util.ThreadPoolConfig;
 import com.sun.grizzly.util.GrizzlyExecutorService;
 import com.sun.grizzly.util.SelectorFactory;
-import com.sun.grizzly.util.DefaultThreadPool;
 import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -67,12 +69,10 @@ import com.sun.enterprise.ee.cms.impl.base.Utility;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
-import java.util.regex.Pattern;
 
 /**
  * @author Bongjae Chang
@@ -110,9 +110,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     private int poolQueueSize;
     private int highWaterMark;
     private int numberToReclaim;
-    private int maxParallel;
+    private int maxParallelSendConnections;
     private long startTimeout; // ms
-    private long writeTimeout; // ms
+    private long sendWriteTimeout; // ms
     private int multicastPacketSize;
     private int writeSelectorPoolSize;
     private String virtualUriList;
@@ -176,9 +176,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         poolQueueSize = Utility.getIntProperty( POOL_QUEUE_SIZE.toString(), 1024 * 4, properties );
         highWaterMark = Utility.getIntProperty( HIGH_WATER_MARK.toString(), 1024, properties );
         numberToReclaim = Utility.getIntProperty( NUMBER_TO_RECLAIM.toString(), 10, properties );
-        maxParallel = Utility.getIntProperty( MAX_PARALLEL.toString(), 15, properties );
+        maxParallelSendConnections = Utility.getIntProperty( MAX_PARALLEL.toString(), 15, properties );
         startTimeout = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
-        writeTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
+        sendWriteTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );
         multicastTimeToLive = Utility.getIntProperty(MULTICAST_TIME_TO_LIVE.toString(),
                                       GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
@@ -200,8 +200,8 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                     append(" POOL_QUEUE_SIZE:").append(poolQueueSize).
                     append(" KEEP_ALIVE_TIME(ms):").append(keepAliveTime).append('\n');
             buf.append("HIGH_WATER_MARK:").append(highWaterMark).append(" NUMBER_TO_RECLAIM:").append(numberToReclaim)
-                .append(" MAX_PARALLEL:").append(maxParallel).append('\n');
-            buf.append("START_TIMEOUT(ms):").append(startTimeout).append(" WRITE_TIMEOUT(ms):").append(writeTimeout).append('\n');
+                .append(" MAX_PARALLEL:").append(maxParallelSendConnections).append('\n');
+            buf.append("START_TIMEOUT(ms):").append(startTimeout).append(" WRITE_TIMEOUT(ms):").append(sendWriteTimeout).append('\n');
             buf.append("MAX_WRITE_SELECTOR_POOL_SIZE:").append(writeSelectorPoolSize).append('\n');
             buf.append("VIRTUAL_MULTICAST_URI_LIST:").append(virtualUriList).append('\n');
             shoalLogger.log(Level.CONFIG, buf.toString());
@@ -214,6 +214,13 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         this.instanceName = instanceName;
         this.groupName = groupName;
         configure( properties );
+        GMSContext ctx = GMSContextFactory.getGMSContext(groupName);
+        if (ctx != null)  {
+            GMSMonitor monitor = ctx.getGMSMonitor();
+            if (monitor != null) {
+                monitor.setSendWriteTimeout(this.sendWriteTimeout);
+            }
+        }
 
         // moved setting of localPeerId.
 
@@ -235,7 +242,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         execService = GrizzlyExecutorService.createInstance(threadPoolConfig);
         controller.setThreadPool( execService );
 
-        ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallel );
+        ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallelSendConnections);
         controller.setConnectorHandlerPool( cacheableHandlerPool );
 
         tcpSelectorHandler = new ReusableTCPSelectorHandler();
@@ -356,9 +363,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             if (LOG.isLoggable(Level.FINE))
                 LOG.log(Level.FINE, "local peer id = " + localPeerID);
         }
-        tcpSender = new GrizzlyTCPConnectorWrapper( controller, writeTimeout, host, tcpPort, localPeerID );
+        tcpSender = new GrizzlyTCPConnectorWrapper( controller, sendWriteTimeout, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
-                                                                                         writeTimeout,
+                                                                                         sendWriteTimeout,
                                                                                          host,
                                                                                          multicastPort,
                                                                                          multicastAddress,

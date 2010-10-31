@@ -128,4 +128,6 @@ public abstract class GMSContextBase implements GMSContext {
     }
 
     abstract public AliveAndReadyViewWindow  getAliveAndReadyViewWindow();
+
+    abstract public GMSMonitor getGMSMonitor();
  }

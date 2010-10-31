@@ -98,13 +98,11 @@ public class GMSMessage implements Serializable {
         StringBuffer sb = new StringBuffer(30);
         sb.append("GMSMessage to componentName:").append(componentName);
         sb.append(" message size:" + message.length);
-        sb.append(" message(0..4):");
-        int i = 0;
-        int max = 5;
-        for (Byte b : message) {
-            if (i++ < max) {
-                sb.append(b);
-            }
+        sb.append(" payload:");
+        if (message.length < 30) {
+            sb.append(new String(message));
+        } else {
+            sb.append(new String(message).substring(0,15));
         }
         sb.append(" group:").append(groupName);
         return sb.toString();

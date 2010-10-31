@@ -96,10 +96,10 @@ public class Router {
     private SignalHandler signalHandler;
     public final AliveAndReadyViewWindow aliveAndReadyView;
     public final String groupName;
-    private final GMSContext ctx;
+    private final GMSMonitor gmsMonitor;
     private final boolean isSpectator;
 
-    public Router(String groupName, int queueSize, AliveAndReadyViewWindow viewWindow, int incomingMsgThreadPoolSize) {
+    public Router(String groupName, int queueSize, AliveAndReadyViewWindow viewWindow, int incomingMsgThreadPoolSize, GMSMonitor gmsMonitor) {
         this.groupName = groupName;
         aliveAndReadyView = viewWindow;
         MAX_QUEUE_SIZE = queueSize;
@@ -113,9 +113,16 @@ public class Router {
         tf = new GMSThreadFactory("GMS-processInboundMsg-Group-" + groupName + "-thread");;
         messageActionPool = Executors.newFixedThreadPool(incomingMsgThreadPoolSize, tf);
         startupTime = System.currentTimeMillis();
-        ctx = GMSContextFactory.getGMSContext(groupName);
-        isSpectator = ctx != null ? ctx.getMemberType() == GroupManagementService.MemberType.SPECTATOR : false;
-
+        this.gmsMonitor = gmsMonitor;
+        GMSContext ctx = GMSContextFactory.getGMSContext(groupName);
+        if (ctx == null || ctx.getMemberType() == GroupManagementService.MemberType.CORE) {
+            isSpectator = false;
+        } else {
+            isSpectator = true;
+        }
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Router: isSpectator:" + isSpectator + " MONITOR_ENABLED:" + gmsMonitor.ENABLED);
+        }
     }
 
     /**
@@ -317,11 +324,11 @@ public class Router {
                     long duration = System.currentTimeMillis() - starttime;
                     if (duration > 2000) {
                         if (lastReported + NEXT_REPORT_DURATION < System.currentTimeMillis()) {
-                            monitorLogger.info("signal processing blocked due to signal queue being full for " +
-                                               duration + " ms. Router signal queue capacity: " + fullcapacity);
+                            monitorLogger.log(Level.WARNING, "router.signal.queue.blocking",
+                                              new Object[]{duration ,fullcapacity});
                             lastReported = System.currentTimeMillis();
                         }
-                    } else if (duration > 50) {
+                    } else if (duration > 20) {
                         if (lastReported + NEXT_REPORT_DURATION < System.currentTimeMillis()) {
                             if (monitorLogger.isLoggable(Level.FINE)) {
                                 monitorLogger.fine("signal processing blocked due to signal queue being full for " +
@@ -385,6 +392,10 @@ public class Router {
         MessageActionFactory maf = null;
         maf = messageAF.get(targetComponent);
         if (maf == null) {
+            if (gmsMonitor.ENABLED && !isSpectator) {
+                GMSMonitor.MessageStats stats = gmsMonitor.getGMSMessageMonitorStats(targetComponent);
+                stats.incrementNumMsgsNoHandler();
+            }
             // Introduce a mechanism in future to
             // register a MessageActionFactory for messages to non-existent targetComponent.
             // (.i.e  register a MessageActionFactory for "null" targetComponent.)
@@ -401,15 +412,12 @@ public class Router {
                 } else {
                     missedMessagesInt = missedMessages.incrementAndGet();
                 }
-                // remove next line when gms stats monitoring fully implemented.
-                if ((missedMessagesInt % 1000) == 1) {
-                    logger.log(Level.INFO, "router.no.msghandler.for.targetcomponent",new Object[]{targetComponent, missedMessagesInt});
+                if (missedMessagesInt == 1) {
+                    logger.log(Level.INFO, "router.no.msghandler.for.targetcomponent",new Object[]{targetComponent, groupName});
                 }
             }
         } else {
             MessageAction a = (MessageAction) maf.produceAction();
-            //due to message ordering requirements,
-            //this call is delegated to a singleton thread pool
             callMessageAction(a, signal);
         }
     }
@@ -514,7 +522,7 @@ public class Router {
         }
     }
 
-    private void callMessageAction(final Action a, final Signal signal) {
+    private void callMessageAction(final Action a, final MessageSignal signal) {
         try {
             final CallableAction task = new CallableAction(a, signal);
             messageActionPool.submit(task);

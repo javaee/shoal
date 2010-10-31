@@ -40,13 +40,11 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
-import com.sun.enterprise.mgmt.transport.MessageIOException;
+import com.sun.enterprise.mgmt.transport.*;
 import com.sun.grizzly.ConnectorHandler;
 import com.sun.grizzly.Controller;
 import com.sun.grizzly.util.OutputWriter;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.mgmt.transport.AbstractMessageSender;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -103,7 +101,14 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
             throw new IOException( "message can not be null" );
         ConnectorHandler connectorHandler = null;
         try {
+            long startGetConnectorHandler = System.currentTimeMillis();
             connectorHandler = controller.acquireConnectorHandler( Controller.Protocol.TCP );
+            long durationGetConnectorHandler = System.currentTimeMillis() - startGetConnectorHandler;
+            if (durationGetConnectorHandler > 1000) {
+                AbstractNetworkManager.getLogger().log(Level.WARNING,
+                                                       "grizzlytcpconnectorwrapper.wait.for.getconnector",
+                                                       durationGetConnectorHandler);
+            }
             try {
                 connectorHandler.connect( remoteAddress, localAddress );
 //   TBD:  this is a short-term workaround for shoal issue 106 so developer testing is not blocked.
