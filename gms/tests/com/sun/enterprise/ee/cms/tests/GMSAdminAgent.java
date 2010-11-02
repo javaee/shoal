@@ -102,7 +102,7 @@ public class GMSAdminAgent implements CallBack {
 
 
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
-        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINAGENT);
+        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINTARGET);
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
     }
@@ -139,6 +139,7 @@ public class GMSAdminAgent implements CallBack {
                         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                             myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete - NumberOfJoinedAndReady=" + numJoinAndReadyReceived.get() + "currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
                         }
+                        activeMembers = gms.getGroupHandle().getCurrentCoreMembers();
                         startupComplete.set(true);
                         synchronized (startupComplete) {
                             startupComplete.notifyAll();
