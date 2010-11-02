@@ -180,7 +180,6 @@ public class GMSClientService implements Runnable, CallBack{
             try {
                 gms.getGroupHandle().sendMessage(serverToken, serviceName, "hello".getBytes());
                 logger.log(Level.INFO, "send hello from member: " + gms.getInstanceName() + " to joined instance: " + serverToken + " succeeded.");
-                gms.getGroupHandle().sendMessage(serverToken, "nonExistent_" + serviceName, "hello".getBytes());
             } catch (GMSException e) {
                 logger.log(Level.WARNING, "failed to send hello message to newly joined member:" + serverToken + " trying one more time", e);
                 try {
