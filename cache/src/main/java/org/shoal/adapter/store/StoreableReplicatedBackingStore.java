@@ -136,6 +136,9 @@ public class StoreableReplicatedBackingStore<K extends Serializable, V extends S
         if (cl == null) {
             cl = conf.getValueClazz().getClassLoader();
         }
+        if (cl == null) {
+            cl = ClassLoader.getSystemClassLoader();
+        }
         dsConf.setClassLoader(cl)
                 .setStartGMS(startGMS)
                 .setCacheLocally(enableLocalCaching);

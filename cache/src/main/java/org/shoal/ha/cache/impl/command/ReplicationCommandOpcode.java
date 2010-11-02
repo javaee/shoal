@@ -44,16 +44,13 @@ package org.shoal.ha.cache.impl.command;
  * @author Mahesh Kannan
  */
 public class ReplicationCommandOpcode {
-
-
+    
 
     public static final byte REPLICATION_FRAME_PAYLOAD = 1;
 
     public static final byte SIMPLE_ACK_COMMAND = 2;
 
     public static final byte SAVE = 33;
-
-    public static final byte SAVE_DELTA = 34;
 
     public static final byte LOAD_REQUEST = 35;
 
@@ -69,20 +66,14 @@ public class ReplicationCommandOpcode {
 
     public static final byte STALE_REMOVE = 40;
 
-    public static final byte BROADCAST_LOAD_REQUEST = 41;
-
     public static final byte SIZE_REQUEST = 51;
 
     public static final byte SIZE_RESPONSE = 52;
 
 
-
-
     public static final byte STOREABLE_SAVE = 68;
 
     public static final byte STOREABLE_UNICAST_LOAD_REQUEST = 69;
-
-    public static final byte STOREABLE_BROADCAST_LOAD_REQUEST = 70;
 
     public static final byte STOREABLE_REMOVE = 71;
 
@@ -90,19 +81,8 @@ public class ReplicationCommandOpcode {
 
     public static final byte STOREABLE_TOUCH = 73;
 
-    public static final byte STOREABLE_REMOVE_EXPIRED = 74;
-
-    public static final byte STOREABLE_STALE_REMOVE = 75;
-
     public static final byte STOREABLE_FULL_SAVE_COMMAND = 76;
 
-
-
-    public static final byte MONITOR_LIST_BACKING_STORE_CONF = 84;
-
-    public static final byte MONITOR_LIST_BACKING_STORE_CONF_RESPONSE = 86;
-
-    public static final byte MONITOR_LIST_REPLICA_STORE_ENTRIES = 87;
     
     public static final byte NOOP_COMMAND = 102;
 }

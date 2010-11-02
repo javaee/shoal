@@ -85,7 +85,9 @@ public class DataStoreFactory {
 
     public static <K, V extends Serializable> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader) {
-
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
+        }
         DefaultObjectInputOutputStreamFactory factory = new DefaultObjectInputOutputStreamFactory();
         DataStoreKeyHelper<K> keyHelper = new ObjectKeyHelper(loader, factory);
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
@@ -109,6 +111,10 @@ public class DataStoreFactory {
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader,
                                                   DataStoreEntryHelper<K, V> helper, DataStoreKeyHelper<K> keyHelper,
                                                   KeyMapper keyMapper) {
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader();
+        }
+
         DataStoreConfigurator<K, V> conf = new DataStoreConfigurator<K, V>();
         conf.setStartGMS(true);
         conf.setStoreName(storeName)
@@ -128,6 +134,10 @@ public class DataStoreFactory {
     public static <K, V extends Serializable> DataStore<K, V> createDataStore(DataStoreConfigurator<K, V> conf) {
         GroupService gs = GroupServiceFactory.getInstance().getGroupService(conf.getInstanceName(), conf.getGroupName(), conf.isStartGMS());
 
+        if (conf.getClassLoader() == null) {
+            conf.setClassLoader(ClassLoader.getSystemClassLoader());
+        }
+        
         if (conf.getKeyMapper() == null) {
             conf.setKeyMapper(new DefaultKeyMapper(conf.getInstanceName(), conf.getGroupName()));
         }

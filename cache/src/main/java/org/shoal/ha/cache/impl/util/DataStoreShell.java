@@ -75,8 +75,7 @@ public class DataStoreShell {
                 .setInstanceName(args[1])
                 .setClusterName(args[2])
                 .setKeyClazz(String.class)
-                .setValueClazz(Serializable.class)
-                .setClassLoader(ClassLoader.getSystemClassLoader());
+                .setValueClazz(Serializable.class);
         Map<String, Object> map = conf.getVendorSpecificSettings();
         map.put("start.gms", true);
         map.put("max.idle.timeout.in.seconds", 90L);
