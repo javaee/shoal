@@ -69,6 +69,7 @@ public class GMSAdminConstants  {
     public static final String ADMINAGENT = "adminagent";
     public static final String ADMINCLI = "admincli";
     public static final String ADMINNAME = "server";
+    public static final String ADMINTARGET = "AdminTarget";
     public static final String INSTANCEPREFIX = "instance";
     public static final String TESTCOORDINATOR = "TestCoordinator";
     public static final String TESTEXECUTOR = "TestExceutor";

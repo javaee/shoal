@@ -177,11 +177,12 @@ public class GMSAdminAgent implements CallBack {
             }
 
              */
+
             try {
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast startup is complete to cluster");
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast startup is complete to ADMINTARGET of cluster");
                 }
-                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, GMSAdminConstants.STARTUPCOMPLETE.getBytes());
+                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINTARGET, GMSAdminConstants.STARTUPCOMPLETE.getBytes());
             } catch (GMSException ge1) {
                 myLogger.log(Level.SEVERE, "Exception occurred while broadcasting message: " + GMSAdminConstants.STARTUPCOMPLETE + ge1, ge1);
             }
@@ -189,11 +190,7 @@ public class GMSAdminAgent implements CallBack {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete");
             }
-
-
-
-
-
+           
             // wait until the Admin receives a shutdown message from the gmsadmincli
             synchronized (NotifiedOfStateChange) {
                 try {
