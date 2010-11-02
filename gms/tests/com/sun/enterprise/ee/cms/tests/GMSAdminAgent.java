@@ -102,7 +102,7 @@ public class GMSAdminAgent implements CallBack {
 
 
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
-        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINTARGET);
+        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINAGENT);
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
     }
@@ -139,7 +139,6 @@ public class GMSAdminAgent implements CallBack {
                         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                             myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete - NumberOfJoinedAndReady=" + numJoinAndReadyReceived.get() + "currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
                         }
-                        activeMembers = gms.getGroupHandle().getCurrentCoreMembers();
                         startupComplete.set(true);
                         synchronized (startupComplete) {
                             startupComplete.notifyAll();
@@ -178,12 +177,11 @@ public class GMSAdminAgent implements CallBack {
             }
 
              */
-
             try {
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast startup is complete to ADMINTARGET of cluster");
+                    myLogger.log(TESTDEFAULTLOGLEVEL, "Broadcast startup is complete to cluster");
                 }
-                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINTARGET, GMSAdminConstants.STARTUPCOMPLETE.getBytes());
+                gms.getGroupHandle().sendMessage(GMSAdminConstants.ADMINNAME, GMSAdminConstants.STARTUPCOMPLETE.getBytes());
             } catch (GMSException ge1) {
                 myLogger.log(Level.SEVERE, "Exception occurred while broadcasting message: " + GMSAdminConstants.STARTUPCOMPLETE + ge1, ge1);
             }
@@ -191,7 +189,11 @@ public class GMSAdminAgent implements CallBack {
             if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete");
             }
-           
+
+
+
+
+
             // wait until the Admin receives a shutdown message from the gmsadmincli
             synchronized (NotifiedOfStateChange) {
                 try {

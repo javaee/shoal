@@ -230,7 +230,7 @@ public class KillTest implements CallBack {
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
         gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
         gms.addActionFactory(new FailureSuspectedActionFactoryImpl(this));
-        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINTARGET);
+        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINNAME);
         gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.TESTCOORDINATOR);
         try {
             gms.join();

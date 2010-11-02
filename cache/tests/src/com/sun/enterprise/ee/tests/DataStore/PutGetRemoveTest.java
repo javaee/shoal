@@ -195,7 +195,7 @@ public class PutGetRemoveTest implements CallBack {
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
-        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINTARGET);
+        gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINNAME);
         gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.TESTCOORDINATOR);
         try {
             gms.join();
