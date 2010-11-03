@@ -376,11 +376,11 @@ public class GroupCommunicationProviderImpl implements
                 if (sendSucceeded) {
                     stats.incrementNumMsgsSent();
                     stats.addBytesSent(msg.getMessage().length);
+                } else {
+                    stats.incrementNumFailMsgSend();
                 }
                 stats.addSendDuration(sendDuration);
-                if (e instanceof IOException && e.getMessage().contains("Client is busy or timed out")) {
-                    stats.incrementSendWriteTimeout();
-                } else if (sendDuration > gmsMonitor.getSendWriteTimeout()) {
+                if (sendDuration > gmsMonitor.getSendWriteTimeout()) {
                     stats.incrementSendWriteTimeout();
                 }
         }
