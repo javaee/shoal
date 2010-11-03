@@ -93,11 +93,11 @@ public class GroupServiceProvider
 
             isJoin = notification instanceof JoinedAndReadyNotificationSignal;
 
-            checkAndNotifyAboutCurrentAndPreviousMembers(notification.getMemberToken(), isJoin);
+            checkAndNotifyAboutCurrentAndPreviousMembers(notification.getMemberToken(), isJoin, true);
         }
     }
 
-    private synchronized void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent) {
+    private synchronized void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent, boolean triggeredByGMS) {
 
         SortedSet<String> currentAliveAndReadyMembers = gms.getGroupHandle().getCurrentAliveAndReadyCoreView().getMembers();
         AliveAndReadyView aView = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
@@ -112,8 +112,8 @@ public class GroupServiceProvider
         long knownId = previousViewId.get();
         Signal sig = aView.getSignal();
 
-        System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: previous viewID: " + knownId
-                + "; current viewID: " + arViewId + "; " + aView.getSignal());
+//        System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: previous viewID: " + knownId
+//                + "; current viewID: " + arViewId + "; " + aView.getSignal());
         if (knownId < arViewId) {
             if (previousViewId.compareAndSet(knownId, arViewId)) {
                 this.arView = aView;
@@ -121,11 +121,11 @@ public class GroupServiceProvider
                 previousAliveAndReadyMembers = this.arView.getMembers();
             } else {
                 previousAliveAndReadyMembers = this.arView.getMembers();
-                System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 1");
+//                System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 1");
             }
         } else {
             previousAliveAndReadyMembers = this.arView.getMembers();
-            System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 2");
+//            System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 2");
         }
 
         //Listeners must be notified even if view has not changed.
@@ -136,25 +136,27 @@ public class GroupServiceProvider
                     previousAliveAndReadyMembers, isJoinEvent);
         }
 
-        StringBuilder sb = new StringBuilder("**VIEW: ");
-        sb.append("prevViewId: " + knownId).append("; curViewID: ").append(arViewId)
-                .append("; signal: ").append(sig).append(" ");
-        sb.append("[current: ");
-        String delim = "";
-        for (String member : currentAliveAndReadyMembers) {
-            sb.append(delim).append(member);
-            delim = ", ";
-        }
-        sb.append("]  [previous: ");
-        delim = "";
+        if (triggeredByGMS) {
+            StringBuilder sb = new StringBuilder("**VIEW: ");
+            sb.append("prevViewId: " + knownId).append("; curViewID: ").append(arViewId)
+                    .append("; signal: ").append(sig).append(" ");
+            sb.append("[current: ");
+            String delim = "";
+            for (String member : currentAliveAndReadyMembers) {
+                sb.append(delim).append(member);
+                delim = ", ";
+            }
+            sb.append("]  [previous: ");
+            delim = "";
 
-        for (String member : previousAliveAndReadyMembers) {
-            sb.append(delim).append(member);
-            delim = ", ";
+            for (String member : previousAliveAndReadyMembers) {
+                sb.append(delim).append(member);
+                delim = ", ";
+            }
+            sb.append("]");
+            logger.log(Level.INFO, sb.toString());
+            logger.log(Level.INFO, "**********************************************************************");
         }
-        sb.append("]");
-        System.out.println(sb.toString());
-        System.out.println("**********************************************************************");
 
     }
 
@@ -285,7 +287,7 @@ public class GroupServiceProvider
     @Override
     public void registerGroupMemberEventListener(GroupMemberEventListener listener) {
         listeners.add(listener);
-        checkAndNotifyAboutCurrentAndPreviousMembers(myName, true);
+        checkAndNotifyAboutCurrentAndPreviousMembers(myName, true, false);
     }
 
     @Override

@@ -232,7 +232,9 @@ public class DefaultKeyMapper
             }
             previuousAliveAndReadyMembers = previousView.toArray(new String[0]);
 
-            printMemberStates("onViewChange (isJoin: " + isJoinEvent + ")");
+            if (_logger.isLoggable(Level.FINE)) {
+                printMemberStates("onViewChange (isJoin: " + isJoinEvent + ")");
+            }
         } finally {
             wLock.unlock();
         }
@@ -287,7 +289,7 @@ public class DefaultKeyMapper
             sb.append("\tReplicaChoices[").append(members[i]).append("]: ").append(replicaChoices[i]);
             sb.append("\n");
         }
-        _logger.log(Level.INFO, sb.toString());
+        _logger.log(Level.FINE, sb.toString());
     }
 
 }
