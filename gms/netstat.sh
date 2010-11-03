@@ -42,7 +42,7 @@
 Usage()
 {
   echo "usage: [-h] [-u] [-r] filename"
-  echo "      -u: display udp data only (default is all)"
+  echo "      -u: get udp data only (default is all)"
   echo "      -r: remove previous file"
   echo "filename: name of the file to store the output in"
 
@@ -78,7 +78,7 @@ if [ ! -z "${LOGDIR}" ]; then
 fi
 
 touch ${FILE}
-date | tee -a ${FILE}
+date >> ${FILE}
 
 mkdir tmp > /dev/null 2>&1
 rm -rf tmp/netstat.tmp
@@ -90,7 +90,7 @@ if [ ${UDP} = true ]; then
     do
       if [ $first -eq 1 ]
       then
-         echo "$line" | tee -a ${FILE}
+         echo "$line" >> ${FILE}
          first=0
       else
          a=`echo "$line" | grep '^.*:$'`
@@ -98,11 +98,11 @@ if [ ${UDP} = true ]; then
          then
             break
          else
-            echo "$line" | tee -a ${FILE}
+            echo "$line" >> ${FILE}
          fi
       fi
     done  < tmp/netstat.tmp
 
 else
-   netstat -u | tee -a ${FILE}
+   netstat -u >> ${FILE}
 fi
