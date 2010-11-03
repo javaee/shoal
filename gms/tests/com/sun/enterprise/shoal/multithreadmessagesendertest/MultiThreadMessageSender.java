@@ -47,7 +47,10 @@ import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.impl.common.JoinNotificationSignalImpl;
 import com.sun.enterprise.ee.cms.impl.common.MessageSignalImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.ee.cms.impl.common.GMSContext;
+import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 
+import java.util.Properties;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -124,12 +127,17 @@ public class MultiThreadMessageSender implements CallBack{
         try {
             Thread.sleep(1000);
         } catch (Throwable t)  {}
+        GMSContext ctx = GMSContextFactory.getGMSContext("DemoGroup");
+        ctx.getGMSMonitor().report();
         gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
     }
 
 	private void initGMS(){
 		try {
-			gms = (GroupManagementService) GMSFactory.startGMSModule(memberToken,"DemoGroup", GroupManagementService.MemberType.CORE, null);
+            Properties props = new Properties();
+            props.put(ServiceProviderConfigurationKeys.INCOMING_MESSAGE_QUEUE_SIZE.toString(), "1500");
+            props.put(ServiceProviderConfigurationKeys.MONITORING.toString(), "120");
+			gms = (GroupManagementService) GMSFactory.startGMSModule(memberToken,"DemoGroup", GroupManagementService.MemberType.CORE, props);
 			gms.addActionFactory(new MessageActionFactoryImpl(this),"SimpleSampleComponent");
             gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
 			gms.join();
@@ -141,6 +149,7 @@ public class MultiThreadMessageSender implements CallBack{
 		}
 	}
 	private void startSenderThread(){
+
         for(int i=0;i<sendingThreadNum; i++){
             final int i1 = i;
             threads[i] = new Thread(new Runnable(){
@@ -159,7 +168,7 @@ public class MultiThreadMessageSender implements CallBack{
 //                                // tmp test, skip one message sent to see if missed on receiving side.
 //                                msgId = masterMsgId.getAndIncrement();
 //                            }
-                            msg1 = msg + " " + " threadid:" + i1 + " msgid:" + msgId;
+                            msg1 = msg + " " + " threadid:" + i1 + " msgid:" + msgId + " " + payload.toString();
                             while (true) {
                                 members = gms.getGroupHandle().getAllCurrentMembers();
                                 try {
@@ -206,14 +215,18 @@ public class MultiThreadMessageSender implements CallBack{
             int localNumMsgReceived = 0;
             boolean localStopFlag = false;
             try {
-                arg0.acquire();
                 MessageSignal messageSignal = (MessageSignal) arg0;
                 final String msgString = new String(messageSignal.getMessage());
-                System.out.println("received msg: " + msgString);
+                String outputStr = msgString;
+                if (msgString.length() > 35) {
+                    outputStr = msgString.substring(0,34) + "...truncated...";
+                }
+                System.out.println("received msg: length:" + msgString.length() + " payload:" + outputStr);
                 int msgIdIdx = msgString.indexOf(" msgid:");
                 if (msgIdIdx != -1) {
                     localNumMsgReceived = numMsgIdReceived.getAndIncrement();
-                    String msgId = msgString.substring(msgIdIdx + 7);
+
+                    String msgId = msgString.substring(msgIdIdx + 7, msgString.indexOf('X') - 1);
                     int msgIdInt = Integer.valueOf(msgId);
                     if (msgIdInt < msgIdReceived.length) {
                         msgIdReceived[msgIdInt] = true;
@@ -244,18 +257,12 @@ public class MultiThreadMessageSender implements CallBack{
                         System.out.println("FAILED. Confirmed " + droppedMessages + " messages were dropped");
                     }
                 }
-
-                arg0.release();
-            } catch (SignalAcquireException e) {
-                e.printStackTrace();
-            } catch (SignalReleaseException e) {
-                e.printStackTrace();
             } catch (Throwable t) {
                 t.printStackTrace();
             }
         }
     }
-    final static int NUM_MESSAGES_TO_SEND = 100;
+    final static int NUM_MESSAGES_TO_SEND = 10000;
     static int EXPECTED_NUMBER_OF_MESSAGES;
     static private boolean msgIdReceived[];
     static private AtomicInteger numMsgIdReceived = new AtomicInteger(0);
@@ -263,7 +270,11 @@ public class MultiThreadMessageSender implements CallBack{
 
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
 
-	
+
+
+    private static final int PAYLOADSIZE = 80 * 1024;
+    private static final StringBuffer payload = new StringBuffer(PAYLOADSIZE);
+
 	/**
 	 * main
 	 * 
@@ -290,6 +301,9 @@ public class MultiThreadMessageSender implements CallBack{
         Utility.setLogger(logger);
         Utility.setupLogHandler();
         logger.setLevel(Level.INFO);
+        for (int i = 0; i < PAYLOADSIZE; i++) {
+            payload.append('X');
+        }        
 		MultiThreadMessageSender multiThreadMessageSender = new MultiThreadMessageSender(memberToken,destMemberToken,sendingThreadNum);
 		multiThreadMessageSender.start();
         multiThreadMessageSender.waitTillDone();
