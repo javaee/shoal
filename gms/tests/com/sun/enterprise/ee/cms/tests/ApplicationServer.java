@@ -252,15 +252,15 @@ public class ApplicationServer implements Runnable, CallBack {
         if (notification instanceof JoinedAndReadyNotificationSignal) {
             // getMemberState constraint check for member being added.
             MemberStates state = gms.getGroupHandle().getMemberState(notification.getMemberToken());
-            if (state != MemberStates.STARTING &&
-                state != MemberStates.READY && 
-                state != MemberStates.ALIVEANDREADY &&
-                state != MemberStates.ALIVE) {
-                logger.warning("incorrect memberstate inside of JoinedAndReadyNotification signal processing " +
-                            " expected: STARTING, READY or ALIVEANDREADY, actual value: " + state);
-            } else {
-                logger.info("getMemberState(" + notification.getMemberToken() + ")=" + state);
-            }
+//            if (state != MemberStates.STARTING &&
+//                state != MemberStates.READY &&
+//                state != MemberStates.ALIVEANDREADY &&
+//                state != MemberStates.ALIVE) {
+//                logger.warning("incorrect memberstate inside of JoinedAndReadyNotification signal processing " +
+//                            " expected: STARTING, READY or ALIVEANDREADY, actual value: " + state);
+//            } else {
+//                logger.info("getMemberState(" + notification.getMemberToken() + ")=" + state);
+//            }
 
             // getMemberState constraint check for all core members.
             JoinedAndReadyNotificationSignal readySignal = (JoinedAndReadyNotificationSignal)notification;
