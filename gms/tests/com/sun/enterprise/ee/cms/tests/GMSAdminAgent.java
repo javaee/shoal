@@ -329,7 +329,9 @@ public class GMSAdminAgent implements CallBack {
                 if (!from.equals(GMSAdminConstants.ADMINCLI)) {
                     synchronized (activeMembers) {
                         if (!activeMembers.remove(from)) {
-                            myLogger.severe("Received more than one plannedshutdown from :" + from);
+                            // todo : add back when this assertion is more reliable. 
+                            //        the activeMember list is not constructed properly and is incorrectly reporting duplicate planned shutdown.
+                            // myLogger.severe("Received more than one plannedshutdown from :" + from);
                         }
                         if (activeMembers.size() == 0) {
                             activeMembers.notifyAll();
