@@ -177,35 +177,34 @@ public class GMSClientService implements Runnable, CallBack{
                     notification.getMemberToken();
             logger.info("Received JoinNotificationSignal for member " + serverToken + " componentService:" + this.serviceName +
                     " with state set to " + ((JoinNotificationSignal) notification).getMemberState().toString());
-            try {
-                gms.getGroupHandle().sendMessage(serverToken, serviceName, "hello".getBytes());
-                logger.log(Level.INFO, "send hello from member: " + gms.getInstanceName() + " to joined instance: " + serverToken + " succeeded.");
-            } catch (GMSException e) {
-                logger.log(Level.WARNING, "failed to send hello message to newly joined member:" + serverToken + " trying one more time", e);
-                try {
-                    gms.getGroupHandle().sendMessage(serverToken, serviceName, "hello".getBytes());
-                    logger.log(Level.INFO, "retry send hello from member: " + gms.getInstanceName() + " to joined instance: " + serverToken + " succeeded.");
-                } catch (GMSException ee) {
-                    logger.log(Level.WARNING, "retried: failed to send hello message to newly joined member:" + serverToken, ee);
-                }
-            }
 
             extractMemberDetails( notification, serverToken );
 
-        }
-        else if(notification instanceof JoinedAndReadyNotificationSignal)
-        {
+        } else if (notification instanceof JoinedAndReadyNotificationSignal) {
             serverToken =
                     notification.getMemberToken();
-            JoinedAndReadyNotificationSignal jrSignal = (JoinedAndReadyNotificationSignal)notification;
-            logger.info("Received "+ notification.toString() +" for member "+serverToken);
+            JoinedAndReadyNotificationSignal jrSignal = (JoinedAndReadyNotificationSignal) notification;
+            logger.info("Received " + notification.toString() + " for member " + serverToken);
             logger.info("JoinedAndReady for member:" + serverToken + ":" + serviceName +
                     " getPreviousAliveAndReadyCoreView()=" + gh.getPreviousAliveAndReadyCoreView() +
                     " getCurrentAliveAndReadyCoreView()=" + gh.getCurrentAliveAndReadyCoreView());
             logger.info("JoinedAndReady for member:" + serverToken + ":" + serviceName +
                     " signal.getPreviousView()=" + jrSignal.getPreviousView() +
                     " signal.getCurrentView()=" + jrSignal.getCurrentView());
-            extractMemberDetails( notification, serverToken );
+            try {
+                gms.getGroupHandle().sendMessage(serverToken, serviceName, "hello".getBytes());
+                logger.log(Level.INFO, "send hello from member: " + gms.getInstanceName() + " to joinedandready instance: " + serverToken + " succeeded.");
+            } catch (GMSException e) {
+                logger.log(Level.WARNING, "failed to send hello message to newly joined member:" + serverToken + " trying one more time", e);
+                try {
+                    gms.getGroupHandle().sendMessage(serverToken, serviceName, "hello".getBytes());
+                    logger.log(Level.INFO, "retry send hello from member: " + gms.getInstanceName() + " to joinedandready instance: " + serverToken + " succeeded.");
+                } catch (GMSException ee) {
+                    logger.log(Level.WARNING, "retried: failed to send hello message to newly joined member:" + serverToken, ee);
+                }
+            }
+
+            extractMemberDetails(notification, serverToken);
 
         }
         else if ( notification instanceof FailureNotificationSignal || notification instanceof PlannedShutdownSignal) {
