@@ -37,7 +37,6 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-
 package com.sun.enterprise.ee.cms.tests;
 
 import com.sun.enterprise.ee.cms.core.*;
@@ -46,6 +45,7 @@ import com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.logging.NiceLogFormatter;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -67,10 +67,9 @@ public class GMSAdminAgent implements CallBack {
     private boolean isAdmin = false;
     private static AtomicInteger NotifiedOfStateChange = new AtomicInteger(GMSAdminConstants.RUN);
     private boolean SHUTDOWNINITIATED = false;
-    List<String> activeMembers;
+    List<String> activeMembers = new LinkedList<String>();
     private GMSConstants.shutdownType shutdownType = GMSConstants.shutdownType.INSTANCE_SHUTDOWN;
     private static AtomicLong timeReceivedLastJoinJoinedAndReady = new AtomicLong(System.currentTimeMillis());
-    private static AtomicInteger numJoinAndReadyReceived = new AtomicInteger(0);
     private static AtomicLong diffTime = new AtomicLong(0);
     private static AtomicBoolean startupComplete = new AtomicBoolean(false);
     private static AtomicBoolean startupInitiated = new AtomicBoolean(false);
@@ -105,6 +104,9 @@ public class GMSAdminAgent implements CallBack {
         gms.addActionFactory(new MessageActionFactoryImpl(this), GMSAdminConstants.ADMINAGENT);
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
+
+        activeMembers.addAll(gms.getGroupHandle().getCurrentCoreMembers());
+
     }
 
     // returns true if shutdown was successful, false if shutdown was a result of a timeout
@@ -128,6 +130,8 @@ public class GMSAdminAgent implements CallBack {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "Startup has begun");
                 }
                 int previousOutstanding = 0;
+                timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
+
                 while (!startupComplete.get()) {
                     // using this mechanism requires the registering of JoinNotification
                     // and JoinedAndReadyNotification
@@ -135,9 +139,16 @@ public class GMSAdminAgent implements CallBack {
                     long diff = currentTime - timeReceivedLastJoinJoinedAndReady.get();
                     // if there are not outstanding messages and the delta time is greater than 5 seconds
                     int currentOutstanding = ((GroupManagementServiceImpl) gms).outstandingNotifications();
-                    if ((currentOutstanding == 0) && (diff >= 5000)) {
+                    if ((currentOutstanding == 0) && (diff >= 10000)) {
                         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                            myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete - NumberOfJoinedAndReady=" + numJoinAndReadyReceived.get() + "currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete - currentOutstanding=" + currentOutstanding + ", previousOutstanding=" + previousOutstanding + ", diff:" + diff);
+                        }
+                        synchronized (activeMembers) {
+                            activeMembers.clear();
+                            activeMembers.addAll(gms.getGroupHandle().getCurrentCoreMembers());
+                            if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                                myLogger.log(TESTDEFAULTLOGLEVEL, "Initializing current list of active members:" + activeMembers.toString());
+                            }
                         }
                         startupComplete.set(true);
                         synchronized (startupComplete) {
@@ -190,10 +201,6 @@ public class GMSAdminAgent implements CallBack {
                 myLogger.log(TESTDEFAULTLOGLEVEL, "Startup Complete");
             }
 
-
-
-
-
             // wait until the Admin receives a shutdown message from the gmsadmincli
             synchronized (NotifiedOfStateChange) {
                 try {
@@ -202,8 +209,14 @@ public class GMSAdminAgent implements CallBack {
                 }
             }
             if (NotifiedOfStateChange.get() == GMSAdminConstants.SHUTDOWNCLUSTER) {
+                synchronized (activeMembers) {
+                    activeMembers.clear();
+                    activeMembers.addAll(gms.getGroupHandle().getCurrentCoreMembers());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Current list of active members:" + activeMembers.toString());
+                    }
+                }
 
-                activeMembers = gms.getGroupHandle().getCurrentCoreMembers();
                 if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                     myLogger.log(TESTDEFAULTLOGLEVEL, "numberOfCoreMembers=" + activeMembers.size());
                 }
@@ -328,10 +341,11 @@ public class GMSAdminAgent implements CallBack {
             if (isAdmin) {
                 if (!from.equals(GMSAdminConstants.ADMINCLI)) {
                     synchronized (activeMembers) {
+                        if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                            myLogger.log(TESTDEFAULTLOGLEVEL, "Current list before remove:" + activeMembers.toString());
+                        }
                         if (!activeMembers.remove(from)) {
-                            // todo : add back when this assertion is more reliable. 
-                            //        the activeMember list is not constructed properly and is incorrectly reporting duplicate planned shutdown.
-                            // myLogger.severe("Received more than one plannedshutdown from :" + from);
+                            myLogger.severe("Received more than one plannedshutdown from :" + from + ", current list:" + activeMembers.toString());
                         }
                         if (activeMembers.size() == 0) {
                             activeMembers.notifyAll();
@@ -358,6 +372,7 @@ public class GMSAdminAgent implements CallBack {
                 // if we are the master and we've received an join from someone other than ourselves or admincli
                 // this basically means all the core members
                 if (!from.equals(GMSAdminConstants.ADMINNAME) && !from.equals(GMSAdminConstants.ADMINCLI)) {
+                    timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
                     if (startupInitiated.get() == false) {
                         if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
                             myLogger.log(TESTDEFAULTLOGLEVEL, "STARTUP INITIATED ");
@@ -367,11 +382,11 @@ public class GMSAdminAgent implements CallBack {
                             startupInitiated.notifyAll();
                         }
                     }
+
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Resetting time received last Join: " + timeReceivedLastJoinJoinedAndReady.get());
+                    }
                 }
-                if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                    myLogger.log(TESTDEFAULTLOGLEVEL, "Resetting time received last Join");
-                }
-                timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
             }
 
 
@@ -383,10 +398,10 @@ public class GMSAdminAgent implements CallBack {
                 // if we are the master and we've received an join from someone other than ourselves or admincli
                 // this basically means all the core members
                 if (!from.equals(GMSAdminConstants.ADMINNAME) && !from.equals(GMSAdminConstants.ADMINCLI)) {
-                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
-                        myLogger.log(TESTDEFAULTLOGLEVEL, "Resetting time received last JoinedAndReady");
-                    }
                     timeReceivedLastJoinJoinedAndReady.set(System.currentTimeMillis());
+                    if (myLogger.isLoggable(TESTDEFAULTLOGLEVEL)) {
+                        myLogger.log(TESTDEFAULTLOGLEVEL, "Resetting time received last JoinedAndReady: " + timeReceivedLastJoinJoinedAndReady.get());
+                    }
                 }
             }
             // }
