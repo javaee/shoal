@@ -67,6 +67,7 @@ import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.logging.NiceLogFormatter;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -708,6 +709,8 @@ public class HAMessageReplicationSimulator {
                 System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
         configProps.put(ServiceProviderConfigurationKeys.INCOMING_MESSAGE_QUEUE_SIZE.toString(),
                 System.getProperty("INCOMING_MESSAGE_QUEUE_SIZE", "3000"));
+        configProps.put(GrizzlyConfigConstants.TCP_BUFFER_SIZE.toString(), 90 * 1024);
+        configProps.put("MONITORING", 20L);
 
         //Uncomment this to receive loop back messages
         //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");

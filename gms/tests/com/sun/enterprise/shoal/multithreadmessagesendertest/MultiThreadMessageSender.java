@@ -101,7 +101,7 @@ public class MultiThreadMessageSender implements CallBack{
             for (Thread t : threads) {
                 if (!threadDone[i]) {
                     if (t.isAlive()) {
-                        System.out.println("thread " + t.getName() + " still alive");
+                        logger.finer("thread " + t.getName() + " still alive");
                         done = false;
                     } else {
                         threadDone[i] = true;
@@ -184,7 +184,7 @@ public class MultiThreadMessageSender implements CallBack{
                                         gms.getGroupHandle().sendMessage(destMemberToken, "SimpleSampleComponent",msg1.getBytes());
                                         break;
                                     }
-                                } catch (InterruptedException e) {
+                               } catch (InterruptedException e) {
 							        e.printStackTrace();
                                     //break;
                                 } catch (GMSException e) {
@@ -218,10 +218,9 @@ public class MultiThreadMessageSender implements CallBack{
                 MessageSignal messageSignal = (MessageSignal) arg0;
                 final String msgString = new String(messageSignal.getMessage());
                 String outputStr = msgString;
-                if (msgString.length() > 35) {
-                    outputStr = msgString.substring(0,34) + "...truncated...";
+                if (msgString.length() > 38) {
+                    outputStr = msgString.substring(0,37) + "...truncated...";
                 }
-                System.out.println("received msg: length:" + msgString.length() + " payload:" + outputStr);
                 int msgIdIdx = msgString.indexOf(" msgid:");
                 if (msgIdIdx != -1) {
                     localNumMsgReceived = numMsgIdReceived.getAndIncrement();
@@ -240,6 +239,9 @@ public class MultiThreadMessageSender implements CallBack{
                         System.out.println("received stop message");
                         localStopFlag = true;
                     }
+                }
+                if ((localNumMsgReceived % 2500) == 0) {
+                    System.out.println("received msg[" + localNumMsgReceived + "]: length:" + msgString.length() + " payload:" + outputStr);
                 }
                 if (localStopFlag && !completedCheck.get()) {
                     completedCheck.set(true);
@@ -262,7 +264,7 @@ public class MultiThreadMessageSender implements CallBack{
             }
         }
     }
-    final static int NUM_MESSAGES_TO_SEND = 10000;
+    final static int NUM_MESSAGES_TO_SEND = 25000;
     static int EXPECTED_NUMBER_OF_MESSAGES;
     static private boolean msgIdReceived[];
     static private AtomicInteger numMsgIdReceived = new AtomicInteger(0);
@@ -297,10 +299,9 @@ public class MultiThreadMessageSender implements CallBack{
         for (int i =0; i < msgIdReceived.length; i++) {
             msgIdReceived[i] = false;
         }
-        logger.setLevel(Level.INFO);
         Utility.setLogger(logger);
         Utility.setupLogHandler();
-        logger.setLevel(Level.INFO);
+        logger.setLevel(Level.CONFIG);
         for (int i = 0; i < PAYLOADSIZE; i++) {
             payload.append('X');
         }        
