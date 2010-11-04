@@ -197,7 +197,9 @@ public class Utility {
         logger.addHandler(consoleHandler);
         logger.setUseParentHandlers(false);
         final String level = System.getProperty("LOG_LEVEL", "INFO");
-        logger.setLevel(Level.parse(level));
+        try {
+            logger.setLevel(Level.parse(level));
+        } catch (IllegalArgumentException iae) {}
     }
 
     public static long getStartTime(SystemAdvertisement advert) {
