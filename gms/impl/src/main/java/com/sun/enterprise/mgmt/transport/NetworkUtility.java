@@ -403,9 +403,7 @@ public class NetworkUtility {
                 Serializable obj = entry.getValue();
                 count++;
                 oos.writeObject( name );
-                synchronized( obj ) {
-                    oos.writeObject( obj );
-                }
+                oos.writeObject( obj );
             }
             oos.flush();
         } catch( Throwable t ) {
