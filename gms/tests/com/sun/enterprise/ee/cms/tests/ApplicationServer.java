@@ -79,7 +79,7 @@ import java.util.logging.Logger;
  * in response to a recover call from the GMS layer.
  *
  * @author Shreedhar Ganapathy"
- * @version $Revision$  Ä
+ * @version $Revision$
  */
 public class ApplicationServer implements Runnable, CallBack {
     private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);

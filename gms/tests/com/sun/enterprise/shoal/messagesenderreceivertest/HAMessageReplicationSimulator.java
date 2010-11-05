@@ -709,7 +709,6 @@ public class HAMessageReplicationSimulator {
                 System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
         configProps.put(ServiceProviderConfigurationKeys.INCOMING_MESSAGE_QUEUE_SIZE.toString(),
                 System.getProperty("INCOMING_MESSAGE_QUEUE_SIZE", "3000"));
-        configProps.put(GrizzlyConfigConstants.TCP_BUFFER_SIZE.toString(), 90 * 1024);
         configProps.put("MONITORING", 20L);
 
         //Uncomment this to receive loop back messages
