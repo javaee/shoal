@@ -64,7 +64,7 @@ public class GMSContextImpl extends GMSContextBase {
     private ArrayBlockingQueue<MessagePacket> messageQueue;
     private static final int DEFAULT_INCOMING_MSG_QUEUE_SIZE = 500;
     private int MAX_MSGS_IN_QUEUE = DEFAULT_INCOMING_MSG_QUEUE_SIZE;
-    private int DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE = 10;
+    private int DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE = 5;
     private int INCOMING_MSG_THREAD_POOL_SIZE = DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE;
     private ViewWindowImpl viewWindow;
     private GroupCommunicationProvider groupCommunicationProvider;
