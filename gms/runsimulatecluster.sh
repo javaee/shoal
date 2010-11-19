@@ -302,7 +302,7 @@ SDTCP=${TCPSTARTPORT}
 EDTCP=${TCPENDPORT}
 if [ $DIST = false ]; then
     # single machine startup
-    echo "Starting ${NUMOFMEMBERS} CORE members"
+    echo `date` "Starting ${NUMOFMEMBERS} CORE members"
     count=1
     while [ $count -le ${NUMOFMEMBERS} ]
     do
@@ -399,7 +399,7 @@ else
     fi
 fi
 
-echo "Waiting for group [${GROUPNAME}] to complete startup"
+echo `date` "Waiting for group [${GROUPNAME}] to complete startup"
 # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
 ADMINCMD="./gms_admin.sh waits ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
 if [ $DIST = false ]; then
@@ -408,7 +408,7 @@ else
     ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
 fi
 
-echo "Group startup has completed"
+echo `date` "Group startup has completed"
 
 if [ "${CMD}" = "stop" ]; then
        echo "Stopping ${INSTANCE_EFFECTED}"
@@ -462,7 +462,7 @@ elif [ "${CMD}" = "kill" ]; then
        else
            ${EXECUTE_REMOTE_CONNECT} ${MASTER_MACHINE_NAME} "cd ${MASTER_WORKSPACE_HOME}; ${ADMINCMD}"
        fi
-       echo "sleeping 15 seconds"
+       echo "killed instance at" `date` ". sleeping 15 seconds"
        sleep 15
        echo "Restarting ${INSTANCE_EFFECTED}"
        if [ $DIST = false ]; then
@@ -596,7 +596,7 @@ else
     fi
 fi
 
-echo "Shutting down group [${GROUPNAME}]"
+echo `date` "Shutting down group [${GROUPNAME}]"
    # we do not want test or shoal output unless we really needit, there we set both types of logging to the same value
 ADMINCMD="./gms_admin.sh stopc ${GROUPNAME} -t ${TRANSPORT} -tl ${ADMINCLI_LOG_LEVEL} -sl ${ADMINCLI_SHOALGMS_LOG_LEVEL} -ma ${MULTICASTADDRESS} -mp ${MULTICASTPORT} ${BIA}"
 if [ $DIST = false ]; then
