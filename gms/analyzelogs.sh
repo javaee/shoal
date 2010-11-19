@@ -428,7 +428,7 @@ else
 fi
 echo "Number of Warnings: ${TMP}"
 
-TMP=`grep "Exception" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "Exception" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN} | grep -v "stack trace" | wc -l`
 if [ ${TMP} -eq 0 ];then
    echo "Number of Exceptions :  ${TMP}  [PASSED]"
    PASS_TOTAL=`expr ${PASS_TOTAL} + 1 `
@@ -462,4 +462,4 @@ else
     grep WARNING  ${ALLLOGS} | grep -v ${APPLICATIONADMIN}
 fi
 echo Exceptions 
-grep "Exception" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN}
+grep "Exception" ${ALLLOGS}  | grep -v ${APPLICATIONADMIN} | grep -v "stack trace"
