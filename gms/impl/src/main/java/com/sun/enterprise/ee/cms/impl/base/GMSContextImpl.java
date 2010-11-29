@@ -222,15 +222,18 @@ public class GMSContextImpl extends GMSContextBase {
     @Override
     public void announceGroupShutdown(final String groupName,
                                       final GMSConstants.shutdownState shutdownState) {
-        // if not groupleader, seize it before shutting down all other members of the group.
-        if (!this.getGroupCommunicationProvider().isGroupLeader()) {
-            logger.log(Level.INFO, "gmsctx.assume.groupleader", new Object[]{groupName});
-            assumeGroupLeadership();
-        }
+        // It is required to announce cluster shutdown BEFORE seizing group leadership.
+        // Otherwise, seizing groupleadership is viewed as a master collision.
+        // This subtle ordering is necessary so the current master resigns and allows the admin
+        // member to grab groupleadership before the entire group is shutdown.
         groupCommunicationProvider.
                 announceClusterShutdown(
                         new GMSMessage(GMSConstants.shutdownType.GROUP_SHUTDOWN.toString(), null,
                                 groupName, null));
+        if (!this.getGroupCommunicationProvider().isGroupLeader()) {
+            logger.log(Level.INFO, "gmsctx.assume.groupleader", new Object[]{groupName});
+            assumeGroupLeadership();
+        }
     }
 
     @Override
