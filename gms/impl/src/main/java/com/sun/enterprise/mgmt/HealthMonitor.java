@@ -1346,39 +1346,42 @@ public class HealthMonitor implements MessageListener, Runnable {
             //if current time exceeds the last state update timestamp from this peer id, by more than the
             //the specified max timeout
             if (!stop) {
-                //dont suspect self
-                if (!entry.id.equals(localPeerID)) {
-                    if (canProcessInDoubt(entry)) {
-                        if (LOG.isLoggable(Level.FINE)) {
-                            LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
-                                    entry.adv.getName(), (cacheSnapShotTime - entry.timestamp),
-                                    computeMissedBeat(cacheSnapShotTime, entry), maxMissedBeats));
-                        }
-                    }
+
+                final boolean processInDoubt = canProcessInDoubt(entry);
+                if (processInDoubt && LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
+                            entry.adv.getName(), (cacheSnapShotTime - entry.timestamp),
+                            computeMissedBeat(cacheSnapShotTime, entry), maxMissedBeats));
                 }
-                if (computeMissedBeat(cacheSnapShotTime, entry) >= maxMissedBeats && !isConnected(entry)) {
-                    LOG.log(Level.FINEST, "timeDiff > maxTime");
-                    if (canProcessInDoubt(entry)) {
-                        LOG.log(Level.FINER, "Designating InDoubtState");
-                        designateInDoubtState(entry);
-                        //delegate verification to Failure Verifier
-                        LOG.log(Level.FINER, "Notifying FailureVerifier for " + entry.adv.getName());
-                        synchronized (verifierLock) {
-                            outstandingFailureToVerify = true;
-                            verifierLock.notify();
-                        }
-                        LOG.log(Level.FINER, "Done Notifying FailureVerifier for " + entry.adv.getName());
+
+                // Optimization.  Avoid calling isConnected() (network call) when not authorized to declare entry as indoubt.
+                if (processInDoubt &&
+                    computeMissedBeat(cacheSnapShotTime, entry) >= maxMissedBeats &&
+                    !isConnected(entry)) {
+                    LOG.log(Level.FINER, "Designating InDoubtState for " + entry.adv.getName());
+                    designateInDoubtState(entry);
+                    //delegate verification to Failure Verifier
+                    LOG.log(Level.FINER, "Notifying FailureVerifier for " + entry.adv.getName());
+                    synchronized (verifierLock) {
+                        outstandingFailureToVerify = true;
+                        verifierLock.notify();
                     }
+                    LOG.log(Level.FINER, "Done Notifying FailureVerifier for " + entry.adv.getName());
+
                 }
             }
         }
 
         private boolean canProcessInDoubt(final HealthMessage.Entry entry) {
             boolean canProcessIndoubt = false;
-            if (masterNode.getMasterNodeID().equals(entry.id)) {
-                canProcessIndoubt = true;
-            } else if (masterNode.isMaster()) {
-                canProcessIndoubt = true;
+
+            //dont suspect self
+            if (!entry.id.equals(localPeerID)) {
+                if (masterNode.getMasterNodeID().equals(entry.id)) {
+                    canProcessIndoubt = true;
+                } else if (masterNode.isMaster()) {
+                    canProcessIndoubt = true;
+                }
             }
             return canProcessIndoubt;
         }
