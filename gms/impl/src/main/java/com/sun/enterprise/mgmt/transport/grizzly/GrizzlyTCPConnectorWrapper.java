@@ -43,13 +43,20 @@ package com.sun.enterprise.mgmt.transport.grizzly;
 import com.sun.enterprise.mgmt.transport.*;
 import com.sun.grizzly.ConnectorHandler;
 import com.sun.grizzly.Controller;
+import com.sun.grizzly.IOEvent;
 import com.sun.grizzly.util.OutputWriter;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.grizzly.AbstractConnectorHandler;
+import com.sun.grizzly.CallbackHandler;
+import com.sun.grizzly.Context;
+import com.sun.grizzly.connectioncache.client.CacheableConnectorHandler;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.SocketAddress;
 import java.net.InetSocketAddress;
+import java.nio.channels.SelectionKey;
+import java.util.Date;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -84,15 +91,12 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
         } else {
             throw new IOException( "peer ID must be GrizzlyPeerID type" );
         }
-        try {
-            return send( remoteSocketAddress, null, message );
-        } catch( IOException ie ) {
-            // once retry
-            return send( remoteSocketAddress, null, message );
+        
+        return send(remoteSocketAddress, null, message, peerID);
         }
-    }
 
-    private boolean send( SocketAddress remoteAddress, SocketAddress localAddress, Message message ) throws IOException {
+    @SuppressWarnings("unchecked")
+    private boolean send( SocketAddress remoteAddress, SocketAddress localAddress, Message message, PeerID target ) throws IOException {
         if( controller == null )
             throw new IOException( "grizzly controller must be initialized" );
         if( remoteAddress == null )
@@ -109,46 +113,89 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
                                                        "grizzlytcpconnectorwrapper.wait.for.getconnector",
                                                        durationGetConnectorHandler);
             }
-            try {
-                connectorHandler.connect( remoteAddress, localAddress );
-//   TBD:  this is a short-term workaround for shoal issue 106 so developer testing is not blocked.
-//         This worksaround for an unhandled NPE from line above. Looks like there is a misuse and/or corruption in the cached ConnectionHandler.
-//         After this failure, the second attempt succeeds.  This is not a true fix but a workaround for time being.
-//            } catch (IOException io) {
-            } catch (Throwable io) {
-                //LOG.log(Level.WARNING, "retry once with another connectorHandler: IOException connecting to connectorHandler:" + connectorHandler.toString() + " remoteAddr:" + remoteAddress +
-                //        " message:" + message, io);
-                if (LOG.isLoggable(Level.FINE)){
-                    LOG.log(Level.FINE, "handled exception during connect to remote address: " + remoteAddress + ": workaround for shoal issue 106: retry one more time to connect", io);
-                }
-                if( connectorHandler != null ) {
+            int attemptNo = 1;
+            do {
+                try {
+                    connectorHandler.connect(remoteAddress, localAddress, new CloseControlCallbackHandler(connectorHandler));
+                } catch (Throwable t) {
+
+                    // close connectorHandler.
                     try {
                         connectorHandler.close();
-                    } catch( IOException e ) {
-                        LOG.log(Level.FINE, "send: exception closing connectorHandler", e);
-                    } finally {
-                        controller.releaseConnectorHandler( connectorHandler );
-                        connectorHandler = null;
+                    } catch (Throwable tt) {
+                        // ignore
                     }
+
+                    // include local call stack.
+                    IOException localIOE = new IOException("failed to connect to " + target.toString(), t);
+                     //AbstractNetworkManager.getLogger().log(Level.WARNING, "failed to connect to target " + target.toString(), localIOE);
+                    throw localIOE;
                 }
-                connectorHandler = controller.acquireConnectorHandler(Controller.Protocol.TCP);
-                connectorHandler.connect( remoteAddress, localAddress );
-                if (LOG.isLoggable(Level.FINE)){
-                    LOG.log(Level.FINE, "reconnect succeeded to remote address:" + remoteAddress + " for message " + message.toString());
-                }
-            }
-            OutputWriter.flushChannel( connectorHandler.getUnderlyingChannel(), message.getPlainByteBuffer(), writeTimeout );
-            //connectorHandler.writeToAsyncQueue( message.getPlainByteBuffer());
-        } finally {
-            if( connectorHandler != null ) {
                 try {
+                    OutputWriter.flushChannel(connectorHandler.getUnderlyingChannel(), message.getPlainByteBuffer(), writeTimeout);
                     connectorHandler.close();
-                } catch( IOException e ) {
-                    LOG.log(Level.FINE, "send: exception closing connectorHandler", e);
+                    break;
+                } catch (Exception e) {
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.log(Level.FINE, "exception during the flushChannel call. Retrying with another connection #" + attemptNo, e);
+                    }
+
+                    forceClose(connectorHandler);
                 }
-                controller.releaseConnectorHandler( connectorHandler );
-            }
+
+                attemptNo++;
+            } while (true);
+        } finally {
+            controller.releaseConnectorHandler(connectorHandler);
         }
+
         return true;
     }
+
+    private void forceClose(ConnectorHandler connectorHandler) throws IOException {
+        if (connectorHandler instanceof CacheableConnectorHandler) {
+            ((CacheableConnectorHandler) connectorHandler).forceClose();
+                }
+            }
+
+    private static final class CloseControlCallbackHandler
+            implements CallbackHandler<Context> {
+
+        private final ConnectorHandler connectorHandler;
+
+        public CloseControlCallbackHandler(ConnectorHandler connectorHandler) {
+            this.connectorHandler = connectorHandler;
+        }
+        
+        @Override
+        public void onConnect(IOEvent<Context> ioEvent) {
+            SelectionKey key = ioEvent.attachment().getSelectionKey();
+            if (connectorHandler instanceof AbstractConnectorHandler) {
+                ((AbstractConnectorHandler) connectorHandler).setUnderlyingChannel(
+                        key.channel());
+            }
+
+                try {
+                connectorHandler.finishConnect(key);
+                ioEvent.attachment().getSelectorHandler().register(key,
+                        SelectionKey.OP_READ);
+            } catch (IOException ex) {
+                Controller.logger().severe(ex.getMessage());
+                }
+            }
+
+        @Override
+        public void onRead(IOEvent<Context> ioEvent) {
+            // We don't expect any read, so if any data comes - we suppose it's "close" notification
+            final Context context = ioEvent.attachment();
+            final SelectionKey selectionKey = context.getSelectionKey();
+            // close the channel
+            context.getSelectorHandler().addPendingKeyCancel(selectionKey);
+        }
+
+        @Override
+        public void onWrite(IOEvent<Context> ioe) {
+    }
+
+}
 }

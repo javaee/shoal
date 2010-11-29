@@ -59,12 +59,14 @@ import com.sun.enterprise.mgmt.transport.NetworkUtility;
 import com.sun.enterprise.mgmt.transport.VirtualMulticastSender;
 
 import com.sun.grizzly.*;
+import com.sun.grizzly.connectioncache.spi.transport.ContactInfo;
 import com.sun.grizzly.util.ThreadPoolConfig;
 import com.sun.grizzly.util.GrizzlyExecutorService;
 import com.sun.grizzly.util.SelectorFactory;
 import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.grizzly.connectioncache.spi.transport.ConnectionFinder;
 
 import java.net.*;
 import java.util.*;
@@ -242,7 +244,25 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         execService = GrizzlyExecutorService.createInstance(threadPoolConfig);
         controller.setThreadPool( execService );
 
-        ConnectorHandlerPool cacheableHandlerPool = new CacheableConnectorHandlerPool( controller, highWaterMark, numberToReclaim, maxParallelSendConnections);
+        final CacheableConnectorHandlerPool cacheableHandlerPool =
+                new CacheableConnectorHandlerPool( controller, highWaterMark,
+                numberToReclaim, maxParallelSendConnections,
+                new ConnectionFinder<ConnectorHandler>() {
+
+            @Override
+            public ConnectorHandler find(ContactInfo<ConnectorHandler> cinfo,
+                    Collection<ConnectorHandler> idleConnections,
+                    Collection<ConnectorHandler> busyConnections)
+                    throws IOException {
+
+                if (!idleConnections.isEmpty()) {
+                    return null;
+                }
+
+                return cinfo.createConnection();
+            }
+        });
+        
         controller.setConnectorHandlerPool( cacheableHandlerPool );
 
         tcpSelectorHandler = new ReusableTCPSelectorHandler();
