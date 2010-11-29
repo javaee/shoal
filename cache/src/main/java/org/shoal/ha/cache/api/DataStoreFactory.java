@@ -40,15 +40,10 @@
 
 package org.shoal.ha.cache.api;
 
-import org.shoal.adapter.store.commands.*;
-import org.shoal.ha.cache.impl.util.DefaultDataStoreEntryHelper;
-import org.shoal.ha.cache.impl.util.StringKeyHelper;
+import org.shoal.ha.cache.impl.store.*;
 import org.shoal.ha.mapper.DefaultKeyMapper;
-import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.group.GroupServiceFactory;
-import org.shoal.ha.mapper.KeyMapper;
-import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
 
 import java.io.Serializable;
 
@@ -58,31 +53,24 @@ import java.io.Serializable;
 public class DataStoreFactory {
 
     public static DataStore<String, Serializable> createDataStore(String storeName, String instanceName, String groupName) {
-        DataStoreKeyHelper<String> keyHelper = new StringKeyHelper();
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(instanceName, groupName);
 
         Class<Serializable> vClazz = Serializable.class;
-        ClassLoader loader = vClazz.getClassLoader();
-        if (loader == null) {
-            loader = ClassLoader.getSystemClassLoader();
-        }
-        DataStoreConfigurator<String, Serializable> conf = new DataStoreConfigurator<String, Serializable>();
+        DataStoreContext<String, Serializable> conf = new DataStoreContext<String, Serializable>();
         conf.setStartGMS(true);
         conf.setStoreName(storeName)
                 .setInstanceName(instanceName)
                 .setGroupName(groupName)
                 .setKeyClazz(String.class)
                 .setValueClazz(vClazz)
-                .setClassLoader(loader)
-                .setDataStoreKeyHelper(keyHelper)
                 .setKeyMapper(keyMapper)
                 .setDoAddCommands()
-                .setDoSynchronousReplication(false)
-                .setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
+                .setDoSynchronousReplication(false);
 
         return createDataStore(conf);
     }
 
+    /*
     public static <K, V extends Serializable> DataStore<K, V> createDataStore(String storeName, String instanceName, String groupName,
                                                   Class<K> keyClazz, Class<V> vClazz, ClassLoader loader) {
         if (loader == null) {
@@ -130,50 +118,12 @@ public class DataStoreFactory {
 
         return createDataStore(conf);
     }
+    */
 
-    public static <K, V extends Serializable> DataStore<K, V> createDataStore(DataStoreConfigurator<K, V> conf) {
-        GroupService gs = GroupServiceFactory.getInstance().getGroupService(conf.getInstanceName(), conf.getGroupName(), conf.isStartGMS());
-
-        if (conf.getClassLoader() == null) {
-            conf.setClassLoader(ClassLoader.getSystemClassLoader());
-        }
-        
-        if (conf.getKeyMapper() == null) {
-            conf.setKeyMapper(new DefaultKeyMapper(conf.getInstanceName(), conf.getGroupName()));
-        }
-
-        if (conf.getKeyMapper() instanceof GroupMemberEventListener) {
-            GroupMemberEventListener groupListener = (GroupMemberEventListener) conf.getKeyMapper();
-            gs.registerGroupMemberEventListener(groupListener);
-        }
-
-        if (conf.getObjectInputOutputStreamFactory() == null) {
-            conf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
-        }
-
-        if (conf.getDataStoreEntryHelper() == null) {
-            conf.setDataStoreEntryHelper(
-                new DefaultDataStoreEntryHelper<K, V>(conf.getObjectInputOutputStreamFactory(),
-                        conf.getClassLoader(), 10 * 60 * 1000));
-        }
-
-        if (conf.getDataStoreKeyHelper() == null) {
-            conf.setDataStoreKeyHelper(new ObjectKeyHelper<K>(
-                    conf.getClassLoader(), conf.getObjectInputOutputStreamFactory()));
-        }
-
-        if (conf.isDoAddCommands()) {
-            conf.addCommand(new SaveCommand<K, V>());
-            conf.addCommand(new SimpleAckCommand<K, V>());
-            conf.addCommand(new RemoveCommand<K, V>());
-            conf.addCommand(new LoadRequestCommand<K, V>());
-            conf.addCommand(new LoadResponseCommand<K, V>());
-            conf.addCommand(new StaleCopyRemoveCommand<K, V>());
-
-        }
-        DataStore<K, V> ds = new ReplicatedDataStore<K, V>(conf, gs);
-
-        return ds;
+    public static <K, V extends Serializable> DataStore<K, V> createDataStore(DataStoreContext<K, V> conf) {
+        GroupService gs = GroupServiceFactory.getInstance().getGroupService(
+                conf.getInstanceName(), conf.getGroupName(), conf.isStartGMS());
+        return new ReplicatedDataStore<K, V>(conf, gs);
     }
 
 }

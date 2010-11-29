@@ -40,13 +40,11 @@
 
 package org.shoal.ha.cache.impl.store;
 
-import org.glassfish.ha.store.api.StoreEntryProcessor;
 import org.shoal.ha.cache.api.*;
 
-import java.io.Serializable;
+import java.io.ByteArrayInputStream;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -102,10 +100,16 @@ public class ReplicaStore<K, V> {
         return entry;
     }
 
-    public V getV(K k)
+    public V getV(K k, ClassLoader cl)
         throws DataStoreException {
-        DataStoreEntry<K, V> dse = map.get(k);
-        return dse == null ? null : ctx.getDataStoreEntryHelper().getV(dse);
+
+        V result = null;
+        DataStoreEntry<K, V> entry = map.get(k);
+        synchronized (entry) {
+            result = ctx.getDataStoreEntryUpdater().getV(entry);
+        }
+        
+        return result;
 
     }
 

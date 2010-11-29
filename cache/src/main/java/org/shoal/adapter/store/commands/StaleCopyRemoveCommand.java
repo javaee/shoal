@@ -43,13 +43,10 @@ package org.shoal.adapter.store.commands;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -60,20 +57,15 @@ public class StaleCopyRemoveCommand<K, V>
 
     protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_STALE_REMOVE_COMMAND);
 
-    private K key;
-
     private String staleTargetName;
 
     public StaleCopyRemoveCommand() {
         super(ReplicationCommandOpcode.STALE_REMOVE);
     }
 
-    public K getKey() {
-        return key;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
+    public StaleCopyRemoveCommand(K k) {
+        this();
+        super.setKey(k);
     }
 
     public String getStaleTargetName() {
@@ -83,27 +75,17 @@ public class StaleCopyRemoveCommand<K, V>
     public void setStaleTargetName(String targetName) {
         this.staleTargetName = targetName;
     }
-
+    
     @Override
     protected boolean beforeTransmit() {
         setTargetName(staleTargetName);
         return staleTargetName != null;
     }
 
-    private void writeObject(ObjectOutputStream ros)
-        throws IOException {
-        ros.writeObject(key);
-    }
-
-    private void readObject(ObjectInputStream ris)
-        throws IOException, ClassNotFoundException {
-        key = (K) ris.readObject();
-    }
-
     @Override
     public void execute(String initiator) {
-        dsc.getReplicaStore().remove(key);
-        System.out.println("*********************  REMOVED STALE REPLICA: " + key + "   ** SENT BY: " + initiator);
+        dsc.getReplicaStore().remove(getKey());
+        System.out.println("*********************  REMOVED STALE REPLICA: " + getKey() + "   ** SENT BY: " + initiator);
     }
 
 }

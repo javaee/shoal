@@ -38,12 +38,19 @@
  * holder.
  */
 
-package org.shoal.ha.cache.api;
+package org.shoal.ha.cache.impl.store;
 
+import org.shoal.adapter.store.commands.SaveCommand;
+import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ObjectInputStreamWithLoader;
 import org.shoal.ha.cache.impl.command.Command;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.logging.Level;
 
 
 /**
@@ -57,15 +64,19 @@ public class DataStoreEntry<K, V> {
 
     private String replicaInstanceName;
 
-    private List<Command<K, V>> pendingUpdates;
+    private TreeSet<SaveCommand<K, V>> pendingUpdates;
 
     private boolean removed;
 
     private long lastAccessedAt;
 
-    private long version;
+    private long maxIdleTime;
 
-    private String reasonForRemoval;
+    private long version = -1;
+
+    private byte[] rawV;
+
+    private boolean isReplicaNode = true;
 
     public DataStoreEntry() {
 
@@ -79,12 +90,25 @@ public class DataStoreEntry<K, V> {
         return key;
     }
 
-    public V getV() {
+    /*package*/ V getV() {
         return v;
+    }
+
+    public void setVersion(long version) {
+        this.version = version;
     }
 
     public void setV(V state) {
         this.v = state;
+    }
+
+    public byte[] getRawV() {
+        return rawV;
+    }
+
+    public void setRawV(byte[] rawV) {
+        this.rawV = rawV;
+        this.v = null;
     }
 
     public String getReplicaInstanceName() {
@@ -98,7 +122,7 @@ public class DataStoreEntry<K, V> {
         return oldValue == null ? null : oldValue.equals(replicaInstanceName) ? null : oldValue;
     }
 
-    public List<Command<K, V>> getPendingUpdates() {
+    public TreeSet<SaveCommand<K, V>> getPendingUpdates() {
         return pendingUpdates;
     }
 
@@ -109,9 +133,16 @@ public class DataStoreEntry<K, V> {
         }
     }
 
-    public void addPendingUpdate(Command<K, V> cmd) {
+    public void addPendingUpdate(SaveCommand<K, V> cmd) {
         if (pendingUpdates == null) {
-            pendingUpdates = new ArrayList<Command<K, V>>();
+            pendingUpdates = new TreeSet<SaveCommand<K, V>>(
+                    new Comparator<SaveCommand<K, V>>() {
+                        @Override
+                        public int compare(SaveCommand<K, V> cmd1, SaveCommand<K, V> cmd2) {
+                            return (int) (cmd1.getVersion() - cmd2.getVersion());
+                        }
+                    }
+            );
         }
         this.pendingUpdates.add(cmd);
     }
@@ -124,7 +155,6 @@ public class DataStoreEntry<K, V> {
         this.removed = true;
         v = null;
         pendingUpdates = null;
-        reasonForRemoval = reason;
     }
 
     public long getLastAccessedAt() {
@@ -143,4 +173,19 @@ public class DataStoreEntry<K, V> {
         return ++version;
     }
 
+    public long getMaxIdleTime() {
+        return maxIdleTime;
+    }
+
+    public void setMaxIdleTime(long maxIdleTime) {
+        this.maxIdleTime = maxIdleTime;
+    }
+
+    public boolean isReplicaNode() {
+        return isReplicaNode;
+    }
+
+    public void setIsReplicaNode(boolean replicaNode) {
+        isReplicaNode = replicaNode;
+    }
 }

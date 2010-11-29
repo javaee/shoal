@@ -58,7 +58,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class SizeResponseCommand<K, V>
-        extends Command<K, V> {
+        extends Command {
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SIZE_RESPONSE_COMMAND);
 
@@ -72,6 +72,7 @@ public class SizeResponseCommand<K, V>
 
     public SizeResponseCommand() {
         super(ReplicationCommandOpcode.SIZE_RESPONSE);
+        super.setKey("SizeResp:" + tokenId);
     }
 
     public SizeResponseCommand(String originatingInstance, long tokenId, int size) {
@@ -85,6 +86,10 @@ public class SizeResponseCommand<K, V>
     protected boolean beforeTransmit() {
         setTargetName(originatingInstance);
         return originatingInstance != null;
+    }
+
+    public Object getCommandKey() {
+        return "SizeResp:" + tokenId;
     }
 
     private void writeObject(ObjectOutputStream ros)

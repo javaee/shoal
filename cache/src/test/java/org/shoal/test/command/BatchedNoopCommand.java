@@ -56,6 +56,7 @@ public class BatchedNoopCommand
 
     public BatchedNoopCommand() {
         super((byte) 121);
+        super.setKey("NoopBatch" + System.identityHashCode(this));
     }
 
     public boolean beforeTransmit() {

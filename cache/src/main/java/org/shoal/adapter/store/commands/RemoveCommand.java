@@ -41,8 +41,6 @@
 package org.shoal.adapter.store.commands;
 
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.io.IOException;
@@ -58,20 +56,11 @@ public class RemoveCommand<K, V>
 
     protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
 
-    private K key;
-
     private String target;
 
-    public RemoveCommand() {
+    public RemoveCommand(K k) {
         super(ReplicationCommandOpcode.REMOVE);
-    }
-
-    public K getKey() {
-        return key;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
+        super.setKey(k);
     }
 
     public void setTarget(String t) {
@@ -84,24 +73,12 @@ public class RemoveCommand<K, V>
         return target != null;
     }
 
-    private void writeObject(ObjectOutputStream ros) throws IOException {
-        ros.writeObject(key);
-    }
-
-    private void readObject(ObjectInputStream ris)
-        throws IOException, ClassNotFoundException {
-        key = (K) ris.readObject();
-    }
-
     @Override
     public void execute(String initiator) {
-        dsc.getReplicaStore().remove(key);
+        dsc.getReplicaStore().remove(getKey());
         if (dsc.isDoSynchronousReplication()) {
             super.sendAcknowledgement();
         }
     }
-
-    public String toString() {
-        return getName() + "(" + key + ")";
-    }
+    
 }

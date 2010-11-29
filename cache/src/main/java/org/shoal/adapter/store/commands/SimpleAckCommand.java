@@ -58,7 +58,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class SimpleAckCommand<K, V>
-        extends Command<K, V> {
+        extends Command {
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
 
@@ -74,6 +74,7 @@ public class SimpleAckCommand<K, V>
 
     public SimpleAckCommand(String targetInstanceName, long tokenId) {
         this();
+        super.setKey("SimpleAck:" + tokenId);
         this.targetInstanceName = targetInstanceName;
         this.tokenId = tokenId;
     }
@@ -88,6 +89,7 @@ public class SimpleAckCommand<K, V>
     }
 
     protected boolean beforeTransmit() {
+        super.setTargetName(targetInstanceName);
         return targetInstanceName != null;
     }
 
@@ -101,7 +103,6 @@ public class SimpleAckCommand<K, V>
 
     @Override
     public void execute(String initiator) {
-
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {

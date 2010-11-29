@@ -40,15 +40,12 @@
 
 package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreEntry;
+import org.shoal.ha.cache.impl.store.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -60,38 +57,33 @@ public class SaveCommand<K, V>
 
     private transient static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
 
-    private K k;
+    private transient V v;
 
-    private V v;
+    protected long version;
 
-    private long version;
+    protected long lastAccessedAt;
 
-    private long lastAccessedAt;
+    protected long maxIdleTime;
 
-    private String targetInstanceName;
+    private transient String targetInstanceName;
+
+    private transient byte[] rawV;
 
     public SaveCommand() {
         super(ReplicationCommandOpcode.SAVE);
     }
 
-    public SaveCommand(K k, V v, long version, long lastAccessedAt) {
+    public SaveCommand(K k, V v, long version, long lastAccessedAt, long maxIdleTime) {
         this();
-        setKey(k);
-        setValue(v);
+        super.setKey(k);
+        this.v = v;
         this.version = version;
         this.lastAccessedAt = lastAccessedAt;
-    }
-
-    public void setKey(K k) {
-        this.k = k;
-    }
-
-    public void setValue(V v) {
-        this.v = v;
+        this.maxIdleTime = maxIdleTime;
     }
 
     public boolean beforeTransmit() {
-        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), k);
+        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), getKey());
         super.setTargetName(targetInstanceName);
         super.beforeTransmit();
         return getTargetName() != null;
@@ -102,12 +94,11 @@ public class SaveCommand<K, V>
         throws DataStoreException {
 
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received save_command for " + k + " from " + initiator);
+            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received save_command for " + getKey() + " from " + initiator);
         }
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(k);
+        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(getKey());
         synchronized (entry) {
-            entry.setV((V) v);
-            entry.setLastAccessedAt(lastAccessedAt);
+            dsc.getDataStoreEntryUpdater().executeSave(entry, this);
         }
 
         if (dsc.isDoSynchronousReplication()) {
@@ -117,7 +108,7 @@ public class SaveCommand<K, V>
     }
 
     public String toString() {
-        return getName() + "(" + k + ")";
+        return getName() + "(" + getKey() + ")";
     }
 
     @Override
@@ -127,24 +118,47 @@ public class SaveCommand<K, V>
 
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
-        out.writeObject(k);
-        out.writeObject(v);
         out.writeLong(version);
         out.writeLong(lastAccessedAt);
+        out.writeLong(maxIdleTime);
+
+        rawV = dsc.getDataStoreEntryUpdater().getState(v);
+        out.writeInt(rawV.length);
+        out.write(rawV);
+        
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getServiceName() + " sending save_command for " + k + "; v = " + v + "; to " + getTargetName());
+            _logger.log(Level.FINE, dsc.getServiceName() + " sending save_command for " + getKey() + "; version = " + version + "; lastAccessedAt = " + lastAccessedAt + "; to " + getTargetName());
         }
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public long getLastAccessedAt() {
+        return lastAccessedAt;
+    }
+
+    public long getMaxIdleTime() {
+        return maxIdleTime;
+    }
+
+    public byte[] getRawV() {
+        return rawV;
     }
 
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
-        k = (K) in.readObject();
-        v = (V) in.readObject();
         version = in.readLong();
         lastAccessedAt = in.readLong();
+        maxIdleTime = in.readLong();
+
+        int len = in.readInt();
+        rawV = new byte[len];
+        in.readFully(rawV);
 
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, "==> read data for key " + k + " => " + v + " using " + in.getClass().getCanonicalName());
+            _logger.log(Level.FINE, "==> read data for key " + getKey() + " => " + version + "; lastAccessedAt = " + lastAccessedAt + " using " + in.getClass().getCanonicalName());
         }
     }
     

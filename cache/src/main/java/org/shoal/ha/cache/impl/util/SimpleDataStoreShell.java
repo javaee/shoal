@@ -40,20 +40,13 @@
 
 package org.shoal.ha.cache.impl.util;
 
-import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.Storeable;
-import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
-import org.shoal.ha.cache.api.DataStore;
-import org.shoal.ha.cache.api.DataStoreConfigurator;
-import org.shoal.ha.cache.api.DataStoreFactory;
-import org.shoal.ha.cache.api.DataStoreKeyHelper;
-import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
+import org.shoal.ha.cache.api.*;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -70,10 +63,9 @@ public class SimpleDataStoreShell {
 
     public static void main(String[] args)
         throws Exception {
-        DataStoreKeyHelper<String> keyHelper = new StringKeyHelper();
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
 
-        DataStoreConfigurator<String, String> conf = new DataStoreConfigurator<String, String>();
+        DataStoreContext<String, String> conf = new DataStoreContext<String, String>();
         conf.setStoreName(args[0])
                 .setInstanceName(args[1])
                 .setGroupName(args[2])

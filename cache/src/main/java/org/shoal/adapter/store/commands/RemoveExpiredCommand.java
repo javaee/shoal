@@ -56,7 +56,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class RemoveExpiredCommand<K, V>
-    extends Command<K, V> {
+    extends Command {
 
     protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
 
@@ -70,6 +70,8 @@ public class RemoveExpiredCommand<K, V>
         super(ReplicationCommandOpcode.REMOVE_EXPIRED);
         this.maxIdleInMillis = maxIdleInMillis;
         this.tokenId = tokenId;
+
+        super.setKey("RemExpired" + System.identityHashCode(this));
     }
 
     public void setTarget(String t) {
@@ -81,6 +83,10 @@ public class RemoveExpiredCommand<K, V>
         return target != null;
     }
 
+    public Object getCommandKey() {
+        return "RemExpired" + System.identityHashCode(this);
+    }
+    
     private void writeObject(ObjectOutputStream ros) throws IOException {
         ros.writeLong(maxIdleInMillis);
         ros.writeLong(tokenId);

@@ -40,95 +40,155 @@
 
 package org.shoal.ha.cache.api;
 
+import org.glassfish.ha.store.api.BackingStoreConfiguration;
+import org.glassfish.ha.store.api.Storeable;
+import org.shoal.ha.cache.impl.store.DataStoreEntry;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.group.GroupService;
-import org.shoal.ha.mapper.KeyMapper;
 import org.shoal.ha.cache.impl.command.CommandManager;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
+import org.shoal.ha.mapper.KeyMapper;
+
+import java.util.Map;
 
 /**
  * @author Mahesh Kannan
  */
-public class DataStoreContext<K, V> {
-
-    private String serviceName;
-
-    private String instanceName;
-
-    private String groupName;
-
-    private DataStoreKeyHelper<K> dataStoreKeyHelper;
-
-    private DataStoreEntryHelper<K, V> dataStoreEntryHelper;
+public class DataStoreContext<K, V>
+    extends DataStoreConfigurator<K, V> {
 
     private CommandManager<K, V> cm;
-
-    private KeyMapper keyMapper;
 
     private ResponseMediator responseMediator;
 
     private GroupService groupService;
 
-    private ReplicaStore<K, V> replica;
-
-    private boolean cacheLocally;
-
-    private boolean doSynchronousReplication;
-
-    private ClassLoader loader;
-
-    private IdleEntryDetector<K, V> idleDetector;
+    private ReplicaStore<K, V> replicaStore;
 
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
-        this.serviceName = serviceName;
+        super.setStoreName(serviceName);
+        super.setInstanceName(gs.getMemberName());
         this.groupService = gs;
-        this.instanceName = gs.getMemberName();
-        this.groupName = gs.getGroupName();
-        this.cm = new CommandManager<K, V>(this);
-        this.responseMediator = new ResponseMediator();
+        super.setClassLoader(loader);
+    }
+    
+    public DataStoreContext() {
+        super();
+    }
 
-        replica = new ReplicaStore<K, V>(this);
-        if (idleDetector != null) {
-            replica.setIdleEntryDetector(idleDetector);
+    public DataStoreContext(BackingStoreConfiguration conf) {
+        setInstanceName(conf.getInstanceName())
+                .setGroupName(conf.getClusterName())
+                .setStoreName(conf.getStoreName())
+                .setKeyClazz(conf.getKeyClazz())
+                .setValueClazz(conf.getValueClazz());
+        Map<String, Object> vendorSpecificMap = conf.getVendorSpecificSettings();
+
+        Object stGMS = vendorSpecificMap.get("start.gms");
+        boolean startGMS = false;
+        if (stGMS != null) {
+            if (stGMS instanceof String) {
+                try {
+                    startGMS = Boolean.valueOf((String) stGMS);
+                } catch (Throwable th) {
+                    //Ignore
+                }
+            } else if (stGMS instanceof Boolean) {
+                startGMS = (Boolean) stGMS;
+            }
         }
 
-        setClassLoader(loader);
+        Object cacheLocally = vendorSpecificMap.get("local.caching");
+        boolean enableLocalCaching = false;
+        if (cacheLocally != null) {
+            if (cacheLocally instanceof String) {
+                try {
+                    enableLocalCaching = Boolean.valueOf((String) cacheLocally);
+                } catch (Throwable th) {
+                    //Ignore
+                }
+            } else if (cacheLocally instanceof Boolean) {
+                enableLocalCaching = (Boolean) stGMS;
+            }
+        }
+
+        ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
+        if (cl == null) {
+            cl = conf.getValueClazz().getClassLoader();
+        }
+        if (cl == null) {
+            cl = ClassLoader.getSystemClassLoader();
+        }
+
+        setClassLoader(cl)
+                .setStartGMS(startGMS)
+                .setCacheLocally(enableLocalCaching);
+
+        boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
+                ? true : (Boolean) vendorSpecificMap.get("async.replication");
+        setDoSynchronousReplication(! asyncReplication);
+
+        KeyMapper keyMapper = (KeyMapper) vendorSpecificMap.get("key.mapper");
+        if (keyMapper != null) {
+            setKeyMapper(keyMapper);
+        }
+
+        /*
+        dsConf.addCommand(new SaveCommand<K, V>());
+        dsConf.addCommand(new SimpleAckCommand<K, V>());
+        dsConf.addCommand(new RemoveCommand<K, V>(null));
+        dsConf.addCommand(new LoadRequestCommand<K, V>());
+        dsConf.addCommand(new LoadResponseCommand<K, V>());
+        dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
+        dsConf.addCommand(new TouchCommand<K, V>());
+        dsConf.addCommand(new SizeRequestCommand<K, V>());
+        dsConf.addCommand(new SizeResponseCommand<K, V>());
+        dsConf.addCommand(new NoOpCommand<K, V>());
+        */
+
+
+        Object idleTimeInMillis = vendorSpecificMap.get("max.idle.timeout.in.seconds");
+        if (idleTimeInMillis != null) {
+            long defaultMaxIdleTimeInMillis = -1;
+            if (idleTimeInMillis instanceof Long) {
+                defaultMaxIdleTimeInMillis = (Long) idleTimeInMillis;
+            } else if (idleTimeInMillis instanceof String) {
+                try {
+                    defaultMaxIdleTimeInMillis = Long.valueOf((String) idleTimeInMillis);
+                } catch (Exception ex) {
+                    //Ignore
+                }
+            }
+            
+            setDefaultMaxIdleTimeInMillis(defaultMaxIdleTimeInMillis);
+        }
+
+        Object safeToDelayCaptureStateObj = vendorSpecificMap.get("value.class.is.thread.safe");
+        if (safeToDelayCaptureStateObj != null) {
+            boolean safeToDelayCaptureState = true;
+            if (safeToDelayCaptureStateObj instanceof Boolean) {
+                safeToDelayCaptureState = (Boolean) safeToDelayCaptureStateObj;
+            } else if (safeToDelayCaptureStateObj instanceof String) {
+                try {
+                    safeToDelayCaptureState = Boolean.valueOf((String) safeToDelayCaptureStateObj);
+                } catch (Exception ex) {
+                    //Ignore
+                }
+            }
+
+            setSafeToDelayCaptureState(safeToDelayCaptureState);
+        }
+    }
+
+    public void completeInitialization() {
+        //this.groupService = gs;
+
+
+        initIdleEntryProcessor();
     }
 
     public String getServiceName() {
-        return serviceName;
-    }
-
-    public String getInstanceName() {
-        return instanceName;
-    }
-
-    public String getGroupName() {
-        return groupName;
-    }
-
-    public DataStoreKeyHelper<K> getDataStoreKeyHelper() {
-        return dataStoreKeyHelper;
-    }
-
-    public void setDataStoreKeyHelper(DataStoreKeyHelper<K> dataStoreKeyHelper) {
-        this.dataStoreKeyHelper = dataStoreKeyHelper;
-    }
-
-    public DataStoreEntryHelper<K, V> getDataStoreEntryHelper() {
-        return dataStoreEntryHelper;
-    }
-
-    public void setDataStoreEntryHelper(DataStoreEntryHelper<K, V> dataStoreEntryHelper) {
-        this.dataStoreEntryHelper = dataStoreEntryHelper;
-    }
-
-    public KeyMapper getKeyMapper() {
-        return keyMapper;
-    }
-
-    public void setKeyMapper(KeyMapper keyMapper) {
-        this.keyMapper = keyMapper;
+        return super.getStoreName();
     }
 
     public CommandManager<K, V> getCommandManager() {
@@ -139,36 +199,62 @@ public class DataStoreContext<K, V> {
         return responseMediator;
     }
 
+    public void setResponseMediator(ResponseMediator responseMediator) {
+        this.responseMediator = responseMediator;
+    }
+
     public GroupService getGroupService() {
         return groupService;
     }
 
+    public void setCommandManager(CommandManager<K, V> cm) {
+        this.cm = cm;
+    }
+
+    public void setGroupService(GroupService groupService) {
+        this.groupService = groupService;
+    }
+
+    public void setReplicaStore(ReplicaStore<K, V> replicaStore) {
+        this.replicaStore = replicaStore;
+    }
+
     public ReplicaStore<K, V> getReplicaStore() {
-        return replica;
+        return replicaStore;
     }
 
-    public boolean isCacheLocally() {
-        return cacheLocally;
-    }
-
-    public void setCacheLocally(boolean cacheLocally) {
-        this.cacheLocally = cacheLocally;
-    }
-
-    public ClassLoader getClassLoader() {
-        return loader;
-    }
-
-    public void setClassLoader(ClassLoader loader) {
-        this.loader = loader;
-    }
-
-    public final boolean isDoSynchronousReplication() {
-        return doSynchronousReplication;
-    }
-
-    public void setDoSyncReplication(boolean doSyncReplication) {
-        this.doSynchronousReplication = doSyncReplication;
-        System.out.println("**DataStorecontext.setDoSyncReplication = " + doSyncReplication);
+    private void initIdleEntryProcessor() {
+                try {
+            if (Storeable.class.isAssignableFrom(getValueClazz())) {
+                super.setIdleEntryDetector(
+                        new IdleEntryDetector<K, V>() {
+                            @Override
+                            public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
+    //                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
+    //                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
+    //                                    + " < now=" +nowInMillis);
+                                return entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
+                            }
+                        }
+                    );
+            } else {
+                if (super.getDefaultMaxIdleTimeInMillis() > 0) {
+                    final long defaultMaxIdleTimeInMillis = super.getDefaultMaxIdleTimeInMillis() * 1000;
+                    super.setIdleEntryDetector(
+                        new IdleEntryDetector<K, V>() {
+                            @Override
+                            public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
+    //                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
+    //                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
+    //                                    + " < now=" +nowInMillis);
+                                return kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
+                            }
+                        }
+                    );
+                }
+            }
+        } catch (Exception ex) {
+            //TODO
+        }
     }
 }

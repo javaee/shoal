@@ -40,31 +40,25 @@
 
 package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.CommandResponse;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class SizeRequestCommand<K, V>
-        extends Command<K, V> {
+        extends Command {
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SIZE_REQUEST_COMMAND);
 
@@ -76,6 +70,7 @@ public class SizeRequestCommand<K, V>
 
     public SizeRequestCommand() {
         super(ReplicationCommandOpcode.SIZE_REQUEST);
+        super.setKey("SizeReq:" + tokenId);
     }
 
     public SizeRequestCommand(String targetInstanceName) {
@@ -93,9 +88,9 @@ public class SizeRequestCommand<K, V>
         setTargetName(targetInstanceName);
         return targetInstanceName != null;
     }
+
     private void writeObject(ObjectOutputStream ros)
         throws IOException {
-
         
         ros.writeUTF(dsc.getInstanceName());
         ros.writeUTF(targetInstanceName);

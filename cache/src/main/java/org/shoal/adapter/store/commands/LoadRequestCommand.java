@@ -40,7 +40,7 @@
 
 package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreEntry;
+import org.shoal.ha.cache.impl.store.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
@@ -63,11 +63,11 @@ public class LoadRequestCommand<K, V>
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
 
-    private K key;
-
     private transient CommandResponse resp;
 
     private transient Future future;
+
+    private long minVersion = -1;
 
     private long tokenId;
 
@@ -79,9 +79,10 @@ public class LoadRequestCommand<K, V>
         super(ReplicationCommandOpcode.LOAD_REQUEST);
     }
 
-    public LoadRequestCommand(K key, String t) {
+    public LoadRequestCommand(K key, long minVersion, String t) {
         this();
-        this.key = key;
+        super.setKey(key);
+        this.minVersion = minVersion;
         this.target = t;
     }
 
@@ -98,18 +99,18 @@ public class LoadRequestCommand<K, V>
 
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
+        out.writeLong(minVersion);
         out.writeLong(resp.getTokenId());
-        out.writeObject(key);
         out.writeUTF(originatingInstance);
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + key + "to " + target);
+            _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_request command for " + getKey() + "to " + target);
         }
     }
 
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
+        minVersion = in.readLong();
         tokenId = in.readLong();
-        key = (K) in.readObject();
         originatingInstance = in.readUTF();
     }
 
@@ -118,21 +119,35 @@ public class LoadRequestCommand<K, V>
 
         try {
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " received load_request command for " + key + "from " + initiator);
+                _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " received load_request command for " + getKey() + "from " + initiator);
             }
-            DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(key);
-            V v = e == null ? null : (V) e.getV();
+            DataStoreEntry<K, V> e = dsc.getReplicaStore().getEntry(getKey());
 
-            if (!originatingInstance.equals(dsc.getInstanceName())) {
-                LoadResponseCommand<K, V> rsp = new LoadResponseCommand<K, V>(key, v, tokenId);
-                rsp.setOriginatingInstance(originatingInstance);
-                if (_logger.isLoggable(Level.FINE)) {
-                    _logger.log(Level.FINE, dsc.getServiceName() + " executed load_request command for " + key + " from " + initiator + "; v = " + v);
+            if (e != null) {
+                synchronized (e) {
+                    if (!originatingInstance.equals(dsc.getInstanceName())) {
+                        LoadResponseCommand<K, V> rsp = dsc.getDataStoreEntryUpdater().createLoadResponseCommand(e, getKey(), minVersion);
+                        rsp.setTokenId(tokenId);
+                        rsp.setOriginatingInstance(originatingInstance);
+
+                        getCommandManager().execute(rsp);
+                    } else {
+                        resp.setResult(dsc.getDataStoreEntryUpdater().getV(e));
+                    }
                 }
-                getCommandManager().execute(rsp);
             } else {
-                resp.setResult(v);
+                if (!originatingInstance.equals(dsc.getInstanceName())) {
+                    LoadResponseCommand<K, V> rsp = dsc.getDataStoreEntryUpdater().createLoadResponseCommand(null, getKey(), minVersion);
+                    rsp.setTokenId(tokenId);
+                    rsp.setOriginatingInstance(originatingInstance);
+
+                    getCommandManager().execute(rsp);
+                } else {
+                    resp.setResult(null);
+                }
             }
+
+
         } catch (DataStoreException dsEx) {
             resp.setException(dsEx);
         }
@@ -148,6 +163,12 @@ public class LoadRequestCommand<K, V>
             Object result = future.get(waitFor, unit);
             if (result instanceof Exception) {
                 throw new DataStoreException((Exception) result);
+            }
+            LoadResponseCommand<K, V> respCmd = (LoadResponseCommand<K, V>) result;
+            if (respCmd.getVersion() >= minVersion) {
+                result = dsc.getDataStoreEntryUpdater().extractVFrom(respCmd);
+            } else {
+                result = null;
             }
             return (V) result;
         } catch (DataStoreException dsEx) {
@@ -165,7 +186,7 @@ public class LoadRequestCommand<K, V>
     }
 
     public String toString() {
-        return getName() + "(" + key + ")";
+        return getName() + "(" + getKey() + ")";
     }
 
 }

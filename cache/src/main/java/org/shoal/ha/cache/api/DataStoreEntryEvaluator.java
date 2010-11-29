@@ -40,6 +40,8 @@
 
 package org.shoal.ha.cache.api;
 
+import org.shoal.ha.cache.impl.store.DataStoreEntry;
+
 /**
  * @author Mahesh Kannan
  */

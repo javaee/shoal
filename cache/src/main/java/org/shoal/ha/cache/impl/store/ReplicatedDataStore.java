@@ -40,11 +40,13 @@
 
 package org.shoal.ha.cache.impl.store;
 
+import org.glassfish.ha.store.api.Storeable;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
-import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
+import org.shoal.ha.cache.impl.util.SimpleStoreableMetadata;
+import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
 import org.shoal.ha.mapper.KeyMapper;
@@ -53,7 +55,6 @@ import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
 
 import java.io.Serializable;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -83,11 +84,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     private CommandManager<K, V> cm;
 
-    private DataStoreEntryHelper<K, V> transformer;
-
     private DataStoreContext<K, V> dsc;
-
-    private DataStoreConfigurator<K, V> conf;
 
     private ReplicaStore<K, V> replicaStore;
 
@@ -102,31 +99,67 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     private String debugName = "ReplicatedDataStore";
 
-    public ReplicatedDataStore(DataStoreConfigurator<K, V> conf, GroupService gs) {
-        this.conf = conf;
+    public ReplicatedDataStore(DataStoreContext<K, V> conf, GroupService gs) {
+        this.dsc = conf;
         this.storeName = conf.getStoreName();
         this.gs = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
 
-        initialize(conf);
+        initialize();
+        postInitialization();
 
         debugName = conf.getStoreName() + ": ";
     }
 
-    private void initialize(DataStoreConfigurator<K, V> conf) {
-        this.dsc = new DataStoreContext<K, V>(
-                storeName, gs, conf.getClassLoader());
+    private void initialize() {
 
-        this.transformer = conf.getDataStoreEntryHelper();
-        dsc.setDataStoreEntryHelper(transformer);
-        dsc.setDataStoreKeyHelper(conf.getDataStoreKeyHelper());
-        dsc.setKeyMapper(conf.getKeyMapper());
-        cm = dsc.getCommandManager();
+        dsc.setGroupService(gs);
+
+        if (dsc.getClassLoader() == null) {
+            ClassLoader loader = dsc.getValueClazz().getClassLoader();
+            if (loader == null) {
+                loader = ClassLoader.getSystemClassLoader();
+            }
+            dsc.setClassLoader(loader);
+        }
+
+        if (dsc.getKeyMapper() == null) {
+            dsc.setKeyMapper(new DefaultKeyMapper(dsc.getInstanceName(), dsc.getGroupName()));
+        }
+
+        if (dsc.getKeyMapper() instanceof GroupMemberEventListener) {
+            GroupMemberEventListener groupListener = (GroupMemberEventListener) dsc.getKeyMapper();
+            gs.registerGroupMemberEventListener(groupListener);
+        }
+
+    }
+
+    private void postInitialization() {
+
+        Class<V> vClazz = dsc.getValueClazz();
+        DataStoreEntryUpdater<K, V> dseUpdater = null;
+
+        if (dsc.isDoSynchronousReplication()) {
+            dseUpdater = new SimpleDataStoreEntryUpdater();
+        } else if (SimpleStoreableMetadata.class.isAssignableFrom(vClazz)) {
+            dseUpdater = new SimpleStoreableDataStoreEntryUpdater();
+        } else if (Storeable.class.isAssignableFrom(vClazz)) {
+            dseUpdater = new StoreableDataStoreEntryUpdater();
+            dsc.setUseMapToCacheCommands(false);
+        } else {
+            dseUpdater = new SimpleDataStoreEntryUpdater();
+        }
+        dseUpdater.initialize(dsc);
+        dsc.setDataStoreEntryUpdater(dseUpdater);
+
+        this.cm = new CommandManager<K, V>();
+        dsc.setCommandManager(cm);
+        cm.initialize(dsc);
 
 
-        if (conf.getCommands() != null) {
-            for (Command<K, ? super V> cmd : conf.getCommands()) {
+        if (dsc.getCommands() != null) {
+            for (Command<K, ? super V> cmd : dsc.getCommands()) {
                 cm.registerCommand(cmd);
             }
         }
@@ -135,22 +168,22 @@ public class ReplicatedDataStore<K, V extends Serializable>
         cm.registerCommand(new ReplicationFramePayloadCommand<K, V>());
 
 
-        KeyMapper keyMapper = conf.getKeyMapper();
+        KeyMapper keyMapper = dsc.getKeyMapper();
         if ((keyMapper != null) && (keyMapper instanceof DefaultKeyMapper)) {
             gs.registerGroupMemberEventListener((DefaultKeyMapper) keyMapper);
         }
 
+        dsc.setResponseMediator(new ResponseMediator());
+        replicaStore = new ReplicaStore<K, V>(dsc);
+        dsc.setReplicaStore(replicaStore);
+        
         gs.registerGroupMessageReceiver(storeName, cm);
 
         replicaStore = dsc.getReplicaStore();
-        replicaStore.setIdleEntryDetector(conf.getIdleEntryDetector());
+        replicaStore.setIdleEntryDetector(dsc.getIdleEntryDetector());
 
-        _logger.log(Level.INFO, "Created ReplicatedDataStore with config: " + conf);
 
-    }
 
-    public DataStoreContext<K, V> getDataStoreContext() {
-        return dsc;
     }
 
     @Override
@@ -161,12 +194,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
         synchronized (entry) {
             if (!entry.isRemoved()) {
-                entry.setLastAccessedAt(System.currentTimeMillis());
-                entry.incrementAndGetVersion();
-                SaveCommand<K, V> cmd = new SaveCommand<K, V>(k, v,
-                        entry.getVersion(), entry.getLastAccessedAt());
+                SaveCommand<K, V> cmd = dsc.getDataStoreEntryUpdater().createSaveCommand(entry, k, v);
                 cm.execute(cmd);
-                if (conf.isCacheLocally()) {
+                if (dsc.isCacheLocally()) {
                     entry.setV(v);
                 }
 
@@ -174,10 +204,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
                 result = cmd.getKeyMappingInfo();
 
-
                 if ((staleLocation != null) && (! staleLocation.equals(cmd.getTargetName()))) {
-                    StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>();
-                    staleCmd.setKey(k);
+                    StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>(k);
                     staleCmd.setStaleTargetName(staleLocation);
                     cm.execute(staleCmd);
                     _saveLogger.log(Level.WARNING, debugName + "put(" + k + ") sent stale_remove to stale data to " + staleLocation);
@@ -199,7 +227,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
         if (entry != null) {
             if (!entry.isRemoved()) {
-                v = entry.getV();
+                v = dsc.getDataStoreEntryUpdater().getV(entry);
                 if (v != null) {
                     foundLocallyCount.incrementAndGet();
                     if (_loadLogger.isLoggable(Level.FINE)) {
@@ -228,8 +256,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     continue;
                 }
                 simpleBroadcastCount.incrementAndGet();
-                LoadRequestCommand<K, V> command
-                        = new LoadRequestCommand<K, V>(key, target);
+                LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key,
+                        entry == null ? -1 : entry.getVersion(), target);
                 if (_loadLogger.isLoggable(Level.FINE)) {
                     _loadLogger.log(Level.FINE, debugName + "load(" + key
                         + ") Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
@@ -254,8 +282,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     if (targetInstance.equals(dsc.getInstanceName())) {
                         continue;
                     }
-                    LoadRequestCommand<K, V> lrCmd
-                            = new LoadRequestCommand<K, V>(key, targetInstance);
+                    LoadRequestCommand<K, V> lrCmd = new LoadRequestCommand<K, V>(key,
+                            entry == null ? -1 : entry.getVersion(), targetInstance);
                     if (_loadLogger.isLoggable(Level.FINE)) {
                         _loadLogger.log(Level.FINE, debugName + "*load(" + key
                             + ") Trying to load from " + targetInstance);
@@ -275,7 +303,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 if (entry != null) {
                     synchronized (entry) {
                         if (!entry.isRemoved()) {
-                            if (conf.isCacheLocally()) {
+                            if (dsc.isCacheLocally()) {
                                 entry.setV(v);
                             }
 
@@ -315,8 +343,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
         if (targets != null) {
             for (String target : targets) {
-                RemoveCommand<K, V> cmd = new RemoveCommand<K, V>();
-                cmd.setKey(k);
+                RemoveCommand<K, V> cmd = new RemoveCommand<K, V>(k);
                 cmd.setTarget(target);
                 cm.execute(cmd);
             }
@@ -345,7 +372,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     @Override
     public int removeIdleEntries(long idleFor) {
-
+        /*
         String[] targets = dsc.getKeyMapper().getCurrentMembers();
 
         ResponseMediator respMed = dsc.getResponseMediator();
@@ -386,6 +413,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
 
         return finalResult;
+        */
+        return replicaStore.removeExpired();
     }
 
     @Override

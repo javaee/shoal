@@ -41,6 +41,7 @@
 package org.shoal.ha.cache.api;
 
 import org.shoal.ha.cache.impl.command.Command;
+import org.shoal.ha.cache.impl.store.DataStoreEntryUpdater;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.util.ArrayList;
@@ -63,15 +64,9 @@ public class DataStoreConfigurator<K, V> {
 
     private KeyMapper keyMapper;
 
-    private DataStoreKeyHelper<K> dataStoreKeyHelper;
-
     private boolean startGMS;
 
     private ClassLoader clazzLoader;
-
-    private DataStoreEntryHelper<K, V> dataStoreEntryHelper;
-
-    private ObjectInputOutputStreamFactory objectInputOutputStreamFactory;
 
     private boolean cacheLocally;
 
@@ -84,6 +79,18 @@ public class DataStoreConfigurator<K, V> {
     private boolean addCommands;
 
     private IdleEntryDetector<K, V> idleEntryDetector;
+
+    private long defaultMaxIdleTimeInMillis = -1;
+
+    private DataStoreEntryUpdater<K, V> dseUpdater;
+
+    private boolean safeToDelayCaptureState = true;
+
+    private boolean useMapToCacheCommands = true;
+
+    protected DataStoreConfigurator() {
+
+    }
 
     public String getInstanceName() {
         return instanceName;
@@ -138,25 +145,6 @@ public class DataStoreConfigurator<K, V> {
         this.keyMapper = keyMapper;
         return this;
     }
-
-    public DataStoreKeyHelper<K> getDataStoreKeyHelper() {
-        return dataStoreKeyHelper;
-    }
-
-    public DataStoreConfigurator<K, V> setDataStoreKeyHelper(DataStoreKeyHelper<K> dataStoreKeyHelper) {
-        this.dataStoreKeyHelper = dataStoreKeyHelper;
-        return this;
-    }
-
-    public DataStoreEntryHelper<K, V> getDataStoreEntryHelper() {
-        return dataStoreEntryHelper;
-    }
-
-    public DataStoreConfigurator<K, V> setDataStoreEntryHelper(DataStoreEntryHelper<K, V> dataStoreEntryHelper) {
-        this.dataStoreEntryHelper = dataStoreEntryHelper;
-        return this;
-    }
-
     public boolean isStartGMS() {
         return startGMS;
     }
@@ -171,16 +159,8 @@ public class DataStoreConfigurator<K, V> {
     }
 
     public DataStoreConfigurator<K, V> setClassLoader(ClassLoader loader) {
-        this.clazzLoader = loader;
+        this.clazzLoader = loader == null ? ClassLoader.getSystemClassLoader() : loader;
         return this;
-    }
-
-    public ObjectInputOutputStreamFactory getObjectInputOutputStreamFactory() {
-        return objectInputOutputStreamFactory;
-    }
-
-    public void setObjectInputOutputStreamFactory(ObjectInputOutputStreamFactory objectInputOutputStreamFactory) {
-        this.objectInputOutputStreamFactory = objectInputOutputStreamFactory;
     }
 
     public boolean isCacheLocally() {
@@ -196,9 +176,8 @@ public class DataStoreConfigurator<K, V> {
         return doSynchronousReplication;
     }
 
-    public DataStoreConfigurator<K, V> setDoSynchronousReplication(boolean doSynchronousReplication) {
-        this.doSynchronousReplication = doSynchronousReplication;
-        System.out.println("**  SET  ASYNC REPLICATUION: " + doSynchronousReplication);
+    public DataStoreConfigurator<K, V> setDoSynchronousReplication(boolean val) {
+        this.doSynchronousReplication = val;
         return this;
     }
 
@@ -223,8 +202,46 @@ public class DataStoreConfigurator<K, V> {
         return idleEntryDetector;
     }
 
-    public void setIdleEntryDetector(IdleEntryDetector<K, V> idleEntryDetector) {
+    public DataStoreConfigurator<K, V> setIdleEntryDetector(IdleEntryDetector<K, V> idleEntryDetector) {
         this.idleEntryDetector = idleEntryDetector;
+        return this;
+    }
+
+    public long getDefaultMaxIdleTimeInMillis() {
+        return defaultMaxIdleTimeInMillis;
+    }
+
+    public DataStoreConfigurator<K, V> setDefaultMaxIdleTimeInMillis(long defaultMaxIdleTimeInMillis) {
+        this.defaultMaxIdleTimeInMillis = defaultMaxIdleTimeInMillis;
+        return this;
+    }
+
+    public DataStoreEntryUpdater<K, V> getDataStoreEntryUpdater() {
+        return dseUpdater;
+    }
+
+    public DataStoreConfigurator<K, V> setDataStoreEntryUpdater(DataStoreEntryUpdater<K, V> dseUpdater) {
+        this.dseUpdater = dseUpdater;
+        return this;
+    }
+
+
+    public boolean isSafeToDelayCaptureState() {
+        return safeToDelayCaptureState;
+    }
+
+    public DataStoreConfigurator<K, V> setSafeToDelayCaptureState(boolean safeToDelayCaptureState) {
+        this.safeToDelayCaptureState = safeToDelayCaptureState;
+        return this;
+    }
+
+    public boolean isUseMapToCacheCommands() {
+        return useMapToCacheCommands;
+    }
+
+    public DataStoreConfigurator<K, V> setUseMapToCacheCommands(boolean useMapToCacheCommands) {
+        this.useMapToCacheCommands = useMapToCacheCommands;
+        return this;
     }
 
     @Override
@@ -236,13 +253,10 @@ public class DataStoreConfigurator<K, V> {
                 ", keyClazz=" + keyClazz +
                 ", valueClazz=" + valueClazz +
                 ", keyMapper=" + keyMapper +
-                ", dataStoreKeyHelper=" + dataStoreKeyHelper +
                 ", startGMS=" + startGMS +
                 ", cacheLocally= " + cacheLocally +
                 ", clazzLoader=" + clazzLoader +
-                ", dataStoreEntryHelper=" + dataStoreEntryHelper +
                 ", doSynchronousReplication=" + doSynchronousReplication +
-                ", objectInputOutputStreamFactory=" + objectInputOutputStreamFactory +
                 '}';
     }
 }

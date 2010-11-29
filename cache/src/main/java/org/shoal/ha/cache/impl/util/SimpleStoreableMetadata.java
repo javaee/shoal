@@ -38,83 +38,110 @@
  * holder.
  */
 
-package org.shoal.adapter.store.commands;
+package org.shoal.ha.cache.impl.util;
 
-import org.shoal.ha.cache.impl.store.DataStoreEntry;
-import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.command.Command;
-import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.glassfish.ha.store.api.Storeable;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * @author Mahesh Kannan
+ * 
  */
-public class TouchCommand<K, V>
-    extends Command<K, V> {
-
-    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_TOUCH_COMMAND);
+public class SimpleStoreableMetadata
+    implements Storeable {
 
     private long version;
 
-    private long accessTime;
+    private long lastAccessTime;
 
     private long maxIdleTime;
 
-    private String replicaChoices;
+    private boolean isNew;
 
-    public TouchCommand() {
-        super(ReplicationCommandOpcode.TOUCH);
+    private byte[] state;
+
+    private static final String[] _attrNames = new String[] {"state"};
+
+    private static final boolean[] _dirtyStates = new boolean[] {true};
+
+    public SimpleStoreableMetadata() {
+
     }
 
-    public TouchCommand(K k, long version, long accessTime, long maxIdleTime) {
-        this();
-        setKey(k);
+    public SimpleStoreableMetadata(long version, long lastAccessTime, long maxIdleTime, boolean aNew,
+                                   byte[] state) {
         this.version = version;
-        this.accessTime = accessTime;
+        this.lastAccessTime = lastAccessTime;
         this.maxIdleTime = maxIdleTime;
+        isNew = aNew;
+        this.state = state;
     }
 
-    protected boolean beforeTransmit() {
-        replicaChoices = dsc.getKeyMapper().getReplicaChoices(dsc.getGroupName(), getKey());
-        String[] choices = replicaChoices == null ? null : replicaChoices.split(":");
-        super.setTargetName(replicaChoices == null ? null : choices[0]);
-
-        return getTargetName() != null;
-    }
-
-    private void writeObject(ObjectOutputStream ros)
-        throws IOException {
-
-        ros.writeLong(version);
-        ros.writeLong(accessTime);
-        ros.writeLong(maxIdleTime);
-    }
-
-    private void readObject(ObjectInputStream ris)
-        throws IOException, ClassNotFoundException {
-        version = ris.readLong();
-        accessTime = ris.readLong();
-        maxIdleTime = ris.readLong();
+    public byte[] getState() {
+        return state;
     }
 
     @Override
-    public void execute(String initiator)
-        throws DataStoreException {
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getInstanceName() + " received save " + getKey() + " from " + initiator);
-        }
+    public String toString() {
+        return "SimpleStoreableMetadata{" +
+                "version=" + version +
+                ", lastAccessTime=" + lastAccessTime +
+                ", maxIdleTime=" + maxIdleTime +
+                ", isNew=" + isNew +
+                ", state=" + state +
+                '}';
+    }
 
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getEntry(getKey());
-        if (entry != null) {
-            synchronized (entry) {
-               //TODO: dsc.getDataStoreEntryHelper().updateState(k, entry, null);
-            }
-        }
+    @Override
+    public long _storeable_getVersion() {
+        return version;
+    }
+
+    @Override
+    public void _storeable_setVersion(long l) {
+        version = l;
+    }
+
+    @Override
+    public long _storeable_getLastAccessTime() {
+        return lastAccessTime;
+    }
+
+    @Override
+    public void _storeable_setLastAccessTime(long l) {
+        lastAccessTime = l;
+    }
+
+    @Override
+    public long _storeable_getMaxIdleTime() {
+        return maxIdleTime;
+    }
+
+    @Override
+    public void _storeable_setMaxIdleTime(long l) {
+        maxIdleTime = l;
+    }
+
+    @Override
+    public String[] _storeable_getAttributeNames() {
+        return _attrNames;
+    }
+
+    @Override
+    public boolean[] _storeable_getDirtyStatus() {
+        return _dirtyStates;
+    }
+
+    @Override
+    public void _storeable_writeState(OutputStream outputStream) throws IOException {
+        //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void _storeable_readState(InputStream inputStream) throws IOException {
+        //To change body of implemented methods use File | Settings | File Templates.
     }
 }

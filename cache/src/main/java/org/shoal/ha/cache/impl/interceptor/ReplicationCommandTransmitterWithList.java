@@ -62,7 +62,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class ReplicationCommandTransmitterWithList<K, V>
-        implements Runnable {
+        implements Runnable, CommandCollector<K, V> {
 
 
     private static final Logger _logger =
@@ -139,6 +139,11 @@ public class ReplicationCommandTransmitterWithList<K, V>
                 done = mapRef.compareAndSet(batch, frame);
             }
         }
+    }
+
+    @Override
+    public void removeCommand(Command<K, V> cmd) {
+        addCommand(cmd);
     }
 
     private void sendMessage(byte[] data) {

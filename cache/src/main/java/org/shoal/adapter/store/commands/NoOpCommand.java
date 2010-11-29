@@ -40,23 +40,15 @@
 
 package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.api.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class NoOpCommand<K, V>
-    extends Command<K, V> {
+    extends Command {
 
     private transient static final byte[] rawReadState = new byte[] {
             (byte) ReplicationCommandOpcode.NOOP_COMMAND,
@@ -66,12 +58,17 @@ public class NoOpCommand<K, V>
 
     public NoOpCommand() {
         super(ReplicationCommandOpcode.NOOP_COMMAND);
+        super.setKey("Noop" + System.identityHashCode(this));
     }
 
     public boolean beforeTransmit() {
         return true;
     }
 
+    public Object getCommandKey() {
+        return "Noop" + System.identityHashCode(this);
+    }
+    
     @Override
     public void execute(String initiator)
         throws DataStoreException {

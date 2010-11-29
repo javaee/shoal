@@ -38,22 +38,21 @@
  * holder.
  */
 
-package org.shoal.ha.cache.api;
+package org.shoal.ha.cache.impl.interceptor;
 
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
-
-import java.io.IOException;
+import org.shoal.ha.cache.api.DataStoreContext;
+import org.shoal.ha.cache.impl.command.Command;
 
 /**
  * @author Mahesh Kannan
+ * 
  */
-public interface DataStoreKeyHelper<K> {
+public interface CommandCollector<K, V> {
+    void initialize(String targetName, DataStoreContext<K, V> rsInfo);
 
-    public void writeKey(ReplicationOutputStream ros, K k)
-            throws IOException;
+    void close();
 
-    public K readKey(ReplicationInputStream ris)
-            throws IOException;
+    void addCommand(Command<K, V> cmd);
 
+    void removeCommand(Command<K, V> cmd);
 }

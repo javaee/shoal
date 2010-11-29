@@ -40,6 +40,7 @@
 
 package org.shoal.adapter.store.commands;
 
+import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
@@ -59,9 +60,9 @@ public class LoadResponseCommand<K, V>
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
 
-    private K key;
+    private long version;
 
-    private V v;
+    private byte[] rawV;
 
     private long tokenId;
 
@@ -73,15 +74,27 @@ public class LoadResponseCommand<K, V>
         super(ReplicationCommandOpcode.LOAD_RESPONSE);
     }
 
-    public LoadResponseCommand(K key, V v, long tokenId) {
+    public LoadResponseCommand(K key, long version, byte[] rawV) {
         this();
-        this.key = key;
-        this.v = v;
+        super.setKey(key);
+        this.version = version;
+        this.rawV = rawV;
+    }
+
+    public void setTokenId(long tokenId) {
         this.tokenId = tokenId;
+    }
+
+    public long getVersion() {
+        return version;
     }
 
     public void setOriginatingInstance(String originatingInstance) {
         this.originatingInstance = originatingInstance;
+    }
+
+    public byte[] getRawV() {
+        return rawV;
     }
 
     protected boolean beforeTransmit() {
@@ -92,57 +105,55 @@ public class LoadResponseCommand<K, V>
     private void writeObject(ObjectOutputStream out)
         throws IOException {
 
-
+        out.writeLong(version);
         out.writeLong(tokenId);
         out.writeUTF(originatingInstance);
         out.writeUTF(dsc.getInstanceName());
 
-        out.writeObject(key);
-        out.writeBoolean(v != null);
-        if (v != null) {
-            out.writeObject(v);
+        out.writeBoolean(rawV != null);
+        if (rawV != null) {
+            out.writeInt(rawV.length);
+            out.write(rawV);
         }
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, dsc.getInstanceName() + getName() + " sending load_response command for "
-                    + key + " to " + originatingInstance + "; " + v);
+                    + getKey() + " to " + originatingInstance + "; version = " + version + "; state = "
+                    + (rawV == null ? "NOT_FOUND" : rawV.length));
         }
     }
 
-
-
     private void readObject(ObjectInputStream ris)
         throws IOException {
-        try {
-            tokenId = ris.readLong();
-            originatingInstance = ris.readUTF();
-            respondingInstanceName = ris.readUTF();
-            key = (K) ris.readObject();
-            boolean notNull = ris.readBoolean();
-            if (notNull) {
-                v = (V) ris.readObject();
-            }
-        } catch (ClassNotFoundException cnfEx) {
-            throw new IOException(cnfEx);
+        version = ris.readLong();
+        tokenId = ris.readLong();
+        originatingInstance = ris.readUTF();
+        respondingInstanceName = ris.readUTF();
+        boolean notNull = ris.readBoolean();
+        if (notNull) {
+            int vLen = ris.readInt();
+            rawV = new byte[vLen];
+            ris.readFully(rawV);
         }
     }
 
     @Override
-    public void execute(String initiator) {
+    public void execute(String initiator)
+        throws DataStoreException {
 
         ResponseMediator respMed = getDataStoreContext().getResponseMediator();
         CommandResponse resp = respMed.getCommandResponse(tokenId);
         if (resp != null) {
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, dsc.getInstanceName() + " received load_response key=" + key + "; value=" + v
+                _logger.log(Level.FINE, dsc.getInstanceName() + " received load_response key=" + getKey() + "; version=" + version
                 + "; from " + respondingInstanceName);
             }
 
             resp.setRespondingInstanceName(respondingInstanceName);
-            resp.setResult(v);
+            resp.setResult(this);
         }
     }
 
     public String toString() {
-        return getName() + "(" + key + ")";
+        return getName() + "(" + getKey() + ")";
     }
 }

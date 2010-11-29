@@ -57,7 +57,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class RemoveExpiredResultCommand<K, V>
-    extends Command<K, V> {
+    extends Command<String, V> {
 
     protected static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REMOVE_COMMAND);
 
@@ -72,6 +72,8 @@ public class RemoveExpiredResultCommand<K, V>
         this.target = target;
         this.tokenId = tokenId;
         this.result = result;
+
+        super.setKey("RemExpResp:" + tokenId);
     }
 
     public boolean beforeTransmit() {

@@ -40,13 +40,10 @@
 
 package org.shoal.adapter.store;
 
-import org.glassfish.ha.store.api.BackingStore;
-import org.glassfish.ha.store.api.BackingStoreConfiguration;
-import org.glassfish.ha.store.api.BackingStoreException;
-import org.glassfish.ha.store.api.BackingStoreFactory;
+import org.glassfish.ha.store.api.*;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
+import org.shoal.ha.cache.impl.store.DataStoreEntry;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
@@ -80,100 +77,9 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     public void initialize(BackingStoreConfiguration<K, V> conf)
             throws BackingStoreException {
         super.initialize(conf);
-        DataStoreConfigurator<K, V> dsConf = new DataStoreConfigurator<K, V>();
-        dsConf.setInstanceName(conf.getInstanceName())
-                .setGroupName(conf.getClusterName())
-                .setStoreName(conf.getStoreName())
-                .setKeyClazz(conf.getKeyClazz())
-                .setValueClazz(conf.getValueClazz());
-        Map<String, Object> vendorSpecificMap = conf.getVendorSpecificSettings();
-
-        Object stGMS = vendorSpecificMap.get("start.gms");
-        boolean startGMS = false;
-        if (stGMS != null) {
-            if (stGMS instanceof String) {
-                try {
-                    startGMS = Boolean.valueOf((String) stGMS);
-                } catch (Throwable th) {
-                    //Ignore
-                }
-            } else if (stGMS instanceof Boolean) {
-                startGMS = (Boolean) stGMS;
-            }
-        }
-
-        Object cacheLocally = vendorSpecificMap.get("local.caching");
-        boolean enableLocalCaching = false;
-        if (cacheLocally != null) {
-            if (cacheLocally instanceof String) {
-                try {
-                    enableLocalCaching = Boolean.valueOf((String) cacheLocally);
-                } catch (Throwable th) {
-                    //Ignore
-                }
-            } else if (cacheLocally instanceof Boolean) {
-                enableLocalCaching = (Boolean) stGMS;
-            }
-        }
-
-        ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
-        if (cl == null) {
-            cl = conf.getValueClazz().getClassLoader();
-        }
-        if (cl == null) {
-            cl = ClassLoader.getSystemClassLoader();
-        }
-
-        dsConf.setClassLoader(cl)
-                .setStartGMS(startGMS)
-                .setCacheLocally(enableLocalCaching);
-
-        boolean asyncReplication = vendorSpecificMap.get("async.replication") == null
-                ? true : (Boolean) vendorSpecificMap.get("async.replication");
-        dsConf.setDoSynchronousReplication(! asyncReplication);
-
-        KeyMapper keyMapper = (KeyMapper) vendorSpecificMap.get("key.mapper");
-        if (keyMapper != null) {
-            dsConf.setKeyMapper(keyMapper);
-        }
-        dsConf.setObjectInputOutputStreamFactory(new DefaultObjectInputOutputStreamFactory());
-
-        dsConf.addCommand(new SaveCommand<K, V>());
-        dsConf.addCommand(new SimpleAckCommand<K, V>());
-        dsConf.addCommand(new RemoveCommand<K, V>());
-        dsConf.addCommand(new LoadRequestCommand<K, V>());
-        dsConf.addCommand(new LoadResponseCommand<K, V>());
-        dsConf.addCommand(new StaleCopyRemoveCommand<K, V>());
-        dsConf.addCommand(new TouchCommand<K, V>());
-        dsConf.addCommand(new SizeRequestCommand<K, V>());
-        dsConf.addCommand(new SizeResponseCommand<K, V>());
-        dsConf.addCommand(new NoOpCommand<K, V>());
-
-        try {
-            Long longVal = (Long) vendorSpecificMap.get("max.idle.timeout.in.seconds");
-            if (longVal != null && longVal > 0) {
-                defaultMaxIdleTimeInMillis = longVal * 1000;
-                dsConf.setIdleEntryDetector(
-                    new IdleEntryDetector<K, V>() {
-                        @Override
-                        public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
-//                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
-//                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
-//                                    + " < now=" +nowInMillis);
-                            return kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
-                        }
-                    }
-                );
-            }
-        } catch (Exception ex) {
-            //TODO
-        }
-
-
+        
+        DataStoreContext<K, V> dsConf = new DataStoreContext<K, V>(conf);
         dataStore = DataStoreFactory.createDataStore(dsConf);
-
-//        RepliatedBackingStoreRegistry.registerStore(conf.getStoreName(), conf,
-//                ((ReplicatedDataStore) dataStore).getDataStoreContext());
     }
 
     @Override

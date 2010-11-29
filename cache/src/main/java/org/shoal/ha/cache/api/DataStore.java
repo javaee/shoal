@@ -40,9 +40,6 @@
 
 package org.shoal.ha.cache.api;
 
-import java.io.Serializable;
-import java.util.Collection;
-
 /**
  * A DataStore allows (#{Serializable} / #{Storable}) objects to be placed in the cache. The
  * cache itself is created and configured using a #{DataStoreFactory}.

@@ -91,11 +91,11 @@ public abstract class Command<K, V>
         commandName = commandName.substring(index+1);
     }
 
-    public void setKey(K key) {
-        this.key = key;
+    protected final void setKey(K k) {
+        this.key = k;
     }
 
-    public K getKey() {
+    public final K getKey() {
         return key;
     }
 
@@ -123,27 +123,42 @@ public abstract class Command<K, V>
             throws IOException {
 
         if (beforeTransmit()) {
-            ByteArrayOutputStream bos = null;
-            ObjectOutputStream oos = null;
-            try {
-                bos = new ByteArrayOutputStream();
-                oos = new ObjectOutputStream(bos);
-                oos.writeObject(this);
-                oos.close();
-
-                cachedSerializedState = bos.toByteArray();
-            } catch (Exception ex) {
-                throw new DataStoreException("Error during prepareToTransmit()", ex);
-            } finally {
-                try { oos.close(); } catch (Exception ex) {}
-                try { bos.close(); } catch (Exception ex) {}
+            if (! dsc.isSafeToDelayCaptureState()) {
+                cachedSerializedState = captureState(this);
             }
+
         } else {
             _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because beforeTransmit returned false");
         }
     }
 
-    public final byte[] getSerializedState() {
+    protected static byte[] captureState(Object obj)
+        throws DataStoreException {
+        byte[] result = null;
+        ByteArrayOutputStream bos = null;
+        ObjectOutputStream oos = null;
+        try {
+            bos = new ByteArrayOutputStream();
+            oos = new ObjectOutputStream(bos);
+            oos.writeObject(obj);
+            oos.close();
+
+            result = bos.toByteArray();
+        } catch (Exception ex) {
+            throw new DataStoreException("Error during prepareToTransmit()", ex);
+        } finally {
+            try { oos.close(); } catch (Exception ex) {}
+            try { bos.close(); } catch (Exception ex) {}
+        }
+
+        return result;
+    }
+
+    public final byte[] getSerializedState()
+        throws DataStoreException {
+        if (dsc.isSafeToDelayCaptureState()) {
+            cachedSerializedState = captureState(this);
+        }
         return cachedSerializedState;
     }
 
@@ -161,11 +176,23 @@ public abstract class Command<K, V>
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
         out.writeByte(opcode);
+        out.writeObject(key);
+        int len = cachedSerializedState != null ? cachedSerializedState.length : 0;
+        out.writeInt(len);
+        if (cachedSerializedState != null) {
+            out.write(cachedSerializedState);
+        }
     }
 
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         opcode = in.readByte();
+        key = (K) in.readObject();
+        int len = in.readInt();
+        cachedSerializedState = new byte[len];
+        if (len > 0) {
+            in.readFully(cachedSerializedState);
+        }
     }
 
     public void onSuccess() {
@@ -175,7 +202,11 @@ public abstract class Command<K, V>
     public void onFailure() {
         
     }
+    public String toString() {
+        return getName() + "(" + key + ")";
+    }
 
-    protected abstract boolean beforeTransmit();
-    
+    protected abstract boolean beforeTransmit()
+            throws IOException;
+
 }

@@ -44,26 +44,23 @@ import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
-import org.shoal.ha.cache.api.*;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Serializable;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mahesh Kannan
  */
-public class DataStoreShell {
+public class SimpleStoreableBackingStoreShell {
 
-    BackingStore<String, Serializable> ds;
+    BackingStore<String, SimpleStoreableMetadata> ds;
+
+    ConcurrentHashMap<String, SimpleStoreableMetadata> cache = new ConcurrentHashMap<String, SimpleStoreableMetadata>();
 
     int counter = 0;
 
@@ -71,36 +68,26 @@ public class DataStoreShell {
         throws Exception {
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
 
-        BackingStoreConfiguration<String, Serializable> conf = new BackingStoreConfiguration<String, Serializable>();
+        BackingStoreConfiguration<String, SimpleStoreableMetadata> conf = new BackingStoreConfiguration<String, SimpleStoreableMetadata>();
         conf.setStoreName(args[0])
                 .setInstanceName(args[1])
                 .setClusterName(args[2])
                 .setKeyClazz(String.class)
-                .setValueClazz(Serializable.class);
+                .setValueClazz(SimpleStoreableMetadata.class)
+                .setClassLoader(ClassLoader.getSystemClassLoader());
         Map<String, Object> map = conf.getVendorSpecificSettings();
         map.put("start.gms", true);
-        map.put("max.idle.timeout.in.seconds", 90L);
         //map.put("local.caching", true);
         map.put("class.loader", ClassLoader.getSystemClassLoader());
-        BackingStore<String, Serializable> ds =
+        map.put("async.replication", true);
+        BackingStore<String, SimpleStoreableMetadata> ds = (BackingStore<String, SimpleStoreableMetadata>)
                 (new ReplicatedBackingStoreFactory()).createBackingStore(conf);
 
-        DataStoreShell main = new DataStoreShell();
+        SimpleStoreableBackingStoreShell main = new SimpleStoreableBackingStoreShell();
         main.runShell(ds);
     }
 
-    private void runShell(BackingStore<String, Serializable> ds) {
-        String[] loggerNames = new String[] {
-            ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND,
-            ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND,
-            ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND};
-
-        for (String loggerName : loggerNames) {
-            Logger logger = Logger.getLogger(loggerName);
-            logger.setLevel(Level.ALL);
-            System.out.println("*** For " + loggerName + " ==> LOG LEVEL SET TO ALL ****");
-        }
-        
+    private void runShell(BackingStore<String, SimpleStoreableMetadata> ds) {
         this.ds = ds;
         String line = "";
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -139,19 +126,63 @@ public class DataStoreShell {
         throws BackingStoreException {
 
         if ("put".equalsIgnoreCase(command)) {
-            String hint = ds.save(params[0], params[1], true);
-            System.out.println("Saved; hint: " + hint);
+            String key = params[0];
+
+            for (int i=0; i<8; i++) {
+                String key1 = params[0] + ":" + i;
+                SimpleStoreableMetadata st = cache.get(key1);
+                long version = st == null ? 0 : st._storeable_getVersion() + 1;
+
+                st = new SimpleStoreableMetadata(version,
+                            System.currentTimeMillis(), 600000, true,
+                            ("Value:" + i + ":" + version).getBytes());
+                cache.put(key1, st);
+                System.out.println("PUT key = " + key1 + " : " + st);
+                ds.save(key1, st, true);
+            }
+
         } else if ("get".equalsIgnoreCase(command)) {
-            String hint = params.length > 1 ? params[1] : null;
-            System.out.println("get(" + params[0] + ") => " + ds.load(params[0], hint));
+            SimpleStoreableMetadata st = ds.load(params[0], params.length > 1 ? params[1] : null);
+            if (st != null) {
+                System.out.println("get(" + params[0] + ") => " + st + " ==> " + new String(st.getState()));
+                cache.put(params[0], st);
+            } else {
+                System.out.println("get(" + params[0] + ") NOT FOUND ==> null");
+            }
+        } else if ("touch".equalsIgnoreCase(command)) {
+            SimpleStoreableMetadata st = ds.load(params[0], params.length > 1 ? params[1] : null);
+            /*
+            st.touch();
+            String result = null;
+            ds.updateTimestamp(params[0], st._storeable_getLastAccessTime());
+            System.out.println("Result of touch: " + result);
+            */
         } else if ("remove".equalsIgnoreCase(command)) {
             ds.remove(params[0]);
-        } else if ("size".equalsIgnoreCase(command)) {
-            int size = ds.size();
-            System.out.println("Size: " + size);
-        } else if ("expireIdle".equalsIgnoreCase(command)) {
-            int count = ds.removeExpired(15);
-            System.out.println("** Idle Entries Removed: " + count);
-        }
+        } /* else if ("list-backing-store-config".equalsIgnoreCase(command)) {
+            ReplicationFramework framework = ds.getFramework();
+            ListBackingStoreConfigurationCommand cmd = new ListBackingStoreConfigurationCommand();
+            try {
+                framework.execute(cmd);
+                ArrayList<String> confs = cmd.getResult(6, TimeUnit.SECONDS);
+                for (String str : confs) {
+                    System.out.println(str);
+                }
+            } catch (DataStoreException dse) {
+                System.err.println(dse);
+            }
+        } else if ("list-entries".equalsIgnoreCase(command)) {
+            ReplicationFramework framework = ds.getFramework();
+            ListReplicaStoreEntriesCommand cmd = new ListReplicaStoreEntriesCommand(params[0]);
+            try {
+                framework.execute(cmd);
+                ArrayList<String> confs = cmd.getResult(6, TimeUnit.SECONDS);
+                for (String str : confs) {
+                    System.out.println(str);
+                }
+            } catch (DataStoreException dse) {
+                System.err.println(dse);
+            }
+        } */
     }
 }

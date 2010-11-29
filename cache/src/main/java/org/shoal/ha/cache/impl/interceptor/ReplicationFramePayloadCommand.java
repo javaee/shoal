@@ -61,7 +61,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class ReplicationFramePayloadCommand<K, V>
-        extends Command<K, V> {
+        extends Command {
 
     private transient static final Logger _logger =
             Logger.getLogger(ShoalCacheLoggerConstants.CACHE_REPLICATION_FRAME_COMMAND);
@@ -70,10 +70,13 @@ public class ReplicationFramePayloadCommand<K, V>
 
     private transient List<Command<K, V>> commands = new ArrayList<Command<K, V>>();
 
-    private transient List<byte[]> list = new ArrayList<byte[]>();
+    private List<K> removedKeys = new ArrayList<K>();
+
+    //private transient List<byte[]> list = new ArrayList<byte[]>();
 
     public ReplicationFramePayloadCommand() {
         super(ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD);
+        setKey("RepFP:" + System.identityHashCode(this));
     }
 
     public void addComamnd(Command<K, V> cmd) {
@@ -84,28 +87,44 @@ public class ReplicationFramePayloadCommand<K, V>
         targetInstanceName = target;
     }
 
-    protected boolean beforeTransmit() {
+    void setRemovedKeys(List<K> removedKeys) {
+        this.removedKeys = removedKeys;
+    }
+
+    protected boolean beforeTransmit()
+        throws DataStoreException {
         setTargetName(targetInstanceName);
-        for (int i = 0; i < commands.size(); i++) {
-            list.add(commands.get(i).getSerializedState());
-        }
         return targetInstanceName != null;
     }
 
     private void writeObject(ObjectOutputStream ros)
             throws IOException {
-        ros.writeObject(list);
+        try {
+        ros.writeObject(commands);
+        ros.writeObject(removedKeys);
+        } catch (IOException ioEx) {
+            _logger.log(Level.INFO, "Error during ReplicationFramePayloadCommand.writeObject ", ioEx);
+            throw ioEx;
+        }
     }
 
     private void readObject(ObjectInputStream ris)
             throws IOException, ClassNotFoundException {
+       try {
+       commands = (List<Command<K, V>>) ris.readObject();
+           
+       removedKeys = (List<K>) ris.readObject();
+       } catch (IOException ioEx) {
+            _logger.log(Level.INFO, "Error during ReplicationFramePayloadCommand.readObject ", ioEx);
+            throw ioEx;
+        }
 
-        list = (List<byte[]>) ris.readObject();
     }
 
     @Override
     public void execute(String initiator)
             throws DataStoreException {
+        /*
         int sz = list.size();
         commands = new ArrayList<Command<K, V>>();
         for (int i = 0; i < sz; i++) {
@@ -125,9 +144,15 @@ public class ReplicationFramePayloadCommand<K, V>
                 try { bis.close(); } catch (Exception ex) {}
             }
         }
+        */
 
         for (Command<K, V> cmd : commands) {
+            cmd.initialize(dsc);
             getCommandManager().executeCommand(cmd, false, initiator);
+        }
+
+        for (K k : removedKeys) {
+            dsc.getReplicaStore().remove(k);
         }
     }
 
@@ -150,6 +175,6 @@ public class ReplicationFramePayloadCommand<K, V>
     }
 
     public String toString() {
-        return "ReplicationFramePayloadCommand: contains " + list.size() + " commands";
+        return "ReplicationFramePayloadCommand: contains " + commands.size() + " commands";
     }
 }

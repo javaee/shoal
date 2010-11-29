@@ -56,6 +56,7 @@ public class NoopCommand
 
     public NoopCommand() {
         super((byte) 123);
+        super.setKey("Noop" + System.identityHashCode(this));
     }
 
     protected boolean beforeTransmit() {

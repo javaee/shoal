@@ -46,9 +46,10 @@ import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import org.shoal.ha.cache.impl.util.ASyncReplicationManager;
-import org.shoal.ha.group.GroupService;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,7 +61,7 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class ReplicationCommandTransmitterWithMap<K, V>
-        implements Runnable {
+        implements Runnable, CommandCollector<K,V> {
 
 
     private static final Logger _logger =
@@ -80,7 +81,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
 
     private int MAX_BATCH_SIZE = 20;
 
-    private AtomicReference<BatchedCommandListDataFrame> mapRef;
+    private AtomicReference<BatchedCommandMapDataFrame> mapRef;
 
     ASyncReplicationManager asyncReplicationManager = ASyncReplicationManager._getInstance();
 
@@ -88,6 +89,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
 
     ThreadPoolExecutor executor;
 
+    @Override
     public void initialize(String targetName, DataStoreContext<K, V> rsInfo) {
 
         this.executor = ASyncReplicationManager._getInstance().getExecutorService();
@@ -110,14 +112,15 @@ public class ReplicationCommandTransmitterWithMap<K, V>
             //Ignore
         }
 
-        BatchedCommandListDataFrame batch = new BatchedCommandListDataFrame();
-        mapRef = new AtomicReference<BatchedCommandListDataFrame>(batch);
+        BatchedCommandMapDataFrame batch = new BatchedCommandMapDataFrame();
+        mapRef = new AtomicReference<BatchedCommandMapDataFrame>(batch);
 
 
         future = asyncReplicationManager.getScheduledThreadPoolExecutor().scheduleAtFixedRate(this, TRANSMITTER_FREQUECNCY_IN_MILLIS,
                 TRANSMITTER_FREQUECNCY_IN_MILLIS, TimeUnit.MILLISECONDS);
     }
 
+    @Override
     public void close() {
         try {
             future.cancel(false);
@@ -126,25 +129,40 @@ public class ReplicationCommandTransmitterWithMap<K, V>
         }
     }
 
+    @Override
     public void addCommand(Command<K, V> cmd) {
 
         for (boolean done = false; !done;) {
-            BatchedCommandListDataFrame batch = mapRef.get();
-            done = batch.addCommand(cmd);
+            BatchedCommandMapDataFrame batch = mapRef.get();
+            done = batch.doAddOrRemove(cmd, true);
             if (!done) {
-                BatchedCommandListDataFrame frame = new BatchedCommandListDataFrame();
-                frame.addCommand(cmd);
+                BatchedCommandMapDataFrame frame = new BatchedCommandMapDataFrame();
+                frame.doAddOrRemove(cmd, true);
+                done = mapRef.compareAndSet(batch, frame);
+            }
+        }
+    }
+
+    @Override
+    public void removeCommand(Command<K, V> cmd) {
+
+        for (boolean done = false; !done;) {
+            BatchedCommandMapDataFrame batch = mapRef.get();
+            done = batch.doAddOrRemove(cmd, false);
+            if (!done) {
+                BatchedCommandMapDataFrame frame = new BatchedCommandMapDataFrame();
+                frame.doAddOrRemove(cmd, false);
                 done = mapRef.compareAndSet(batch, frame);
             }
         }
     }
 
     public void run() {
-        BatchedCommandListDataFrame batch = mapRef.get();
+        BatchedCommandMapDataFrame batch = mapRef.get();
         batch.flushAndTransmit();
     }
 
-    private class BatchedCommandListDataFrame
+    private class BatchedCommandMapDataFrame
             implements Runnable {
 
         private AtomicInteger inFlightCount = new AtomicInteger(0);
@@ -155,22 +173,28 @@ public class ReplicationCommandTransmitterWithMap<K, V>
 
         private transient ConcurrentHashMap map = new ConcurrentHashMap();
 
+        private List removedKeys = new ArrayList();
+
         private long lastTS = System.currentTimeMillis();
 
-        public boolean addCommand(Command cmd) {
+        public boolean doAddOrRemove(Command cmd, boolean isAdd) {
 
             boolean result = false;
             inFlightCount.incrementAndGet();
             if (!batchThresholdReached.get()) {
-
-                int size = map.size();
-                if (size < MAX_BATCH_SIZE) {
-                    Object key = cmd.getKey();
-                    map.put(key, cmd);
-                    result = true;
-                    if (map.size() >= MAX_BATCH_SIZE) {
-                        batchThresholdReached.compareAndSet(false, true);
+                if (isAdd) {
+                    int size = map.size();
+                    if (size < MAX_BATCH_SIZE) {
+                        Object key = cmd.getKey();
+                        map.put(key, cmd);
+                        result = true;
+                        if (map.size() >= MAX_BATCH_SIZE) {
+                            batchThresholdReached.compareAndSet(false, true);
+                        }
                     }
+                } else {
+                    map.remove(cmd.getKey());
+                    removedKeys.add(cmd.getKey());
                 }
             }
 
@@ -192,8 +216,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     NoOpCommand nc = null;
                     do {
                         nc = new NoOpCommand();
-                        nc.setKey("DummyKey:"+index++);
-                    } while (addCommand(nc));
+                    } while (doAddOrRemove(nc, true));
                 } else {
                     timeStamp = lastTS;
                 }
@@ -213,6 +236,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     }
                 }
 
+                rfCmd.setRemovedKeys(removedKeys);
                 dsc.getCommandManager().execute(rfCmd);
             } catch (IOException ioEx) {
                 _logger.log(Level.WARNING, "Batch operation (ASyncCommandList failed...", ioEx);

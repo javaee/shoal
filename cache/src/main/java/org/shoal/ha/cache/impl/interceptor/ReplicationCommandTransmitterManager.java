@@ -48,6 +48,7 @@ import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -59,10 +60,10 @@ public class ReplicationCommandTransmitterManager<K, V>
 
     private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
 
-    private ConcurrentHashMap<String, ReplicationCommandTransmitterWithList<K, V>> transmitters
-            = new ConcurrentHashMap<String, ReplicationCommandTransmitterWithList<K, V>>();
+    private ConcurrentHashMap<String, CommandCollector<K, V>> transmitters
+            = new ConcurrentHashMap<String, CommandCollector<K, V>>();
 
-    private ReplicationCommandTransmitterWithList<K, V> broadcastTransmitter;
+    private CommandCollector<K, V> broadcastTransmitter;
 
     public ReplicationCommandTransmitterManager() {
     }
@@ -72,6 +73,9 @@ public class ReplicationCommandTransmitterManager<K, V>
         super.initialize(dsc);
         broadcastTransmitter = new ReplicationCommandTransmitterWithList<K, V>();
         broadcastTransmitter.initialize(null, dsc);
+
+        _logger.log(Level.INFO, "ReplicationCommandTransmitterManager(" + dsc.getServiceName() + ") instantiated with: "
+            + dsc.isUseMapToCacheCommands() + " : " + dsc.isSafeToDelayCaptureState());
     }
 
     @Override
@@ -85,16 +89,22 @@ public class ReplicationCommandTransmitterManager<K, V>
             default:
                 String target = cmd.getTargetName();
                 if (target != null) {
-                    ReplicationCommandTransmitterWithList<K, V> rft = transmitters.get(target);
+                    CommandCollector<K, V> rft = transmitters.get(target);
                     if (rft == null) {
-                        rft = new ReplicationCommandTransmitterWithList<K, V>();
+                        rft = dsc.isUseMapToCacheCommands()
+                                ? new ReplicationCommandTransmitterWithMap<K, V>()
+                                : new ReplicationCommandTransmitterWithList<K, V>();
                         rft.initialize(target, getDataStoreContext());
-                        ReplicationCommandTransmitterWithList oldRCT = transmitters.putIfAbsent(target, rft);
+                        CommandCollector oldRCT = transmitters.putIfAbsent(target, rft);
                         if (oldRCT != null) {
                             rft = oldRCT;
                         }
                     }
-                    rft.addCommand(cmd);
+                    if (cmd.getOpcode() == ReplicationCommandOpcode.REMOVE) {
+                        rft.removeCommand(cmd);
+                    } else {
+                        rft.addCommand(cmd);
+                    }
                 } else {
                     broadcastTransmitter.addCommand(cmd);
                 }
