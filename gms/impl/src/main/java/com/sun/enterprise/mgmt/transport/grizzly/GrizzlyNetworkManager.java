@@ -144,7 +144,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         GrizzlyUtil.setLogger(LOG);
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
         tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
-        tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9120, properties );
+        tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9200, properties );
 
         // allow grizzly to select port from port range. Grizzly will keep hold of port,
         // preventing other gms clients running at same time from picking same port.
