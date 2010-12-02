@@ -40,10 +40,9 @@
 
 package org.shoal.ha.mapper;
 
-import org.shoal.ha.cache.api.HashableKey;
+import org.glassfish.ha.store.api.HashableKey;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.group.GroupMemberEventListener;
-import org.shoal.ha.mapper.KeyMapper;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
