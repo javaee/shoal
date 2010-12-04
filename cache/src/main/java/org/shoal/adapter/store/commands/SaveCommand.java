@@ -94,7 +94,7 @@ public class SaveCommand<K, V>
         throws DataStoreException {
 
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received save_command for " + getKey() + " from " + initiator);
+            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received save_command for key = " + getKey() + " from " + initiator);
         }
         DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(getKey());
         synchronized (entry) {
@@ -123,11 +123,10 @@ public class SaveCommand<K, V>
         out.writeLong(maxIdleTime);
 
         rawV = dsc.getDataStoreEntryUpdater().getState(v);
-        out.writeInt(rawV.length);
-        out.write(rawV);
+        out.writeObject(rawV);
         
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getServiceName() + " sending save_command for " + getKey() + "; version = " + version + "; lastAccessedAt = " + lastAccessedAt + "; to " + getTargetName());
+            _logger.log(Level.FINE, dsc.getServiceName() + " sending save_command for key = " + getKey() + "; version = " + version + "; lastAccessedAt = " + lastAccessedAt + "; to " + getTargetName());
         }
     }
 
@@ -153,13 +152,7 @@ public class SaveCommand<K, V>
         lastAccessedAt = in.readLong();
         maxIdleTime = in.readLong();
 
-        int len = in.readInt();
-        rawV = new byte[len];
-        in.readFully(rawV);
-
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, "==> read data for key " + getKey() + " => " + version + "; lastAccessedAt = " + lastAccessedAt + " using " + in.getClass().getCanonicalName());
-        }
+        rawV = (byte[]) in.readObject();
     }
     
 }

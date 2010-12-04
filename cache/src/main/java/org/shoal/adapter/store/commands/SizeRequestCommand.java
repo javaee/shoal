@@ -128,4 +128,10 @@ public class SizeRequestCommand<K, V>
 
         return result;
     }
+
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
+    }
+        
 }

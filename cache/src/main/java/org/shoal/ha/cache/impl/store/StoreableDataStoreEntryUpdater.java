@@ -4,7 +4,6 @@ import org.glassfish.ha.store.api.Storeable;
 import org.shoal.adapter.store.commands.LoadResponseCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.util.SimpleStoreableMetadata;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

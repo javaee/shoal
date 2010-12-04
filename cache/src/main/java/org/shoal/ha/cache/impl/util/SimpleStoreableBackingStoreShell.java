@@ -44,6 +44,7 @@ import org.glassfish.ha.store.api.BackingStore;
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.BackingStoreException;
 import org.glassfish.ha.store.api.HashableKey;
+import org.glassfish.ha.store.util.SimpleMetadata;
 import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 
@@ -59,10 +60,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SimpleStoreableBackingStoreShell {
 
-    BackingStore<MyKey, SimpleStoreableMetadata> ds;
+    BackingStore<MyKey, SimpleMetadata> ds;
 
-    ConcurrentHashMap<MyKey, SimpleStoreableMetadata> cache =
-            new ConcurrentHashMap<MyKey, SimpleStoreableMetadata>();
+    ConcurrentHashMap<MyKey, SimpleMetadata> cache =
+            new ConcurrentHashMap<MyKey, SimpleMetadata>();
 
     int counter = 0;
 
@@ -70,26 +71,26 @@ public class SimpleStoreableBackingStoreShell {
         throws Exception {
         DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
 
-        BackingStoreConfiguration<MyKey, SimpleStoreableMetadata> conf = new BackingStoreConfiguration<MyKey, SimpleStoreableMetadata>();
+        BackingStoreConfiguration<MyKey, SimpleMetadata> conf = new BackingStoreConfiguration<MyKey, SimpleMetadata>();
         conf.setStoreName(args[0])
                 .setInstanceName(args[1])
                 .setClusterName(args[2])
                 .setKeyClazz(MyKey.class)
-                .setValueClazz(SimpleStoreableMetadata.class)
+                .setValueClazz(SimpleMetadata.class)
                 .setClassLoader(ClassLoader.getSystemClassLoader());
         Map<String, Object> map = conf.getVendorSpecificSettings();
         map.put("start.gms", true);
         //map.put("local.caching", true);
         map.put("class.loader", ClassLoader.getSystemClassLoader());
         map.put("async.replication", true);
-        BackingStore<MyKey, SimpleStoreableMetadata> ds = (BackingStore<MyKey, SimpleStoreableMetadata>)
+        BackingStore<MyKey, SimpleMetadata> ds = (BackingStore<MyKey, SimpleMetadata>)
                 (new ReplicatedBackingStoreFactory()).createBackingStore(conf);
 
         SimpleStoreableBackingStoreShell main = new SimpleStoreableBackingStoreShell();
         main.runShell(ds);
     }
 
-    private void runShell(BackingStore<MyKey, SimpleStoreableMetadata> ds) {
+    private void runShell(BackingStore<MyKey, SimpleMetadata> ds) {
         this.ds = ds;
         String line = "";
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -132,11 +133,11 @@ public class SimpleStoreableBackingStoreShell {
 
             for (int i=0; i<8; i++) {
                 MyKey key1 = new MyKey(params[0] + ":" + i, key);
-                SimpleStoreableMetadata st = cache.get(key1);
+                SimpleMetadata st = cache.get(key1);
                 long version = st == null ? 0 : st._storeable_getVersion() + 1;
 
-                st = new SimpleStoreableMetadata(version,
-                            System.currentTimeMillis(), 600000, true,
+                st = new SimpleMetadata(version,
+                            System.currentTimeMillis(), 600000,
                             ("Value:" + i + ":" + version).getBytes());
                 cache.put(key1, st);
                 String rs = ds.save(key1, st, true);
@@ -151,7 +152,7 @@ public class SimpleStoreableBackingStoreShell {
 
         } else if ("get".equalsIgnoreCase(command)) {
             MyKey key = new MyKey(params[0], null);
-            SimpleStoreableMetadata st = ds.load(key, params.length > 1 ? params[1] : null);
+            SimpleMetadata st = ds.load(key, params.length > 1 ? params[1] : null);
             if (st != null) {
                 System.out.println("get(" + params[0] + ") => " + st + " ==> " + new String(st.getState()));
                 cache.put(key, st);
@@ -160,7 +161,7 @@ public class SimpleStoreableBackingStoreShell {
             }
         } else if ("touch".equalsIgnoreCase(command)) {
             MyKey key = new MyKey(params[0], null);
-            SimpleStoreableMetadata st = ds.load(key, params.length > 1 ? params[1] : null);
+            SimpleMetadata st = ds.load(key, params.length > 1 ? params[1] : null);
             /*
             st.touch();
             String result = null;

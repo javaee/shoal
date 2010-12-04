@@ -41,11 +41,15 @@
 package org.shoal.ha.cache.impl.store;
 
 import org.glassfish.ha.store.api.Storeable;
+import org.glassfish.ha.store.util.KeyTransformer;
+import org.glassfish.ha.store.util.SimpleMetadata;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
+import org.shoal.ha.cache.impl.util.CommandResponse;
+import org.shoal.ha.cache.impl.util.DefaultKeyTransformer;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
-import org.shoal.ha.cache.impl.util.SimpleStoreableMetadata;
+import org.shoal.ha.cache.impl.util.StringKeyTransformer;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 import org.shoal.ha.group.GroupService;
@@ -55,6 +59,7 @@ import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
 
 import java.io.Serializable;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -133,6 +138,18 @@ public class ReplicatedDataStore<K, V extends Serializable>
             gs.registerGroupMemberEventListener(groupListener);
         }
 
+        if (dsc.getKeyTransformer() == null) {
+            KeyTransformer kt = null;
+            if (dsc.getKeyClazz() == String.class) {
+                kt = new StringKeyTransformer();
+
+                System.out.println("** USING KeyTransfomer: " + kt.getClass().getName());
+            } else {
+                //kt = new DefaultKeyTransformer(dsc.getClassLoader());
+            }
+            dsc.setKeyTransformer(kt);
+        }
+
     }
 
     private void postInitialization() {
@@ -142,7 +159,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
         if (dsc.isDoSynchronousReplication()) {
             dseUpdater = new SimpleDataStoreEntryUpdater();
-        } else if (SimpleStoreableMetadata.class.isAssignableFrom(vClazz)) {
+        } else if (SimpleMetadata.class.isAssignableFrom(vClazz)) {
             dseUpdater = new SimpleStoreableDataStoreEntryUpdater();
         } else if (Storeable.class.isAssignableFrom(vClazz)) {
             dseUpdater = new StoreableDataStoreEntryUpdater();
@@ -152,6 +169,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
         dseUpdater.initialize(dsc);
         dsc.setDataStoreEntryUpdater(dseUpdater);
+
+        _logger.log(Level.INFO, "ReplicatedDataStore using DataStoreEntryUpdater = "
+                + dsc.getDataStoreEntryUpdater().getClass().getName());
 
         this.cm = new CommandManager<K, V>();
         dsc.setCommandManager(cm);
@@ -372,7 +392,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     @Override
     public int removeIdleEntries(long idleFor) {
-        /*
+
         String[] targets = dsc.getKeyMapper().getCurrentMembers();
 
         ResponseMediator respMed = dsc.getResponseMediator();
@@ -383,7 +403,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
         int finalResult = 0;
         try {
-            if (targets != null) {
+            if (targets != null && dsc.isBroadcastRemovedExpired()) {
                 resp.setExpectedUpdateCount(targets.length);
                 for (String target : targets) {
                     RemoveExpiredCommand<K, V> cmd = new RemoveExpiredCommand<K, V>(idleFor, tokenId);
@@ -413,8 +433,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
 
         return finalResult;
-        */
-        return replicaStore.removeExpired();
+
+        //return replicaStore.removeExpired();
     }
 
     @Override

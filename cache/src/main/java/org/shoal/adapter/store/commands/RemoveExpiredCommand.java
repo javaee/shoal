@@ -111,6 +111,11 @@ public class RemoveExpiredCommand<K, V>
         }
     }
 
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
+    }
+
     public String toString() {
         return getName() + "(" + maxIdleInMillis + ")";
     }

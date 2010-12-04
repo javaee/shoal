@@ -111,6 +111,11 @@ public class SimpleAckCommand<K, V>
         }
     }
 
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
+    }
+
     public String toString() {
         return getName() + "()";
     }

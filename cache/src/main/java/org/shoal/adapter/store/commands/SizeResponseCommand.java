@@ -125,6 +125,11 @@ public class SizeResponseCommand<K, V>
         }
     }
 
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
+    }
+       
     public String toString() {
         return getName() + "(" + tokenId + ")";
     }

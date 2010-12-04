@@ -1,15 +1,15 @@
 package org.shoal.ha.cache.impl.store;
 
+import org.glassfish.ha.store.util.SimpleMetadata;
 import org.shoal.adapter.store.commands.LoadResponseCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
 import org.shoal.ha.cache.api.*;
-import org.shoal.ha.cache.impl.util.SimpleStoreableMetadata;
 
 /**
  * @author Mahesh Kannan
  * 
  */
-public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleStoreableMetadata>
+public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleMetadata>
     extends DataStoreEntryUpdater<K, V> {
 
     @Override
@@ -24,8 +24,8 @@ public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleStoreableMe
     @Override
     public V extractVFrom(LoadResponseCommand<K, V> cmd)
         throws DataStoreException {
-        return (V) new SimpleStoreableMetadata(cmd.getVersion(),
-                    System.currentTimeMillis(), 600000, false, cmd.getRawV());
+        return (V) new SimpleMetadata(cmd.getVersion(),
+                    System.currentTimeMillis(), 600000, cmd.getRawV());
     }
 
     @Override
@@ -62,8 +62,8 @@ public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleStoreableMe
         throws DataStoreException {
         V v = entry == null ? null : entry.getV();
         if (entry != null && v == null && entry.getRawV() != null) {
-            SimpleStoreableMetadata ssm = new SimpleStoreableMetadata(entry.getVersion(),
-                    entry.getLastAccessedAt(), entry.getMaxIdleTime(), false, entry.getRawV());
+            SimpleMetadata ssm = new SimpleMetadata(entry.getVersion(),
+                    entry.getLastAccessedAt(), entry.getMaxIdleTime(), entry.getRawV());
             v = (V) ssm;
         }
 

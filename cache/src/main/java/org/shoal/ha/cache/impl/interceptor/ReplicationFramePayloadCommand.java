@@ -40,6 +40,7 @@
 
 package org.shoal.ha.cache.impl.interceptor;
 
+import org.glassfish.ha.store.util.KeyTransformer;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ObjectInputStreamWithLoader;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
@@ -60,7 +61,8 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class ReplicationFramePayloadCommand<K, V>
+public class
+        ReplicationFramePayloadCommand<K, V>
         extends Command {
 
     private transient static final Logger _logger =
@@ -68,11 +70,11 @@ public class ReplicationFramePayloadCommand<K, V>
 
     private String targetInstanceName;
 
-    private transient List<Command<K, V>> commands = new ArrayList<Command<K, V>>();
+    private List<Command<K, V>> commands = new ArrayList<Command<K, V>>();
 
     private List<K> removedKeys = new ArrayList<K>();
 
-    //private transient List<byte[]> list = new ArrayList<byte[]>();
+    private List<byte[]> rawRemovedKeys = new ArrayList<byte[]>();
 
     public ReplicationFramePayloadCommand() {
         super(ReplicationCommandOpcode.REPLICATION_FRAME_PAYLOAD);
@@ -100,8 +102,20 @@ public class ReplicationFramePayloadCommand<K, V>
     private void writeObject(ObjectOutputStream ros)
             throws IOException {
         try {
-        ros.writeObject(commands);
-        ros.writeObject(removedKeys);
+            ros.writeObject(commands);
+            ros.writeBoolean(dsc.getKeyTransformer() == null);
+            if (dsc.getKeyTransformer() == null) {
+                ros.writeObject(removedKeys);
+            } else {
+                KeyTransformer<K> kt = dsc.getKeyTransformer();
+                int sz = removedKeys.size();
+                rawRemovedKeys = new ArrayList<byte[]>();
+                for (K k : removedKeys) {
+                    rawRemovedKeys.add(kt.keyToByteArray(k));
+                }
+
+                ros.writeObject(rawRemovedKeys);
+            }
         } catch (IOException ioEx) {
             _logger.log(Level.INFO, "Error during ReplicationFramePayloadCommand.writeObject ", ioEx);
             throw ioEx;
@@ -110,11 +124,15 @@ public class ReplicationFramePayloadCommand<K, V>
 
     private void readObject(ObjectInputStream ris)
             throws IOException, ClassNotFoundException {
-       try {
-       commands = (List<Command<K, V>>) ris.readObject();
-           
-       removedKeys = (List<K>) ris.readObject();
-       } catch (IOException ioEx) {
+        try {
+            commands = (List<Command<K, V>>) ris.readObject();
+            boolean ktAbsent = ris.readBoolean();
+            if (ktAbsent) {
+                removedKeys = (List<K>) ris.readObject();
+            } else {
+                rawRemovedKeys = (List<byte[]>) ris.readObject();
+            }
+        } catch (IOException ioEx) {
             _logger.log(Level.INFO, "Error during ReplicationFramePayloadCommand.readObject ", ioEx);
             throw ioEx;
         }
@@ -146,6 +164,14 @@ public class ReplicationFramePayloadCommand<K, V>
         }
         */
 
+        if (rawRemovedKeys != null) {
+            KeyTransformer<K> kt = dsc.getKeyTransformer();
+            removedKeys = new ArrayList<K>();
+            for (byte[] bytes : rawRemovedKeys) {
+                removedKeys.add(kt.byteArrayToKey(bytes, 0, bytes.length));
+            }
+        }
+        
         for (Command<K, V> cmd : commands) {
             cmd.initialize(dsc);
             getCommandManager().executeCommand(cmd, false, initiator);
@@ -172,6 +198,11 @@ public class ReplicationFramePayloadCommand<K, V>
             Command cmd = commands.get(i);
             cmd.onFailure();
         }
+    }
+
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
     }
 
     public String toString() {

@@ -44,6 +44,10 @@ import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 /**
  * @author Mahesh Kannan
  */
@@ -82,5 +86,9 @@ public class NoOpCommand<K, V>
     public String getKeyMappingInfo() {
         return null;
     }
-    
+
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
+    }
 }

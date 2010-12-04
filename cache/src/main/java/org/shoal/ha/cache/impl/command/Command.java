@@ -40,6 +40,7 @@
 
 package org.shoal.ha.cache.impl.command;
 
+import org.glassfish.ha.store.util.KeyTransformer;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
@@ -47,10 +48,7 @@ import org.shoal.ha.cache.api.TooManyRetriesException;
 import org.shoal.ha.cache.impl.util.ReplicationInputStream;
 import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -66,13 +64,14 @@ public abstract class Command<K, V>
 
     private byte opcode;
 
-    private K key;
+    private byte[] rawKey;
+
+    
+    private transient K key;
 
     protected transient DataStoreContext<K, V> dsc;
 
     private transient CommandManager<K, V> cm;
-
-    private transient byte[] cachedSerializedState;
 
     private transient String commandName;
 
@@ -96,6 +95,13 @@ public abstract class Command<K, V>
     }
 
     public final K getKey() {
+        if (key == null && rawKey != null) {
+            KeyTransformer<K> kt = dsc.getKeyTransformer();
+            if (kt != null) {
+                key = kt.byteArrayToKey(rawKey, 0, rawKey.length);
+            }
+        }
+
         return key;
     }
 
@@ -119,15 +125,10 @@ public abstract class Command<K, V>
         this.targetInstanceName = val;
     }
 
-    public final void prepareTransmit(DataStoreContext<K, V> ctx)
+    public void prepareTransmit(DataStoreContext<K, V> ctx)
             throws IOException {
 
-        if (beforeTransmit()) {
-            if (! dsc.isSafeToDelayCaptureState()) {
-                cachedSerializedState = captureState(this);
-            }
-
-        } else {
+        if (! beforeTransmit()) {
             _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because beforeTransmit returned false");
         }
     }
@@ -154,14 +155,6 @@ public abstract class Command<K, V>
         return result;
     }
 
-    public final byte[] getSerializedState()
-        throws DataStoreException {
-        if (dsc.isSafeToDelayCaptureState()) {
-            cachedSerializedState = captureState(this);
-        }
-        return cachedSerializedState;
-    }
-
     public String getKeyMappingInfo() {
         return targetInstanceName == null ? "" : targetInstanceName;
     }
@@ -176,23 +169,13 @@ public abstract class Command<K, V>
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
         out.writeByte(opcode);
-        out.writeObject(key);
-        int len = cachedSerializedState != null ? cachedSerializedState.length : 0;
-        out.writeInt(len);
-        if (cachedSerializedState != null) {
-            out.write(cachedSerializedState);
-        }
+        writeKey(out);
     }
 
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         opcode = in.readByte();
-        key = (K) in.readObject();
-        int len = in.readInt();
-        cachedSerializedState = new byte[len];
-        if (len > 0) {
-            in.readFully(cachedSerializedState);
-        }
+        readKey(in);
     }
 
     public void onSuccess() {
@@ -203,7 +186,40 @@ public abstract class Command<K, V>
         
     }
     public String toString() {
-        return getName() + "(" + key + ")";
+        return getName() + "(" + getKey() + ")";
+    }
+
+    private void writeKey(ObjectOutputStream out)
+            throws IOException {
+        if (isArtificialKey()) {
+            out.writeObject(key);
+        } else {
+            KeyTransformer<K> kt = dsc.getKeyTransformer();
+            out.writeBoolean(kt != null);
+            if (kt != null) {
+                out.writeObject(kt.keyToByteArray(key));
+            }  else {
+                out.writeObject(key);
+            }
+        }
+    }
+
+    private void readKey(ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        if (isArtificialKey()) {
+            key = (K) in.readObject();
+        } else {
+            boolean needToTransformKey = in.readBoolean();
+            if (! needToTransformKey) {
+                key = (K) in.readObject();
+            } else {
+                rawKey = (byte[]) in.readObject();
+            }
+        }
+    }
+
+    protected boolean isArtificialKey() {
+        return false;
     }
 
     protected abstract boolean beforeTransmit()

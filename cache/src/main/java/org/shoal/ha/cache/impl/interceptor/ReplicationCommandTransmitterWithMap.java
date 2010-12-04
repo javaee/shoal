@@ -79,7 +79,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
 
     private static int TRANSMITTER_FREQUECNCY_IN_MILLIS = 100;
 
-    private int MAX_BATCH_SIZE = 20;
+    private int MAX_BATCH_SIZE = 30;
 
     private AtomicReference<BatchedCommandMapDataFrame> mapRef;
 
@@ -100,6 +100,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
             TRANSMITTER_FREQUECNCY_IN_MILLIS =
                     Integer.getInteger(System.getProperty(TRANSMITTER_FREQUECNCY_PROP_NAME,
                             "" + TRANSMITTER_FREQUECNCY_IN_MILLIS));
+            _logger.log(Level.INFO, "USING " + TRANSMITTER_FREQUECNCY_PROP_NAME  + " = " + TRANSMITTER_FREQUECNCY_IN_MILLIS);
         } catch (Exception ex) {
             //Ignore
         }
@@ -108,6 +109,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
             MAX_BATCH_SIZE =
                     Integer.getInteger(System.getProperty(MAX_BATCH_SIZE_PROP_NAME,
                             "" + MAX_BATCH_SIZE));
+            _logger.log(Level.INFO, "USING " + MAX_BATCH_SIZE_PROP_NAME  + " = " + MAX_BATCH_SIZE);
         } catch (Exception ex) {
             //Ignore
         }

@@ -42,6 +42,7 @@ package org.shoal.ha.cache.api;
 
 import org.glassfish.ha.store.api.BackingStoreConfiguration;
 import org.glassfish.ha.store.api.Storeable;
+import org.glassfish.ha.store.util.KeyTransformer;
 import org.shoal.ha.cache.impl.store.DataStoreEntry;
 import org.shoal.ha.cache.impl.store.ReplicaStore;
 import org.shoal.ha.group.GroupService;
@@ -133,6 +134,12 @@ public class DataStoreContext<K, V>
             setKeyMapper(keyMapper);
         }
 
+        KeyTransformer<K> kt = (KeyTransformer<K>) vendorSpecificMap.get("key.transformer");
+        if (kt != null) {
+            super.setKeyTransformer(kt);
+            System.out.println("** USING CLIENT DEFINED KeyTransfomer: " + super.getKeyTransformer().getClass().getName());
+        }
+
         /*
         dsConf.addCommand(new SaveCommand<K, V>());
         dsConf.addCommand(new SimpleAckCommand<K, V>());
@@ -147,20 +154,20 @@ public class DataStoreContext<K, V>
         */
 
 
-        Object idleTimeInMillis = vendorSpecificMap.get("max.idle.timeout.in.seconds");
-        if (idleTimeInMillis != null) {
+        Object idleTimeInSeconds = vendorSpecificMap.get("max.idle.timeout.in.seconds");
+        if (idleTimeInSeconds != null) {
             long defaultMaxIdleTimeInMillis = -1;
-            if (idleTimeInMillis instanceof Long) {
-                defaultMaxIdleTimeInMillis = (Long) idleTimeInMillis;
-            } else if (idleTimeInMillis instanceof String) {
+            if (idleTimeInSeconds instanceof Long) {
+                defaultMaxIdleTimeInMillis = (Long) idleTimeInSeconds;
+            } else if (idleTimeInSeconds instanceof String) {
                 try {
-                    defaultMaxIdleTimeInMillis = Long.valueOf((String) idleTimeInMillis);
+                    defaultMaxIdleTimeInMillis = Long.valueOf((String) idleTimeInSeconds);
                 } catch (Exception ex) {
                     //Ignore
                 }
             }
             
-            setDefaultMaxIdleTimeInMillis(defaultMaxIdleTimeInMillis);
+            setDefaultMaxIdleTimeInMillis(defaultMaxIdleTimeInMillis * 1000);
         }
 
         Object safeToDelayCaptureStateObj = vendorSpecificMap.get("value.class.is.thread.safe");
@@ -177,6 +184,22 @@ public class DataStoreContext<K, V>
             }
 
             setSafeToDelayCaptureState(safeToDelayCaptureState);
+        }
+
+        Object bcastRemExpObj = vendorSpecificMap.get("broadcast.remove.expired");
+        if (bcastRemExpObj != null) {
+            boolean bcastRemExp = true;
+            if (bcastRemExpObj instanceof Boolean) {
+                bcastRemExp = (Boolean) bcastRemExpObj;
+            } else if (bcastRemExpObj instanceof String) {
+                try {
+                    bcastRemExp = Boolean.valueOf((String) bcastRemExpObj);
+                } catch (Exception ex) {
+                    //Ignore
+                }
+            }
+
+            setBroadcastRemovedExpired(bcastRemExp);
         }
     }
 
@@ -233,7 +256,7 @@ public class DataStoreContext<K, V>
     //                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
     //                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
     //                                    + " < now=" +nowInMillis);
-                                return entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
+                                return (entry.getMaxIdleTime() > 0) && entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
                             }
                         }
                     );
@@ -243,11 +266,11 @@ public class DataStoreContext<K, V>
                     super.setIdleEntryDetector(
                         new IdleEntryDetector<K, V>() {
                             @Override
-                            public boolean isIdle(DataStoreEntry<K, V> kvDataStoreEntry, long nowInMillis) {
+                            public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
     //                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
     //                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
     //                                    + " < now=" +nowInMillis);
-                                return kvDataStoreEntry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
+                                return (defaultMaxIdleTimeInMillis > 0) && entry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
                             }
                         }
                     );

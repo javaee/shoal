@@ -133,10 +133,11 @@ public class CommandManager<K, V>
         ByteArrayInputStream bis = null;
         try {
             bis = new ByteArrayInputStream(messageData);
-            ois = new ObjectInputStreamWithLoader(bis, dsc.getClassLoader());
+            //ois = new ObjectInputStreamWithLoader(bis, dsc.getClassLoader());
+            ois = new ObjectInputStream(bis);
             Command<K, V> cmd = (Command<K, V>) ois.readObject();
-            if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, dsc.getServiceName() + " RECEIVED " + cmd);
+            if (_logger.isLoggable(Level.FINER)) {
+                _logger.log(Level.FINER, dsc.getServiceName() + " RECEIVED " + cmd);
             }
             cmd.initialize(dsc);
             this.executeCommand(cmd, false, sourceMemberName);

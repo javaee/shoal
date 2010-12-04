@@ -40,6 +40,7 @@
 
 package org.shoal.ha.cache.api;
 
+import org.glassfish.ha.store.util.KeyTransformer;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.store.DataStoreEntryUpdater;
 import org.shoal.ha.mapper.KeyMapper;
@@ -87,6 +88,10 @@ public class DataStoreConfigurator<K, V> {
     private boolean safeToDelayCaptureState = true;
 
     private boolean useMapToCacheCommands = true;
+
+    private KeyTransformer<K> keyTransformer;
+
+    private boolean broadcastRemovedExpired = true;
 
     protected DataStoreConfigurator() {
 
@@ -244,6 +249,24 @@ public class DataStoreConfigurator<K, V> {
         return this;
     }
 
+    public KeyTransformer<K> getKeyTransformer() {
+        return keyTransformer;
+    }
+
+    public DataStoreConfigurator<K, V> setKeyTransformer(KeyTransformer<K> keyTransformer) {
+        this.keyTransformer = keyTransformer;
+        return this;
+    }
+
+    public boolean isBroadcastRemovedExpired() {
+        return broadcastRemovedExpired;
+    }
+
+    public DataStoreConfigurator<K, V> setBroadcastRemovedExpired(boolean broadcastRemovedExpired) {
+        this.broadcastRemovedExpired = broadcastRemovedExpired;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "DataStoreConfigurator{" +
@@ -257,6 +280,8 @@ public class DataStoreConfigurator<K, V> {
                 ", cacheLocally= " + cacheLocally +
                 ", clazzLoader=" + clazzLoader +
                 ", doSynchronousReplication=" + doSynchronousReplication +
+                ", broadcastRemovedExpired=" + broadcastRemovedExpired +
+                ", keyTransformer=" + ((keyTransformer == null) ? null : keyTransformer.getClass().getName()) +
                 '}';
     }
 }

@@ -117,6 +117,11 @@ public class RemoveExpiredResultCommand<K, V>
         }
     }
 
+    @Override
+    protected boolean isArtificialKey() {
+        return true;
+    }
+
     public String toString() {
         return getName() + "(result=" + result + ")";
     }
