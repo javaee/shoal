@@ -117,6 +117,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
         debugName = conf.getStoreName() + ": ";
     }
 
+    public DataStoreContext<K, V> getDataStoreContext() {
+        return dsc;
+    }
+
     private void initialize() {
 
         dsc.setGroupService(gs);

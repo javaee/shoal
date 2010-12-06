@@ -44,6 +44,7 @@ import org.glassfish.ha.store.api.*;
 import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.store.DataStoreEntry;
+import org.shoal.ha.cache.impl.store.ReplicatedDataStore;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
@@ -70,7 +71,7 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     }
 
     public DataStoreContext<K, V> getDataStoreContext() {
-        return null;//dataStore.get();
+        return dataStore == null ? null : ((ReplicatedDataStore) dataStore).getDataStoreContext();
     }
 
     @Override
