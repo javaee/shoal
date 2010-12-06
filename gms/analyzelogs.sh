@@ -137,7 +137,7 @@ else
 fi
 
 echo
-TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "JOINED_AND_READY_EVENT for member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=`expr ${NUMOFMEMBERS} + 1`
 elif [ "${CMD}" = "kill" ]; then
@@ -155,7 +155,7 @@ if [ ${TMP} -eq ${EXPECTED} ];then
 else
    echo "Check for JOINED_AND_READY_EVENT in DAS log. Expect: ${EXPECTED},  Found: ${TMP} [FAILED]"
    echo "-----------------"
-   grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}
+   grep "JOINED_AND_READY_EVENT for member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN}
    echo "-----------------"
    FAIL_TOTAL=`expr ${FAIL_TOTAL} + 1 `
 fi
@@ -312,7 +312,7 @@ do
 done
 
 echo
-TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "JOINED_AND_READY_EVENT for member:"  ${ALLLOGS} | grep -v ${APPLICATIONADMIN} | wc -l`
 if [ "${CMD}" = "stop" ]; then
    EXPECTED=`expr \( ${NUMOFMEMBERS} \* ${NUMOFMEMBERS} \) + 1`
 elif [ "${CMD}" = "kill" ]; then
@@ -325,7 +325,7 @@ else
    EXPECTED=`expr ${NUMOFMEMBERS} \* ${NUMOFINSTANCES} + 1 `
 fi
 echo "Check for JOINED_AND_READY_EVENT over all logs. Expect ${EXPECTED},   Found: ${TMP}"
-TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+TMP=`grep "JOINED_AND_READY_EVENT for member:"  ${SERVERLOG} | grep -v ${APPLICATIONADMIN} | wc -l`
 echo "JoinAndReady in server    : ${TMP}"
 count=1
 num=0
@@ -337,7 +337,7 @@ do
        num=${count}
     fi
     LOG=${LOGS_DIR}/instance${num}.log
-    TMP=`grep "JOINED_AND_READY_EVENT for Member:"  ${LOG} | grep -v ${APPLICATIONADMIN} | wc -l`
+    TMP=`grep "JOINED_AND_READY_EVENT for member:"  ${LOG} | grep -v ${APPLICATIONADMIN} | wc -l`
     echo "JoinAndReady in instance${num}: ${TMP}"
     count=`expr ${count} + 1`
 done

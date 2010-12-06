@@ -366,8 +366,8 @@ public class Router {
     void notifyFailureRecoveryAction(final FailureRecoverySignal signal) {
         final FailureRecoveryAction a;
         final FailureRecoverySignal frs;
-        logger.log(Level.INFO, "failurenotificationsignals.send.component",
-                new Object[]{signal.getComponentName()});
+        logger.log(Level.INFO, "failurerecoverysignals.send.component",
+                new Object[]{signal.getComponentName(), signal.getMemberToken()});
         final FailureRecoveryActionFactory fraf = failureRecoveryAF.get(signal.getComponentName());
         a = (FailureRecoveryAction) fraf.produceAction();
         frs = new FailureRecoverySignalImpl(signal);
