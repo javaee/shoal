@@ -47,6 +47,7 @@ import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -85,7 +86,9 @@ public class StaleCopyRemoveCommand<K, V>
     @Override
     public void execute(String initiator) {
         dsc.getReplicaStore().remove(getKey());
-        System.out.println("*********************  REMOVED STALE REPLICA: " + getKey() + "   ** SENT BY: " + initiator);
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, "*********************  REMOVED STALE REPLICA: " + getKey() + "   ** SENT BY: " + initiator);
+        }
     }
 
 }

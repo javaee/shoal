@@ -232,7 +232,6 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>(k);
                     staleCmd.setStaleTargetName(staleLocation);
                     cm.execute(staleCmd);
-                    _saveLogger.log(Level.WARNING, debugName + "put(" + k + ") sent stale_remove to stale data to " + staleLocation);
                 }
             } else {
                 _logger.log(Level.WARNING, "ReplicatedDataStore.put(" + k + ") AFTER remove?");
@@ -240,7 +239,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
         }
 
-        _saveLogger.log(Level.FINE, debugName + " done save(" + k + ") to " + result);
+        if (_saveLogger.isLoggable(Level.FINE)) {
+            _saveLogger.log(Level.FINE, debugName + " done save(" + k + ") to " + result);
+        }
         return result;
     }
 
