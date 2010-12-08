@@ -174,7 +174,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         dseUpdater.initialize(dsc);
         dsc.setDataStoreEntryUpdater(dseUpdater);
 
-        _logger.log(Level.INFO, "ReplicatedDataStore using DataStoreEntryUpdater = "
+        _logger.log(Level.INFO, "ReplicatedDataStore(3.1) For {" + dsc.getStoreName() + "} using DataStoreEntryUpdater = "
                 + dsc.getDataStoreEntryUpdater().getClass().getName());
 
         this.cm = new CommandManager<K, V>();
@@ -249,11 +249,13 @@ public class ReplicatedDataStore<K, V extends Serializable>
     public V get(K key)
             throws DataStoreException {
         V v = null;
+        boolean foundLocally = false;
         DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
         if (entry != null) {
             if (!entry.isRemoved()) {
                 v = dsc.getDataStoreEntryUpdater().getV(entry);
                 if (v != null) {
+                    foundLocally = true;
                     foundLocallyCount.incrementAndGet();
                     if (_loadLogger.isLoggable(Level.FINE)) {
                         _loadLogger.log(Level.FINE, debugName + "load(" + key
@@ -354,6 +356,20 @@ public class ReplicatedDataStore<K, V extends Serializable>
         if (_loadLogger.isLoggable(Level.FINE)) {
             _loadLogger.log(Level.FINE, debugName + "load(" + key
                     + ") Final result: " + v);
+        }
+
+        if ((v != null) && foundLocally) {
+            //Because we did a successful load, to ensure that the data lives in another instance
+            //  lets do a save
+
+            try {
+                _loadLogger.log(Level.FINE, "(SaveOnLoad) About to save the data to another replica...");
+                String secondaryReplica = put(key, v);
+                _saveLogger.log(Level.FINE, "(SaveOnLoad) Saved the data to replica: "  + secondaryReplica);
+            } catch (DataStoreException dsEx) {
+                _saveLogger.log(Level.WARNING, "(SaveOnLoad) Failed to save data after a load", dsEx);
+            }
+
         }
         return v;
     }

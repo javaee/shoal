@@ -9,6 +9,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.logging.Level;
 
 /**
  * @author Mahesh Kannan
@@ -35,11 +36,15 @@ public class
         if (entry != null && entry.isReplicaNode() && entry.getVersion() >= minVersion) {
             byte[] rawV = super.captureState(entry.getV());
             cmd = new LoadResponseCommand<K, V>(k, entry.getVersion(), rawV);
-//            System.out.println("Sending valid load response for key: " + k
-//                    + "; minVersion = " + minVersion + "; myVersion = " + entry.getVersion());
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "Sending valid load response for key: " + k
+                    + "; minVersion = " + minVersion + "; myVersion = " + entry.getVersion());
+            }
         } else {
             cmd = new LoadResponseCommand<K, V>(k, Long.MIN_VALUE, null);
-//            System.out.println("Sending NotFound load response for key: " + k);
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "Sending NotFound load response for key: " + k);
+            }
         }
         return cmd;
     }
@@ -58,6 +63,12 @@ public class
             //This is the only data that we have
             // So just deserialize and merge with subsequent data
 
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "StoreableEntryUpdater.executeSave received (first copy) of key = "
+                    + saveCmd.getKey()
+                    + "; entry.version" + entry.getVersion()
+                    + "; cmd.version" + saveCmd.getVersion());
+            }
             V v = null;
             try {
                 v = ctx.getValueClazz().newInstance();
@@ -70,9 +81,11 @@ public class
             super.printEntryInfo("Saved initial entry", entry, saveCmd.getKey());
             entry.setIsReplicaNode(true);
         } else {
-//            System.out.println("Added to pending update: key = " + saveCmd.getKey()
-//                    + "; entry.version" + entry.getVersion()
-//                    + "; cmd.version" + saveCmd.getVersion());
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "StoreableEntryUpdater received: key = " + saveCmd.getKey()
+                    + "; entry.version" + entry.getVersion()
+                    + "; cmd.version" + saveCmd.getVersion());
+            }
             entry.addPendingUpdate(saveCmd);
             Iterator<SaveCommand<K, V>> iter = entry.getPendingUpdates().iterator();
             while (iter.hasNext()) {

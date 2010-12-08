@@ -159,8 +159,8 @@ public class StoreableBackingStoreShell {
                     st1.setStr2(params[2] + ":" + i);
                 }
                 st1.touch();
-                System.out.println("PUT key = " + key1 + " : " + st1);
-                ds.save(key1, st1, true);
+                String replica = ds.save(key1, st1, true);
+                System.out.println("PUT key = " + key1 + " : " + st1 + " ==> " + replica);
             }
             
         } else if ("get".equalsIgnoreCase(command)) {

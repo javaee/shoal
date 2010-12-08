@@ -5,6 +5,8 @@ import org.shoal.adapter.store.commands.LoadResponseCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
 import org.shoal.ha.cache.api.*;
 
+import java.util.logging.Level;
+
 /**
  * @author Mahesh Kannan
  * 
@@ -37,11 +39,13 @@ public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleMetadata>
 //                + "; rawV.length = " + entry.getRawV());
             cmd = new LoadResponseCommand<K, V>(k, entry.getVersion(), entry.getRawV());
         } else {
-            String entryMsg = (entry == null) ? "NULL ENTRY"
-                    : (entry.getVersion() + " >= " + minVersion);
-//            System.out.println("SimpleStoreableDataStoreEntryUpdater.createLoadResp "
-//                + entryMsg
-//                + "; rawV.length = " + (entry == null ? " null " : "" + entry.getRawV()));
+            if (_logger.isLoggable(Level.FINE)) {
+                String entryMsg = (entry == null) ? "NULL ENTRY"
+                        : (entry.getVersion() + " >= " + minVersion);
+                _logger.log(Level.FINE, "SimpleStoreableDataStoreEntryUpdater.createLoadResp " + entryMsg
+                   + "; rawV.length = " + (entry == null ? " null " : "" + entry.getRawV()));
+            }
+            
             cmd = new LoadResponseCommand<K, V>(k, Long.MIN_VALUE, null);
         }
         return cmd;
@@ -50,10 +54,21 @@ public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleMetadata>
     @Override
     public void executeSave(DataStoreEntry<K, V> entry, SaveCommand<K, V> cmd) {
         if (entry != null && entry.getVersion() < cmd.getVersion()) {
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "SimpleStoreableDataStoreEntryUpdater.executeSave. SAVING ... "
+                    + "entry = " + entry + "; entry.version = " + entry.getVersion()
+                    + "; cmd.version = " + cmd.getVersion());
+            }
             entry.setIsReplicaNode(true);
             super.updateMetaInfoInDataStoreEntry(entry, cmd);
             entry.setRawV(cmd.getRawV());
             super.printEntryInfo("SimpleStoreableDataStoreEntryUpdater:Updated", entry, cmd.getKey());
+        } else {
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "SimpleStoreableDataStoreEntryUpdater.executeSave. IGNORING ... "
+                    + "entry = " + entry + "; entry.version = " + entry.getVersion()
+                    + "; cmd.version = " + cmd.getVersion());
+            }
         }
     }
 

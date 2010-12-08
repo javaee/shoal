@@ -72,7 +72,7 @@ public class DataStoreEntry<K, V> {
 
     private long maxIdleTime;
 
-    private long version = -1;
+    private long version = -8; //some negative number that is small enough to allow updates/saves to succeed
 
     private byte[] rawV;
 
