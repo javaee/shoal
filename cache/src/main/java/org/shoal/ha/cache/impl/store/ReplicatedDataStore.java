@@ -146,14 +146,11 @@ public class ReplicatedDataStore<K, V extends Serializable>
             KeyTransformer kt = null;
             if (dsc.getKeyClazz() == String.class) {
                 kt = new StringKeyTransformer();
-
-                System.out.println("** USING KeyTransfomer: " + kt.getClass().getName());
             } else {
                 //kt = new DefaultKeyTransformer(dsc.getClassLoader());
             }
             dsc.setKeyTransformer(kt);
         }
-
     }
 
     private void postInitialization() {
@@ -174,8 +171,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
         dseUpdater.initialize(dsc);
         dsc.setDataStoreEntryUpdater(dseUpdater);
 
-        _logger.log(Level.INFO, "ReplicatedDataStore(3.1) For {" + dsc.getStoreName() + "} using DataStoreEntryUpdater = "
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, "ReplicatedDataStore For {" + dsc.getStoreName() + "} using DataStoreEntryUpdater = "
                 + dsc.getDataStoreEntryUpdater().getClass().getName());
+        }
 
         this.cm = new CommandManager<K, V>();
         dsc.setCommandManager(cm);
@@ -207,6 +206,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
         replicaStore.setIdleEntryDetector(dsc.getIdleEntryDetector());
 
 
+
+        if (_logger.isLoggable(Level.FINE)) {
+            _logger.log(Level.FINE, "Created ReplicatedDataStore with configuration = " + dsc);
+        }
 
     }
 
@@ -354,8 +357,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
 
         if (_loadLogger.isLoggable(Level.FINE)) {
-            _loadLogger.log(Level.FINE, debugName + "load(" + key
-                    + ") Final result: " + v);
+            _loadLogger.log(Level.FINE, debugName + "load(" + key + ") Final result: " + v);
         }
 
         if ((v != null) && foundLocally) {
@@ -363,9 +365,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
             //  lets do a save
 
             try {
-                _loadLogger.log(Level.FINE, "(SaveOnLoad) About to save the data to another replica...");
                 String secondaryReplica = put(key, v);
-                _saveLogger.log(Level.FINE, "(SaveOnLoad) Saved the data to replica: "  + secondaryReplica);
+                if (_logger.isLoggable(Level.FINE)) {
+                    _saveLogger.log(Level.FINE, "(SaveOnLoad) Saved the data to replica: "  + secondaryReplica);
+                }
             } catch (DataStoreException dsEx) {
                 _saveLogger.log(Level.WARNING, "(SaveOnLoad) Failed to save data after a load", dsEx);
             }

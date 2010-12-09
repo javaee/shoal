@@ -106,6 +106,14 @@ public class DefaultKeyMapper
         if (key1 instanceof HashableKey) {
             HashableKey k = (HashableKey) key1;
             hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "DefaultKeyMapper.getMappedInstance got a HashableKey "
+                        + " key = " + key1 + "; key.hc = " + key1.hashCode()
+                        + "; key.getHashKey() = " + ((HashableKey) key1).getHashKey() + "; key.getHashKey().hc = "
+                        + (k.getHashKey() == null ? "-" : hc)
+                        + "; Final hc = " + hc
+                );
+            }
         }
         hc = Math.abs(hc);
 

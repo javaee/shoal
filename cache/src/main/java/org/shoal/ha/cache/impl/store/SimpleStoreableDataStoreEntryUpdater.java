@@ -34,9 +34,12 @@ public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleMetadata>
     public LoadResponseCommand<K, V> createLoadResponseCommand(DataStoreEntry<K, V> entry, K k, long minVersion) {
         LoadResponseCommand<K, V> cmd = null;
         if (entry != null && entry.isReplicaNode() && entry.getVersion() >= minVersion) {
-//            System.out.println("SimpleStoreableDataStoreEntryUpdater.createLoadResp "
-//                + " entry.version " + entry.getVersion() + ">= " + minVersion
-//                + "; rawV.length = " + entry.getRawV());
+
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "SimpleStoreableDataStoreEntryUpdater.createLoadResp "
+                    + " entry.version " + entry.getVersion() + ">= " + minVersion
+                    + "; rawV.length = " + entry.getRawV());
+            }
             cmd = new LoadResponseCommand<K, V>(k, entry.getVersion(), entry.getRawV());
         } else {
             if (_logger.isLoggable(Level.FINE)) {

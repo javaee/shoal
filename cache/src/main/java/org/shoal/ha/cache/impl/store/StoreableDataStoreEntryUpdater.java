@@ -37,14 +37,17 @@ public class
             byte[] rawV = super.captureState(entry.getV());
             cmd = new LoadResponseCommand<K, V>(k, entry.getVersion(), rawV);
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "Sending valid load response for key: " + k
+                _logger.log(Level.FINE, "StoreableDataStoreEntryUpdater Sending valid load response for key: " + k
                     + "; minVersion = " + minVersion + "; myVersion = " + entry.getVersion());
             }
         } else {
-            cmd = new LoadResponseCommand<K, V>(k, Long.MIN_VALUE, null);
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "Sending NotFound load response for key: " + k);
+                String entryMsg = (entry == null) ? "NULL ENTRY"
+                        : (entry.getVersion() + " >= " + minVersion);
+                _logger.log(Level.FINE, "StoreableDataStoreEntryUpdater.createLoadResp " + entryMsg
+                   + "; rawV.length = " + (entry == null ? " null " : "" + entry.getRawV()));
             }
+            cmd = new LoadResponseCommand<K, V>(k, Long.MIN_VALUE, null);
         }
         return cmd;
     }
