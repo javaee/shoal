@@ -52,6 +52,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Array;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -73,6 +74,8 @@ public class CommandManager<K, V>
     private volatile AbstractCommandInterceptor<K, V> tail;
 
     private static Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_COMMAND);
+
+    private static Logger _statsLogger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_STATS);
 
     public CommandManager() {}
 
@@ -141,6 +144,14 @@ public class CommandManager<K, V>
                 _logger.log(Level.FINER, dsc.getServiceName() + " RECEIVED " + cmd);
             }
             cmd.initialize(dsc);
+
+
+            int receivedCount = dsc.getDataStoreMBean().incrementBatchReceivedCount();
+            if (_statsLogger.isLoggable(Level.FINE)) {
+                _statsLogger.log(Level.FINE, "Received message#  " + receivedCount + "  from " + sourceMemberName);
+            }
+
+            
             this.executeCommand(cmd, false, sourceMemberName);
         } catch (IOException dse) {
             _logger.log(Level.WARNING, "Error during parsing command: opcode: " + messageData[0], dse);

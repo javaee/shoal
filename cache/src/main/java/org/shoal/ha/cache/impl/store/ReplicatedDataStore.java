@@ -47,7 +47,6 @@ import org.shoal.adapter.store.commands.*;
 import org.shoal.ha.cache.impl.interceptor.ReplicationCommandTransmitterManager;
 import org.shoal.ha.cache.impl.interceptor.ReplicationFramePayloadCommand;
 import org.shoal.ha.cache.impl.util.CommandResponse;
-import org.shoal.ha.cache.impl.util.DefaultKeyTransformer;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.cache.impl.util.StringKeyTransformer;
 import org.shoal.ha.group.GroupMemberEventListener;
@@ -58,10 +57,11 @@ import org.shoal.ha.cache.api.*;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.CommandManager;
 
+import javax.management.*;
 import java.io.Serializable;
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -93,16 +93,14 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     private ReplicaStore<K, V> replicaStore;
 
-    private AtomicInteger broadcastLoadRequestCount = new AtomicInteger(0);
-
-    private AtomicInteger simpleBroadcastCount = new AtomicInteger(0);
-
-    private AtomicInteger foundLocallyCount = new AtomicInteger(0);
-
     private long defaultIdleTimeoutInMillis;
 
+    private ReplicatedDataStoreStatsHolder<K, V> dscMBean;
 
     private String debugName = "ReplicatedDataStore";
+
+    private MBeanServer mbs;
+    private ObjectName mbeanObjectName;
 
     public ReplicatedDataStore(DataStoreContext<K, V> conf, GroupService gs) {
         this.dsc = conf;
@@ -211,6 +209,26 @@ public class ReplicatedDataStore<K, V extends Serializable>
             _logger.log(Level.FINE, "Created ReplicatedDataStore with configuration = " + dsc);
         }
 
+        dscMBean = new ReplicatedDataStoreStatsHolder<K, V>(dsc);
+        dsc.setDataStoreMBean(dscMBean);
+
+
+		try {
+
+            mbeanObjectName = new ObjectName("org.shoal.ha.cache.jmx.ReplicatedDataStore"
+            + ":name="+dsc.getStoreName() + "_" + dsc.getInstanceName());
+
+            mbs = ManagementFactory.getPlatformMBeanServer();
+            mbs.registerMBean(new StandardMBean(dscMBean, DataStoreMBean.class), mbeanObjectName);
+        } catch(MalformedObjectNameException malEx) {
+            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+        } catch(InstanceAlreadyExistsException malEx) {
+            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+        } catch(MBeanRegistrationException malEx) {
+            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+        } catch(NotCompliantMBeanException malEx) {
+            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+        }
     }
 
     @Override
@@ -223,6 +241,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
             if (!entry.isRemoved()) {
                 SaveCommand<K, V> cmd = dsc.getDataStoreEntryUpdater().createSaveCommand(entry, k, v);
                 cm.execute(cmd);
+                dscMBean.incrementSaveCount();
                 if (dsc.isCacheLocally()) {
                     entry.setV(v);
                 }
@@ -251,6 +270,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public V get(K key)
             throws DataStoreException {
+        dscMBean.incrementLoadCount();
         V v = null;
         boolean foundLocally = false;
         DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
@@ -259,7 +279,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 v = dsc.getDataStoreEntryUpdater().getV(entry);
                 if (v != null) {
                     foundLocally = true;
-                    foundLocallyCount.incrementAndGet();
+                    dscMBean.incrementLocalLoadSuccessCount();
                     if (_loadLogger.isLoggable(Level.FINE)) {
                         _loadLogger.log(Level.FINE, debugName + "load(" + key
                                 + "); FOUND IN LOCAL CACHE!!");
@@ -285,7 +305,6 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 if (target == null || target.trim().length() == 0 || target.equals(dsc.getInstanceName())) {
                     continue;
                 }
-                simpleBroadcastCount.incrementAndGet();
                 LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key,
                         entry == null ? -1 : entry.getVersion(), target);
                 if (_loadLogger.isLoggable(Level.FINE)) {
@@ -297,6 +316,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 v = command.getResult(3, TimeUnit.SECONDS);
                 if (v != null) {
                     respondingInstance = command.getRespondingInstanceName();
+                    dscMBean.incrementSimpleLoadSuccessCount();
                     break;
                 }
             }
@@ -306,7 +326,6 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     _loadLogger.log(Level.FINE, debugName + "*load(" + key
                         + ") Performing broadcast load");
                 }
-                broadcastLoadRequestCount.incrementAndGet();
                 String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
                 for (String targetInstance : targetInstances) {
                     if (targetInstance.equals(dsc.getInstanceName())) {
@@ -323,6 +342,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     v = lrCmd.getResult(3, TimeUnit.SECONDS);
                     if (v != null) {
                         respondingInstance = targetInstance;
+                        dscMBean.incrementBroadcastLoadSuccessCount();
                         break;
                     }
                 }
@@ -345,14 +365,19 @@ public class ReplicatedDataStore<K, V extends Serializable>
                                 _loadLogger.log(Level.FINE, debugName + "load(" + key
                                         + "; Successfully loaded data from " + respondingInstance);
                             }
+
+                            dscMBean.incrementLoadSuccessCount();
                         } else {
                             if (_loadLogger.isLoggable(Level.FINE)) {
                                 _loadLogger.log(Level.FINE, debugName + "load(" + key
                                         + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
                             }
+                            dscMBean.incrementLoadFailureCount();
                         }
                     }
                 }
+            } else {
+                dscMBean.incrementLoadFailureCount();
             }
         }
 
@@ -382,7 +407,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
             throws DataStoreException {
 
         replicaStore.remove(k);
-
+        dscMBean.incrementRemoveCount();
+        
         String[] targets = dsc.getKeyMapper().getCurrentMembers();
 
         if (targets != null) {
@@ -463,6 +489,15 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     @Override
     public void close() {
+        try {
+            if (mbs != null && mbeanObjectName != null) {
+                mbs.unregisterMBean(mbeanObjectName);
+            }
+        } catch (InstanceNotFoundException inNoEx) {
+            //TODO
+        } catch (MBeanRegistrationException mbRegEx) {
+            //TODO
+        }
     }
 
     public int size() {

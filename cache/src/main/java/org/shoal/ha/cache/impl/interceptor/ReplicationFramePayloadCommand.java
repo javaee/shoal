@@ -168,17 +168,15 @@ public class
             KeyTransformer<K> kt = dsc.getKeyTransformer();
             removedKeys = new ArrayList<K>();
             for (byte[] bytes : rawRemovedKeys) {
-                removedKeys.add(kt.byteArrayToKey(bytes, 0, bytes.length));
+                K k = kt.byteArrayToKey(bytes, 0, bytes.length);
+                removedKeys.add(k);
+                dsc.getReplicaStore().remove(k);
             }
         }
         
         for (Command<K, V> cmd : commands) {
             cmd.initialize(dsc);
             getCommandManager().executeCommand(cmd, false, initiator);
-        }
-
-        for (K k : removedKeys) {
-            dsc.getReplicaStore().remove(k);
         }
     }
 

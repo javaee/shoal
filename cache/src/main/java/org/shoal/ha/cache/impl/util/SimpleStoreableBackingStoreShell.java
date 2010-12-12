@@ -144,12 +144,13 @@ public class SimpleStoreableBackingStoreShell {
                 System.out.println("PUT key = " + key1 + " : " + st + ";   TO : " + rs);
             }
 
+            /*
             for (int i=0; i<8; i++) {
                 MyKey key1 = new MyKey(params[0] + ":" + i, key);
                 System.out.println("(local) GET key = " + key1 + " : "
                         + cache.get(key1));
             }
-
+            */
         } else if ("get".equalsIgnoreCase(command)) {
             MyKey key = new MyKey(params[0], null);
             SimpleMetadata st = ds.load(key, params.length > 1 ? params[1] : null);

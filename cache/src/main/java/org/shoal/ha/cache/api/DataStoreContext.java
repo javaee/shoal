@@ -66,6 +66,8 @@ public class DataStoreContext<K, V>
 
     private ReplicaStore<K, V> replicaStore;
 
+    private ReplicatedDataStoreStatsHolder dscMBean;
+
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
         super.setStoreName(serviceName);
         super.setInstanceName(gs.getMemberName());
@@ -208,6 +210,14 @@ public class DataStoreContext<K, V>
 
 
         initIdleEntryProcessor();
+    }
+
+    public void setDataStoreMBean(ReplicatedDataStoreStatsHolder<K, V> dscMBean) {
+        this.dscMBean = dscMBean;
+    }
+
+    public ReplicatedDataStoreStatsHolder<K, V> getDataStoreMBean() {
+        return dscMBean;
     }
 
     public String getServiceName() {

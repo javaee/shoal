@@ -200,10 +200,10 @@ public class GroupServiceProvider
 
                 createdAndJoinedGMSGroup = true;
             } else {
-                logger.info("**GroupServiceProvider:: Will not start GMS module for group " + groupName + ". It should have been started by now. But GMS: " + gms);
+                logger.fine("**GroupServiceProvider:: Will not start GMS module for group " + groupName + ". It should have been started by now. But GMS: " + gms);
             }
         } else {
-            logger.info("**GroupServiceProvider:: GMS module for group " + groupName + " should have been started by now GMS: " + gms);
+            logger.fine("**GroupServiceProvider:: GMS module for group " + groupName + " should have been started by now GMS: " + gms);
         }
 
         if (gms != null) {
@@ -219,7 +219,7 @@ public class GroupServiceProvider
             logger.info("**GroupServiceProvider:: REGISTERED member event listeners for <group, instance> => <" + groupName + ", " + myName + ">");
 
         } else {
-            throw new IllegalStateException("GMS has not been started yet for group name: " + groupName);
+            throw new IllegalStateException("GMS has not been started yet for group name: " + groupName + ". Is the cluster up and running");
         }
 
         if (createdAndJoinedGMSGroup) {

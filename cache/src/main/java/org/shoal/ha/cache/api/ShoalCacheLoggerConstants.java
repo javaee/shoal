@@ -47,6 +47,8 @@ public class ShoalCacheLoggerConstants {
 
     public static final String CACHE = "org.shoal.ha.cache";
 
+    public static final String CACHE_STATS = "org.shoal.ha.cache.stats";
+
     public static final String CACHE_CONFIG = "org.shoal.ha.cache.config";
 
     public static final String CACHE_KEY_MAPPER = "org.shoal.ha.cache.mapper";
