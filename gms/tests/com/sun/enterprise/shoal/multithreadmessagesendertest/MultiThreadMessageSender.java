@@ -136,7 +136,7 @@ public class MultiThreadMessageSender implements CallBack{
 		try {
             Properties props = new Properties();
             props.put(ServiceProviderConfigurationKeys.INCOMING_MESSAGE_QUEUE_SIZE.toString(), "1500");
-            props.put(ServiceProviderConfigurationKeys.MONITORING.toString(), "120");
+            props.put(ServiceProviderConfigurationKeys.MONITORING.toString(), "0");
 			gms = (GroupManagementService) GMSFactory.startGMSModule(memberToken,"DemoGroup", GroupManagementService.MemberType.CORE, props);
 			gms.addActionFactory(new MessageActionFactoryImpl(this),"SimpleSampleComponent");
             gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
@@ -264,7 +264,7 @@ public class MultiThreadMessageSender implements CallBack{
             }
         }
     }
-    final static int NUM_MESSAGES_TO_SEND = 25000;
+    final static int NUM_MESSAGES_TO_SEND = 10000;
     static int EXPECTED_NUMBER_OF_MESSAGES;
     static private boolean msgIdReceived[];
     static private AtomicInteger numMsgIdReceived = new AtomicInteger(0);

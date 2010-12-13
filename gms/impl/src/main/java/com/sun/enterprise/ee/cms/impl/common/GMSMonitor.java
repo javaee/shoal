@@ -50,6 +50,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.management.*;
+import java.lang.management.ManagementFactory;
 
 
 /**
@@ -70,18 +72,28 @@ public class GMSMonitor {
     private Timer timer = null;
     private long REPORT_DURATION = 5;  //seconds
     private long sendWriteTimeout = Long.MAX_VALUE;   //default to no timeout.
+    final public MBeanServer mbs;
+    final public String instanceName;
+    final public String groupName;
     
-    public GMSMonitor(Properties props) {
+    public GMSMonitor(String instanceName, String groupName, Properties props) {
+        this.instanceName = instanceName;
+        this.groupName = groupName;
         REPORT_DURATION =
                 Utility.getLongProperty(ServiceProviderConfigurationKeys.MONITORING.toString(), ENABLED_DEFAULT, props);
-        boolean enableMonitoring = REPORT_DURATION <= 0 ? false : true;
+        boolean enableMonitoring = REPORT_DURATION < 0 ? false : true;
         if (REPORT_DURATION != ENABLED_DEFAULT && logger.isLoggable(Level.CONFIG)) {
             logger.config("GMSMonitor ENABLED: " + enableMonitoring);
         }
         this.ENABLED = enableMonitoring;
         if (this.ENABLED) {
-            timer = new Timer(true);
-            timer.scheduleAtFixedRate(new Report(this), REPORT_DURATION * 1000 , REPORT_DURATION * 1000);
+            if (REPORT_DURATION != 0) {
+                timer = new Timer(true);
+                timer.scheduleAtFixedRate(new Report(this), REPORT_DURATION * 1000 , REPORT_DURATION * 1000);
+            }
+            mbs = ManagementFactory.getPlatformMBeanServer();
+        } else {
+            mbs = null;
         }
     }
 
@@ -110,20 +122,80 @@ public class GMSMonitor {
 
         // initialization step.  Ensures that one and only one entry will be added for a targetComponent.
         if (result == null) {
-            MessageStats newEntry = new MessageStats(targetComponent);
+            MessageStats newEntry = new MessageStats(targetComponent, this);
             result = gmsMsgStats.putIfAbsent(targetComponent, newEntry);
             // returns null if targetComponent was not in hash.
             if (result == null) {
                 result = newEntry;
+
+                // register new mbean.
+                result.register();
             }
         }
         return result;
     }
 
+    public void closeGMSMessageMonitorStats(String targetComponent) {
+        MessageStats closeEntry = gmsMsgStats.remove(targetComponent);
+        if (closeEntry != null) {
+            closeEntry.close();
+        }
+    }
+
     private AtomicLong maxIncomingMessageQueueSize = new AtomicLong(0);
 
-    static public class MessageStats {
+    static public interface GMSMessageStatsMBean {
+        long getNumFailMsgSend();
+
+        long incrementNumFailMsgSend();
+
+        long getSendWriteTimeouts();
+
+        long incrementSendWriteTimeout();
+
+        long getNumMsgsSent();
+
+        long incrementNumMsgsSent();
+
+        long getBytesSent();
+
+        long addBytesSent(long bytesSent);
+
+        long getSendDuration();
+
+        long addSendDuration(long duration);
+
+        long getMaxSendDuration();
+
+        void setMaxSendDuration(long duration);
+
+        long getReceiveDuration();
+
+        long addReceiveDuration(long duration);
+
+        long getMaxReceiveDuration();
+
+        void setMaxReceiveDuration(long duration);
+
+        long getNumMsgsReceived();
+
+        long incrementNumMsgsReceived();
+
+        long getBytesReceived();
+
+        long addBytesReceived(long bytesReceived);
+
+        long getNumMsgsNoListener();
+
+        long incrementNumMsgsNoHandler();
+    };
+
+    static public class MessageStats implements GMSMessageStatsMBean {
         final private String targetComponent;
+        final private GMSMonitor gmsMonitor;
+        private MBeanServer mbs = null;
+        private ObjectName mbeanObjectName = null;
+
         private AtomicLong numMsgsSent = new AtomicLong(0);
         private AtomicLong bytesSent = new AtomicLong(0);
         private AtomicLong sendTime = new AtomicLong(0);
@@ -137,8 +209,43 @@ public class GMSMonitor {
         private AtomicLong receiveTime = new AtomicLong(0);
         private AtomicLong maxReceiveTime = new AtomicLong(0);
 
-        public MessageStats(String component) {
+        private static final Logger _logger = GMSLogDomain.getMonitorLogger();
+
+
+        public MessageStats(String component, GMSMonitor gmsMonitor) {
             targetComponent = component;
+            this.gmsMonitor = gmsMonitor;
+            this.mbs = gmsMonitor.mbs;
+        }
+
+        public void register() {
+            if (mbs != null) {
+
+                try {
+                    mbeanObjectName = new ObjectName("com.sun.enterprise.ee.cms.impl.common.GMSMonitor.MessageStats"
+                            + ":name=" + gmsMonitor.groupName + "_" + gmsMonitor.instanceName + "_" + targetComponent);
+
+                    gmsMonitor.mbs.registerMBean(new StandardMBean(this, GMSMessageStatsMBean.class), mbeanObjectName);
+                } catch (MalformedObjectNameException malEx) {
+                    _logger.log(Level.INFO, "Couldn't register MBean for " + targetComponent + " : " + malEx);
+                } catch (InstanceAlreadyExistsException malEx) {
+                    _logger.log(Level.INFO, "Couldn't register MBean for " + targetComponent + " : " + malEx);
+                } catch (MBeanRegistrationException malEx) {
+                    _logger.log(Level.INFO, "Couldn't register MBean for " + targetComponent + " : " + malEx);
+                } catch (NotCompliantMBeanException malEx) {
+                    _logger.log(Level.INFO, "Couldn't register MBean for " + targetComponent + " : " + malEx);
+                }
+            }
+        }
+
+        public void close() {
+            if (mbs != null && mbeanObjectName != null) {
+                try {
+                    mbs.unregisterMBean(mbeanObjectName);
+                    mbeanObjectName = null;
+                    mbs = null;
+                } catch (Exception e) {}
+            }
         }
 
 
@@ -277,8 +384,8 @@ public class GMSMonitor {
             return result;
         }
 
-        public long getMaxReeceiveDuration() {
-            return maxSendTime.get();
+        public long getMaxReceiveDuration() {
+            return maxReceiveTime.get();
         }
 
         public void setMaxReceiveDuration(long duration) {
@@ -338,6 +445,12 @@ public class GMSMonitor {
     public void stop() {
         if (timer != null) {
             timer.cancel();
+        }
+        if (ENABLED) {
+            report();
+        }
+        for (MessageStats componentMsgStats: gmsMsgStats.values()) {
+            componentMsgStats.close();
         }
     }
 

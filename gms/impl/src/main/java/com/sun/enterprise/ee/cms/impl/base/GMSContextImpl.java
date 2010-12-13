@@ -98,7 +98,7 @@ public class GMSContextImpl extends GMSContextBase {
             logger.config("INCOMING_MSG_THREAD_POOL_SIZE: " + INCOMING_MSG_THREAD_POOL_SIZE + " overrides default value of " + DEFAULT_INCOMING_MSG_THREAD_POOL_SIZE);
         }
         long MAX_STARTCLUSTER_DURATION_MS = Utility.getLongProperty("MAX_STARTCLUSTER_DURATION_MS", 10000, configProperties);
-        this.gmsMonitor = new GMSMonitor(configProperties);
+        this.gmsMonitor = new GMSMonitor(serverToken, groupName, configProperties);
         aliveAndReadyViewWindow = new AliveAndReadyViewWindow(this);
         aliveAndReadyViewWindow.setStartClusterMaxDuration(MAX_STARTCLUSTER_DURATION_MS);
         router = new Router(groupName, MAX_MSGS_IN_QUEUE + 100, aliveAndReadyViewWindow, INCOMING_MSG_THREAD_POOL_SIZE, gmsMonitor);
