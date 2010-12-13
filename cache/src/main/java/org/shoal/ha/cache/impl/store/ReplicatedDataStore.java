@@ -202,8 +202,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
         replicaStore = dsc.getReplicaStore();
         replicaStore.setIdleEntryDetector(dsc.getIdleEntryDetector());
-
-
+        
 
         if (_logger.isLoggable(Level.FINE)) {
             _logger.log(Level.FINE, "Created ReplicatedDataStore with configuration = " + dsc);
@@ -213,21 +212,23 @@ public class ReplicatedDataStore<K, V extends Serializable>
         dsc.setDataStoreMBean(dscMBean);
 
 
-		try {
+        boolean registerInMBeanServer = Boolean.getBoolean("org.shoal.ha.cache.mbean.register");
+        if (registerInMBeanServer) {
+            try {
+                mbeanObjectName = new ObjectName("org.shoal.ha.cache.jmx.ReplicatedDataStore"
+                    + ":name="+dsc.getStoreName() + "_" + dsc.getInstanceName());
 
-            mbeanObjectName = new ObjectName("org.shoal.ha.cache.jmx.ReplicatedDataStore"
-            + ":name="+dsc.getStoreName() + "_" + dsc.getInstanceName());
-
-            mbs = ManagementFactory.getPlatformMBeanServer();
-            mbs.registerMBean(new StandardMBean(dscMBean, DataStoreMBean.class), mbeanObjectName);
-        } catch(MalformedObjectNameException malEx) {
-            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
-        } catch(InstanceAlreadyExistsException malEx) {
-            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
-        } catch(MBeanRegistrationException malEx) {
-            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
-        } catch(NotCompliantMBeanException malEx) {
-            _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+                mbs = ManagementFactory.getPlatformMBeanServer();
+                mbs.registerMBean(new StandardMBean(dscMBean, DataStoreMBean.class), mbeanObjectName);
+            } catch(MalformedObjectNameException malEx) {
+                _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+            } catch(InstanceAlreadyExistsException malEx) {
+                _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+            } catch(MBeanRegistrationException malEx) {
+                _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+            } catch(NotCompliantMBeanException malEx) {
+                _logger.log(Level.INFO, "Couldn't register MBean for " + dscMBean.getStoreName() + " : " + malEx);
+            }
         }
     }
 

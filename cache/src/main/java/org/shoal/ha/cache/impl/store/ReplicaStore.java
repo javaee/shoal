@@ -130,7 +130,7 @@ public class ReplicaStore<K, V> {
 
     public int removeExpired() {
         int result = 0;
-
+        ctx.getDataStoreMBean().incrementRemoveExpiredCallCount();
         if (expiredEntryRemovalInProgress.compareAndSet(false, true)) {
             try {
                 if (idleEntryDetector != null) {
@@ -153,6 +153,8 @@ public class ReplicaStore<K, V> {
             } finally {
                 expiredEntryRemovalInProgress.set(false);
             }
+
+            ctx.getDataStoreMBean().incrementRemoveExpiredEntriesCount(result);
         } else {
             _logger.log(Level.FINE, "ReplicaStore.removeExpired(). Skipping since there is already another thread running");
         }

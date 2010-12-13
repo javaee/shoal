@@ -79,6 +79,8 @@ public class RemoveCommand<K, V>
         if (dsc.isDoSynchronousReplication()) {
             super.sendAcknowledgement();
         }
+
+        dsc.getDataStoreMBean().incrementExecutedRemoveCount();
     }
     
 }

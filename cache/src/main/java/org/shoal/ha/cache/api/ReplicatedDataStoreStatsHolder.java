@@ -14,7 +14,13 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
 
     private String valueClassName;
 
+    private String keyTransformerClassName;
+
+    private String entryUpdaterClassName;
+
     private AtomicInteger saveCount = new AtomicInteger(0);
+
+    private AtomicInteger executedSaveCount = new AtomicInteger(0);
 
     private AtomicInteger loadCount = new AtomicInteger(0);
 
@@ -26,9 +32,13 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
 
     private AtomicInteger broadcastLoadSuccessCount = new AtomicInteger(0);
 
+    private AtomicInteger saveOnLoadCount = new AtomicInteger(0);
+
     private AtomicInteger loadFailureCount = new AtomicInteger(0);
 
     private AtomicInteger removeCount = new AtomicInteger(0);
+
+    private AtomicInteger executedRemoveCount = new AtomicInteger(0);
 
     private AtomicInteger batchSentCount = new AtomicInteger(0);
 
@@ -38,12 +48,20 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
 
     private AtomicInteger flushThreadFlushedCount = new AtomicInteger(0);
 
+    private AtomicInteger removeExpiredCallCount = new AtomicInteger(0);
+
+    private AtomicInteger removeExpiredEntriesCount = new AtomicInteger(0);
+
 
     public ReplicatedDataStoreStatsHolder(DataStoreContext<K, V> dsc) {
         this.dsc = dsc;
 
         this.keyClassName = (dsc.getKeyClazz() != null) ? dsc.getKeyClazz().getName() : "?";
         this.valueClassName = (dsc.getValueClazz() != null) ? dsc.getValueClazz().getName() : "?";
+        this.keyTransformerClassName = (dsc.getKeyTransformer() != null)
+                ? dsc.getKeyTransformer().getClass().getName() : "?";
+        this.entryUpdaterClassName = (dsc.getDataStoreEntryUpdater() != null)
+                ? dsc.getDataStoreEntryUpdater().getClass().getName() : "?";
     }
 
     //@Override
@@ -61,15 +79,27 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
         return valueClassName;
     }
 
+    public String getEntryUpdaterClassName() {
+        return entryUpdaterClassName;
+    }
+
+    public String getKeyTransformerClassName() {
+        return keyTransformerClassName;
+    }
+
     //@Override
     public int getSize() {
         return dsc.getReplicaStore().size();
     }
 
-    
     //@Override
-    public int getSaveCount() {
+    public int getSentSaveCount() {
         return saveCount.get();
+    }
+
+    //@Override
+    public int getExecutedSaveCount() {
+        return executedSaveCount.get();
     }
 
     //@Override
@@ -113,8 +143,13 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
     }
 
     //@Override
-    public int getRemoveCount() {
+    public int getSentRemoveCount() {
         return removeCount.get();
+    }
+
+    //@Override
+    public int getExecutedRemoveCount() {
+        return executedRemoveCount.get();
     }
 
     public int getFlushThreadFlushedCount() {
@@ -125,12 +160,31 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
         return flushThreadWakeupCount.get();
     }
 
+    public int getSaveOnLoadCount() {
+        return saveOnLoadCount.get();
+    }
+
+    public int getExpiredEntriesCount() {
+        return removeExpiredEntriesCount.get();
+    }
+
+    public int getRemoveExpiredCallCount() {
+        return removeExpiredCallCount.get();
+    }
+
+
+    //Mutators
+
     public int incrementBatchSentCount() {
         return batchSentCount.incrementAndGet();
     }
 
     public int incrementSaveCount() {
         return saveCount.incrementAndGet();
+    }
+
+    public int incrementExecutedSaveCount() {
+        return executedSaveCount.incrementAndGet();
     }
 
     public int incrementLoadCount() {
@@ -161,6 +215,10 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
         return removeCount.incrementAndGet();
     }
 
+    public int incrementExecutedRemoveCount() {
+        return executedRemoveCount.incrementAndGet();
+    }
+
     public int incrementBatchReceivedCount() {
         return batchReceivedCount.incrementAndGet();
     }
@@ -171,9 +229,25 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
     }
 
 
-    public int incrementFlushThreadFlushhedCount() {
+    public int incrementFlushThreadFlushedCount() {
         return flushThreadFlushedCount.incrementAndGet();
     }
+
+    public int incrementSaveOnLoadCount() {
+        return saveOnLoadCount.incrementAndGet();
+    }
+
+
+    public int incrementRemoveExpiredCallCount() {
+        return removeExpiredCallCount.incrementAndGet();
+    }
+
+
+    public int incrementRemoveExpiredEntriesCount(int delta) {
+        return removeExpiredEntriesCount.addAndGet(delta);
+    }
+
+
 
     //@Override
     public String toString() {
@@ -181,18 +255,23 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
                 "name=" + getStoreName() +
                 ", keyClassName='" + getKeyClassName() + '\'' +
                 ", valueClassName='" + getValueClassName() + '\'' +
-                ", saveCount=" + getSaveCount() +
+                ", sentSaveCount=" + getSentSaveCount() +
+                ", executedSaveCount=" + getExecutedSaveCount() +
+                ", saveOnLoadCount=" + getSaveOnLoadCount() +
                 ", loadCount=" + getLoadCount() +
                 ", localLoadSuccessCount=" + getLocalLoadSuccessCount() +
                 ", simpleLoadSuccessCount=" + getSimpleLoadSuccessCount() +
                 ", broadcastLoadSuccessCount=" + getBroadcastLoadSuccessCount() +
                 ", loadSuccessCount=" + getLoadSuccessCount() +
                 ", loadFailureCount=" + getLoadFailureCount() +
-                ", removeCount=" + getRemoveCount() +
+                ", sentRemoveCount=" + getSentRemoveCount() +
+                ", executedRemoveCount=" + getExecutedRemoveCount() +
                 ", batchSentCount=" + getBatchSentCount() +
                 ", batchReceivedCount=" + getBatchReceivedCount() +
                 ", flushThreadWakeupCount=" + getFlushThreadWakeupCount() +
                 ", flushThreadFlushedCount=" + getFlushThreadFlushedCount() +
+                ", removeExpiredCallCount=" + getRemoveExpiredCallCount() +
+                ", expiredEntriesCount=" + getExpiredEntriesCount() +
                 '}';
     }
 }

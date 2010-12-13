@@ -105,6 +105,8 @@ public class SaveCommand<K, V>
             _logger.log(Level.WARNING, "SaveCommand Sending SIMPLE_ACK");
             super.sendAcknowledgement();
         }
+
+        dsc.getDataStoreMBean().incrementExecutedSaveCount();
     }
 
     public String toString() {

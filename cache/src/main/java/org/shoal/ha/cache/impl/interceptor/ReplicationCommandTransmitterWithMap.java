@@ -261,7 +261,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     do {
                         nc = new NoOpCommand();
                     } while (doAddOrRemove(nc, true));
-                    dsc.getDataStoreMBean().incrementFlushThreadFlushhedCount();
+                    dsc.getDataStoreMBean().incrementFlushThreadFlushedCount();
                 } else {
                     if (_statsLogger.isLoggable(Level.FINE)) {
                         _statsLogger.log(Level.FINE, "flushAndTransmit will NOT flush data because lastTS = " + lastTS

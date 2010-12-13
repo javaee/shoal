@@ -11,9 +11,15 @@ public interface DataStoreMBean {
 
     public String getValueClassName();
 
+    public String getEntryUpdaterClassName();
+
+    public String getKeyTransformerClassName();
+
     public int getSize();
 
-    public int getSaveCount();
+    public int getSentSaveCount();
+
+    public int getExecutedSaveCount();
 
     public int getBatchSentCount();
 
@@ -27,14 +33,21 @@ public interface DataStoreMBean {
 
     public int getBroadcastLoadSuccessCount();
 
+    public int getSaveOnLoadCount();
+
     public int getLoadFailureCount();
 
     public int getBatchReceivedCount();
 
-    public int getRemoveCount();
+    public int getSentRemoveCount();
+
+    public int getExecutedRemoveCount();
     
     public int getFlushThreadFlushedCount();
 
     public int getFlushThreadWakeupCount();
 
+    public int getRemoveExpiredCallCount();
+
+    public int getExpiredEntriesCount();
 }
