@@ -9,6 +9,8 @@ import org.glassfish.ha.store.util.KeyTransformer;
 public class StringKeyTransformer
     implements KeyTransformer<String> {
 
+    public StringKeyTransformer() {}
+
     @Override
     public byte[] keyToByteArray(String str) {
         //System.out.println("@@@@@@@@@@@@@ StringKeyTransformer.keyTobyteArray(" + str +")");

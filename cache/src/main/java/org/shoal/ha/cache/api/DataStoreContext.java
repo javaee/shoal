@@ -84,7 +84,8 @@ public class DataStoreContext<K, V>
                 .setGroupName(conf.getClusterName())
                 .setStoreName(conf.getStoreName())
                 .setKeyClazz(conf.getKeyClazz())
-                .setValueClazz(conf.getValueClazz());
+                .setValueClazz(conf.getValueClazz())
+                .setClassLoader(conf.getClassLoader());
         Map<String, Object> vendorSpecificMap = conf.getVendorSpecificSettings();
 
         Object stGMS = vendorSpecificMap.get("start.gms");
@@ -115,16 +116,19 @@ public class DataStoreContext<K, V>
             }
         }
 
-        ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
-        if (cl == null) {
-            cl = conf.getValueClazz().getClassLoader();
-        }
-        if (cl == null) {
-            cl = ClassLoader.getSystemClassLoader();
+        if (getClassLoader() == null) {
+            ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
+            if (cl == null) {
+                cl = conf.getValueClazz().getClassLoader();
+            }
+            if (cl == null) {
+                cl = ClassLoader.getSystemClassLoader();
+            }
+
+            setClassLoader(cl);
         }
 
-        setClassLoader(cl)
-                .setStartGMS(startGMS)
+        setStartGMS(startGMS)
                 .setCacheLocally(enableLocalCaching);
 
         boolean asyncReplication = vendorSpecificMap.get("async.replication") == null

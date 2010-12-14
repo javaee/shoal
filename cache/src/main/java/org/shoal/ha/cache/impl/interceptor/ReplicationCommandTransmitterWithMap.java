@@ -263,8 +263,8 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     } while (doAddOrRemove(nc, true));
                     dsc.getDataStoreMBean().incrementFlushThreadFlushedCount();
                 } else {
-                    if (_statsLogger.isLoggable(Level.FINE)) {
-                        _statsLogger.log(Level.FINE, "flushAndTransmit will NOT flush data because lastTS = " + lastTS
+                    if (_statsLogger.isLoggable(Level.FINER)) {
+                        _statsLogger.log(Level.FINER, "flushAndTransmit will NOT flush data because lastTS = " + lastTS
                                 + "; timeStamp = " + timeStamp + "; lastTS = " + lastTS
                                 + "; map.size() = " + map.size()
                                 + "; removedKeys.size() = " +removedKeys.size());
@@ -272,8 +272,8 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     timeStamp = lastTS;
                 }
             } else {
-                if (_statsLogger.isLoggable(Level.FINE)) {
-                    _statsLogger.log(Level.FINE, "flushAndTransmit visited a new Batch");
+                if (_statsLogger.isLoggable(Level.FINER)) {
+                    _statsLogger.log(Level.FINER, "flushAndTransmit visited a new Batch");
                 }
             }
         }
