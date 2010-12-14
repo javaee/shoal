@@ -51,12 +51,16 @@ import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class DataStoreContext<K, V>
     extends DataStoreConfigurator<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_DATA_STORE);
 
     private CommandManager<K, V> cm;
 
@@ -84,9 +88,14 @@ public class DataStoreContext<K, V>
                 .setGroupName(conf.getClusterName())
                 .setStoreName(conf.getStoreName())
                 .setKeyClazz(conf.getKeyClazz())
-                .setValueClazz(conf.getValueClazz())
-                .setClassLoader(conf.getClassLoader());
-        Map<String, Object> vendorSpecificMap = conf.getVendorSpecificSettings();
+                .setValueClazz(conf.getValueClazz());
+
+        if (conf.getClassLoader() != null) {
+            _logger.log(Level.FINE, "**DSC[" + conf.getStoreName() + "] Client supplied ClassLoader : " + conf.getClassLoader());
+            setClassLoader(conf.getClassLoader());
+        }
+
+         Map<String, Object> vendorSpecificMap = conf.getVendorSpecificSettings();
 
         Object stGMS = vendorSpecificMap.get("start.gms");
         boolean startGMS = false;
@@ -118,13 +127,17 @@ public class DataStoreContext<K, V>
 
         if (getClassLoader() == null) {
             ClassLoader cl = (ClassLoader) vendorSpecificMap.get("class.loader");
+            _logger.log(Level.FINE, "**DSC[" + conf.getStoreName() + "] vendorMap.classLoader CLASS LOADER: " + cl);
             if (cl == null) {
                 cl = conf.getValueClazz().getClassLoader();
+                _logger.log(Level.FINE, "**DSC[" + conf.getStoreName() + "] USING VALUE CLASS CLASS LOADER: " + conf.getValueClazz().getName());
             }
             if (cl == null) {
                 cl = ClassLoader.getSystemClassLoader();
+                _logger.log(Level.FINE, "**DSC[" + conf.getStoreName() + "] USING system CLASS CLASS LOADER: " + cl);
             }
 
+            _logger.log(Level.FINE, "**DSC[" + conf.getStoreName() + "] FINALLY USING CLASS CLASS LOADER: " + cl);
             setClassLoader(cl);
         }
 

@@ -127,7 +127,6 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public void destroy() throws BackingStoreException {
-        RepliatedBackingStoreRegistry.unregisterStore(super.getBackingStoreConfiguration().getStoreName());
         dataStore.close();
         dataStore = null;
         factory = null;
