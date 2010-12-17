@@ -2074,7 +2074,12 @@ class MasterNode implements MessageListener, Runnable {
             newMaster = clusterViewManager.setMaster(adv, notify);
             masterAssigned = true;
         }
+        if (masterLogger.isLoggable(Level.FINE)) {
+            masterLogger.log(Level.FINE, "setMaster isNewMaster=" + newMaster + " master=" + adv.getName() + " newMaster=" + newMaster);
+        }
         if (newMaster) {
+            this.lastCheckedMasterViewID = -1;
+            this.lastCheckedMaster = null;
             clearChangeEventsNotFromCurrentMaster(adv.getID());
         }
     }

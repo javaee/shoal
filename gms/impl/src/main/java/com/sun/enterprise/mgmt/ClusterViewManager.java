@@ -185,10 +185,11 @@ public class ClusterViewManager {
      *
      * @param advertisement Master system adverisement                                                          
      * @param notify        if true, notifies registered listeners
+     * @return true if there is master's change, false otherwise
      */
     boolean setMaster(final SystemAdvertisement advertisement, boolean notify) {
         if (advertisement.equals(masterAdvertisement)) {
-            return true;
+            return false;
         } else {
             masterAdvertisement = advertisement;
             lockLog("setMaster()");
@@ -216,7 +217,7 @@ public class ClusterViewManager {
                                   .append(advertisement.getID()).toString());
                 }
             }
-            return false;
+            return true;
         }
     }
 
