@@ -50,4 +50,8 @@ public interface DataStoreMBean {
     public int getRemoveExpiredCallCount();
 
     public int getExpiredEntriesCount();
+
+    public int getGmsSendCount();
+
+    public long getGmsSendBytesCount();
 }

@@ -222,13 +222,6 @@ public class DataStoreContext<K, V>
         }
     }
 
-    public void completeInitialization() {
-        //this.groupService = gs;
-
-
-        initIdleEntryProcessor();
-    }
-
     public void setDataStoreMBean(ReplicatedDataStoreStatsHolder<K, V> dscMBean) {
         this.dscMBean = dscMBean;
     }
@@ -273,38 +266,4 @@ public class DataStoreContext<K, V>
         return replicaStore;
     }
 
-    private void initIdleEntryProcessor() {
-                try {
-            if (Storeable.class.isAssignableFrom(getValueClazz())) {
-                super.setIdleEntryDetector(
-                        new IdleEntryDetector<K, V>() {
-                            @Override
-                            public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
-    //                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
-    //                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
-    //                                    + " < now=" +nowInMillis);
-                                return (entry.getMaxIdleTime() > 0) && entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
-                            }
-                        }
-                    );
-            } else {
-                if (super.getDefaultMaxIdleTimeInMillis() > 0) {
-                    final long defaultMaxIdleTimeInMillis = super.getDefaultMaxIdleTimeInMillis() * 1000;
-                    super.setIdleEntryDetector(
-                        new IdleEntryDetector<K, V>() {
-                            @Override
-                            public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
-    //                            System.out.println("AccessTimeInfo: getLastAccessedAt=" + kvDataStoreEntry.getLastAccessedAt()
-    //                                    + "; defaultMaxIdleTimeInMillis="+defaultMaxIdleTimeInMillis
-    //                                    + " < now=" +nowInMillis);
-                                return (defaultMaxIdleTimeInMillis > 0) && entry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
-                            }
-                        }
-                    );
-                }
-            }
-        } catch (Exception ex) {
-            //TODO
-        }
-    }
 }

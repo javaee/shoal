@@ -49,12 +49,18 @@ import org.shoal.ha.mapper.KeyMapper;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class ReplicatedBackingStore<K extends Serializable, V extends Serializable>
         extends BackingStore<K, V> {
+
+    private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_DATA_STORE);
+
+    private String storeName = "";
 
     private DataStore<K, V> dataStore;
 
@@ -81,6 +87,8 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
         
         DataStoreContext<K, V> dsConf = new DataStoreContext<K, V>(conf);
         dataStore = DataStoreFactory.createDataStore(dsConf);
+
+        storeName = dsConf.getStoreName();
     }
 
     @Override
@@ -127,7 +135,12 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
 
     @Override
     public void destroy() throws BackingStoreException {
-        dataStore.close();
+        if (dataStore != null) {
+            dataStore.close();
+            _logger.log(Level.FINE, "** StoreName = " + storeName + " is destroyed ");
+        } else {
+            _logger.log(Level.FINE, "** StoreName = " + storeName + " is already destroyed ");
+        }
         dataStore = null;
         factory = null;
     }

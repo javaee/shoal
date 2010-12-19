@@ -200,6 +200,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         
         gs.registerGroupMessageReceiver(storeName, cm);
 
+        initIdleEntryProcessor();
         replicaStore = dsc.getReplicaStore();
         replicaStore.setIdleEntryDetector(dsc.getIdleEntryDetector());
         
@@ -232,10 +233,45 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
     }
 
+    private void initIdleEntryProcessor() {
+                try {
+            if (Storeable.class.isAssignableFrom(dsc.getValueClazz())) {
+                dsc.setIdleEntryDetector(
+                        new IdleEntryDetector<K, V>() {
+                            @Override
+                            public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
+                                _logger.log(Level.FINE, "AccessTimeInfo: getLastAccessedAt=" + entry.getLastAccessedAt()
+                                        + "; maxIdleTimeInMillis=" + entry.getMaxIdleTime()
+                                        + " < now=" +nowInMillis);
+                                return (entry.getMaxIdleTime() > 0) && entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
+                            }
+                        }
+                    );
+            } else {
+                if (dsc.getDefaultMaxIdleTimeInMillis() > 0) {
+                    final long defaultMaxIdleTimeInMillis = dsc.getDefaultMaxIdleTimeInMillis();
+                    dsc.setIdleEntryDetector(
+                        new IdleEntryDetector<K, V>() {
+                            @Override
+                            public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
+                                _logger.log(Level.FINE, "AccessTimeInfo: getLastAccessedAt=" + entry.getLastAccessedAt()
+                                        + "; defaultMaxIdleTimeInMillis=" + defaultMaxIdleTimeInMillis
+                                        + " < now=" +nowInMillis);
+                                return (defaultMaxIdleTimeInMillis > 0) && entry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
+                            }
+                        }
+                    );
+                }
+            }
+        } catch (Exception ex) {
+            //TODO
+        }
+    }
+
+
     @Override
     public String put(K k, V v)
             throws DataStoreException {
-
         String result = null;
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
         synchronized (entry) {
@@ -406,6 +442,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public void remove(K k)
             throws DataStoreException {
+
+        if (_logger.isLoggable(Level.FINE)) {
+        	_logger.log(Level.FINE, "DataStore.remove(" + k + ") CALLED ****");
+	}
 
         replicaStore.remove(k);
         dscMBean.incrementRemoveCount();

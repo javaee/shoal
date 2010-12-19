@@ -125,7 +125,7 @@ public class ReplicaStore<K, V> {
     }
 
     public int size() {
-        return replicaEntries.get();
+        return map.size();
     }
 
     public int removeExpired() {

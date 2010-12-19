@@ -44,6 +44,8 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.DataStoreMBean;
+import org.shoal.ha.cache.api.ReplicatedDataStoreStatsHolder;
 import org.shoal.test.common.DummyGroupService;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.impl.command.CommandManager;
@@ -87,6 +89,8 @@ public class CommandManagerTest
         DataStoreContext dsc = new DataStoreContext("test", gs, this.getClass().getClassLoader());
         CommandManager cm = new CommandManager();
         dsc.setCommandManager(cm);
+        ReplicatedDataStoreStatsHolder dscMBean = new ReplicatedDataStoreStatsHolder(dsc);
+        dsc.setDataStoreMBean(dscMBean);
         cm.initialize(dsc);
 
         cm.registerCommand(new NoopCommand());

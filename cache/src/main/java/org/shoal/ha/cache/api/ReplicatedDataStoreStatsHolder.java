@@ -1,6 +1,7 @@
 package org.shoal.ha.cache.api;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Mahesh Kannan
@@ -51,6 +52,10 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
     private AtomicInteger removeExpiredCallCount = new AtomicInteger(0);
 
     private AtomicInteger removeExpiredEntriesCount = new AtomicInteger(0);
+
+    private AtomicInteger gmsSendCount = new AtomicInteger(0);
+
+    private AtomicLong gmsSendBytesCount = new AtomicLong(0);
 
 
     public ReplicatedDataStoreStatsHolder(DataStoreContext<K, V> dsc) {
@@ -172,6 +177,14 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
         return removeExpiredCallCount.get();
     }
 
+    public int getGmsSendCount() {
+        return gmsSendCount.get();
+    }
+
+    public long getGmsSendBytesCount() {
+        return gmsSendBytesCount.get();
+    }
+
 
     //Mutators
 
@@ -242,11 +255,17 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
         return removeExpiredCallCount.incrementAndGet();
     }
 
-
     public int incrementRemoveExpiredEntriesCount(int delta) {
         return removeExpiredEntriesCount.addAndGet(delta);
     }
 
+    public int incrementGmsSendCount() {
+        return gmsSendCount.incrementAndGet();
+    }
+
+    public long incrementGmsSendBytesCount(int delta) {
+        return gmsSendBytesCount.addAndGet(delta);
+    }
 
 
     //@Override
@@ -272,6 +291,8 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
                 ", flushThreadFlushedCount=" + getFlushThreadFlushedCount() +
                 ", removeExpiredCallCount=" + getRemoveExpiredCallCount() +
                 ", expiredEntriesCount=" + getExpiredEntriesCount() +
+                ", gmsSendCount=" + getGmsSendCount() +
+                ", gmsSendBytesCount=" + getGmsSendBytesCount() +
                 '}';
     }
 }
