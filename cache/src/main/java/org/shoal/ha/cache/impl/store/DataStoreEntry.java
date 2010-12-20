@@ -58,6 +58,8 @@ import java.util.logging.Level;
  */
 public class DataStoreEntry<K, V> {
 
+    public static final long MIN_VERSION = -8;
+
     private K key;
 
     private V v;
@@ -72,7 +74,7 @@ public class DataStoreEntry<K, V> {
 
     private long maxIdleTime;
 
-    private long version = -8; //some negative number that is small enough to allow updates/saves to succeed
+    private long version = MIN_VERSION; //some negative number that is small enough to allow updates/saves to succeed
 
     private byte[] rawV;
 

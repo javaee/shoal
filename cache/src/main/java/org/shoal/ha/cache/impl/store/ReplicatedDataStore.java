@@ -343,7 +343,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     continue;
                 }
                 LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key,
-                        entry == null ? -1 : entry.getVersion(), target);
+                        entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), target);
                 if (_loadLogger.isLoggable(Level.FINE)) {
                     _loadLogger.log(Level.FINE, debugName + "load(" + key
                         + ") Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
@@ -369,7 +369,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                         continue;
                     }
                     LoadRequestCommand<K, V> lrCmd = new LoadRequestCommand<K, V>(key,
-                            entry == null ? -1 : entry.getVersion(), targetInstance);
+                            entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), targetInstance);
                     if (_loadLogger.isLoggable(Level.FINE)) {
                         _loadLogger.log(Level.FINE, debugName + "*load(" + key
                             + ") Trying to load from " + targetInstance);
