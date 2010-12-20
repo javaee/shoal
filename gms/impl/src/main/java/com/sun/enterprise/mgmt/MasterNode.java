@@ -1036,11 +1036,11 @@ class MasterNode implements MessageListener, Runnable {
             if (masterAssigned && !isMaster() && !isDiscoveryInProgress()) {
 
                 // TODO: do not allow this in final release. injecting test failures via logging config is short term only.
-                if (mcastLogger.isLoggable(Level.FINEST)) {
-                    if (injectSimulatedFailure(mnme)) {
-                         return;
-                    }
-                }
+//                if (mcastLogger.isLoggable(Level.FINEST)) {
+//                    if (injectSimulatedFailure(mnme)) {
+//                         return;
+//                    }
+//                }
                 // TODO: do not allow in final release.
 
                 ProcessedMasterViewId processed = new ProcessedMasterViewId((PeerID)msg.getMessageElement(Message.SOURCE_PEER_ID_TAG), mnme.seqId);
@@ -1049,7 +1049,6 @@ class MasterNode implements MessageListener, Runnable {
                     result = processedChangeEvents.add(processed);
                 }
                 if (!result) {
-                    // TODO: decide whether to leave INFO or to demote to FINE logging.
                     if (mcastLogger.isLoggable(Level.FINE)) {
                         mcastLogger.log(Level.FINE, "dropping master node message with masterViewID=" + mnme.seqId + " it was already processed.");
                     }
