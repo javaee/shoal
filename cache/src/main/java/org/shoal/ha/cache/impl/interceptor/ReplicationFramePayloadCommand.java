@@ -170,13 +170,18 @@ public class
             for (byte[] bytes : rawRemovedKeys) {
                 K k = kt.byteArrayToKey(bytes, 0, bytes.length);
                 removedKeys.add(k);
-                dsc.getReplicaStore().remove(k);
             }
         }
         
         for (Command<K, V> cmd : commands) {
             cmd.initialize(dsc);
             getCommandManager().executeCommand(cmd, false, initiator);
+        }
+
+        if (removedKeys != null) {
+            for (K k : removedKeys) {
+                    dsc.getReplicaStore().remove(k);
+            }
         }
     }
 
