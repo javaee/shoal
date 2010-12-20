@@ -217,7 +217,7 @@ class MasterNode implements MessageListener, Runnable {
                 //accept the DAS as the new Master
                 masterLogger.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
                 masterLogger.log(Level.FINE, "Accepting DAS as new master in the event of cluster stopping...");
-                setMaster(systemAdv, DONOT_NOTIFY_LISTENERS);
+                setMaster(systemAdv, NOTIFY_LISTENERS);
                 return false;
             }
             LOG.log(Level.INFO, "mgmt.masternode.collision", new Object[]{systemAdv.getName() });
@@ -458,8 +458,8 @@ class MasterNode implements MessageListener, Runnable {
 
         GMSMember member = Utility.getGMSMember(source);
         long seqID = getLongFromMessage(msg, NAMESPACE, MASTERVIEWSEQ);
-        if (LOG.isLoggable(Level.FINE)) {
-            LOG.fine("Received a Master Node Announcement from  member:" + member.getMemberToken() +
+        if (masterLogger.isLoggable(Level.FINE)) {
+            masterLogger.fine("Received a Master Node Announcement from  member:" + member.getMemberToken() +
                      " of group:" + member.getGroupName() +
                      " masterViewSeqId:" + seqID + " masterAssigned:" + masterAssigned + " isMaster:" + isMaster());
         }
