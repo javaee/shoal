@@ -47,12 +47,12 @@
     <groupId>org.shoal</groupId>
     <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.5.24</version>
+    <version>1.5.25-SNAPSHOT</version>
     <name>shoal</name>
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/tags/shoal-1.5.24</connection>
+        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/branches/SHOAL_1_1_ABSTRACTING_TRANSPORT</connection>
     </scm>
 
     <issueManagement>
