@@ -21,7 +21,7 @@ public abstract class DataStoreEntryUpdater<K, V> {
 
     public void initialize(DataStoreContext<K, V> ctx) {
         this.ctx = ctx;
-        System.out.println("** INITIALIZED DSEUpdater: " + this.getClass().getName());
+        _logger.log(Level.FINE, "** INITIALIZED DSEUpdater: " + this.getClass().getName());
     }
 
     protected byte[] captureState(V v)

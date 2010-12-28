@@ -85,7 +85,7 @@ public class DefaultKeyMapper
         rLock = rwLock.readLock();
         wLock = rwLock.writeLock();
 
-        _logger.log(Level.INFO, "DefaultKeyMapper created for: myName: " + myName + "; groupName: " + groupName);
+        _logger.log(Level.FINE, "DefaultKeyMapper created for: myName: " + myName + "; groupName: " + groupName);
     }
 
     protected ReentrantReadWriteLock.ReadLock getReadLock() {

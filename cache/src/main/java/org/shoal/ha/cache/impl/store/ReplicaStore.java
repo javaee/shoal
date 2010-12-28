@@ -141,7 +141,7 @@ public class ReplicaStore<K, V> {
                         synchronized (entry) {
                             if (idleEntryDetector.isIdle(entry, now)) {
                                 entry.markAsRemoved("Idle");
-                                _logger.log(Level.WARNING, "ReplicaStore removing (idle) key: " + entry.getKey());
+                                _logger.log(Level.FINE, "ReplicaStore removing (idle) key: " + entry.getKey());
                                 iterator.remove();
                                 result++;
                             }
@@ -156,7 +156,7 @@ public class ReplicaStore<K, V> {
 
             ctx.getDataStoreMBean().incrementRemoveExpiredEntriesCount(result);
         } else {
-            _logger.log(Level.FINE, "ReplicaStore.removeExpired(). Skipping since there is already another thread running");
+            _logger.log(Level.FINEST, "ReplicaStore.removeExpired(). Skipping since there is already another thread running");
         }
 
         return result;

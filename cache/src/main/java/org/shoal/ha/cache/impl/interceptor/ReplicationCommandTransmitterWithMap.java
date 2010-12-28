@@ -111,7 +111,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
             _statsLogger.log(Level.CONFIG, "USING " + MAX_BATCH_SIZE_PROP_NAME + " = " + MAX_BATCH_SIZE);
         }
 
-        _logger.log(Level.INFO, "USING ReplicationCommandTransmitterWithMap V.Dec12");
+        _logger.log(Level.FINE, "USING ReplicationCommandTransmitterWithMap");
     }
 
     @Override
@@ -272,9 +272,9 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     timeStamp = lastTS;
                 }
             } else {
-                if (_statsLogger.isLoggable(Level.FINER)) {
-                    _statsLogger.log(Level.FINER, "flushAndTransmit visited a new Batch");
-                }
+//                if (_statsLogger.isLoggable(Level.FINEST)) {
+//                    _statsLogger.log(Level.FINEST, "flushAndTransmit visited a new Batch");
+//                }
             }
         }
 

@@ -113,7 +113,7 @@ public class RemoveExpiredResultCommand<K, V>
                 resp.setResult(resp.getTransientResult());
             }
         } else {
-            _logger.log(Level.INFO, "RemoveExpiredResult: TOKEN already removed for tokenId = " + tokenId);
+            _logger.log(Level.FINE, "RemoveExpiredResult: TOKEN already removed for tokenId = " + tokenId);
         }
     }
 

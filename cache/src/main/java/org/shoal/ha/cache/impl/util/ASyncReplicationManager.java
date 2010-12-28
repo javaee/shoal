@@ -71,9 +71,9 @@ public class ASyncReplicationManager {
         //TODO Should we another system property?
         _scheduledTP = new ScheduledThreadPoolExecutor(2);
 
-        System.out.println("Created ExecutorService with: " +
-            "core=" + corePoolSize + "; max=" + maxPoolSize +
-            "; keepAlive=" + keepAliveInSeconds + "; maxLimit=" + boundedPoolSize);
+//        System.out.println("Created ExecutorService with: " +
+//            "core=" + corePoolSize + "; max=" + maxPoolSize +
+//            "; keepAlive=" + keepAliveInSeconds + "; maxLimit=" + boundedPoolSize);
     }
 
     private static final int getSystemProp(String propName, int defaultValue) {

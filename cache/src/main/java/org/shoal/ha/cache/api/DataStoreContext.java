@@ -156,7 +156,7 @@ public class DataStoreContext<K, V>
         KeyTransformer<K> kt = (KeyTransformer<K>) vendorSpecificMap.get("key.transformer");
         if (kt != null) {
             super.setKeyTransformer(kt);
-            System.out.println("** USING CLIENT DEFINED KeyTransfomer: " + super.getKeyTransformer().getClass().getName());
+            _logger.log(Level.FINE, "** USING CLIENT DEFINED KeyTransfomer: " + super.getKeyTransformer().getClass().getName());
         }
 
         /*

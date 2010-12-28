@@ -68,8 +68,6 @@ public class ReplicatedBackingStoreFactory
         store.setBackingStoreFactory(this);
         store.initialize(conf);
 
-        System.out.println("ReplicatedBackingStoreFactory:: CREATED an instance of: " + store.getClass().getName());
-
         return store;
     }
 

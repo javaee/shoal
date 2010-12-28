@@ -74,7 +74,7 @@ public class ReplicationCommandTransmitterManager<K, V>
         broadcastTransmitter = new ReplicationCommandTransmitterWithList<K, V>();
         broadcastTransmitter.initialize(null, dsc);
 
-        _logger.log(Level.INFO, "ReplicationCommandTransmitterManager(" + dsc.getServiceName() + ") instantiated with: "
+        _logger.log(Level.FINE, "ReplicationCommandTransmitterManager(" + dsc.getServiceName() + ") instantiated with: "
             + dsc.isUseMapToCacheCommands() + " : " + dsc.isSafeToDelayCaptureState());
     }
 
