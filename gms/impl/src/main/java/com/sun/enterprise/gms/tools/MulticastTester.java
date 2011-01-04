@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -83,7 +83,7 @@ public class MulticastTester {
         }
 
         StringBuilder out = new StringBuilder();
-        out.append(sm.get("port.set", mcPort)).append("\n");
+        out.append(sm.get("port.set", Integer.toString(mcPort))).append("\n");
         out.append(sm.get("address.set", mcAddress)).append("\n");
         out.append(sm.get("bind.int.set", bindInterface)).append("\n");
         out.append(sm.get("period.set", msgPeriodInMillis)).append("\n");
