@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -72,7 +73,7 @@ public class
 
     private List<Command<K, V>> commands = new ArrayList<Command<K, V>>();
 
-    private List<K> removedKeys = new ArrayList<K>();
+    private Collection<K> removedKeys = new ArrayList<K>();
 
     private List<byte[]> rawRemovedKeys = new ArrayList<byte[]>();
 
@@ -89,7 +90,7 @@ public class
         targetInstanceName = target;
     }
 
-    void setRemovedKeys(List<K> removedKeys) {
+    void setRemovedKeys(Collection<K> removedKeys) {
         this.removedKeys = removedKeys;
     }
 

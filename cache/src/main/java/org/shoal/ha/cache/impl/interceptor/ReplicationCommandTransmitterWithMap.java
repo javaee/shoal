@@ -190,7 +190,9 @@ public class ReplicationCommandTransmitterWithMap<K, V>
 
         private volatile ConcurrentHashMap map = new ConcurrentHashMap();
 
-        private volatile List removedKeys = new ArrayList();
+        private AtomicInteger  removedKeysSize = new AtomicInteger(0);
+
+        private volatile ConcurrentLinkedQueue removedKeys = new ConcurrentLinkedQueue();
 
         private volatile long lastTS = System.currentTimeMillis();
 
@@ -216,8 +218,9 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                         } else {
                             map.remove(cmd.getKey());
                             removedKeys.add(cmd.getKey());
+                            int removedSz = removedKeysSize.incrementAndGet();
                             result = true;
-                            if (removedKeys.size() >= (2 * MAX_BATCH_SIZE)) {
+                            if (removedSz >= (2 * MAX_BATCH_SIZE)) {
                                 batchThresholdReached.compareAndSet(false, true);
                             }
                         }
@@ -247,13 +250,13 @@ public class ReplicationCommandTransmitterWithMap<K, V>
         //Called by periodic task
         void flushAndTransmit() {
             dsc.getDataStoreMBean().incrementFlushThreadWakeupCount();
-            if ((!alreadySent.get()) && ((map.size() > 0) || (removedKeys.size() > 0))) {
+            if ((!alreadySent.get()) && ((map.size() > 0) || (removedKeysSize.get() > 0))) {
                 if (lastTS == timeStamp) {
                     if (_statsLogger.isLoggable(Level.FINE)) {
                         _statsLogger.log(Level.FINE, "flushAndTransmit will flush data because lastTS = " + lastTS
                                 + "; timeStamp = " + timeStamp + "; lastTS = " + lastTS
                                 + "; map.size() = " + map.size()
-                                + "; removedKeys.size() = " +removedKeys.size());
+                                + "; removedKeys.size() = " +removedKeysSize.get());
                     }
                     boolean completed = false;
                     int index = 0;
@@ -267,7 +270,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                         _statsLogger.log(Level.FINER, "flushAndTransmit will NOT flush data because lastTS = " + lastTS
                                 + "; timeStamp = " + timeStamp + "; lastTS = " + lastTS
                                 + "; map.size() = " + map.size()
-                                + "; removedKeys.size() = " +removedKeys.size());
+                                + "; removedKeys.size() = " +removedKeysSize.get());
                     }
                     timeStamp = lastTS;
                 }
