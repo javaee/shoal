@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -85,7 +85,6 @@ public class NetworkUtilityTest extends TestCase {
         final String notLocalOrValid [] = {
             "_",
             "99999999999999",
-            "128", // *not* the same as 127.0.0.1
             "www.oracle.com"
         };
 
