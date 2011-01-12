@@ -85,7 +85,8 @@ public class NetworkUtilityTest extends TestCase {
         final String notLocalOrValid [] = {
             "_",
             "99999999999999",
-            "128", // *not* the same as 127.0.0.1
+	    // removed the following since some systems consider this valid
+//            "128", // *not* the same as 127.0.0.1
             "www.oracle.com"
         };
 
