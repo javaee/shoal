@@ -43,6 +43,7 @@ package org.shoal.ha.group.gms;
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.util.MessageReceiver;
 import org.shoal.ha.group.GroupMemberEventListener;
 import org.shoal.ha.group.GroupService;
@@ -59,7 +60,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GroupServiceProvider
         implements GroupService, CallBack {
 
-    private static final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private static final Logger logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_KEY_MAPPER);
 
     private String myName;
 
@@ -93,40 +94,22 @@ public class GroupServiceProvider
 
             isJoin = notification instanceof JoinedAndReadyNotificationSignal;
 
+
+            logger.log(Level.FINE, "**Entered GroupServiceProvider:processNotification: signal = " + notification
+                + "; memberName = " + notification.getMemberToken() + "; isJoinEvent = " + isJoin + "; triggeredByGMS = " + true);
             checkAndNotifyAboutCurrentAndPreviousMembers(notification.getMemberToken(), isJoin, true);
         }
     }
 
     private synchronized void checkAndNotifyAboutCurrentAndPreviousMembers(String memberName, boolean isJoinEvent, boolean triggeredByGMS) {
 
+
+        AliveAndReadyView arView = gms.getGroupHandle().getCurrentAliveAndReadyCoreView();
         SortedSet<String> currentAliveAndReadyMembers = gms.getGroupHandle().getCurrentAliveAndReadyCoreView().getMembers();
-        AliveAndReadyView aView = gms.getGroupHandle().getPreviousAliveAndReadyCoreView();
         SortedSet<String> previousAliveAndReadyMembers = new TreeSet<String>();
 
-        if (aView == null) { //Possible during unit tests when listeners are registered before GMS is started
-            return;
-        }
-
-
-        long arViewId = aView.getViewId();
-        long knownId = previousViewId.get();
-        Signal sig = aView.getSignal();
-
-//        System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: previous viewID: " + knownId
-//                + "; current viewID: " + arViewId + "; " + aView.getSignal());
-        if (knownId < arViewId) {
-            if (previousViewId.compareAndSet(knownId, arViewId)) {
-                this.arView = aView;
-                sig = this.arView.getSignal();
-                previousAliveAndReadyMembers = this.arView.getMembers();
-            } else {
-                previousAliveAndReadyMembers = this.arView.getMembers();
-//                System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 1");
-            }
-        } else {
-            previousAliveAndReadyMembers = this.arView.getMembers();
-//            System.out.println("**GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers.  Entered ELSE 2");
-        }
+        logger.log(Level.FINE, "**Entered GroupServiceProvider:checkAndNotifyAboutCurrentAndPreviousMembers: "
+            + "memberName = " + memberName + "; isJoinEvent = " + isJoinEvent + "; triggeredByGMS = " + triggeredByGMS);
 
         //Listeners must be notified even if view has not changed.
         //This is because this method is called when a listener
@@ -137,15 +120,16 @@ public class GroupServiceProvider
         }
 
         if (triggeredByGMS) {
-            StringBuilder sb = new StringBuilder("**VIEW: ");
-            sb.append("prevViewId: " + knownId).append("; curViewID: ").append(arViewId)
-                    .append("; signal: ").append(sig).append(" ");
+            StringBuilder sb = new StringBuilder("**GroupServiceProvider.VIEW: ");
+            sb.append("viewID: " + arView.getViewId()).append(" ");
             sb.append("[current: ");
             String delim = "";
             for (String member : currentAliveAndReadyMembers) {
                 sb.append(delim).append(member);
                 delim = ", ";
             }
+
+            /*
             sb.append("]  [previous: ");
             delim = "";
 
@@ -153,6 +137,7 @@ public class GroupServiceProvider
                 sb.append(delim).append(member);
                 delim = ", ";
             }
+            */
             sb.append("]");
             logger.log(Level.INFO, sb.toString());
             logger.log(Level.INFO, "**********************************************************************");

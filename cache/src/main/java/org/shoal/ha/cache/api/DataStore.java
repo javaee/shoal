@@ -68,6 +68,15 @@ public interface DataStore<K, V> {
             throws DataStoreException;
 
     /**
+     * Returns the value to which the specified key is mapped in this cache.
+     *
+     * @param k  The key
+     * @return The value if the association exists or null.
+     */
+    public V get(K k, String minVersion)
+            throws DataStoreException;
+
+    /**
      * Removes the mapping between the key and the object.
      *
      * @param k The key

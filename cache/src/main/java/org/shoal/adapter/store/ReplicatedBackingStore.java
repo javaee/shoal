@@ -94,9 +94,9 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     @Override
     public V load(K key, String versionInfo) throws BackingStoreException {
         try {
-            return dataStore.get(key);
+            return dataStore.get(key, versionInfo);
         } catch (DataStoreException dsEx) {
-            throw new BackingStoreException("Error during load: " + key, dsEx);
+            throw new BackingStoreException("Error during load(" + key + ", " + versionInfo + ")", dsEx);
         }
     }
 
