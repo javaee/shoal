@@ -186,9 +186,15 @@
             <fileset dir="${impl.src.dir}"
                      includes="**/*.properties"/>
         </copy>
+        <property name="version.num" value="${shoal.gms.version}"/>
+	<manifest file="MANIFEST.MF">
+          <attribute name="Implementation-Version" value="${version.num}"/>
+          <attribute name="package" value="com.sun.enterprise.ee.cms"/>
+          <attribute name="url" value="https://shoal.java.net"/>
+        </manifest>
 
         <!-- don't include the tests, they will be put in seperate jar file -->
-        <jar jarfile="${dist.dir}/${shoal-gms.jar}" update="yes">
+        <jar jarfile="${dist.dir}/${shoal-gms.jar}" update="yes" manifest="MANIFEST.MF">
             <fileset dir="${component.classes.dir}" excludes="**/*test*/**, **/*Test*/**">
                 <include name="**/*.class"/>
                 <include name="**/*.properties"/>
@@ -255,8 +261,8 @@
 
     <target name="assemblegmswszip" description="create ${shoal-gms-ws.zip}" >
         <zip zipfile="dist/${shoal-gms-ws.zip}" >
-            <zipfileset prefix="gms" dir="." includes="**/*.jar" excludes="**/api/**, **/impl/**"/>
-            <zipfileset prefix="gms" dir="." includes="**/*.sh" />
+            <zipfileset prefix="gms" dir="." includes="**/*.jar" excludes="**/api/**, **/impl/**, lib/jxta.jar"/>
+            <zipfileset prefix="gms" dir="." includes="**/*.sh, bin/mcastvalidator" />
             <zipfileset prefix="gms" dir="." includes="**/*.xml" excludes="**/pom.xml" />
             <zipfileset prefix="gms" dir="." includes="**/*.properties" />
             <zipfileset prefix="gms" dir="." includes="**/configs/**" />
