@@ -173,10 +173,7 @@ public class DefaultKeyMapper
         }
     }
     */
-
-    //No one uses this method other than KeyMapperTest.
-    //  We no longer rely on getPreviousView of GMS
-    //
+    
     @Override
     public String[] findReplicaInstance(String groupName, Object key1, String keyMappingInfo) {
         if (keyMappingInfo != null) {
@@ -242,7 +239,7 @@ public class DefaultKeyMapper
             }
             previuousAliveAndReadyMembers = previousView.toArray(new String[0]);
 
-            if (_logger.isLoggable(Level.FINER)) {
+            if (_logger.isLoggable(Level.FINE)) {
                 printMemberStates("onViewChange (isJoin: " + isJoinEvent + ")");
             }
         } finally {
@@ -299,7 +296,7 @@ public class DefaultKeyMapper
             sb.append("\tReplicaChoices[").append(members[i]).append("]: ").append(replicaChoices[i]);
             sb.append("\n");
         }
-        _logger.log(Level.FINER, sb.toString());
+        _logger.log(Level.FINE, sb.toString());
     }
 
 }
