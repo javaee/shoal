@@ -1296,14 +1296,14 @@ class MasterNode implements MessageListener, Runnable {
                 }
                 final boolean sent = manager.getNetworkManager().send( peerid, msg );
                 if (!sent) {
-                    LOG.log(Level.WARNING, "mgmt.masternode.sendfailed",new Object[]{ msg, name});
+                    LOG.log(Level.WARNING, "mgmt.masternode.sendmsgfailed",new Object[]{ msg, name});
                 }
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
                 final boolean sent = manager.getNetworkManager().broadcast(msg);
                 if (!sent) {
-                    LOG.log(Level.WARNING, "mgmt.masternode.broadcastfailed", new Object[]{msg, manager.getGroupName()});
+                    LOG.log(Level.WARNING, "mgmt.masternode.broadcastmsgfailed", new Object[]{msg, manager.getGroupName()});
                 }
             }
         } catch (IOException io) {
