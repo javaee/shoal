@@ -436,8 +436,7 @@ public class MessageImpl implements Message {
             int msgSize = HEADER_LENGTH + messageLen;
             if( msgSize > maxTotalMessageLength ) {
                 if( LOG.isLoggable( Level.WARNING ) ) { 
-                    LOG.log( Level.WARNING,
-                             "messageImpl.msg.too.big", new Object[]{msgSize, maxTotalMessageLength} );
+                    LOG.log( Level.WARNING, "messageImpl.msg.too.big", new Object[]{msgSize, maxTotalMessageLength} );
                 }
                 throw new MessageIOException("total message size is too big: size = " + msgSize + ", max size = " + maxTotalMessageLength +
                 toString());
