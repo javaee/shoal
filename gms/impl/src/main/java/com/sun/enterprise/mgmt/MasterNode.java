@@ -435,7 +435,7 @@ class MasterNode implements MessageListener, Runnable {
                 LOG.log( Level.FINER, "Received a System advertisment Name :" + adv.getName() );
             }
         } else {
-            LOG.log(Level.WARNING, "mgmt.unknownmessage");
+            LOG.log(Level.WARNING, "mgmt.unknownMessage");
             adv = null;
         }
         return adv;

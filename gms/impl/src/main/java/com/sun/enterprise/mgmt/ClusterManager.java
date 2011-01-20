@@ -618,7 +618,7 @@ public class ClusterManager implements MessageListener {
                     bindInterfaceEndpointAddress = TCP_SCHEME + bindInterfaceAddress + PORT;
                 }
             } catch( Exception e ) {
-                LOG.log( Level.WARNING, "mgmt.clustermanagement.invalidbindinterface",
+                LOG.log( Level.WARNING, "mgmt.clustermanager.invalidbindinterfaceaddress",
                                         new Object[]{ ConfigConstants.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress});
             }
         }
