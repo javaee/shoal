@@ -49,7 +49,6 @@ import java.util.logging.Logger;
 /**
  * Reference Implementation of JoinedAndReadyNotificationAction
  * @author Sheetal Vartak
- * @Date : Nov 13, 2007
  */
 public class JoinedAndReadyNotificationActionImpl implements JoinedAndReadyNotificationAction {
     private final CallBack callBack;

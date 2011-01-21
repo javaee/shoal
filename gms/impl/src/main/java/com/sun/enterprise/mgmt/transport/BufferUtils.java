@@ -81,7 +81,7 @@ public class BufferUtils {
      * equal to number of sliced bytes (limit - position).
      *
      * @param byteBuffer {@link ByteBuffer} to slice/
-     * @param postion the position in the passed byteBuffer, the slice will start from.
+     * @param position the position in the passed byteBuffer, the slice will start from.
      * @param limit the limit in the passed byteBuffer, the slice will be ended.
      *
      * @return sliced {@link ByteBuffer} of required size.

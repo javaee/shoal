@@ -97,8 +97,8 @@ public class GMSCacheable implements Serializable, Comparator {
      * We compare the contents of the GMSCacheable argument passed in with
      * the contents of this instance and determine if they are the same.
      *
-     * @override
      */
+    @Override
     public boolean equals(final Object o) {
         boolean retval = false;
         boolean componentNameEqual = false;

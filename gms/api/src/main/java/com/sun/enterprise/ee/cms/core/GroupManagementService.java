@@ -300,8 +300,8 @@ public interface GroupManagementService {
      * <p/>
      * <P>Group members in parameter <code>members</code> is interpreted differently based on startupState.
      * All preconfigured members of group are passed in <code>members</code> when
-     * {@see GMSConstants.groupStartupState.INITIATED} or {@see GMSConstants.groupStartupState.COMPLETED_SUCCESS}.
-     * When startupState is  {@see GMSConstants.groupStartupState.COMPLETED_FAILED}, <code>members</code> is a list of the
+     * <code>GMSConstants.groupStartupState.INITIATED</code> or <code>GMSConstants.groupStartupState.COMPLETED_SUCCESS</code>.
+     * When startupState is  <code>GMSConstants.groupStartupState.COMPLETED_FAILED</code>, <code>members</code> is a list of the
      * members that failed to start.
      *
      * @param groupName    the group name

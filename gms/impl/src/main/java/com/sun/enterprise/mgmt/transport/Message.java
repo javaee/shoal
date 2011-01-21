@@ -127,7 +127,7 @@ public interface Message extends Serializable {
     /**
      * Parses the message's header from given ByteBuffer
      *
-     * @param byteBuffer ByteBuffer which should be parsed
+     * @param buffer ByteBuffer which should be parsed
      * @param offset offset from which the message should be parsed
      * @return the message's length(body length) which this message contains
      * @throws IllegalArgumentException if the argument is not valid or an unexpected error occurs
@@ -148,7 +148,7 @@ public interface Message extends Serializable {
     /**
      * Parses the message's body from given ByteBuffer
      *
-     * @param byteBuffer ByteBuffer which should be parsed
+     * @param buffer ByteBuffer which should be parsed
      * @param offset offset from which the message should be parsed
      * @param length the message's length(body length)
      * @throws IllegalArgumentException if the argument is not valid or an unexpected error occurs

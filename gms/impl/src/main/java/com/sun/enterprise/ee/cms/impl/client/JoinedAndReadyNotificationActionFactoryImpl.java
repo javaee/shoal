@@ -47,7 +47,6 @@ import com.sun.enterprise.ee.cms.core.JoinedAndReadyNotificationActionFactory;
 /**
  * Reference Implementation of JoinedAndReadyNotificationActionFactory
  * @author Sheetal Vartak
- * @Date: Nov 13, 2007
  */
 public class JoinedAndReadyNotificationActionFactoryImpl implements JoinedAndReadyNotificationActionFactory{
     private final CallBack callBack;

@@ -267,7 +267,7 @@
         </jar>
     </target>
 
-    <target name="assemblegmswszip" description="create ${shoal-gms-ws.zip}" >
+    <target name="assemblegmswszip" description="create ${shoal-gms-ws.zip}" depends="gms-javadocs" >
         <zip zipfile="dist/${shoal-gms-ws.zip}" >
             <zipfileset prefix="gms" dir="." includes="**/*.jar" excludes="**/api/**, **/impl/**, lib/jxta.jar"/>
             <zipfileset prefix="gms" dir="." filemode="755" includes="**/*.sh, bin/mcastvalidator" />
@@ -275,6 +275,12 @@
             <zipfileset prefix="gms" dir="." includes="**/*.properties" />
             <zipfileset prefix="gms" dir="." includes="**/configs/**" excludes="**/*.properties" />
         </zip>
+	<zip zipfile="dist/shoal-gms-src.zip">
+	    <zipfileset prefix="gms" dir="." includes="**/*.java **/LogStrings.properties **/LocalStrings.properties"/>
+	</zip>
+	<zip zipfile="dist/shoal-gms-docs.zip">
+	    <zipfileset prefix="docs" dir="../www/docs" includes="**/*"/>
+	</zip>
     </target>
 
 
@@ -285,29 +291,29 @@
     </target>
 
     <!-- javadoc -->
-    <target name="gms-javadocs">
-        <javadoc packagenames="com.sun.enterprise.ee.cms.*"
+    <target name="gms-javadocs" depends="update.shoal.gms.version.in.project.properties">
+        <javadoc packagenames="com.sun.enterprise.*"
                  sourcepath="${api.src.dir}:${impl.src.dir}:${tests.dir}"
                  destdir="${javadocs.dir}"
                  version="true"
                  use="true"
                  private="false"
                  windowtitle="Shoal Group Management Service Framework"
-                 doctitle="Shoal Group Management Service Framework"
-                 bottom="Copyright © 2003   Copyright 2004 Sun Microsystems, Inc. All rights reserved.
+                 doctitle="Shoal Group Management Service Framework       Verson: ${shoal.gms.version}"
+                 bottom="Copyright 2011 Oracle, Inc. All rights reserved.
                  Use is subject to license terms." >
 
-            <link href="http://java.sun.com/j2se/1.5/docs/api/" />
+            <link href="http://download.oracle.com/javase/6/docs/api" offline="true" packageListLoc="lib/javase6_docs_api_package-list"/>
 
-            <group title="Core Client Interfaces and Implementations"
+            <group title="Core Client Interfaces and Implementations" 
                    packages="com.sun.enterprise.ee.cms.core:com.sun.enterprise.ee.cms.core.*,
                    com.sun.enterprise.ee.cms.impl.client:com.sun.enterprise.ee.cms.impl.client.*"/>
 
             <group title="Service Provider Interface"
                    packages="com.sun.enterprise.ee.cms.spi:com.sun.enterprise.ee.cms.spi.*"/>
 
-            <group title="Jxta SPI Implementation"
-                   packages="com.sun.enterprise.ee.cms.impl.jxta:com.sun.enterprise.ee.cms.impl.jxta.*"/>
+            <group title="Grizzly Transport Implementation"
+                   packages="com.sun.enterprise.mgmt.transport:com.sun.enterprise.mgmt.transport.*,com.sun.enterprise.mgmt.transport.grizzly:com.sun.enterprie.mgmt.transport.grizzly.*"/>
 
             <group title="Demonstration Example"
                    packages="com.sun.enterprise.ee.cms.tests:com.sun.enterprise.ee.cms.tests.*"/>

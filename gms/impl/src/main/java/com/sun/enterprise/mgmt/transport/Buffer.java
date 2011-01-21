@@ -42,6 +42,7 @@ package com.sun.enterprise.mgmt.transport;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.*;
 
 /**
  * JDK {@link java.nio.ByteBuffer} was taken as base for Grizzly
@@ -182,7 +183,7 @@ public interface Buffer extends Comparable<Buffer> {
      * out.write(buf);    // Write header + data to channel</pre></blockquote>
      *
      * <p> This method is often used in conjunction with the
-     * {@link Buffer#compact compact} method when transferring data from
+     * {@link com.sun.enterprise.mgmt.transport.Buffer#trimLeft()} method when transferring data from
      * one place to another.  </p>
      *
      * @return  This buffer

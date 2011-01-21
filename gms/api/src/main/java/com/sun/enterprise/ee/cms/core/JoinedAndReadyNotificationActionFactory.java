@@ -46,7 +46,6 @@ package com.sun.enterprise.ee.cms.core;
  * This factory's implementation provides a way to produce a JoinedAndReadyNotificationAction
  * implementation
  * @author Sheetal Vartak
- * @Date: Nov 13, 2007
  */
 public interface JoinedAndReadyNotificationActionFactory extends ActionFactory{
 }

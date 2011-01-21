@@ -60,13 +60,13 @@ import java.util.logging.Level;
  *      magicNumber    integer     {@link MessageImpl#MAGIC_NUMBER}
  *      version        integer     {@link MessageImpl#VERSION}
  *      type           integer     {@link Message#getType} for possible values
- *      messageLength  integer     {@link MessageImpl#MAX_TOTAL_MESSAGE_LENGTH}
+ *      messageLength  integer     {@link MessageImpl#maxTotalMessageLength}
  *
  * Message Body is composed of following fields.
  *      payload        byte[messageLen]
  *
- * MessageHeader  {@link Message#parseHeader(ByteBuffer, int)}
- * MessageBody    {@link Message#parseMessage(ByteBuffer, int, int)}
+ * MessageHeader  {@link Message#parseHeader(com.sun.enterprise.mgmt.transport.Buffer, int)}
+ * MessageBody    {@link Message#parseMessage(com.sun.enterprise.mgmt.transport.Buffer, int, int)}
  *
  * @author Bongjae Chang
  * @author Joe FIalli

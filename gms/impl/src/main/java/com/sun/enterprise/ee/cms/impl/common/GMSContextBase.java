@@ -121,7 +121,7 @@ public abstract class GMSContextBase implements GMSContext {
 
     /**
      * Return <code>true</code> if shutting down
-     * @return
+     * @return <code>true</code> if shutting down
      */
     public boolean isShuttingDown() {
         return shuttingDown;

@@ -1014,7 +1014,7 @@ public class HealthMonitor implements MessageListener, Runnable {
      * if both the above parameters are specified, then fisrt attempt is to get the state from the local
      * cache. If it comes back as UNKNOWN, then another attempt is made via LWR multicast to get the state
      * directly from the concerned member.
-     * @return
+     * @return state
      */
     public String getMemberState(PeerID peerID, long threshold, long timeout) {
         if (peerID == null) {

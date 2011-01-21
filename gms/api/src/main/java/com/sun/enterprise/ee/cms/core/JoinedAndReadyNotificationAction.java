@@ -48,7 +48,6 @@
  * that are produced by registered instances of JoinedAndReadyNotificationActionFactory.
  *
  *  @author Sheetal Vartak
- *  @Date: Nov 13, 2007 
  */
 public interface JoinedAndReadyNotificationAction extends Action{
 }
