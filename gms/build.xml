@@ -270,10 +270,10 @@
     <target name="assemblegmswszip" description="create ${shoal-gms-ws.zip}" >
         <zip zipfile="dist/${shoal-gms-ws.zip}" >
             <zipfileset prefix="gms" dir="." includes="**/*.jar" excludes="**/api/**, **/impl/**, lib/jxta.jar"/>
-            <zipfileset prefix="gms" dir="." includes="**/*.sh, bin/mcastvalidator" />
+            <zipfileset prefix="gms" dir="." filemode="755" includes="**/*.sh, bin/mcastvalidator" />
             <zipfileset prefix="gms" dir="." includes="**/*.xml" excludes="**/pom.xml" />
             <zipfileset prefix="gms" dir="." includes="**/*.properties" />
-            <zipfileset prefix="gms" dir="." includes="**/configs/**" />
+            <zipfileset prefix="gms" dir="." includes="**/configs/**" excludes="**/*.properties" />
         </zip>
     </target>
 
