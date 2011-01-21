@@ -435,7 +435,7 @@ class MasterNode implements MessageListener, Runnable {
                 LOG.log( Level.FINER, "Received a System advertisment Name :" + adv.getName() );
             }
         } else {
-            LOG.log(Level.WARNING, "mgmt.unknownmessage");
+            LOG.log(Level.WARNING, "mgmt.unknownMessage");
             adv = null;
         }
         return adv;
@@ -1296,14 +1296,14 @@ class MasterNode implements MessageListener, Runnable {
                 }
                 final boolean sent = manager.getNetworkManager().send( peerid, msg );
                 if (!sent) {
-                    LOG.log(Level.WARNING, "mgmt.masternode.sendfailed",new Object[]{ msg, name});
+                    LOG.log(Level.WARNING, "mgmt.masternode.sendmsgfailed",new Object[]{ msg, name});
                 }
             } else {
                 // multicast
                 LOG.log(Level.FINER, "Broadcasting Message");
                 final boolean sent = manager.getNetworkManager().broadcast(msg);
                 if (!sent) {
-                    LOG.log(Level.WARNING, "mgmt.masternode.broadcastfailed", new Object[]{msg, manager.getGroupName()});
+                    LOG.log(Level.WARNING, "mgmt.masternode.broadcastmsgfailed", new Object[]{msg, manager.getGroupName()});
                 }
             }
         } catch (IOException io) {

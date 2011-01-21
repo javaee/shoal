@@ -129,7 +129,7 @@ public class
             commands = (List<Command<K, V>>) ris.readObject();
             boolean ktAbsent = ris.readBoolean();
             if (ktAbsent) {
-                removedKeys = (List<K>) ris.readObject();
+                removedKeys = (Collection<K>) ris.readObject();
             } else {
                 rawRemovedKeys = (List<byte[]>) ris.readObject();
             }

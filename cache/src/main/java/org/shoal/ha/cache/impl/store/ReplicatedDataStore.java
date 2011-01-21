@@ -240,14 +240,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
                         new IdleEntryDetector<K, V>() {
                             @Override
                             public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
-                                boolean result = (entry.getMaxIdleTime() > 0) && entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
-                                if (result && _logger.isLoggable(Level.FINE)) {
-                                    _logger.log(Level.FINE, "AccessTimeInfo: Removing idle entry; getLastAccessedAt=" + entry.getLastAccessedAt()
+                                _logger.log(Level.FINE, "AccessTimeInfo: getLastAccessedAt=" + entry.getLastAccessedAt()
                                         + "; maxIdleTimeInMillis=" + entry.getMaxIdleTime()
                                         + " < now=" +nowInMillis);
-                                }
-
-                                return  result;
+                                return (entry.getMaxIdleTime() > 0) && entry.getLastAccessedAt() + entry.getMaxIdleTime() < nowInMillis;
                             }
                         }
                     );
@@ -258,15 +254,10 @@ public class ReplicatedDataStore<K, V extends Serializable>
                         new IdleEntryDetector<K, V>() {
                             @Override
                             public boolean isIdle(DataStoreEntry<K, V> entry, long nowInMillis) {
-
-                                boolean result = (defaultMaxIdleTimeInMillis > 0) && entry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
-                                if (result && _logger.isLoggable(Level.FINE)) {
-                                    _logger.log(Level.FINE, "AccessTimeInfo: Removing idle entry; getLastAccessedAt=" + entry.getLastAccessedAt()
+                                _logger.log(Level.FINE, "AccessTimeInfo: getLastAccessedAt=" + entry.getLastAccessedAt()
                                         + "; defaultMaxIdleTimeInMillis=" + defaultMaxIdleTimeInMillis
                                         + " < now=" +nowInMillis);
-                                }
-
-                                return result;
+                                return (defaultMaxIdleTimeInMillis > 0) && entry.getLastAccessedAt() + defaultMaxIdleTimeInMillis < nowInMillis;
                             }
                         }
                     );
@@ -316,59 +307,22 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public V get(K key)
             throws DataStoreException {
-        if (_loadLogger.isLoggable(Level.FINE)) {
-            _loadLogger.log(Level.FINE, debugName + "Entered load(" + key
-                    + ", __NO_VERSION__); ");
-        }
-        return get(key, null);
-    }
-
-    @Override
-    public V get(K key, String minVersionStr)
-            throws DataStoreException {
-        if (_loadLogger.isLoggable(Level.FINE)) {
-            _loadLogger.log(Level.FINE, debugName + "Entered load(" + key
-                    + ", " + minVersionStr + "); ");
-        }
-
         dscMBean.incrementLoadCount();
         V v = null;
         boolean foundLocally = false;
         DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
-
-        long minVersion = entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion();
-        if (minVersionStr != null) {
-            try { minVersion = Long.valueOf(minVersionStr); } catch (Exception ex) {}
-        }
-
-        if (_loadLogger.isLoggable(Level.FINE)) {
-            _loadLogger.log(Level.FINE, debugName + "Performing load(" + key
-                    + ", " + minVersionStr + "); ");
-        }
         if (entry != null) {
             if (!entry.isRemoved()) {
-                if (entry.getVersion() >= minVersion) {
-                    v = dsc.getDataStoreEntryUpdater().getV(entry);
-                    if (v != null) {
-                        foundLocally = true;
-                        dscMBean.incrementLocalLoadSuccessCount();
-                        if (_loadLogger.isLoggable(Level.FINE)) {
-                            _loadLogger.log(Level.FINE, debugName + "load(" + key
-                                    + ", " + minVersion + "); FOUND IN LOCAL CACHE!! entry.version = " + entry.getVersion());
-                        }
-                    }
-                } else {
+                v = dsc.getDataStoreEntryUpdater().getV(entry);
+                if (v != null) {
+                    foundLocally = true;
+                    dscMBean.incrementLocalLoadSuccessCount();
                     if (_loadLogger.isLoggable(Level.FINE)) {
                         _loadLogger.log(Level.FINE, debugName + "load(" + key
-                                + "); Ignoring local entry because entry.version=" + entry.getVersion()
-                                + " < " + minVersion);
+                                + "); FOUND IN LOCAL CACHE!!");
                     }
                 }
             } else {
-                if (_loadLogger.isLoggable(Level.FINE)) {
-                            _loadLogger.log(Level.FINE, debugName + "load(" + key
-                                    + ");Entry already deleted, so returning null");
-                        }
                 return null; //Because it is already removed
             }
         }
@@ -378,7 +332,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
             String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
             String[] replicaHint = replicachoices.split(":");
             if (_loadLogger.isLoggable(Level.FINE)) {
-                _loadLogger.log(Level.FINE, debugName + "load(" + key + "); ReplicaChoices: " + replicachoices);
+                _loadLogger.log(Level.FINE, debugName + "load(" + key
+                        + "); ReplicaChoices: " + replicachoices);
             }
 
             String respondingInstance = null;
@@ -387,7 +342,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 if (target == null || target.trim().length() == 0 || target.equals(dsc.getInstanceName())) {
                     continue;
                 }
-                LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key, minVersion, target);
+                LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key,
+                        entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), target);
                 if (_loadLogger.isLoggable(Level.FINE)) {
                     _loadLogger.log(Level.FINE, debugName + "load(" + key
                         + ") Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
@@ -412,7 +368,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     if (targetInstance.equals(dsc.getInstanceName())) {
                         continue;
                     }
-                    LoadRequestCommand<K, V> lrCmd = new LoadRequestCommand<K, V>(key, minVersion, targetInstance);
+                    LoadRequestCommand<K, V> lrCmd = new LoadRequestCommand<K, V>(key,
+                            entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), targetInstance);
                     if (_loadLogger.isLoggable(Level.FINE)) {
                         _loadLogger.log(Level.FINE, debugName + "*load(" + key
                             + ") Trying to load from " + targetInstance);

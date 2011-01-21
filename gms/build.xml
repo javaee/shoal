@@ -3,7 +3,7 @@
 
     DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-    Copyright (c) 2004-2011 Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2004-2010 Oracle and/or its affiliates. All rights reserved.
 
     The contents of this file are subject to the terms of either the GNU
     General Public License Version 2 only ("GPL") or the Common Development
@@ -47,7 +47,6 @@
 
     <property file="${basedir}/project.properties"/>
     <property file="${basedir}/build.properties"/>
-    <import file="${basedir}/taskdefs.xml"/>
 
     <!--
         See if we have the GroupLayout class to build the test UI
@@ -120,7 +119,6 @@
                failonerror="true"
                includes="**/*.java"
                excludes="com/sun/enterprise/osgi/ShoalActivator.java,**/${junit_src_dir}/**"
-               includeAntRuntime="false"
                >
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
@@ -137,7 +135,6 @@
                failonerror="true"
                includes="**/*.java"
                excludes="com/sun/enterprise/osgi/ShoalActivator.java,**/${junit_src_dir}/**"
-               includeAntRuntime="false"
                >
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
@@ -162,7 +159,6 @@
                failonerror="true"
                includes="**/*.java"
                excludes="${build.excludes},**/${junit_src_dir}/**"
-               includeAntRuntime="false"
                >
             <compilerarg value="-Xlint:unchecked"/>
             <classpath>
@@ -181,7 +177,7 @@
         <antcall target="assemblegmswszip" />
     </target>
 
-    <target name="assemblejar" description="create ${shoal-gms.jar}" depends="update.shoal.gms.version.in.project.properties" >
+    <target name="assemblejar" description="create ${shoal-gms.jar}" >
         <copy todir="${component.classes.dir}">
             <fileset dir="${api.src.dir}"
                      includes="**/*.properties"/>
@@ -190,11 +186,7 @@
             <fileset dir="${impl.src.dir}"
                      includes="**/*.properties"/>
         </copy>
-        <!-- reload the shoal.gms.version property -->
-        <var name="shoal.gms.version" unset="true"/>
-        <property file="${basedir}/project.properties"/>
         <property name="version.num" value="${shoal.gms.version}"/>
-
 	<manifest file="MANIFEST.MF">
           <attribute name="Implementation-Version" value="${version.num}"/>
           <attribute name="package" value="com.sun.enterprise.ee.cms"/>
@@ -475,43 +467,6 @@
             </fileset>
             <report format="frames" todir="${junit_results_html}"/>
         </junitreport>
-    </target>
-
-    <target name="get-shoal-version"  description="get the org.shoal version value from pom file minus '-SNAPSHOT'">
-        <get-ant_contrib-taskdef/>
-
-        <xmlproperty prefix="shoalgms" file="${basedir}/pom.xml"/>
-        <!--<echo message="shoalgms.project.parent.version=${shoalgms.project.parent.version}"/>-->
-        <propertyregex property="shoalgms.project.parent.version_modified"
-              input="${shoalgms.project.parent.version}"
-              regexp="(^.*)-SNAPSHOT"
-              select="\1"
-              defaultValue="${shoalgms.project.parent.version}"/>
-        <echo message="New Shoal GMS version=${shoalgms.project.parent.version_modified}"/>
-
-    </target>
-    <target name="update.shoal.gms.version.in.project.properties"  depends="get-shoal-version">
-         <!-- read file -->
-        <loadfile property="file.text" srcFile="${basedir}/project.properties" />
-
-        <!--<echo>${file.text}</echo> -->
-        <propertyregex property="shoal.gms.version.old"
-              input="${file.text}"
-              regexp="(.*)(shoal\.gms\.version=)(.*)"
-              select="\3"
-              defaultValue="Unable to determine value"/>
-        <echo message="Old Shoal GMS version=${shoal.gms.version.old}"/>
-
-        <!-- alter the shoal.gms.version value  -->
-        <propertyregex property="file.text.new"
-              input="${file.text}"
-              regexp="(.*)(shoal\.gms\.version=)(.*)"
-              replace="\1\2${shoalgms.project.parent.version_modified}"
-              defaultvalue="${file.text}"/>
-
-         <!-- write back the file contents with the changes -->
-        <echo file="${basedir}/project.properties">${file.text.new}</echo>
-        <!-- <echo>${file.text.new}</echo> -->
     </target>
 
 </project>

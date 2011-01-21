@@ -67,10 +67,10 @@ public class
             // So just deserialize and merge with subsequent data
 
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "*StoreableDataStoreEntryUpdater.executeSave received (first copy) of key = "
+                _logger.log(Level.FINE, "StoreableEntryUpdater.executeSave received (first copy) of key = "
                     + saveCmd.getKey()
-                    + "; entry.version = " + entry.getVersion()
-                    + "; cmd.version = " + saveCmd.getVersion());
+                    + "; entry.version" + entry.getVersion()
+                    + "; cmd.version" + saveCmd.getVersion());
             }
             V v = null;
             try {
@@ -83,11 +83,11 @@ public class
             super.updateMetaInfoInDataStoreEntry(entry, saveCmd);
             super.printEntryInfo("Saved initial entry", entry, saveCmd.getKey());
             entry.setIsReplicaNode(true);
-        } else if (saveCmd.getVersion() > entry.getVersion()) {
+        } else {
             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "*StoreableDataStoreEntryUpdater received: key = " + saveCmd.getKey()
-                    + "; entry.version = " + entry.getVersion()
-                    + "; cmd.version = " + saveCmd.getVersion());
+                _logger.log(Level.FINE, "StoreableEntryUpdater received: key = " + saveCmd.getKey()
+                    + "; entry.version" + entry.getVersion()
+                    + "; cmd.version" + saveCmd.getVersion());
             }
             entry.addPendingUpdate(saveCmd);
             Iterator<SaveCommand<K, V>> iter = entry.getPendingUpdates().iterator();
@@ -96,28 +96,9 @@ public class
                 if (entry.getVersion() + 1 == cmd.getVersion()) {
                     iter.remove();
                     mergeIntoV(entry, entry.getV(), cmd);
-                    if (_logger.isLoggable(Level.FINE)) {
-                        _logger.log(Level.FINE, "*StoreableDataStoreEntryUpdater Merged: key = " + saveCmd.getKey()
-                            + "; entry.version = " + entry.getVersion()
-                            + "; cmd.version = " + saveCmd.getVersion());
-                    }
-                } else {
-                    if (_logger.isLoggable(Level.FINE)) {
-                        _logger.log(Level.FINE, "*StoreableDataStoreEntryUpdater Parked: key = " + saveCmd.getKey()
-                            + "; entry.version = " + entry.getVersion()
-                            + "; cmd.version = " + saveCmd.getVersion());
-                    }
                 }
             }
-
-            super.printEntryInfo("*After merge entry = ", entry, saveCmd.getKey());
             entry.setIsReplicaNode(true);
-        } else {
-             if (_logger.isLoggable(Level.FINE)) {
-                _logger.log(Level.FINE, "*StoreableDataStoreEntryUpdater IGNORING received save command: key = " + saveCmd.getKey()
-                    + "; entry.version = " + entry.getVersion()
-                    + "; cmd.version = " + saveCmd.getVersion());
-            }
         }
     }
 
