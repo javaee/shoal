@@ -268,6 +268,10 @@ public class ReplicatedDataStoreStatsHolder<K, V> implements DataStoreMBean {
     }
 
 
+    public int updateExecutedRemoveCount(int delta) {
+        return executedRemoveCount.addAndGet(delta);
+    }
+
     //@Override
     public String toString() {
         return "ReplicatedDataStoreStatsHolder{" +

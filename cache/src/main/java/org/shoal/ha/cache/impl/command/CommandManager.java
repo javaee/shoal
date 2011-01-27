@@ -120,9 +120,9 @@ public class CommandManager<K, V>
         if (forward) {
             try {
                 head.onTransmit(cmd, initiator);
-                //cmd.onSuccess();
+                cmd.onSuccess();
             } catch (DataStoreException dseEx) {
-                //cmd.onError(dseEx);
+                cmd.onFailure();
             }
         } else {
             tail.onReceive(cmd, initiator);
