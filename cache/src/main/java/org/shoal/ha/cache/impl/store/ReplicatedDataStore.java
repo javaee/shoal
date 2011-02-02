@@ -156,9 +156,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
         Class<V> vClazz = dsc.getValueClazz();
         DataStoreEntryUpdater<K, V> dseUpdater = null;
 
-        if (dsc.isDoSynchronousReplication()) {
-            dseUpdater = new SimpleDataStoreEntryUpdater();
-        } else if (SimpleMetadata.class.isAssignableFrom(vClazz)) {
+        if (SimpleMetadata.class.isAssignableFrom(vClazz)) {
             dseUpdater = new SimpleStoreableDataStoreEntryUpdater();
         } else if (Storeable.class.isAssignableFrom(vClazz)) {
             dseUpdater = new StoreableDataStoreEntryUpdater();

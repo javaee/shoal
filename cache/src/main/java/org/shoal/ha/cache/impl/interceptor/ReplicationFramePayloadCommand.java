@@ -42,14 +42,10 @@ package org.shoal.ha.cache.impl.interceptor;
 
 import org.glassfish.ha.store.util.KeyTransformer;
 import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.api.ObjectInputStreamWithLoader;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
-import org.shoal.ha.cache.impl.util.ReplicationInputStream;
-import org.shoal.ha.cache.impl.util.ReplicationOutputStream;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -62,8 +58,7 @@ import java.util.logging.Logger;
 /**
  * @author Mahesh Kannan
  */
-public class
-        ReplicationFramePayloadCommand<K, V>
+public class ReplicationFramePayloadCommand<K, V>
         extends Command {
 
     private transient static final Logger _logger =
@@ -179,19 +174,16 @@ public class
             getCommandManager().executeCommand(cmd, false, initiator);
         }
 
+        int executedRemoveCount = 0;
         if (removedKeys != null) {
             for (K k : removedKeys) {
-                    dsc.getReplicaStore().remove(k);
+                dsc.getReplicaStore().remove(k);
+                executedRemoveCount++;
             }
-        }
-    }
 
-    @Override
-    public void onSuccess() {
-        int sz = commands.size();
-        for (int i = 0; i < sz; i++) {
-            Command cmd = commands.get(i);
-            cmd.onSuccess();
+            if (dsc.getDataStoreMBean() != null) {
+                dsc.getDataStoreMBean().updateExecutedRemoveCount(executedRemoveCount);
+            }
         }
     }
 
