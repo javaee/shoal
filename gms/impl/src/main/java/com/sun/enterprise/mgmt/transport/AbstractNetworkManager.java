@@ -171,8 +171,8 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         while (iter.hasNext())  {
             try {
                 networkManager = iter.next().getClass().newInstance();
-                if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
-                    if (networkManager.getClass().getName().contains("Grizzly")) {
+                if (transport.startsWith("grizzly")) {
+                    if (networkManager.getClass().getName().contains(transport)) {
                         // found service that matches group communication provider.
                         break;
                     }
@@ -213,8 +213,8 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         }
         if (networkManager == null) {
             String classname = null;
-            if (transport.compareToIgnoreCase(GMSConstants.GRIZZLY_GROUP_COMMUNICATION_PROVIDER) == 0) {
-                classname = "com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager";
+            if (transport.startsWith("grizzly")) {
+                classname = "com.sun.enterprise.mgmt.transport.grizzly." + transport + ".GrizzlyNetworkManager";
             } else {
                 classname = "com.sun.enterprise.mgmt.transport.jxta.JxtaNetworkManager";
             }

@@ -79,51 +79,43 @@ import java.nio.channels.SelectionKey;
 /**
  * @author Bongjae Chang
  */
-public class GrizzlyNetworkManager extends AbstractNetworkManager {
+public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     // too many protocol warnings/severe when trying to communicate to a stopped/killed member of cluster.
     // only logger to shoal logger when necessary to debug grizzly transport within shoal.  don't leave this way.
-    private static final Logger LOG = GrizzlyUtil.getLogger();
+    public static final Logger LOG = GrizzlyUtil.getLogger();
 
-    private final Controller controller = new Controller();
-    private final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
-    private final Map<SelectionKey, String> selectionKeyMap = new ConcurrentHashMap<SelectionKey, String>();
+    public final Controller controller = new Controller();
+    public final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
+    public final Map<SelectionKey, String> selectionKeyMap = new ConcurrentHashMap<SelectionKey, String>();
 
-    private volatile boolean running;
-    private MessageSender tcpSender;
-    private MessageSender udpSender;
-    private MulticastMessageSender multicastSender;
-    private int multicastTimeToLive;
+    public volatile boolean running;
+    public MessageSender tcpSender;
+    public MessageSender udpSender;
+    public MulticastMessageSender multicastSender;
+    public int multicastTimeToLive;
 
 
-    private String instanceName;
-    private String groupName;
-    private String host;
-    private int tcpPort;
-    private int tcpStartPort;
-    private int tcpEndPort;
-    private int multicastPort;
-    private String multicastAddress;
-    private String networkInterfaceName;
-    private long failTcpTimeout; // ms
-    private int maxPoolSize;
-    private int corePoolSize;
-    private long keepAliveTime; // ms
-    private int poolQueueSize;
-    private int highWaterMark;
-    private int numberToReclaim;
-    private int maxParallelSendConnections;
-    private long startTimeout; // ms
-    private long sendWriteTimeout; // ms
-    private int multicastPacketSize;
-    private int writeSelectorPoolSize;
-    private String virtualUriList;
-    private GrizzlyExecutorService execService;
-    private ExecutorService multicastSenderThreadPool = null;
-    private TCPSelectorHandler tcpSelectorHandler = null;
-    final private String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
+    public String instanceName;
+    public String groupName;
+    public String host;
+    public int tcpPort;
+    public int tcpStartPort;
+    public int tcpEndPort;
+    public int multicastPort;
+    public String multicastAddress;
+    public String networkInterfaceName;
+    public long failTcpTimeout; // ms
+    public int maxParallelSendConnections;
+    public long startTimeout; // ms
+    public long sendWriteTimeout; // ms
+    public int multicastPacketSize;
+    public int writeSelectorPoolSize;
+    public TCPSelectorHandler tcpSelectorHandler = null;
 
-    private final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
+    final public String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
+
+    public final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
     public static final String MESSAGE_SELECTION_KEY_TAG = "selectionKey";
 
@@ -139,7 +131,7 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         return validateMulticastAddress != null && validateMulticastAddress.isMulticastAddress();
     }
 
-    private void configure( final Map properties ) {
+    public void configure( final Map properties ) {
         Logger shoalLogger = getLogger();
         GrizzlyUtil.setLogger(LOG);
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
@@ -172,12 +164,6 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
             }
         }
         failTcpTimeout = Utility.getLongProperty( FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString(), 10 * 1000, properties );
-        maxPoolSize = Utility.getIntProperty( MAX_POOLSIZE.toString(), 50, properties );
-        corePoolSize = Utility.getIntProperty( CORE_POOLSIZE.toString(), 20, properties );
-        keepAliveTime = Utility.getLongProperty( KEEP_ALIVE_TIME.toString(), 60 * 1000, properties );
-        poolQueueSize = Utility.getIntProperty( POOL_QUEUE_SIZE.toString(), 1024 * 4, properties );
-        highWaterMark = Utility.getIntProperty( HIGH_WATER_MARK.toString(), 1024, properties );
-        numberToReclaim = Utility.getIntProperty( NUMBER_TO_RECLAIM.toString(), 10, properties );
         maxParallelSendConnections = Utility.getIntProperty( MAX_PARALLEL.toString(), 15, properties );
         startTimeout = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
         sendWriteTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
@@ -185,7 +171,6 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         multicastTimeToLive = Utility.getIntProperty(MULTICAST_TIME_TO_LIVE.toString(),
                                       GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
-        virtualUriList = Utility.getStringProperty( VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties );
         if (shoalLogger.isLoggable(Level.CONFIG)) {
             String multicastTTLresults = multicastTimeToLive == GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE ?
                     " default" : Integer.toString(multicastTimeToLive);
@@ -197,15 +182,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                      .append(" MULTICAST_PACKET_SIZE:").append(multicastPacketSize)
                      .append(" MULTICAST_TIME_TO_LIVE:").append(multicastTTLresults).append('\n');
             buf.append("FAILURE_DETECT_TCP_RETRANSMIT_TIMEOUT(ms):").append(failTcpTimeout).append('\n');
-            buf.append("ThreadPool CORE_POOLSIZE:").append(corePoolSize).
-                    append(" MAX_POOLSIZE:").append(maxPoolSize).
-                    append(" POOL_QUEUE_SIZE:").append(poolQueueSize).
-                    append(" KEEP_ALIVE_TIME(ms):").append(keepAliveTime).append('\n');
-            buf.append("HIGH_WATER_MARK:").append(highWaterMark).append(" NUMBER_TO_RECLAIM:").append(numberToReclaim)
-                .append(" MAX_PARALLEL:").append(maxParallelSendConnections).append('\n');
+            buf.append(" MAX_PARALLEL:").append(maxParallelSendConnections).append('\n');
             buf.append("START_TIMEOUT(ms):").append(startTimeout).append(" WRITE_TIMEOUT(ms):").append(sendWriteTimeout).append('\n');
             buf.append("MAX_WRITE_SELECTOR_POOL_SIZE:").append(writeSelectorPoolSize).append('\n');
-            buf.append("VIRTUAL_MULTICAST_URI_LIST:").append(virtualUriList).append('\n');
             shoalLogger.log(Level.CONFIG, buf.toString());
         }
     }
@@ -213,89 +192,6 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     @SuppressWarnings( "unchecked" )
     public synchronized void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException {
         super.initialize(groupName, instanceName, properties);
-        this.instanceName = instanceName;
-        this.groupName = groupName;
-        configure( properties );
-        GMSContext ctx = GMSContextFactory.getGMSContext(groupName);
-        if (ctx != null)  {
-            GMSMonitor monitor = ctx.getGMSMonitor();
-            if (monitor != null) {
-                monitor.setSendWriteTimeout(this.sendWriteTimeout);
-            }
-        }
-
-        // moved setting of localPeerId.
-
-        InetAddress localInetAddress = null;
-        if( host != null ) {
-            localInetAddress = InetAddress.getByName( host );
-        }
-        ThreadPoolConfig threadPoolConfig = new ThreadPoolConfig("GMS-GrizzlyControllerThreadPool-Group-" + groupName,
-                corePoolSize,
-                maxPoolSize,
-                new ArrayBlockingQueue<Runnable>( poolQueueSize ),
-                poolQueueSize,
-                keepAliveTime,
-                TimeUnit.MILLISECONDS,
-                null,
-                java.lang.Thread.NORM_PRIORITY, //priority = 5
-                null);
-
-        execService = GrizzlyExecutorService.createInstance(threadPoolConfig);
-        controller.setThreadPool( execService );
-
-        final CacheableConnectorHandlerPool cacheableHandlerPool =
-                new CacheableConnectorHandlerPool( controller, highWaterMark,
-                numberToReclaim, maxParallelSendConnections,
-                new ConnectionFinder<ConnectorHandler>() {
-
-            @Override
-            public ConnectorHandler find(ContactInfo<ConnectorHandler> cinfo,
-                    Collection<ConnectorHandler> idleConnections,
-                    Collection<ConnectorHandler> busyConnections)
-                    throws IOException {
-
-                if (!idleConnections.isEmpty()) {
-                    return null;
-                }
-
-                return cinfo.createConnection();
-            }
-        });
-        
-        controller.setConnectorHandlerPool( cacheableHandlerPool );
-
-        tcpSelectorHandler = new ReusableTCPSelectorHandler();
-        tcpSelectorHandler.setPortRange(new PortRange(this.tcpStartPort, this.tcpEndPort));
-        tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
-        tcpSelectorHandler.setInet( localInetAddress );
-
-        controller.addSelectorHandler( tcpSelectorHandler );
-
-        MulticastSelectorHandler multicastSelectorHandler = new MulticastSelectorHandler();
-        multicastSelectorHandler.setPort( multicastPort );
-        multicastSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
-        if( GrizzlyUtil.isSupportNIOMulticast() ) {
-            multicastSelectorHandler.setMulticastAddress( multicastAddress );
-            multicastSelectorHandler.setNetworkInterface( networkInterfaceName );
-            multicastSelectorHandler.setInet( localInetAddress );
-            controller.addSelectorHandler( multicastSelectorHandler );                      
-        }
-
-        ProtocolChainInstanceHandler pciHandler = new DefaultProtocolChainInstanceHandler() {
-            @Override
-            public ProtocolChain poll() {
-                ProtocolChain protocolChain = protocolChains.poll();
-                if( protocolChain == null ) {
-                    protocolChain = new DefaultProtocolChain();
-                    protocolChain.addFilter( GrizzlyMessageProtocolParser.createParserProtocolFilter( null ) );
-                    protocolChain.addFilter( new GrizzlyMessageDispatcherFilter( GrizzlyNetworkManager.this ) );
-                }
-                return protocolChain;
-            }
-        };
-        controller.setProtocolChainInstanceHandler( pciHandler );
-        SelectorFactory.setMaxSelectors( writeSelectorPoolSize );
     }
 
     private final CountDownLatch controllerGate = new CountDownLatch( 1 );
@@ -306,175 +202,11 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     @Override
     @SuppressWarnings( "unchecked" )
     public synchronized void start() throws IOException {
-        if( running )
-            return;
-        super.start();
-
-        ControllerStateListener controllerStateListener = new ControllerStateListener() {
-
-            public void onStarted() {
-            }
-
-            public void onReady() {
-                if( LOG.isLoggable( Level.FINER ) )
-                    LOG.log( Level.FINER, "GrizzlyNetworkManager is ready" );
-                controllerGateIsReady = true;
-                controllerGate.countDown();
-            }
-
-            public void onStopped() {
-                controllerGate.countDown();
-            }
-
-            @Override
-            public void onException(Throwable e) {
-                if (controllerGate.getCount() > 0) {
-                    getLogger().log(Level.SEVERE, "Exception during " +
-                            "starting the controller", e);
-                    controllerGate.countDown();
-                    controllerGateStartupException = e;
-                } else {
-                    getLogger().log(Level.SEVERE, "Exception during " +
-                            "controller processing", e);
-                }
-            }
-        };
-        controller.addStateListener( controllerStateListener );
-        new Thread( controller ).start();
-        long controllerStartTime = System.currentTimeMillis();
-        try {
-            controllerGate.await( startTimeout, TimeUnit.MILLISECONDS );
-        } catch( InterruptedException e ) {
-            e.printStackTrace();
-        }
-        long durationInMillis = System.currentTimeMillis() - controllerStartTime;
-
-        // do not continue if controller did not start.
-        if (!controller.isStarted() || !controllerGateIsReady) {
-            if (controllerGateStartupException != null) {
-                throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms",
-                        controllerGateStartupException);
-            } else {
-                throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms");
-
-            }
-        } else if (controllerGateIsReady) {
-            // todo: make this FINE in future.
-            getLogger().config("Grizzly controller listening on " + tcpSelectorHandler.getInet() + ":" + tcpSelectorHandler.getPort() + ". Controller started in " + durationInMillis + " ms");
-        }
-
-        tcpPort = tcpSelectorHandler.getPort();
-
-        if (localPeerID == null) {
-            String uniqueHost = host;
-            if (uniqueHost == null) {
-                // prefer IPv4
-                InetAddress firstInetAddress = NetworkUtility.getFirstInetAddress(false);
-                if (firstInetAddress == null)
-                    firstInetAddress = NetworkUtility.getFirstInetAddress(true);
-                if (firstInetAddress == null)
-                    throw new IOException("can not find a first InetAddress");
-                uniqueHost = firstInetAddress.getHostAddress();
-            }
-            if (uniqueHost == null)
-                throw new IOException("can not find an unique host");
-            localPeerID = new PeerID<GrizzlyPeerID>(new GrizzlyPeerID(uniqueHost, tcpPort, multicastAddress, multicastPort), groupName, instanceName);
-            peerIDMap.put(instanceName, localPeerID);
-            if (LOG.isLoggable(Level.FINE))
-                LOG.log(Level.FINE, "local peer id = " + localPeerID);
-        }
-        tcpSender = new GrizzlyTCPConnectorWrapper( controller, sendWriteTimeout, host, tcpPort, localPeerID );
-        GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
-                                                                                         sendWriteTimeout,
-                                                                                         host,
-                                                                                         multicastPort,
-                                                                                         multicastAddress,
-                                                                                         localPeerID );
-        udpSender = udpConnectorWrapper;
-        List<PeerID> virtualPeerIdList = getVirtualPeerIDList( virtualUriList );
-        if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() ) {
-            final boolean FAIRNESS = true;
-            ThreadFactory tf = new GMSThreadFactory("GMS-mcastSenderThreadPool-thread");
-
-            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS,
-                                                                new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ), tf);
-            multicastSender = new VirtualMulticastSender( host,
-                                                          multicastAddress,
-                                                          multicastPort,
-                                                          networkInterfaceName,
-                                                          multicastPacketSize,
-                                                          localPeerID,
-                                                          multicastSenderThreadPool,
-                                                          this,
-                                                          multicastTimeToLive,
-                                                          virtualPeerIdList );
-        } else {
-            if( GrizzlyUtil.isSupportNIOMulticast() ) {
-                multicastSender = udpConnectorWrapper;
-            } else {
-                final boolean FAIRNESS = true;
-                ThreadFactory tf = new GMSThreadFactory("GMS-McastMsgProcessor-Group-" + groupName + "-thread");                          
-                multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ), tf );
-                multicastSender = new BlockingIOMulticastSender( host,
-                                                                 multicastAddress,
-                                                                 multicastPort,
-                                                                 networkInterfaceName,
-                                                                 multicastPacketSize,
-                                                                 localPeerID,
-                                                                 multicastSenderThreadPool,
-                                                                 multicastTimeToLive,
-                                                                 this );
-            }
-        }
-        if( tcpSender != null )
-            tcpSender.start();
-        if( udpSender != null )
-            udpSender.start();
-        if( multicastSender != null )
-            multicastSender.start();
-        addMessageListener( new PingMessageListener() );
-        addMessageListener( new PongMessageListener() );
-        running = true;
+        // TBD: consider if code can be share here or not between grizzly 1.9 and 2.0 transport containers.
     }
 
-    private List<PeerID> getVirtualPeerIDList( String virtualUriList ) {
-        if( virtualUriList == null )
-            return null;
-        LOG.config( "VIRTUAL_MULTICAST_URI_LIST = " + virtualUriList );
-        List<PeerID> virtualPeerIdList = new ArrayList<PeerID>();
-        //if this object has multiple addresses that are comma separated
-        if( virtualUriList.indexOf( "," ) > 0 ) {
-            String addresses[] = virtualUriList.split( "," );
-            if( addresses.length > 0 ) {
-                List<String> virtualUriStringList = Arrays.asList( addresses );
-                for( String uriString : virtualUriStringList ) {
-                    try {
-                        PeerID peerID = getPeerIDFromURI( uriString );
-                        if( peerID != null ) {
-                            virtualPeerIdList.add( peerID );
-                            LOG.config( "VIRTUAL_MULTICAST_URI = " + uriString + ", Converted PeerID = " + peerID );
-                        }
-                    } catch( URISyntaxException use ) {
-                        if( LOG.isLoggable( Level.CONFIG ) )
-                            LOG.log( Level.CONFIG, "failed to parse the virtual multicast uri(" + uriString + ")", use );
-                    }
-                }
-            }
-        } else {
-            //this object has only one address in it, so add it to the list
-            try {
-                PeerID peerID = getPeerIDFromURI( virtualUriList );
-                if( peerID != null ) {
-                    virtualPeerIdList.add( peerID );
-                    LOG.config( "VIRTUAL_MULTICAST_URI = " + virtualUriList + ", Converted PeerID = " + peerID );
-                }
-            } catch( URISyntaxException use ) {
-                if( LOG.isLoggable( Level.CONFIG ) )
-                    LOG.log( Level.CONFIG, "failed to parse the virtual multicast uri(" + virtualUriList + ")", use );
-            }
-        }
-        return virtualPeerIdList;
-    }
+    abstract public List<PeerID> getVirtualPeerIDList( String virtualUriList );
+
 
     private PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
         if( uri == null )
@@ -490,28 +222,11 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     @Override
-    public synchronized void stop() throws IOException {
-        if( !running )
-            return;
-        running = false;
+    public void stop() throws IOException {
         super.stop();
-        if( tcpSender != null )
-            tcpSender.stop();
-        if( udpSender != null )
-            udpSender.stop();
-        if( multicastSender != null )
-            multicastSender.stop();
-        if( multicastSenderThreadPool != null ) {
-            multicastSenderThreadPool.shutdown();
-        }
-        peerIDMap.clear();
-        selectionKeyMap.clear();
-        pingMessageLockMap.clear();
-        controller.stop();
-        execService.shutdown();
     }
 
-    protected void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
+    public void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
         if( messageEvent == null )
             return;
         SelectionKey selectionKey = null;
@@ -523,11 +238,11 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
         addRemotePeer( messageEvent.getSourcePeerID(), selectionKey );
     }
 
-    protected void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
+    public void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
     }
 
     @SuppressWarnings( "unchecked" )
-    private void addRemotePeer( PeerID peerID, SelectionKey selectionKey ) {
+    public void addRemotePeer( PeerID peerID, SelectionKey selectionKey ) {
         if( peerID == null )
             return;
         if( peerID.equals( localPeerID ) )
