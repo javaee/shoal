@@ -47,7 +47,7 @@
     <groupId>org.shoal</groupId>
     <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.5.29-SNAPSHOT</version>
+    <version>1.5.30-SNAPSHOT</version>
     <name>shoal</name>
     <url>http://java.net/projects/shoal</url>
 
