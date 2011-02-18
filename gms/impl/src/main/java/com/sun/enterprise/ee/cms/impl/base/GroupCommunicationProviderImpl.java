@@ -86,7 +86,7 @@ public class GroupCommunicationProviderImpl implements
 
     // TBD:  Reintroduce this in future. Comment out unused field for now.
     // private final ExecutorService msgSendPool;
-    private Map<PeerID, CallableMessageSend> instanceCache = new Hashtable<PeerID, CallableMessageSend>();
+    //private Map<PeerID, CallableMessageSend> instanceCache = new Hashtable<PeerID, CallableMessageSend>();
 
     public GroupCommunicationProviderImpl(final String groupName) {
         this.groupName = groupName;
@@ -527,7 +527,7 @@ public class GroupCommunicationProviderImpl implements
      * implements Callable.
      * Used for handing off the job of calling sendMessage() method to a ThreadPool.
      * REVISIT
-     */
+
     private class CallableMessageSend implements Callable<Object> {
         private PeerID member;
         private Serializable msg;
@@ -551,6 +551,7 @@ public class GroupCommunicationProviderImpl implements
             return null;
         }
     }
+    */
 
     public void announceWatchdogObservedFailure(String serverToken) throws GMSException {
         if (clusterManager == null) {
