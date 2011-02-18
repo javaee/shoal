@@ -97,6 +97,7 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
 
     @SuppressWarnings("unchecked")
     private boolean send( SocketAddress remoteAddress, SocketAddress localAddress, Message message, PeerID target ) throws IOException {
+        final int MAX_RESEND_ATTEMPTS = 4;
         if( controller == null )
             throw new IOException( "grizzly controller must be initialized" );
         if( remoteAddress == null )
@@ -135,6 +136,10 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
                     OutputWriter.flushChannel(connectorHandler.getUnderlyingChannel(), message.getPlainByteBuffer(), writeTimeout);
                     connectorHandler.close();
                     break;
+                } catch (MessageIOException mioe) {
+                    // thrown when message size is too big.
+                    forceClose(connectorHandler);
+                    throw mioe;
                 } catch (Exception e) {
                     if (LOG.isLoggable(Level.FINE)) {
                         LOG.log(Level.FINE, "exception during the flushChannel call. Retrying with another connection #" + attemptNo, e);
@@ -144,7 +149,7 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
                 }
 
                 attemptNo++;
-            } while (true);
+            } while (attemptNo < MAX_RESEND_ATTEMPTS);
         } finally {
             controller.releaseConnectorHandler(connectorHandler);
         }
