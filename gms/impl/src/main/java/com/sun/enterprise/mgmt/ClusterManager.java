@@ -267,52 +267,6 @@ public class ClusterManager implements MessageListener {
         cmListeners.remove(listener);
     }
 
-    /**
-     * @param argv none defined
-     */
-    public static void main(final String[] argv) throws GMSException {
-        LOG.setLevel(Level.FINEST);
-        final String name = System.getProperty("INAME", "instanceName");
-        final String groupName = System.getProperty("GNAME", "groupName");
-        LOG.log(Level.FINER, "Instance Name :" + name);
-        final Map props = getPropsForTest();
-        final Map<String, String> idMap = getIdMap(name, groupName);
-        final List<ClusterViewEventListener> vListeners =
-                new ArrayList<ClusterViewEventListener>();
-        final List<ClusterMessageListener> mListeners =
-                new ArrayList<ClusterMessageListener>();
-        vListeners.add(
-                new ClusterViewEventListener() {
-                    public void clusterViewEvent(
-                            final ClusterViewEvent event,
-                            final ClusterView view) {
-                        LOG.log(Level.INFO, "event.message", new Object[]{event.getEvent().toString()});
-                        LOG.log(Level.INFO, "peer.involved", new Object[]{event.getAdvertisement().toString()});
-                        LOG.log(Level.INFO, "view.message", new Object[]{view.getPeerNamesInView().toString()});
-                    }
-                });
-        mListeners.add(
-                new ClusterMessageListener() {
-                    public void handleClusterMessage(
-                            final SystemAdvertisement id, final Object message) {
-                        LOG.log(Level.INFO, id.getName());
-                        LOG.log(Level.INFO, message.toString());
-                    }
-                }
-        );
-        final ClusterManager manager = new ClusterManager(groupName,
-                name,
-                idMap,
-                props,
-                vListeners,
-                mListeners);
-        manager.start();
-        //manager.waitForClose();
-        try {
-            Thread.sleep(10000); // long enough to announce being master.
-        } catch (InterruptedException ie) {}
-        manager.stop(false);
-    }
 
     private static Map<String, String> getIdMap(String memberType, String groupName) {
         final Map<String, String> idMap = new HashMap<String, String>();
