@@ -275,6 +275,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final ClusterViewEvents events = packet.getClusterViewEvent();
         switch (events) {
             case ADD_EVENT:
+            case NO_LONGER_INDOUBT_EVENT:
                 addNewMemberJoins(packet);
                 break;
             case CLUSTER_STOP_EVENT:
@@ -292,12 +293,10 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             case MASTER_CHANGE_EVENT:
                 analyzeMasterChangeView(packet);
                 break;
-            case NO_LONGER_INDOUBT_EVENT:
-                addNewMemberJoins(packet);
-                break;
             case PEER_STOP_EVENT:
                 addPlannedShutdownSignals(packet);
                 break;
+            default:
         }
 
         final Signal[] s = new Signal[signals.size()];
@@ -495,12 +494,12 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final List<String> tokens = new ArrayList<String>();
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);
-        for (GMSCacheable gmsCacheable : entries.keySet()) {
+        for (Map.Entry<GMSCacheable, Object> entry : entries.entrySet()) {
+            GMSCacheable gmsCacheable = entry.getKey();
             //if this failed member was appointed for recovering someone else
             if (token.equals(gmsCacheable.getMemberTokenId()) && !token.equals(gmsCacheable.getKey())) {
-                final Object entry = entries.get(gmsCacheable);
-                if (entry instanceof String) {
-                    if (((String) entry).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(gmsCacheable.getKey())) {
+                if (entry.getValue() instanceof String) {
+                    if (((String) entry.getValue()).startsWith(REC_APPOINTED_STATE) && !currentCoreMembers.contains(gmsCacheable.getKey())) {
                         if (logger.isLoggable(Level.FINER)){
                             //if the target member is already up dont include that
                             logger.log(Level.FINER, new StringBuffer("Failed Member ")
@@ -535,12 +534,12 @@ class ViewWindowImpl implements ViewWindow, Runnable {
         final DistributedStateCache dsc = getGMSContext().getDistributedStateCache();
         final Map<GMSCacheable, Object> entries = dsc.getFromCache(token);
 
-        for (GMSCacheable gmsCacheable : entries.keySet()) {
+        for (Map.Entry<GMSCacheable,Object> entry : entries.entrySet()) {
+            GMSCacheable gmsCacheable = entry.getKey();
             //if this member is recovering someone else
             if (token.equals(gmsCacheable.getMemberTokenId()) && !token.equals(gmsCacheable.getKey())) {
-                final Object entry = entries.get(gmsCacheable);
-                if (entry instanceof String) {
-                    if (((String) entry).startsWith(REC_PROGRESS_STATE)) {
+                if (entry.getValue() instanceof String) {
+                    if (((String) entry.getValue()).startsWith(REC_PROGRESS_STATE)) {
                         if (logger.isLoggable(Level.FINER)){
                             logger.log(Level.FINER, new StringBuffer("Failed Member ").append(token)
                                     .append(" had recovery-in-progress for ")

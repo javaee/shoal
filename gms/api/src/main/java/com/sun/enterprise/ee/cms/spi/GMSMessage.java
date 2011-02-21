@@ -51,6 +51,8 @@ import java.io.Serializable;
  */
 
 public class GMSMessage implements Serializable {
+    static final long serialVersionUID = -5485293884999776323L;
+
     private final String componentName;
     private final byte[] message;
     private final String groupName;

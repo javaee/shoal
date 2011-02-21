@@ -48,6 +48,7 @@ import java.util.Date;
  * that a previously failed instance had joined the cluster.
  */
 public class RejoinSubeventImpl implements RejoinSubevent {
+    static final long serialVersionUID = -3554482822551862156L;
 
     final long groupJoinTime;
 

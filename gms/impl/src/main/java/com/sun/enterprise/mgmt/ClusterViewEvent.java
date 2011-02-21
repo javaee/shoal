@@ -53,6 +53,8 @@ import java.io.Serializable;
  * @version $Revision$
  */
 public class ClusterViewEvent implements Serializable {
+    static final long serialVersionUID = 4125228994646649851L;
+
     private final ClusterViewEvents event;
     private final SystemAdvertisement advertisement;
 

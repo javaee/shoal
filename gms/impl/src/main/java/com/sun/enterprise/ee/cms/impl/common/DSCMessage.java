@@ -55,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @version $Revision$
  */
 public class DSCMessage implements Serializable {
+    static final long serialVersionUID = -3594369933952520038L;
 
     public static enum OPERATION { ADD, REMOVE, ADDALLLOCAL,
         ADDALLREMOTE, REMOVEALL }

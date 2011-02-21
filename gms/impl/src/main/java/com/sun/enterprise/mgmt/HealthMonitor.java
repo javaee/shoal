@@ -1040,7 +1040,7 @@ public class HealthMonitor implements MessageListener, Runnable {
                 threshold = defaultThreshold;
             }
             String state = getMemberStateFromHeartBeat(peerID, threshold);
-            if (state == states[UNKNOWN]) {
+            if (state.equals(states[UNKNOWN])) {
                 return getMemberStateViaLWR(peerID, timeout);
             } else return state;
         }
@@ -1765,13 +1765,13 @@ public class HealthMonitor implements MessageListener, Runnable {
                     boolean completed = false;
                     synchronized (result) {
                         if (!result.completed.get()) {
-                            result.isConnectionUp = new Boolean(isConnectionUp());
+                            result.isConnectionUp = Boolean.valueOf(isConnectionUp());
                             if (result.isConnectionUp)  {
                                 result.connectionUpSocketAddress = siaddr;
                             }
                             completed = true;
                             result.completed.set(true);
-                            result.notify();
+                            result.notifyAll();
                         }
                     }
                     if (completed) {

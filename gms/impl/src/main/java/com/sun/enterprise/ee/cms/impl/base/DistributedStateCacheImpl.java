@@ -223,11 +223,11 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         final StringBuffer buf = new StringBuffer();
         final ConcurrentHashMap<GMSCacheable, Object> copy;
         copy = new ConcurrentHashMap<GMSCacheable, Object>(cache);
-        for (GMSCacheable c : copy.keySet()) {
-            buf.append(c.hashCode()).append(" key=")
-                    .append(c.toString())
+        for (Map.Entry<GMSCacheable, Object> entry : copy.entrySet()) {
+            buf.append(entry.getKey().hashCode()).append(" key=")
+                    .append(entry.getKey().toString())
                     .append(" : value=")
-                    .append(copy.get(c))
+                    .append(entry.getValue())
                     .append("\n");
         }
         return buf.toString();

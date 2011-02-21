@@ -56,6 +56,8 @@ import static com.sun.enterprise.ee.cms.core.GroupManagementService.MemberType.C
  * @version $Revision$
  */
 public class GMSMember implements Serializable {
+    static final long serialVersionUID = -938961303520509595L;
+
     private final String memberToken;
     private final String memberType;
     private long id;
