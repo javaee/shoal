@@ -149,7 +149,7 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
                 }
 
                 attemptNo++;
-            } while (attemptNo < MAX_RESEND_ATTEMPTS);
+            } while (attemptNo <= MAX_RESEND_ATTEMPTS);
         } finally {
             controller.releaseConnectorHandler(connectorHandler);
         }
