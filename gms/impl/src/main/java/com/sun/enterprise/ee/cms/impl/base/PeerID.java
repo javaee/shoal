@@ -40,8 +40,6 @@
 
 package com.sun.enterprise.ee.cms.impl.base;
 
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
-
 import java.io.Serializable;
                            
 /**
@@ -136,11 +134,11 @@ public class PeerID<T extends Serializable> implements Serializable, Comparable<
         if (result != 0) {
             return result;
         }
-        if (uniqueID instanceof GrizzlyPeerID  && other.getUniqueID() instanceof GrizzlyPeerID) {
 
-            // do not use GrizzlyPeerID.toString() since it includes tcpport, which is not part of comparison.
-            result = ((GrizzlyPeerID)uniqueID).compareTo((GrizzlyPeerID)other.getUniqueID());
-            return result;
+        final Class<T> uniqueIDClass = (Class<T>) uniqueID.getClass();
+        if (Comparable.class.isAssignableFrom(uniqueIDClass) &&
+                uniqueIDClass.isAssignableFrom(other.getUniqueID().getClass())) {
+            return ((Comparable<T>) uniqueID).compareTo((T) other.getUniqueID());
         } else {
             return uniqueID.toString().compareTo(other.getUniqueID().toString());
         }
