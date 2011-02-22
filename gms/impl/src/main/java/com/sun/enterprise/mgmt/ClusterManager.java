@@ -268,67 +268,6 @@ public class ClusterManager implements MessageListener {
     }
 
     /**
-     * @param argv none defined
-     */
-    public static void main(final String[] argv) throws GMSException {
-        LOG.setLevel(Level.FINEST);
-        final String name = System.getProperty("INAME", "instanceName");
-        final String groupName = System.getProperty("GNAME", "groupName");
-        LOG.log(Level.FINER, "Instance Name :" + name);
-        final Map props = getPropsForTest();
-        final Map<String, String> idMap = getIdMap(name, groupName);
-        final List<ClusterViewEventListener> vListeners =
-                new ArrayList<ClusterViewEventListener>();
-        final List<ClusterMessageListener> mListeners =
-                new ArrayList<ClusterMessageListener>();
-        vListeners.add(
-                new ClusterViewEventListener() {
-                    public void clusterViewEvent(
-                            final ClusterViewEvent event,
-                            final ClusterView view) {
-                        LOG.log(Level.INFO, "event.message", new Object[]{event.getEvent().toString()});
-                        LOG.log(Level.INFO, "peer.involved", new Object[]{event.getAdvertisement().toString()});
-                        LOG.log(Level.INFO, "view.message", new Object[]{view.getPeerNamesInView().toString()});
-                    }
-                });
-        mListeners.add(
-                new ClusterMessageListener() {
-                    public void handleClusterMessage(
-                            final SystemAdvertisement id, final Object message) {
-                        LOG.log(Level.INFO, id.getName());
-                        LOG.log(Level.INFO, message.toString());
-                    }
-                }
-        );
-        final ClusterManager manager = new ClusterManager(groupName,
-                name,
-                idMap,
-                props,
-                vListeners,
-                mListeners);
-        manager.start();
-        //manager.waitForClose();
-        try {
-            Thread.sleep(10000); // long enough to announce being master.
-        } catch (InterruptedException ie) {}
-        manager.stop(false);
-    }
-
-    private static Map<String, String> getIdMap(String memberType, String groupName) {
-        final Map<String, String> idMap = new HashMap<String, String>();
-        idMap.put(CustomTagNames.MEMBER_TYPE.toString(), memberType);
-        idMap.put(CustomTagNames.GROUP_NAME.toString(), groupName);
-        idMap.put(CustomTagNames.START_TIME.toString(), Long.valueOf(System.currentTimeMillis()).toString());
-        return idMap;
-    }
-
-    //TODO: NOT YET IMPLEMENTED
-    private static Map getPropsForTest() {
-        return new HashMap();
-    }
-
-
-    /**
      * Stops the ClusterManager and all it's services
      *
      * @param isClusterShutdown true if this peer is shutting down as part of cluster wide shutdown
@@ -347,7 +286,7 @@ public class ClusterManager implements MessageListener {
             }
             stopped = true;
             synchronized (closeLock) {
-                closeLock.notify();
+                closeLock.notifyAll();
             }
         }
     }
@@ -426,22 +365,6 @@ public class ClusterManager implements MessageListener {
 
     public boolean isMaster() {
         return clusterViewManager.isMaster() && masterNode.isMasterAssigned();
-    }
-
-    /**
-     * Ensures the ClusterManager continues to run.
-     */
-    private void waitForClose() {
-        try {
-            LOG.log(Level.FINER, "Waiting for close");
-            synchronized (closeLock) {
-                closeLock.wait();
-            }
-            stop(false);
-            LOG.log(Level.FINER, "Good Bye");
-        } catch (InterruptedException e) {
-            LOG.log(Level.WARNING, e.getLocalizedMessage());
-        }
     }
 
     /**
@@ -624,7 +547,7 @@ public class ClusterManager implements MessageListener {
         }
         if (bindInterfaceEndpointAddress != null) {
             if (LOG.isLoggable(Level.CONFIG)) {
-                LOG.config("Configured bindInterfaceEndpointAddress URI " + bindInterfaceEndpointAddress.toString() +
+                LOG.config("Configured bindInterfaceEndpointAddress URI " + bindInterfaceEndpointAddress +
                            " using property " + ConfigConstants.BIND_INTERFACE_ADDRESS.toString() +
                            " value=" + bindInterfaceAddress);
             }
@@ -685,7 +608,7 @@ public class ClusterManager implements MessageListener {
 
     public void notifyNewMaster() {
         synchronized (MASTERBYFORCELOCK) {
-            MASTERBYFORCELOCK.notify();
+            MASTERBYFORCELOCK.notifyAll();
         }
     }
 

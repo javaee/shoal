@@ -53,6 +53,8 @@ import java.util.Comparator;
  * @version $Revision$
  */
 public class GMSCacheable implements Serializable, Comparator {
+    static final long serialVersionUID = 8510812525534342911L;
+
     private final String componentName;
     private final String memberTokenId;
     private final Object key;

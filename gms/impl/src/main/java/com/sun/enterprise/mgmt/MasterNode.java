@@ -467,12 +467,10 @@ class MasterNode implements MessageListener, Runnable {
             msgElement = msg.getMessageElement(AMASTERVIEW);
             if (msgElement != null && msgElement instanceof List) {
                 final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>)msgElement;
-                if (newLocalView != null) {
-                    if (LOG.isLoggable(Level.FINER)) {
-                        LOG.log(Level.FINER, MessageFormat.format("Received an authoritative view from {0}, of size {1}" +
+                if (LOG.isLoggable(Level.FINER)) {
+                    LOG.log(Level.FINER, MessageFormat.format("Received an authoritative view from {0}, of size {1}" +
                                 " resetting local view containing {2}",
                                 source.getName(), newLocalView.size(), clusterViewManager.getLocalView().getSize()));
-                    }
                 }
                 msgElement = msg.getMessageElement(VIEW_CHANGE_EVENT);
                 if (msgElement != null && msgElement instanceof ClusterViewEvent) {
@@ -484,7 +482,6 @@ class MasterNode implements MessageListener, Runnable {
                         return true;
                     }
                     final ClusterViewEvent cvEvent = (ClusterViewEvent)msgElement;
-                    assert newLocalView != null;
                     if (!newLocalView.contains(manager.getSystemAdvertisement())) {
                         LOG.log(Level.FINE, "New ClusterViewManager does not contain self. Publishing Self");
                         sendSelfNodeAdvertisement(source.getID(), null);
@@ -643,7 +640,7 @@ class MasterNode implements MessageListener, Runnable {
                 default:
             }
             msgElement = msg.getMessageElement(AMASTERVIEW);
-            if (msgElement != null && msgElement instanceof List && cvEvent != null) {
+            if (msgElement != null && msgElement instanceof List) {
                 final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>)msgElement;
                 if (cvEvent.getEvent() == ClusterViewEvents.JOINED_AND_READY_EVENT) {
                     if (cvEvent.getAdvertisement().getID().equals(localNodeID)) {
@@ -760,7 +757,7 @@ class MasterNode implements MessageListener, Runnable {
         //check if the adv.getID was the master before ...
         SystemAdvertisement madv = clusterViewManager.getMaster();
         SystemAdvertisement oldSysAdv = clusterViewManager.get(adv.getID());
-        if (madv != null && adv != null && madv.getID().equals(adv.getID())) {
+        if (madv != null && madv.getID().equals(adv.getID())) {
             //master restarted
             //check for the start times for both advs i.e. the one in the view and the one passed into this method.
             //If they are different that means the master has restarted for sure
@@ -1757,14 +1754,13 @@ class MasterNode implements MessageListener, Runnable {
                 if (msgElement != null && msgElement instanceof List) {
                     result.append(" masterview: size:");
                     final List<SystemAdvertisement> newLocalView = (List<SystemAdvertisement>) msgElement;
-                    if (newLocalView != null) {
-                        result.append(newLocalView.size());
-                    } else {
-                        result.append(0);
-                    }
+                    result.append(newLocalView.size());
+
                     for (SystemAdvertisement adv : newLocalView) {
                         result.append(" ").append(adv.getName());
                     }
+                } else {
+                    result.append(0);
                 }
             } catch (Throwable t) {
                 // don't allow any NPEs in this debug aid to cause a failure.
@@ -2042,7 +2038,7 @@ class MasterNode implements MessageListener, Runnable {
         private final PeerID master;
         private final long masterViewSeqId;
         private final MasterNode masterNode;
-        private final long EXPIRE_REAPER_FREQUENCY_MS = 20 * 1000;
+        static private final long EXPIRE_REAPER_FREQUENCY_MS = 20 * 1000;
         private long nextExpireReaperTime;
 
         CheckForMissedMasterMessages(MasterNode masterNode, PeerID master, long masterViewSeqId) {

@@ -144,9 +144,9 @@ ${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9130 9160
 sleep 5
 $ECHO "Starting CORE members on `uname -n`"
 
-${TMPDIR}/grouphandle.sh core103 ${groupName} ${LOGDIR} 9223 9253 ${logLevel} >& ${LOGDIR}/GroupHandle_core103.log &
-${TMPDIR}/grouphandle.sh core102 ${groupName} ${LOGDIR} 9192 9222 ${logLevel} >& ${LOGDIR}/GroupHandle_core102.log &
-${TMPDIR}/grouphandle.sh core101 ${groupName} ${LOGDIR} 9161 9191 ${logLevel} >& ${LOGDIR}/GroupHandle.log
+${TMPDIR}/grouphandle.sh core103 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core103.log &
+${TMPDIR}/grouphandle.sh core102 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core102.log &
+${TMPDIR}/grouphandle.sh core101 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core101.log
 #-----------------------------------------------
 
 

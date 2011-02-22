@@ -52,6 +52,8 @@ import java.util.EventObject;
  * @author Bongjae Chang
  */
 public class MessageEvent extends EventObject {
+    static final long serialVersionUID = -7065693766490210768L;
+
 
     /**
      * The received {@link Message}

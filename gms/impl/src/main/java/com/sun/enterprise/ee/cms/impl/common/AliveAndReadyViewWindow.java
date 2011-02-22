@@ -87,7 +87,6 @@ public class AliveAndReadyViewWindow {
 
     public AliveAndReadyViewWindow(GMSContext ctx) {
         this.ctx = ctx;
-        Router router = ctx.getRouter();
         currentInstanceName = ctx.getServerIdentityToken();
 
         jrcallback = new JoinedAndReadyCallBack(ctx.getGroupHandle(), aliveAndReadyView);
@@ -312,7 +311,7 @@ public class AliveAndReadyViewWindow {
         if (LOG.isLoggable(TRACE_LEVEL)) {
             LOG.log(TRACE_LEVEL, "put joinedAndReadySignal member:" + joinedAndReadyMember + " ready members:" + readyMembers);
         }
-        SortedSet<String> result = joinedAndReadySignalReadyList.put(joinedAndReadyMember, readyMembers);
+        joinedAndReadySignalReadyList.put(joinedAndReadyMember, readyMembers);
     }
 
     private boolean isStartClusterComplete() {

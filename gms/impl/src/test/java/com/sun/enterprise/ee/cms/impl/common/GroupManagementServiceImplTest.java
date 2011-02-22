@@ -42,10 +42,7 @@
 package com.sun.enterprise.ee.cms.impl.common;
 
 import com.sun.enterprise.ee.cms.core.*;
-import com.sun.enterprise.ee.cms.impl.client.JoinNotificationActionFactoryImpl;
-import com.sun.enterprise.ee.cms.impl.client.JoinedAndReadyNotificationActionFactoryImpl;
-import com.sun.enterprise.ee.cms.impl.client.MessageActionFactoryImpl;
-import com.sun.enterprise.ee.cms.impl.client.PlannedShutdownActionFactoryImpl;
+import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.ConfigConstants;
@@ -67,6 +64,8 @@ public class GroupManagementServiceImplTest extends TestCase {
     private int numJoinsReceived = 0;
     private int numJoinedAndReadyReceived = 0;
     private int numPlannedShutdownReceived = 0;
+    private int numGroupLeadership = 0;
+
     final private AtomicBoolean joinedAndReady = new AtomicBoolean(false);
     final private AtomicBoolean isShutdown = new AtomicBoolean(false);
     private AtomicLong numMsgReceived = new AtomicLong(0);
@@ -88,6 +87,15 @@ public class GroupManagementServiceImplTest extends TestCase {
         assertTrue(gms.getInstanceName().equals(instanceName));
         assertTrue(gms.getGroupName().equals(groupName));
 
+        numGroupLeadership =0;
+        gms.addActionFactory(new GroupLeadershipNotificationActionFactoryImpl(new CallBack() {
+             public void processNotification(Signal sig) {
+                if (sig instanceof GroupLeadershipNotificationSignal) {
+                    GroupLeadershipNotificationSignal groupSig = (GroupLeadershipNotificationSignal)sig;
+                }   numGroupLeadership++;
+            }
+        }));
+
         numJoinsReceived = 0;
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(new CallBack() {
             public void processNotification(Signal sig) {
@@ -104,6 +112,12 @@ public class GroupManagementServiceImplTest extends TestCase {
                 numMsgReceived.incrementAndGet();
             }
         }), "testTargetComponent");
+        gms.addActionFactory(new MessageActionFactoryImpl(new CallBack() {
+            public void processNotification(Signal sig) {
+                throw new NullPointerException("not a true null pointer exception. throwing for testing purposes");
+            }
+        }), "testExceptionThrowingMessageAction");
+
         numJoinedAndReadyReceived = 0;
         joinedAndReady.set(false);
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(new CallBack() {
@@ -157,6 +171,13 @@ public class GroupManagementServiceImplTest extends TestCase {
         for (int i =0; i < 20; i++) {
             gms.getGroupHandle().sendMessage(instanceName, "testTargetComponent", "hello".getBytes());
             gms.getGroupHandle().sendMessage(instanceName, "testTargetComponent", "goodbye".getBytes());
+        }
+        gms.getGroupHandle().sendMessage(instanceName, "testExceptionThrowingMessageAction", "hello".getBytes());
+        try {
+            gms.getGroupHandle().sendMessage("NonExistentInstanceName", "testTargetComponent", "hello".getBytes());
+            assertTrue("must throw MemberNotInViewException sending to non-existent instance", false);
+        } catch (MemberNotInViewException me) {
+            System.out.println("Passed. Threw expected exception sending to non-existent instance." + me.getLocalizedMessage());
         }
         try {
             Thread.sleep(1000);

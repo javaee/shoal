@@ -150,7 +150,7 @@ public class GroupHandleTest {
 
         System.out.println("================================================================");
         if (numOfTests > 0) {
-            System.out.println(GROUPHANDLE + " Testing Complete for " + numOfTests + " tests (NOTE: NOT ALL TESTS ARE COMPLETE)");
+            System.out.println(GROUPHANDLE + " Testing Complete for " + numOfTests + " tests");
         } else {
             System.out.println("Testing Complete  (NOTE: NOT ALL TESTS ARE COMPLETE)");
         }
@@ -235,10 +235,10 @@ public class GroupHandleTest {
         gmsLogger.log(Level.INFO, "Executing TEST3");
         members = gh.getAllCurrentMembers();
         sList = new ArrayList<String>();
-        sList.add("master");
         sList.add("core101");
         sList.add("core102");
         sList.add("core103");
+        sList.add("master");
         if (!members.equals(sList)) {
             gmsLogger.log(Level.SEVERE, "TEST3: getAllCurrentMembers(): expected result:" + sList.toString() + ", actual result:" + members.toString());
         }
@@ -250,10 +250,10 @@ public class GroupHandleTest {
         gmsLogger.log(Level.INFO, "Executing TEST6");
         members = gh.getAllCurrentMembersWithStartTimes();
         sList = new ArrayList<String>();
-        sList.add("master");
         sList.add("core101");
         sList.add("core102");
         sList.add("core103");
+        sList.add("master");
         ArrayList<String> tList = new ArrayList<String>();
         for (String member : members) {
             // get the time piece
@@ -778,10 +778,8 @@ public class GroupHandleTest {
         sExpected = "TEST34:";
         try {
             gh.sendMessage("core102", null, sExpected.getBytes());
-        } catch (IllegalArgumentException iae)  {
-            // expect this for null target component.
         } catch (GMSException ge) {
-            gmsLogger.log(Level.SEVERE, "TEST34: sendMessage(core102, null,TEST34:.getBytes()): resulted in a GMSException:" + ge);
+            // expect this for null target component.
         }
         
         // send a message to the TestComponent component of all members
@@ -884,7 +882,7 @@ public class GroupHandleTest {
         try {
             gh.sendMessage(sList, "TestComponent", sExpected.getBytes());
         } catch (GMSException ge) {
-            gmsLogger.log(Level.SEVERE, "TEST64: sendMessage(ArrayList<String>(doesnotexistMember,core102),TestComponent,TEST64:.getBytes()): resulted in a GMSException:" + ge);
+            // expect exception to be thrown after all sends completed. Should indicate last member failed to send message to.
         }
         fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_TEST64";
         doneFileName = fileName + ".done";

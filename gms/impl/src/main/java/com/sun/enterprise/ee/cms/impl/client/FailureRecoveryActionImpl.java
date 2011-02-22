@@ -69,7 +69,8 @@ public class FailureRecoveryActionImpl implements FailureRecoveryAction {
      */
     public void consumeSignal(final Signal signal) throws ActionException {
         boolean signalAcquired = false;
-        final String component = ((FailureRecoverySignal)signal).getComponentName();
+        final String component = signal instanceof FailureRecoverySignal ?
+                                 ((FailureRecoverySignal)signal).getComponentName() : "";
         try {
             //This is a mandatory call.
             // Always call acquire before doing any other processing as this

@@ -368,13 +368,14 @@ public final class GroupHandleImpl implements GroupHandle {
         final DistributedStateCache dsc = getGMSContext()
                 .getDistributedStateCache();
 
-        for (final GMSCacheable cKey : fromCache.keySet()) {
+        for (final Map.Entry<GMSCacheable, Object> entry : fromCache.entrySet()) {
+            final GMSCacheable cKey = entry.getKey();
             if (cKey.getKey().equals(failedMemberToken) &&
                 cKey.getComponentName().equals(componentName) &&
-                    fromCache.get(cKey).toString().startsWith(REC_APPOINTED_STATE)) {
+                    entry.getValue().toString().startsWith(REC_APPOINTED_STATE)) {
                 if (logger.isLoggable(Level.FINE)){
                     logger.log(Level.FINE, "remove RecoveryAppointment componentName: " + componentName +
-                                " failedMember:" + failedMemberToken + "value="+ fromCache.get(cKey).toString());
+                            " failedMember:" + failedMemberToken + "value=" + entry.getValue().toString());
                 }
                 dsc.removeFromCache(cKey.getComponentName(),
                         cKey.getMemberTokenId(),
@@ -431,14 +432,15 @@ public final class GroupHandleImpl implements GroupHandle {
             }
         }
         entries = dsc.getFromCache(memberToken);
-        for (GMSCacheable c : entries.keySet()) {
+        for (Map.Entry<GMSCacheable, Object> entry : entries.entrySet()) {
+            final GMSCacheable c = entry.getKey();
             if (componentName.equals(c.getComponentName())) {   //if this member is being recovered by someone
                 if (memberToken.equals(c.getKey())) {   //if this is an old record of a self recovery then ignore
                     if (!memberToken.equals(c.getMemberTokenId())) {
-                        if (((String) entries.get(c))
+                        if (((String) entry.getValue())
                                 .startsWith(REC_PROGRESS_STATE)) {
                             if (logger.isLoggable(Level.FINER)){
-                                logger.log(Level.FINER, c.toString() + " value:" + entries.get(c));
+                                logger.log(Level.FINER, c.toString() + " value:" + entry.getValue());
                                 logger.log(Level.FINER,"Returning true for isFenced query");
                             }
                             retval = true;

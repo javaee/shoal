@@ -139,6 +139,9 @@ public class AliveAndReadyViewWindowTest extends TestCase {
             aliveAndReadyViewWindow.processNotification(jrSignal);
         }
         if (coreClusterMembers.size() > 0) {
+            System.out.println("Current AliveAndReadyView:" + aliveAndReadyViewWindow.getCurrentView().toString());
+            System.out.println("Previous AliveAndReadyView:" + aliveAndReadyViewWindow.getPreviousView().toString());
+
             assertTrue("startCluster assertion failure coreClusterMembers != getCurrentView()", coreClusterMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
             assertTrue("startCluster assertion failure coreClusterMembers == getPrevioussView()", ! coreClusterMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         } else if (coreClusterMembers.size() ==0 ) {
@@ -204,6 +207,8 @@ public class AliveAndReadyViewWindowTest extends TestCase {
     public void testStartClusterStopCluster() throws GMSException {
         mySetup();
         startCluster(10);
+        System.out.println("Current AliveAndReadyView:" + aliveAndReadyViewWindow.getCurrentView().toString());
+        System.out.println("Previous AliveAndReadyView:" + aliveAndReadyViewWindow.getPreviousView().toString());
         stopCluster();
     }
 
@@ -290,6 +295,8 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         boolean result = expectedMembers.remove(killInstance);
         assertTrue(result);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getCurrentView().getMembers()));
+        System.out.println("Current AliveAndReadyView:" + failureNotificationSignal.getCurrentView().toString());
+        System.out.println("Previous AliveAndReadyView:" + failureNotificationSignal.getPreviousView().toString());
         stopCluster();
     }
 

@@ -327,9 +327,10 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         }
         final Map<GMSCacheable, Object> ret = ctx.getDistributedStateCache().getFromCache(key);
 
-        for (GMSCacheable c : ret.keySet()) {
+        for (Map.Entry<GMSCacheable, Object> entry: ret.entrySet()) {
+            GMSCacheable c = entry.getKey();
             if (c.getComponentName().equals(MEMBER_DETAILS)) {
-                retval.put(c.getMemberTokenId(), (Serializable) ret.get(c));
+                retval.put(c.getMemberTokenId(), (Serializable) entry.getValue());
             }
         }
         return retval;
@@ -365,12 +366,12 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
         if (isWatchdog()) {
             return;
         }
-        for (Object key : keyValuePairs.keySet()) {
+        for (Map.Entry<? extends Object, ? extends Object> entry : keyValuePairs.entrySet()) {
             ctx.getDistributedStateCache()
                     .addToLocalCache(MEMBER_DETAILS,
                             serverToken,
-                            (Serializable) key,
-                            (Serializable) keyValuePairs.get(key));
+                            (Serializable) entry.getKey(),
+                            (Serializable) entry.getValue());
         }
     }
 

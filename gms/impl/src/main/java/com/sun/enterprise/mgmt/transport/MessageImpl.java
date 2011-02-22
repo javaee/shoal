@@ -289,8 +289,8 @@ public class MessageImpl implements Message {
         }
     }
 
-    private GMSMonitor gmsMonitor = null;
-    private boolean checkForGmsMonitor = true;
+    private transient GMSMonitor gmsMonitor = null;
+    private transient boolean checkForGmsMonitor = true;
 
     private void monitorReceive(long receiveDuration) {
         monitorReceive(receiveDuration, false);
@@ -528,7 +528,7 @@ public class MessageImpl implements Message {
         return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
     }
 
-    private class MessageByteArrayOutputStream extends ByteArrayOutputStream {
+    static private class MessageByteArrayOutputStream extends ByteArrayOutputStream {
 
         private MessageByteArrayOutputStream() {
             super();
