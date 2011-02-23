@@ -138,7 +138,7 @@ numInstances="3"
 $ECHO "Number of Instances=${numInstances}"
 
 $ECHO "Starting SPECTOR/MASTER"
-${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9130 9160 ${logLevel} >& ${LOGDIR}/GroupHandle_master.log &
+${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_master.log &
 
 # give time for the SPECTATOR and WATCHDOG to start
 sleep 5

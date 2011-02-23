@@ -128,6 +128,9 @@ public class PeerID<T extends Serializable> implements Serializable, Comparable<
             return 0;
         if( other == null )
             return 1;
+        if (this == NULL_PEER_ID) {
+            return -1;
+        }
         int result = groupName.compareTo(other.getGroupName());
         if (result != 0) {
             return result;
