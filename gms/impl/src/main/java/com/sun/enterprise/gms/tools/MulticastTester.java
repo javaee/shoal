@@ -239,6 +239,7 @@ public class MulticastTester {
         sb.append(WAIT_PERIOD_OPTION).append("\n");
         sb.append(TIMEOUT_OPTION).append("\n");
         sb.append(DEBUG_OPTION).append("\n");
+        System.out.println(sb.toString());
     }
 
     private void log(String msg) {
