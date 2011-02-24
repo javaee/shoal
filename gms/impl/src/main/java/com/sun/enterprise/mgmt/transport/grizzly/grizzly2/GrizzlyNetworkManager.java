@@ -40,7 +40,8 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
-import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyUtil;
+import org.glassfish.grizzly.Grizzly;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.PongMessageListener;
 import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.PingMessageListener;
 import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyMessageProtocolParser;
@@ -90,7 +91,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     private String virtualUriList;
     private GrizzlyExecutorService execService;
     private ExecutorService multicastSenderThreadPool = null;
-    private TCPSelectorHandler tcpSelectorHandler = null;
 
     public GrizzlyNetworkManager() {
     }
@@ -592,5 +592,10 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
             return multicastSender;
         else
             return null;
+    }
+
+    @Override
+    protected Logger getGrizzlyLogger() {
+        return Grizzly.logger(GrizzlyNetworkManager.class);
     }
 }

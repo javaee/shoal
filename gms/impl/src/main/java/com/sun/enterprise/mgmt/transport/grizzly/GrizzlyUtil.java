@@ -38,11 +38,8 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
+package com.sun.enterprise.mgmt.transport.grizzly;
 
-import com.sun.grizzly.util.LoggerUtils;
-
-import java.util.logging.Logger;
 import java.lang.reflect.Method;
 import java.nio.channels.DatagramChannel;
 import java.net.InetAddress;
@@ -53,22 +50,9 @@ import java.net.NetworkInterface;
  */
 public class GrizzlyUtil {
 
-    private static Logger LOG = LoggerUtils.getLogger();
-
     private static final boolean IS_SUPPORT_NIO_MULTICAST = ( getNIOMulticastMethod() != null );
 
     private GrizzlyUtil() {
-    }
-
-    public static Logger getLogger() {
-        return LOG;
-    }
-
-    public static void setLogger( Logger logger ) {
-        if( logger == null )
-            return;
-        LoggerUtils.setLogger( logger );
-        LOG = logger;
     }
 
     public static boolean isSupportNIOMulticast() {

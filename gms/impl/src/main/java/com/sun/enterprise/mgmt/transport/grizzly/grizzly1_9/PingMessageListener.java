@@ -40,6 +40,7 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.enterprise.mgmt.transport.MessageListener;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -57,8 +58,9 @@ import java.util.logging.Level;
  */
 public class PingMessageListener implements MessageListener {
 
-    private static final Logger LOG = GrizzlyUtil.getLogger();
+    private final static Logger LOG = GrizzlyNetworkManager.getLogger();
 
+    @Override
     public void receiveMessageEvent( final MessageEvent event ) throws MessageIOException {
         if( event == null )
             return;

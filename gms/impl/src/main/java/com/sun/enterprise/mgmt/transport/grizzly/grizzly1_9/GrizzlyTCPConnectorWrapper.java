@@ -56,7 +56,6 @@ import java.io.Serializable;
 import java.net.SocketAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
-import java.util.Date;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -65,12 +64,15 @@ import java.util.logging.Level;
  */
 public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
 
-    private static final Logger LOG = GrizzlyUtil.getLogger();
-    private final Controller controller;
+    private final static Logger LOG = GrizzlyNetworkManager.getLogger();
+
+    private Controller controller;
     private final long writeTimeout; // ms
     private final InetSocketAddress localSocketAddress; // todo not used
 
-    public GrizzlyTCPConnectorWrapper( Controller controller, long writeTimeout, String host, int port, PeerID<GrizzlyPeerID> localPeerID ) {
+    public GrizzlyTCPConnectorWrapper(Controller controller, long writeTimeout,
+            String host, int port,
+            PeerID<GrizzlyPeerID> localPeerID ) {
         this.controller = controller;
         this.writeTimeout = writeTimeout;
         if( host != null )

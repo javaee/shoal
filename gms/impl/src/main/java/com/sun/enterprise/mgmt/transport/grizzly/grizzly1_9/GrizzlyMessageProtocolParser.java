@@ -46,7 +46,6 @@ import com.sun.grizzly.ProtocolParser;
 import com.sun.grizzly.SSLConfig;
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageImpl;
-import com.sun.grizzly.filter.ParserProtocolFilter;
 import com.sun.grizzly.util.WorkerThread;
 
 import java.nio.ByteBuffer;
@@ -73,7 +72,7 @@ import java.util.logging.Level;
  */
 public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
 
-    private static final Logger LOG = GrizzlyUtil.getLogger();
+    private final static Logger LOG = GrizzlyNetworkManager.getLogger();
 
     private static final int MIN_BUFFER_FREE_SPACE = 1024;
 
@@ -91,19 +90,23 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
     static volatile boolean DEBUG_ENABLED = false;           // must be set to TRUE to enable debugging.
 
     protected GrizzlyMessageProtocolParser() {
+        this(null);
     }
 
-    protected GrizzlyMessageProtocolParser( SSLConfig sslConfig ) {
+    protected GrizzlyMessageProtocolParser(SSLConfig sslConfig) {
+        
         this.sslConfig = sslConfig;
         if (sslConfig != null) {
             throw new UnsupportedOperationException("GrizzlyMessageProtocolParser: sslConfig is not yet supported");
         }
     }
 
-    public static ParserFilter createParserProtocolFilter( final SSLConfig sslConfig ) {
+    public static ParserFilter createParserProtocolFilter(
+            final SSLConfig sslConfig) {
         return new ParserFilter() {
+            @Override
             public ProtocolParser newProtocolParser() {
-                return new GrizzlyMessageProtocolParser( sslConfig );
+                return new GrizzlyMessageProtocolParser(sslConfig );
             }
         };
     }

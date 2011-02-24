@@ -40,7 +40,6 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
-import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyUtil;
 import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyPeerID;
 import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
@@ -70,7 +69,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     // too many protocol warnings/severe when trying to communicate to a stopped/killed member of cluster.
     // only logger to shoal logger when necessary to debug grizzly transport within shoal.  don't leave this way.
-    public static final Logger LOG = GrizzlyUtil.getLogger();
+    public final Logger LOG;
 
     public final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
 
@@ -102,6 +101,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
     public GrizzlyNetworkManager() {
+        LOG = getGrizzlyLogger();
     }
 
     private boolean validMulticastAddress(String multicastAddr) {
@@ -115,7 +115,6 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     public void configure( final Map properties ) {
         Logger shoalLogger = getLogger();
-        GrizzlyUtil.setLogger(LOG);
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
         tcpStartPort = Utility.getIntProperty( TCPSTARTPORT.toString(), 9090, properties );
         tcpEndPort = Utility.getIntProperty( TCPENDPORT.toString(), 9200, properties );
@@ -350,4 +349,6 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         else
             return null;
     }
+
+    protected abstract Logger getGrizzlyLogger();
 }

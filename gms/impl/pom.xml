@@ -81,6 +81,11 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>${grizzly2.group.id}</groupId>
+            <artifactId>grizzly-framework</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi_R4_core</artifactId>
             <scope>provided</scope>

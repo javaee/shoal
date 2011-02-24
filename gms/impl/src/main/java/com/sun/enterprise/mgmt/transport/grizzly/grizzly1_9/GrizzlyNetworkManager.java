@@ -40,6 +40,7 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
@@ -54,6 +55,7 @@ import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.grizzly.connectioncache.spi.transport.ConnectionFinder;
 import com.sun.grizzly.connectioncache.spi.transport.ContactInfo;
 import com.sun.grizzly.util.GrizzlyExecutorService;
+import com.sun.grizzly.util.LoggerUtils;
 import com.sun.grizzly.util.SelectorFactory;
 import com.sun.grizzly.util.ThreadPoolConfig;
 
@@ -184,8 +186,10 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
                 ProtocolChain protocolChain = protocolChains.poll();
                 if( protocolChain == null ) {
                     protocolChain = new DefaultProtocolChain();
-                    protocolChain.addFilter( GrizzlyMessageProtocolParser.createParserProtocolFilter( null ) );
-                    protocolChain.addFilter( new GrizzlyMessageDispatcherFilter( GrizzlyNetworkManager.this ) );
+                    protocolChain.addFilter(
+                            GrizzlyMessageProtocolParser.createParserProtocolFilter(null));
+                    protocolChain.addFilter(new GrizzlyMessageDispatcherFilter(
+                            GrizzlyNetworkManager.this));
                 }
                 return protocolChain;
             }
@@ -279,7 +283,8 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
             if (LOG.isLoggable(Level.FINE))
                 LOG.log(Level.FINE, "local peer id = " + localPeerID);
         }
-        tcpSender = new GrizzlyTCPConnectorWrapper( controller, sendWriteTimeout, host, tcpPort, localPeerID );
+        tcpSender = new GrizzlyTCPConnectorWrapper(controller,
+                sendWriteTimeout, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
                                                                                          sendWriteTimeout,
                                                                                          host,
@@ -482,5 +487,10 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     }
 
     public void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
+    }
+
+    @Override
+    protected Logger getGrizzlyLogger() {
+        return LoggerUtils.getLogger();
     }
 }
