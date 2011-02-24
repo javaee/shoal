@@ -40,33 +40,21 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
+import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyUtil;
+import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyPeerID;
 import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
-import com.sun.enterprise.ee.cms.impl.common.GMSContext;
-import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
-import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
 import com.sun.enterprise.mgmt.transport.AbstractNetworkManager;
-import com.sun.enterprise.mgmt.transport.BlockingIOMulticastSender;
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
 import com.sun.enterprise.mgmt.transport.MessageImpl;
 import com.sun.enterprise.mgmt.transport.MessageSender;
 import com.sun.enterprise.mgmt.transport.MulticastMessageSender;
-import com.sun.enterprise.mgmt.transport.NetworkUtility;
-import com.sun.enterprise.mgmt.transport.VirtualMulticastSender;
 
-import com.sun.grizzly.*;
-import com.sun.grizzly.connectioncache.spi.transport.ContactInfo;
-import com.sun.grizzly.util.ThreadPoolConfig;
-import com.sun.grizzly.util.GrizzlyExecutorService;
-import com.sun.grizzly.util.SelectorFactory;
-import com.sun.grizzly.connectioncache.client.CacheableConnectorHandlerPool;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
-import com.sun.grizzly.connectioncache.spi.transport.ConnectionFinder;
 
 import java.net.*;
 import java.util.*;
@@ -74,7 +62,6 @@ import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
-import java.nio.channels.SelectionKey;
 
 /**
  * @author Bongjae Chang
@@ -85,9 +72,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     // only logger to shoal logger when necessary to debug grizzly transport within shoal.  don't leave this way.
     public static final Logger LOG = GrizzlyUtil.getLogger();
 
-    public final Controller controller = new Controller();
     public final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
-    public final Map<SelectionKey, String> selectionKeyMap = new ConcurrentHashMap<SelectionKey, String>();
 
     public volatile boolean running;
     public MessageSender tcpSender;
@@ -111,13 +96,10 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public long sendWriteTimeout; // ms
     public int multicastPacketSize;
     public int writeSelectorPoolSize;
-    public TCPSelectorHandler tcpSelectorHandler = null;
 
     final public String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
 
     public final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
-
-    public static final String MESSAGE_SELECTION_KEY_TAG = "selectionKey";
 
     public GrizzlyNetworkManager() {
     }
@@ -227,44 +209,9 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     public void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
-        if( messageEvent == null )
-            return;
-        SelectionKey selectionKey = null;
-        if( piggyback != null ) {
-            Object value = piggyback.get( MESSAGE_SELECTION_KEY_TAG );
-            if( value instanceof SelectionKey )
-                selectionKey = (SelectionKey)value;
-        }
-        addRemotePeer( messageEvent.getSourcePeerID(), selectionKey );
     }
 
     public void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
-    }
-
-    @SuppressWarnings( "unchecked" )
-    public void addRemotePeer( PeerID peerID, SelectionKey selectionKey ) {
-        if( peerID == null )
-            return;
-        if( peerID.equals( localPeerID ) )
-            return; // lookback
-        String instanceName = peerID.getInstanceName();
-        if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
-//            PeerID<GrizzlyPeerID> previous = peerIDMap.get(instanceName);
-//            if (previous != null) {
-//                if (previous.getUniqueID().getTcpPort() != ((GrizzlyPeerID) peerID.getUniqueID()).tcpPort) {
-//                    LOG.log(Level.WARNING, "addRemotePeer(selectionKey): assertion failure: no mapping should have existed for member:"
-//                            + instanceName + " existingID=" + previous + " adding peerid=" + peerID, new Exception("stack trace"));
-//                }
-//            }
-            PeerID<GrizzlyPeerID> previous = peerIDMap.put( instanceName, peerID );
-            if (previous == null) {
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.fine("addRemotePeer: " + instanceName + " peerId:" + peerID);
-                }
-            }
-            if( selectionKey != null )
-                selectionKeyMap.put( selectionKey, instanceName );
-        }
     }
 
     @SuppressWarnings( "unchecked" )
@@ -293,37 +240,6 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     public void removeRemotePeer(String instanceName) {
-        for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
-            if (entry.getValue().equals(instanceName)) {
-                if (getLogger().isLoggable(Level.FINE)) {
-                    getLogger().log(Level.FINE, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
-                }
-                tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
-                selectionKeyMap.remove(entry.getKey());
-            }
-        }
-    }
-
-    public void removeRemotePeer( SelectionKey selectionKey ) {
-        if(selectionKey == null) {
-            return;
-        }
-        selectionKeyMap.remove(selectionKey);
-
-        // Bug Fix. DO NOT REMOVE member name to peerid mapping when selection key is being removed.
-        // THIS HAPPENS TOO FREQUENTLY.  Only remove this mapping when member fails or planned shutdown.\
-        // This method was getting called by GrizzlyCacheableSelectionKeyHandler.cancel(SelectionKey).
-
-        // use following line instead of remove call above if uncommenting the rest
-//        String instanceName = selectionKeyMap.remove( selectionKey );
-//      if( instanceName != null ) {
-//          Level level = Level.FINEST;
-//          if (LOG.isLoggable(level)) {
-//              LOG.log(level, "removeRemotePeer selectionKey=" + selectionKey + " instanceName=" + instanceName,
-//                      new Exception("stack trace"));
-//          }
-//          peerIDMap.remove( instanceName );
-//      }
     }
 
     public boolean send( final PeerID peerID, final Message message ) throws IOException {

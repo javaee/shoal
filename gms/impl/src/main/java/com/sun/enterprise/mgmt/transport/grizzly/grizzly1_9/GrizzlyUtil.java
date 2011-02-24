@@ -38,41 +38,50 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.grizzly.util.Copyable;
-import com.sun.grizzly.connectioncache.server.CacheableSelectionKeyHandler;
+import com.sun.grizzly.util.LoggerUtils;
 
-import java.nio.channels.SelectionKey;
+import java.util.logging.Logger;
+import java.lang.reflect.Method;
+import java.nio.channels.DatagramChannel;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 
 /**
  * @author Bongjae Chang
  */
-public class GrizzlyCacheableSelectionKeyHandler extends CacheableSelectionKeyHandler {
+public class GrizzlyUtil {
 
-    private GrizzlyNetworkManager networkManager;
+    private static Logger LOG = LoggerUtils.getLogger();
 
-    public GrizzlyCacheableSelectionKeyHandler() {
+    private static final boolean IS_SUPPORT_NIO_MULTICAST = ( getNIOMulticastMethod() != null );
+
+    private GrizzlyUtil() {
     }
 
-    public GrizzlyCacheableSelectionKeyHandler( int highWaterMark, int numberToReclaim, GrizzlyNetworkManager networkManager ) {
-        super( highWaterMark, numberToReclaim );
-        this.networkManager = networkManager;
+    public static Logger getLogger() {
+        return LOG;
     }
 
-    @Override
-    public void cancel( SelectionKey key ) {
-        super.cancel( key );
-        if( networkManager != null )
-            networkManager.removeRemotePeer( key );
+    public static void setLogger( Logger logger ) {
+        if( logger == null )
+            return;
+        LoggerUtils.setLogger( logger );
+        LOG = logger;
     }
 
-    @Override
-    public void copyTo( Copyable copy ) {
-        super.copyTo( copy );
-        if( copy instanceof GrizzlyCacheableSelectionKeyHandler ) {
-            GrizzlyCacheableSelectionKeyHandler copyHandler = (GrizzlyCacheableSelectionKeyHandler)copy;
-            copyHandler.networkManager = networkManager;
+    public static boolean isSupportNIOMulticast() {
+        return IS_SUPPORT_NIO_MULTICAST;
+    }
+
+    private static Method getNIOMulticastMethod() {
+        Method method = null;
+        try {
+            method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
+        } catch( Throwable t ) {
+            method = null;
         }
+        return method;
     }
 }

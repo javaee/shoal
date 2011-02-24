@@ -38,31 +38,41 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.grizzly.UDPConnectorHandler;
-import com.sun.grizzly.Controller;
+import com.sun.grizzly.util.Copyable;
+import com.sun.grizzly.connectioncache.server.CacheableSelectionKeyHandler;
 
 import java.nio.channels.SelectionKey;
-import java.io.IOException;
-import java.util.logging.Level;
 
 /**
  * @author Bongjae Chang
  */
-public class MulticastConnectorHandler extends UDPConnectorHandler {
+public class GrizzlyCacheableSelectionKeyHandler extends CacheableSelectionKeyHandler {
+
+    private GrizzlyNetworkManager networkManager;
+
+    public GrizzlyCacheableSelectionKeyHandler() {
+    }
+
+    public GrizzlyCacheableSelectionKeyHandler( int highWaterMark, int numberToReclaim, GrizzlyNetworkManager networkManager ) {
+        super( highWaterMark, numberToReclaim );
+        this.networkManager = networkManager;
+    }
 
     @Override
-    public void finishConnect( SelectionKey key) throws IOException {
-        if ( Controller.logger().isLoggable( Level.FINE)) {
-            Controller.logger().log(Level.FINE, "Finish connect");
-        }
-        underlyingChannel = key.channel();
-        isConnected = true;
-        synchronized(this) {
-            if (isConnectedLatch != null) {
-                isConnectedLatch.countDown();
-            }
+    public void cancel( SelectionKey key ) {
+        super.cancel( key );
+        if( networkManager != null )
+            networkManager.removeRemotePeer( key );
+    }
+
+    @Override
+    public void copyTo( Copyable copy ) {
+        super.copyTo( copy );
+        if( copy instanceof GrizzlyCacheableSelectionKeyHandler ) {
+            GrizzlyCacheableSelectionKeyHandler copyHandler = (GrizzlyCacheableSelectionKeyHandler)copy;
+            copyHandler.networkManager = networkManager;
         }
     }
 }

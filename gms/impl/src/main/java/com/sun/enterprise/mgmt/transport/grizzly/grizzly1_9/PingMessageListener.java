@@ -38,50 +38,55 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.grizzly.util.LoggerUtils;
+import com.sun.enterprise.mgmt.transport.MessageListener;
+import com.sun.enterprise.mgmt.transport.MessageEvent;
+import com.sun.enterprise.mgmt.transport.Message;
+import com.sun.enterprise.mgmt.transport.NetworkManager;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
+import com.sun.enterprise.mgmt.transport.MessageImpl;
+import com.sun.enterprise.ee.cms.impl.base.PeerID;
 
+import java.io.IOException;
 import java.util.logging.Logger;
-import java.lang.reflect.Method;
-import java.nio.channels.DatagramChannel;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
+import java.util.logging.Level;
 
 /**
  * @author Bongjae Chang
  */
-public class GrizzlyUtil {
+public class PingMessageListener implements MessageListener {
 
-    private static Logger LOG = LoggerUtils.getLogger();
+    private static final Logger LOG = GrizzlyUtil.getLogger();
 
-    private static final boolean IS_SUPPORT_NIO_MULTICAST = ( getNIOMulticastMethod() != null );
-
-    private GrizzlyUtil() {
-    }
-
-    public static Logger getLogger() {
-        return LOG;
-    }
-
-    public static void setLogger( Logger logger ) {
-        if( logger == null )
+    public void receiveMessageEvent( final MessageEvent event ) throws MessageIOException {
+        if( event == null )
             return;
-        LoggerUtils.setLogger( logger );
-        LOG = logger;
-    }
-
-    public static boolean isSupportNIOMulticast() {
-        return IS_SUPPORT_NIO_MULTICAST;
-    }
-
-    private static Method getNIOMulticastMethod() {
-        Method method = null;
-        try {
-            method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
-        } catch( Throwable t ) {
-            method = null;
+        final Message msg = event.getMessage();
+        if( msg == null )
+            return;
+        Object obj = event.getSource();
+        if( !( obj instanceof NetworkManager ) )
+            return;
+        NetworkManager networkManager = (NetworkManager)obj;
+        PeerID sourcePeerId = event.getSourcePeerID();
+        if( sourcePeerId == null )
+            return;
+        PeerID targetPeerId = event.getTargetPeerID();
+        if( targetPeerId == null )
+            return;
+        if( networkManager.getLocalPeerID().equals( targetPeerId ) ) {
+            // send a pong message
+            try {
+                networkManager.send( sourcePeerId, new MessageImpl( Message.TYPE_PONG_MESSAGE ));
+            } catch( IOException ie ) {
+                if( LOG.isLoggable( Level.WARNING ) )
+                    LOG.log( Level.WARNING, "failed to send a pong message" , ie );
+            }
         }
-        return method;
+    }
+
+    public int getType() {
+        return Message.TYPE_PING_MESSAGE;
     }
 }

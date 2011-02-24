@@ -38,40 +38,31 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.enterprise.mgmt.transport.MessageListener;
-import com.sun.enterprise.mgmt.transport.MessageEvent;
-import com.sun.enterprise.mgmt.transport.MessageIOException;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.grizzly.UDPConnectorHandler;
+import com.sun.grizzly.Controller;
 
-import java.util.concurrent.CountDownLatch;
+import java.nio.channels.SelectionKey;
+import java.io.IOException;
+import java.util.logging.Level;
 
 /**
  * @author Bongjae Chang
  */
-public class PongMessageListener implements MessageListener {
+public class MulticastConnectorHandler extends UDPConnectorHandler {
 
-    public void receiveMessageEvent( final MessageEvent event ) throws MessageIOException {
-        if( event == null )
-            return;
-        final Message msg = event.getMessage();
-        if( msg == null )
-            return;
-        Object obj = event.getSource();
-        if( !( obj instanceof GrizzlyNetworkManager ) )
-            return;
-        GrizzlyNetworkManager networkManager = (GrizzlyNetworkManager)obj;
-        PeerID sourcePeerId = event.getSourcePeerID();
-        if( sourcePeerId == null )
-            return;
-        CountDownLatch pingMessageLock = networkManager.getPingMessageLock( sourcePeerId );
-        if( pingMessageLock != null )
-            pingMessageLock.countDown();
-    }
-
-    public int getType() {
-        return Message.TYPE_PONG_MESSAGE;
+    @Override
+    public void finishConnect( SelectionKey key) throws IOException {
+        if ( Controller.logger().isLoggable( Level.FINE)) {
+            Controller.logger().log(Level.FINE, "Finish connect");
+        }
+        underlyingChannel = key.channel();
+        isConnected = true;
+        synchronized(this) {
+            if (isConnectedLatch != null) {
+                isConnectedLatch.countDown();
+            }
+        }
     }
 }

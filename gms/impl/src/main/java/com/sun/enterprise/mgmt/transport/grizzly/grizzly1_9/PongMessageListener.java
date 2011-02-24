@@ -38,26 +38,21 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly;
+package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
 import com.sun.enterprise.mgmt.transport.MessageListener;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.mgmt.transport.NetworkManager;
 import com.sun.enterprise.mgmt.transport.MessageIOException;
-import com.sun.enterprise.mgmt.transport.MessageImpl;
+import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager;
 
-import java.io.IOException;
-import java.util.logging.Logger;
-import java.util.logging.Level;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Bongjae Chang
  */
-public class PingMessageListener implements MessageListener {
-
-    private static final Logger LOG = GrizzlyUtil.getLogger();
+public class PongMessageListener implements MessageListener {
 
     public void receiveMessageEvent( final MessageEvent event ) throws MessageIOException {
         if( event == null )
@@ -66,27 +61,18 @@ public class PingMessageListener implements MessageListener {
         if( msg == null )
             return;
         Object obj = event.getSource();
-        if( !( obj instanceof NetworkManager ) )
+        if( !( obj instanceof GrizzlyNetworkManager ) )
             return;
-        NetworkManager networkManager = (NetworkManager)obj;
+        GrizzlyNetworkManager networkManager = (GrizzlyNetworkManager)obj;
         PeerID sourcePeerId = event.getSourcePeerID();
         if( sourcePeerId == null )
             return;
-        PeerID targetPeerId = event.getTargetPeerID();
-        if( targetPeerId == null )
-            return;
-        if( networkManager.getLocalPeerID().equals( targetPeerId ) ) {
-            // send a pong message
-            try {
-                networkManager.send( sourcePeerId, new MessageImpl( Message.TYPE_PONG_MESSAGE ));
-            } catch( IOException ie ) {
-                if( LOG.isLoggable( Level.WARNING ) )
-                    LOG.log( Level.WARNING, "failed to send a pong message" , ie );
-            }
-        }
+        CountDownLatch pingMessageLock = networkManager.getPingMessageLock( sourcePeerId );
+        if( pingMessageLock != null )
+            pingMessageLock.countDown();
     }
 
     public int getType() {
-        return Message.TYPE_PING_MESSAGE;
+        return Message.TYPE_PONG_MESSAGE;
     }
 }

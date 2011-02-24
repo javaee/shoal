@@ -73,6 +73,8 @@ import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*
  */
 public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
 
+    public static final String MESSAGE_SELECTION_KEY_TAG = "selectionKey";
+
     private int maxPoolSize;
     private int corePoolSize;
     private long keepAliveTime; // ms
@@ -83,6 +85,10 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     private String virtualUriList;
     private GrizzlyExecutorService execService;
     private ExecutorService multicastSenderThreadPool = null;
+
+    public final Controller controller = new Controller();
+    public final Map<SelectionKey, String> selectionKeyMap = new ConcurrentHashMap<SelectionKey, String>();
+    public TCPSelectorHandler tcpSelectorHandler = null;
 
 
     public GrizzlyNetworkManager() {
@@ -326,6 +332,67 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         addMessageListener( new PongMessageListener() );
         running = true;
         }
+
+    @SuppressWarnings( "unchecked" )
+    public void addRemotePeer( PeerID peerID, SelectionKey selectionKey ) {
+        if( peerID == null )
+            return;
+        if( peerID.equals( localPeerID ) )
+            return; // lookback
+        String instanceName = peerID.getInstanceName();
+        if( instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID ) {
+//            PeerID<GrizzlyPeerID> previous = peerIDMap.get(instanceName);
+//            if (previous != null) {
+//                if (previous.getUniqueID().getTcpPort() != ((GrizzlyPeerID) peerID.getUniqueID()).tcpPort) {
+//                    LOG.log(Level.WARNING, "addRemotePeer(selectionKey): assertion failure: no mapping should have existed for member:"
+//                            + instanceName + " existingID=" + previous + " adding peerid=" + peerID, new Exception("stack trace"));
+//                }
+//            }
+            PeerID<GrizzlyPeerID> previous = peerIDMap.put( instanceName, peerID );
+            if (previous == null) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.fine("addRemotePeer: " + instanceName + " peerId:" + peerID);
+                }
+            }
+            if( selectionKey != null )
+                selectionKeyMap.put( selectionKey, instanceName );
+        }
+    }
+
+    @Override
+    public void removeRemotePeer(String instanceName) {
+        for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
+            if (entry.getValue().equals(instanceName)) {
+                if (getLogger().isLoggable(Level.FINE)) {
+                    getLogger().log(Level.FINE, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
+                }
+                tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
+                selectionKeyMap.remove(entry.getKey());
+            }
+        }
+    }
+
+    public void removeRemotePeer( SelectionKey selectionKey ) {
+        if(selectionKey == null) {
+            return;
+        }
+        selectionKeyMap.remove(selectionKey);
+
+        // Bug Fix. DO NOT REMOVE member name to peerid mapping when selection key is being removed.
+        // THIS HAPPENS TOO FREQUENTLY.  Only remove this mapping when member fails or planned shutdown.\
+        // This method was getting called by GrizzlyCacheableSelectionKeyHandler.cancel(SelectionKey).
+
+        // use following line instead of remove call above if uncommenting the rest
+//        String instanceName = selectionKeyMap.remove( selectionKey );
+//      if( instanceName != null ) {
+//          Level level = Level.FINEST;
+//          if (LOG.isLoggable(level)) {
+//              LOG.log(level, "removeRemotePeer selectionKey=" + selectionKey + " instanceName=" + instanceName,
+//                      new Exception("stack trace"));
+//          }
+//          peerIDMap.remove( instanceName );
+//      }
+    }
 
     @Override
     public List<PeerID> getVirtualPeerIDList( String virtualUriList ) {
