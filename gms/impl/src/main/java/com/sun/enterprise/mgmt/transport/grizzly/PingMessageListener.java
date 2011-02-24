@@ -38,9 +38,8 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
+package com.sun.enterprise.mgmt.transport.grizzly;
 
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.enterprise.mgmt.transport.MessageListener;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -88,6 +87,7 @@ public class PingMessageListener implements MessageListener {
         }
     }
 
+    @Override
     public int getType() {
         return Message.TYPE_PING_MESSAGE;
     }

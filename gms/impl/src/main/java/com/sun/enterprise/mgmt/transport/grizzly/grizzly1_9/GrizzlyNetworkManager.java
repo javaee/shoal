@@ -40,6 +40,8 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
+import com.sun.enterprise.mgmt.transport.grizzly.PingMessageListener;
+import com.sun.enterprise.mgmt.transport.grizzly.PongMessageListener;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;

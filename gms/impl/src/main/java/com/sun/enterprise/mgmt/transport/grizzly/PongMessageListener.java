@@ -38,7 +38,7 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
+package com.sun.enterprise.mgmt.transport.grizzly;
 
 import com.sun.enterprise.mgmt.transport.MessageListener;
 import com.sun.enterprise.mgmt.transport.MessageEvent;

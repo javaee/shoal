@@ -39,6 +39,8 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
+import com.sun.enterprise.mgmt.transport.grizzly.PongMessageListener;
+import com.sun.enterprise.mgmt.transport.grizzly.PingMessageListener;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilder;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
