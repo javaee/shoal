@@ -40,9 +40,18 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
+import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import maskedclasses.LinkedTransferQueue;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.SocketConnectorHandler;
+import org.glassfish.grizzly.utils.Exceptions;
 
 /**
  * Connection cache implementation.
@@ -56,6 +65,16 @@ public class ConnectionCache {
     private final int maxParallelConnections;
     private final int numberToReclaim;
 
+    private final AtomicBoolean isClosed = new AtomicBoolean();
+
+    private final AtomicInteger totalCachedConnectionsCount = new AtomicInteger();
+    
+    private final ConcurrentHashMap<SocketAddress, CacheRecord> cache =
+            new ConcurrentHashMap<SocketAddress, CacheRecord>();
+
+    // Connect timeout 5 seconds
+    private final long connectTimeoutMillis = 5000;
+
     public ConnectionCache(SocketConnectorHandler socketConnectorHandler,
             int highWaterMark, int maxParallelConnections, int numberToReclaim) {
         this.socketConnectorHandler = socketConnectorHandler;
@@ -66,16 +85,102 @@ public class ConnectionCache {
     }
 
     public Connection poll(final SocketAddress localAddress,
-            final SocketAddress remoteAddress) {
-        
-        throw new UnsupportedOperationException("Not yet implemented");
+            final SocketAddress remoteAddress) throws IOException {
+
+        final CacheRecord cacheRecord = obtainCacheRecord(remoteAddress);
+
+        if (isClosed.get()) {
+            // remove cache entry associated with the remoteAddress (only if we have the actual value)
+            cache.remove(remoteAddress, cacheRecord);
+            closeCacheRecord(cacheRecord);
+            throw new IOException("ConnectionCache is closed");
+        }
+
+        // take connection from cache
+        Connection connection = cacheRecord.connections.poll();
+        if (connection != null) {
+            // if we have one - just return it
+            cacheRecord.idleConnectionsCount.decrementAndGet();
+            return connection;
+        }
+
+        final Future<Connection> connectFuture =
+                socketConnectorHandler.connect(remoteAddress, localAddress);
+
+        try {
+            connection = connectFuture.get(connectTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            throw Exceptions.makeIOException(e);
+        }
+
+        return connection;
     }
     
-    public void offer(Connection connection) {
-        throw new UnsupportedOperationException("Not yet implemented");
+    public void offer(final Connection connection) {
+        final SocketAddress remoteAddress = (SocketAddress) connection.getPeerAddress();
+
+        final CacheRecord cacheRecord = obtainCacheRecord(remoteAddress);
+
+        final int totalConnectionsN = totalCachedConnectionsCount.incrementAndGet();
+        final int parallelConnectionN = cacheRecord.idleConnectionsCount.incrementAndGet();
+
+        if (totalConnectionsN > highWaterMark ||
+                parallelConnectionN > maxParallelConnections) {
+            totalCachedConnectionsCount.decrementAndGet();
+            cacheRecord.idleConnectionsCount.decrementAndGet();
+        }
+
+
+        cacheRecord.connections.offer(connection);
+        
+        if (isClosed.get()) {
+            // remove cache entry associated with the remoteAddress (only if we have the actual value)
+            cache.remove(remoteAddress, cacheRecord);
+            closeCacheRecord(cacheRecord);
+        }
     }
 
     public void close() {
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (!isClosed.getAndSet(true)) {
+            for (SocketAddress key : cache.keySet()) {
+                final CacheRecord cacheRecord = cache.remove(key);
+                closeCacheRecord(cacheRecord);
+            }
+        }
+    }
+
+    private void closeCacheRecord(final CacheRecord cacheRecord) {
+        if (cacheRecord == null) return;
+        Connection connection;
+        while ((connection = cacheRecord.connections.poll()) != null) {
+            try {
+                cacheRecord.idleConnectionsCount.decrementAndGet();
+                connection.close();
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    private CacheRecord obtainCacheRecord(final SocketAddress remoteAddress) {
+        CacheRecord cacheRecord = cache.get(remoteAddress);
+        if (cacheRecord == null) {
+            // make sure we added CacheRecord corresponding to the remoteAddress
+            final CacheRecord newCacheRecord = new CacheRecord();
+            cacheRecord = cache.putIfAbsent(remoteAddress, newCacheRecord);
+            if (cacheRecord == null) {
+                cacheRecord = newCacheRecord;
+            }
+        }
+
+        return cacheRecord;
+    }
+
+    private static final class CacheRecord {
+        final AtomicInteger idleConnectionsCount =
+                new AtomicInteger();
+
+        final Queue<Connection> connections =
+                new LinkedTransferQueue<Connection>();
+        
     }
 }
