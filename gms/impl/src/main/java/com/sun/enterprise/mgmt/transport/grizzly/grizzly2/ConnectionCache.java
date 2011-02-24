@@ -42,6 +42,7 @@ package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
 import java.net.SocketAddress;
 import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.SocketConnectorHandler;
 
 /**
  * Connection cache implementation.
@@ -49,8 +50,24 @@ import org.glassfish.grizzly.Connection;
  * @author Alexey Stashok
  */
 public class ConnectionCache {
+    private final SocketConnectorHandler socketConnectorHandler;
 
-    public Connection poll(SocketAddress remoteAddress, SocketAddress localAddress) {
+    private final int highWaterMark;
+    private final int maxParallelConnections;
+    private final int numberToReclaim;
+
+    public ConnectionCache(SocketConnectorHandler socketConnectorHandler,
+            int highWaterMark, int maxParallelConnections, int numberToReclaim) {
+        this.socketConnectorHandler = socketConnectorHandler;
+
+        this.highWaterMark = highWaterMark;
+        this.maxParallelConnections = maxParallelConnections;
+        this.numberToReclaim = numberToReclaim;
+    }
+
+    public Connection poll(final SocketAddress localAddress,
+            final SocketAddress remoteAddress) {
+        
         throw new UnsupportedOperationException("Not yet implemented");
     }
     
@@ -61,5 +78,4 @@ public class ConnectionCache {
     public void close() {
         throw new UnsupportedOperationException("Not yet implemented");
     }
-
 }

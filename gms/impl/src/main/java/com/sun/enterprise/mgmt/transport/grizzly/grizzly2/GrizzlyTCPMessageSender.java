@@ -93,12 +93,13 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
             throw new IOException("peer ID must be GrizzlyPeerID type");
         }
 
-        return send(remoteSocketAddress, null, message, peerID);
+        return send(null, remoteSocketAddress, message, peerID);
     }
 
     @SuppressWarnings("unchecked")
-    private boolean send(SocketAddress remoteAddress, SocketAddress localAddress,
-            Message message, PeerID target) throws IOException {
+    private boolean send(final SocketAddress localAddress,
+            final SocketAddress remoteAddress,
+            final Message message, final PeerID target) throws IOException {
         
         final int MAX_RESEND_ATTEMPTS = 4;
         if (tcpNioTransport == null) {
@@ -116,7 +117,7 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
             final Connection connection;
 
             try {
-                connection = connectionCache.poll(remoteAddress, localAddress);
+                connection = connectionCache.poll(localAddress, remoteAddress);
             } catch (Throwable t) {
                     // include local call stack.
                     final IOException localIOE = new IOException("failed to connect to " + target.toString(), t);
@@ -126,10 +127,12 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
 
             try {
                 connection.write(message, returnToConnectionCacheCompletionHandler);
-                break;
+
+                return true;
             } catch (MessageIOException mioe) {
                 // thrown when message size is too big.
                 connection.close();
+                
                 throw mioe;
             } catch (Exception e) {
                 if (LOG.isLoggable(Level.FINE)) {
@@ -142,7 +145,7 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
             attemptNo++;
         } while (attemptNo <= MAX_RESEND_ATTEMPTS);
 
-        return true;
+        return false;
     }
 
     private final class ReturnToConnectionCacheCompletionHandler 
