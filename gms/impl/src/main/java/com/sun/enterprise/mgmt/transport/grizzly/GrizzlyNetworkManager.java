@@ -40,7 +40,6 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly;
 
-import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyPeerID;
 import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 

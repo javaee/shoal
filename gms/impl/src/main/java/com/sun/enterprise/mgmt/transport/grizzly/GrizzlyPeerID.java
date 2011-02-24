@@ -38,7 +38,7 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
+package com.sun.enterprise.mgmt.transport.grizzly;
 
 import java.io.Serializable;
 

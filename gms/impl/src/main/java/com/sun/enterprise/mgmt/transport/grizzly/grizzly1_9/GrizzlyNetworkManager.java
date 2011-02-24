@@ -40,6 +40,7 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;

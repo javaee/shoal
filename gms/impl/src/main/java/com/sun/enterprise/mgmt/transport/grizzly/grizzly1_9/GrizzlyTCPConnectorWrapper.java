@@ -40,6 +40,7 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import com.sun.enterprise.mgmt.transport.*;
 import com.sun.grizzly.ConnectorHandler;
 import com.sun.grizzly.Controller;
