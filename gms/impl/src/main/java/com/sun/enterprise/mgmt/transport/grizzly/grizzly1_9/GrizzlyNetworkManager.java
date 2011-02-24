@@ -80,8 +80,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     private int corePoolSize;
     private long keepAliveTime; // ms
     private int poolQueueSize;
-    private int highWaterMark;
-    private int numberToReclaim;
 
     private String virtualUriList;
     private GrizzlyExecutorService execService;
@@ -94,13 +92,12 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
     public GrizzlyNetworkManager() {
     }
+
     public void localConfigure( final Map properties ) {
         maxPoolSize = Utility.getIntProperty( MAX_POOLSIZE.toString(), 50, properties );
         corePoolSize = Utility.getIntProperty( CORE_POOLSIZE.toString(), 20, properties );
         keepAliveTime = Utility.getLongProperty( KEEP_ALIVE_TIME.toString(), 60 * 1000, properties );
         poolQueueSize = Utility.getIntProperty( POOL_QUEUE_SIZE.toString(), 1024 * 4, properties );
-        highWaterMark = Utility.getIntProperty( HIGH_WATER_MARK.toString(), 1024, properties );
-        numberToReclaim = Utility.getIntProperty( NUMBER_TO_RECLAIM.toString(), 10, properties );
         virtualUriList = Utility.getStringProperty( VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties );
     }
 

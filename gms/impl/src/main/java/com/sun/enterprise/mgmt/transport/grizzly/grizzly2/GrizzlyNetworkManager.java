@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -66,9 +66,7 @@ import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageSender;
 import com.sun.enterprise.mgmt.transport.MulticastMessageSender;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
-import org.glassfish.grizzly.threadpool.GrizzlyExecutorService;
 import org.glassfish.grizzly.Grizzly;
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -80,9 +78,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.omg.PortableInterceptor.TRANSPORT_RETRY;
 
-import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
 /**
@@ -94,12 +90,11 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     private int corePoolSize;
     private long keepAliveTime; // ms
     private int poolQueueSize;
-    private int highWaterMark;
-    private int numberToReclaim;
     private String virtualUriList;
     private ExecutorService multicastSenderThreadPool = null;
-    private TCPNIOTransport tcpTransport;
-
+    private TCPNIOTransport tcpNioTransport;
+    private ConnectionCache tcpNioConnectionCache;
+    
     public GrizzlyNetworkManager() {
     }
 
@@ -108,8 +103,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         corePoolSize = Utility.getIntProperty(CORE_POOLSIZE.toString(), 20, properties);
         keepAliveTime = Utility.getLongProperty(KEEP_ALIVE_TIME.toString(), 60 * 1000, properties);
         poolQueueSize = Utility.getIntProperty(POOL_QUEUE_SIZE.toString(), 1024 * 4, properties);
-        highWaterMark = Utility.getIntProperty(HIGH_WATER_MARK.toString(), 1024, properties);
-        numberToReclaim = Utility.getIntProperty(NUMBER_TO_RECLAIM.toString(), 10, properties);
         virtualUriList = Utility.getStringProperty(VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties);
     }
 
@@ -210,7 +203,9 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         controller.setProtocolChainInstanceHandler(pciHandler);
         SelectorFactory.setMaxSelectors(writeSelectorPoolSize);
 
-        tcpTransport = transport;
+        tcpNioTransport = transport;
+        tcpNioConnectionCache = new ConnectionCache(tcpNioTransport,
+                highWaterMark, maxParallelSendConnections, numberToReclaim);
     }
 
 //    private final CountDownLatch controllerGate = new CountDownLatch( 1 );
@@ -262,7 +257,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //        }
         final long transportStartTime = System.currentTimeMillis();
 
-        tcpTransport.start();
+        tcpNioTransport.start();
 
         final long durationInMillis = System.currentTimeMillis() - transportStartTime;
 
@@ -308,7 +303,8 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
             }
         }
 
-        tcpSender = new GrizzlyTCPConnectorWrapper(controller, sendWriteTimeout, host, tcpPort, localPeerID);
+        tcpSender = new GrizzlyTCPMessageSender(tcpNioTransport,
+                tcpNioConnectionCache, localPeerID);
 //        GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper(controller,
 //                sendWriteTimeout,
 //                host,
@@ -457,7 +453,8 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //        selectionKeyMap.clear();
         pingMessageLockMap.clear();
 //        controller.stop();
-        tcpTransport.stop();
+        tcpNioConnectionCache.close();
+        tcpNioTransport.stop();
 //        execService.shutdown();
     }
 

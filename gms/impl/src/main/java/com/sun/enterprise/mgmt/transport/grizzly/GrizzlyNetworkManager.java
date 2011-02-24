@@ -89,7 +89,11 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public String multicastAddress;
     public String networkInterfaceName;
     public long failTcpTimeout; // ms
-    public int maxParallelSendConnections;
+
+    protected int highWaterMark;
+    protected int numberToReclaim;
+    protected int maxParallelSendConnections;
+    
     public long startTimeout; // ms
     public long sendWriteTimeout; // ms
     public int multicastPacketSize;
@@ -144,7 +148,11 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
             }
         }
         failTcpTimeout = Utility.getLongProperty( FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString(), 10 * 1000, properties );
+
+        highWaterMark = Utility.getIntProperty( HIGH_WATER_MARK.toString(), 1024, properties );
+        numberToReclaim = Utility.getIntProperty( NUMBER_TO_RECLAIM.toString(), 10, properties );
         maxParallelSendConnections = Utility.getIntProperty( MAX_PARALLEL.toString(), 15, properties );
+
         startTimeout = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
         sendWriteTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );
