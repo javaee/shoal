@@ -40,9 +40,6 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
-import com.sun.enterprise.ee.cms.core.GMSConstants;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -68,7 +65,6 @@ import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
 /**
