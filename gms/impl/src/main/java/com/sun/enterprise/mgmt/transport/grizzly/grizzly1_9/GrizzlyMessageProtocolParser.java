@@ -41,7 +41,6 @@
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
 import com.sun.enterprise.mgmt.transport.BufferUtils;
-import com.sun.enterprise.mgmt.transport.ByteBuffersBuffer;
 import com.sun.grizzly.ProtocolParser;
 import com.sun.grizzly.SSLConfig;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -325,7 +324,7 @@ public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
     }
 
     private void compactBuffers() {
-        workBuffer.trimLeft();
+        workBuffer.shrink();
         final int workerBufferRemaining = workBuffer.remaining();
         final int lastBufferRemaining = lastBuffer.remaining();
 

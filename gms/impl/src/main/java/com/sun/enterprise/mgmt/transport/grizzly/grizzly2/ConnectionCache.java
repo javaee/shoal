@@ -75,6 +75,9 @@ public class ConnectionCache {
     // Connect timeout 5 seconds
     private final long connectTimeoutMillis = 5000;
 
+    private final Connection.CloseListener removeCachedConnectionOnCloseListener =
+            new RemoveCachedConnectionOnCloseListener();
+    
     public ConnectionCache(SocketConnectorHandler socketConnectorHandler,
             int highWaterMark, int maxParallelConnections, int numberToReclaim) {
         this.socketConnectorHandler = socketConnectorHandler;
@@ -100,6 +103,7 @@ public class ConnectionCache {
         Connection connection = cacheRecord.connections.poll();
         if (connection != null) {
             // if we have one - just return it
+            connection.removeCloseListener(removeCachedConnectionOnCloseListener);
             cacheRecord.idleConnectionsCount.decrementAndGet();
             return connection;
         }
@@ -130,6 +134,7 @@ public class ConnectionCache {
             cacheRecord.idleConnectionsCount.decrementAndGet();
         }
 
+        connection.addCloseListener(removeCachedConnectionOnCloseListener);
 
         cacheRecord.connections.offer(connection);
         
@@ -182,5 +187,20 @@ public class ConnectionCache {
         final Queue<Connection> connections =
                 new LinkedTransferQueue<Connection>();
         
+    }
+
+    private final class RemoveCachedConnectionOnCloseListener implements
+            Connection.CloseListener {
+
+        @Override
+        public void onClosed(final Connection connection) throws IOException {
+            final SocketAddress remoteAddress =
+                    (SocketAddress) connection.getPeerAddress();
+            final CacheRecord cacheRecord = cache.get(remoteAddress);
+            if (cacheRecord != null &&
+                    cacheRecord.connections.remove(connection)) {
+                cacheRecord.idleConnectionsCount.decrementAndGet();
+            }
+        }
     }
 }

@@ -38,8 +38,10 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport;
+package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
+import com.sun.enterprise.mgmt.transport.ArrayUtils;
+import com.sun.enterprise.mgmt.transport.Buffer;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
@@ -234,24 +236,29 @@ public final class ByteBuffersBuffer implements Buffer {
     }
 
     @Override
-    public ByteBuffer trimLeft() {
+    public void shrink() {
         final ByteBuffer releasedBuffer;
-        
+
         if (position == limit) {
             if (buffersSize > 0) {
                 releasedBuffer = buffers[0];
                 releasedBuffer.clear();
             } else {
                 releasedBuffer = null;
-        }
+            }
 
             removeBuffers();
 
-            return releasedBuffer;
+            return;
         }
 
         checkIndex(position);
         final int posBufferIndex = lastSegmentIndex;
+
+        checkIndex(limit - 1);
+        final int limitBufferIndex = lastSegmentIndex;
+
+        final int rightTrim = buffersSize - limitBufferIndex - 1;
 
         int shift = 0;
 
@@ -262,22 +269,21 @@ public final class ByteBuffersBuffer implements Buffer {
 
         setPosLim(position - shift, limit - shift);
 
-        if (posBufferIndex > 0) {
-            releasedBuffer = buffers[0];
-            
-            buffersSize -= posBufferIndex;
+        for (int i = 0; i < rightTrim; i++) {
+            final int idx = buffersSize - i - 1;
+            buffers[idx] = null;
+        }
 
+        buffersSize -= (posBufferIndex + rightTrim);
+
+        if (posBufferIndex > 0) {
             System.arraycopy(buffers, posBufferIndex, buffers, 0, buffersSize);
             Arrays.fill(buffers, buffersSize, buffersSize + posBufferIndex, null);
-        } else {
-            releasedBuffer = null;
         }
 
         calcCapacity();
         resetLastLocation();
-
-        return releasedBuffer;
-        }
+    }
 
     @Override
     public byte get() {

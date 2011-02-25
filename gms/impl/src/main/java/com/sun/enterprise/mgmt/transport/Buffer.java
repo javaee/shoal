@@ -40,9 +40,7 @@
 
 package com.sun.enterprise.mgmt.transport;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.nio.*;
 
 /**
  * JDK {@link java.nio.ByteBuffer} was taken as base for Grizzly
@@ -56,11 +54,11 @@ public interface Buffer extends Comparable<Buffer> {
     /**
      * Disposes the buffer part, outside [position, limit] interval if possible.
      * May return without changing capacity.
-     * After disposeUnused is called, postion/limit/capacity values may have
-     * different values, than before, by still point to the same <tt>Buffer</tt>
+     * After shrink is called, position/limit/capacity values may have
+     * different values, than before, but still point to the same <tt>Buffer</tt>
      * elements.
      */
-    public ByteBuffer trimLeft();
+    public void shrink();
 
     /**
      * Notify the allocator that the space for this <tt>Buffer</tt> is no
