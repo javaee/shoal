@@ -95,6 +95,9 @@
         <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
         <grizzly.version>1.9.24</grizzly.version>
 
+        <grizzly2.group.id>org.glassfish.grizzly</grizzly2.group.id>
+        <grizzly2.version>2.0</grizzly2.version>
+
         <junit.group.id>junit</junit.group.id>
         <junit.version>3.8.1</junit.version>
 
@@ -181,6 +184,11 @@
             </dependency>
 
             <dependency>
+                <groupId>${grizzly2.group.id}</groupId>
+                <version>${grizzly2.version}</version>
+                <artifactId>grizzly-framework</artifactId>
+            </dependency>
+            <dependency>
                 <groupId>${junit.group.id}</groupId>
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
@@ -205,6 +213,12 @@
             <id>glassfish-repo-archive</id>
             <name>Nexus repository collection for Glassfish</name>
             <url>http://maven.glassfish.org/content/groups/glassfish</url>
+        </repository>
+        <repository>
+            <id>glassfish-maven2-repository.dev.java.net</id>
+            <name>Java.net Maven 2 Repository for GlassFish</name>
+            <url>http://download.java.net/maven/glassfish/</url>
+            <layout>default</layout>
         </repository>
     </repositories>
 
