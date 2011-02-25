@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,11 +40,16 @@
 
 package com.sun.enterprise.mgmt.transport;
 
+import com.sun.enterprise.mgmt.transport.buffers.BufferInputStream;
+import com.sun.enterprise.mgmt.transport.buffers.BufferUtils;
+import com.sun.enterprise.mgmt.transport.buffers.ExpandableBufferWriter;
+import com.sun.enterprise.mgmt.transport.buffers.Buffer;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
+import com.sun.enterprise.mgmt.transport.buffers.ExpandableBufferWriterFactory;
 
 import java.nio.ByteBuffer;
 import java.io.ByteArrayOutputStream;
@@ -100,7 +105,8 @@ public class MessageImpl implements Message {
 
     private final Map<String, Serializable> messages = new HashMap<String, Serializable>();
     private final ReentrantLock messageLock = new ReentrantLock();
-    private transient ByteBuffer byteBuffer;
+    private transient Buffer cachedBuffer;
+    private transient ByteBuffer cachedByteBuffer;
     private boolean modified;
 
     public static int getMaxMessageLength() {
@@ -407,8 +413,8 @@ public class MessageImpl implements Message {
     public ByteBuffer getPlainByteBuffer() throws MessageIOException {
         messageLock.lock();
         try {
-            if( byteBuffer != null && !modified )
-                return byteBuffer;
+            if( cachedByteBuffer != null && !modified )
+                return cachedByteBuffer;
             MessageByteArrayOutputStream mbaos = new MessageByteArrayOutputStream();
             DataOutputStream dos = null;
             try {
@@ -441,14 +447,14 @@ public class MessageImpl implements Message {
                 throw new MessageIOException("total message size is too big: size = " + msgSize + ", max size = " + maxTotalMessageLength +
                 toString());
             }
-            byteBuffer = ByteBuffer.allocate( HEADER_LENGTH + messageLen );
-            byteBuffer.putInt( MAGIC_NUMBER );
-            byteBuffer.putInt( version );
-            byteBuffer.putInt( type );
-            byteBuffer.putInt( messageLen );
-            byteBuffer.put( messageBytes, 0, messageLen );
-            byteBuffer.flip();
-            return byteBuffer;
+            cachedByteBuffer = ByteBuffer.allocate( HEADER_LENGTH + messageLen );
+            cachedByteBuffer.putInt( MAGIC_NUMBER );
+            cachedByteBuffer.putInt( version );
+            cachedByteBuffer.putInt( type );
+            cachedByteBuffer.putInt( messageLen );
+            cachedByteBuffer.put( messageBytes, 0, messageLen );
+            cachedByteBuffer.flip();
+            return cachedByteBuffer;
         } finally {
             modified = false;
             messageLock.unlock();
@@ -462,6 +468,55 @@ public class MessageImpl implements Message {
         messageLock.lock();
         try {
             return getPlainByteBuffer().array();
+        } finally {
+            messageLock.unlock();
+        }
+    }
+
+    public Buffer getPlainBuffer(
+            final ExpandableBufferWriterFactory bufferWriterFactory)
+            throws MessageIOException {
+        messageLock.lock();
+        try {
+            if (cachedBuffer != null && !modified) {
+                return cachedBuffer.duplicate();
+            }
+
+            final ExpandableBufferWriter bufferWriter = bufferWriterFactory.create();
+            
+            final int headerStart = bufferWriter.position();
+            bufferWriter.reserve(HEADER_LENGTH);
+
+            try {
+                final int pos = bufferWriter.position();
+                bufferWriter.reserve(4);
+                
+                final int messageCount = NetworkUtility.serialize(
+                        bufferWriter.asOutputStream(), messages);
+                
+                bufferWriter.putInt(pos, messageCount);
+            } catch( IOException ie ) {
+                throw new MessageIOException(ie);
+            }
+            
+            final int msgSize = bufferWriter.position();
+            if( msgSize > maxTotalMessageLength ) {
+                if( LOG.isLoggable( Level.WARNING ) ) {
+                    LOG.log( Level.WARNING, "messageImpl.msg.too.big", new Object[]{msgSize, maxTotalMessageLength} );
+                }
+                
+                throw new MessageIOException("total message size is too big: size = " +
+                        msgSize + ", max size = " + maxTotalMessageLength + toString());
+            }
+
+            bufferWriter.putInt(headerStart, MAGIC_NUMBER);
+            bufferWriter.putInt(headerStart + 4, version);
+            bufferWriter.putInt(headerStart + 8, type);
+            bufferWriter.putInt(headerStart + 12, msgSize - HEADER_LENGTH);
+
+            cachedBuffer = bufferWriter.toBuffer();
+            
+            return bufferWriter.toBuffer();
         } finally {
             messageLock.unlock();
         }
@@ -486,11 +541,12 @@ public class MessageImpl implements Message {
         }
     }
 
+    @Override
     public String toString() {
-        StringBuffer sb = new StringBuffer(50);
+        StringBuilder sb = new StringBuilder(50);
         sb.append(MessageImpl.class.getSimpleName());
-        sb.append("[v" + version + ":");
-        sb.append(getStringType( type ) + ":");
+        sb.append("[v").append(version).append(":");
+        sb.append(getStringType(type)).append(":");
         Serializable seq = messages.get("SEQ");
         if (seq != null) {
             sb.append(" MasterViewSeqID:").append(seq);
@@ -498,11 +554,11 @@ public class MessageImpl implements Message {
 
         for (String elementName : messages.keySet()) {
             if (SOURCE_PEER_ID_TAG.compareTo(elementName) == 0) {
-                sb.append(" Source: " + messages.get(SOURCE_PEER_ID_TAG) + ", ");
+                sb.append(" Source: ").append(messages.get(SOURCE_PEER_ID_TAG)).append(", ");
             } else if (TARGET_PEER_ID_TAG.compareTo(elementName) == 0) {
-                sb.append(" Target: " + messages.get(TARGET_PEER_ID_TAG) + " , ");
+                sb.append(" Target: ").append(messages.get(TARGET_PEER_ID_TAG)).append(" , ");
             } else {
-                sb.append(" ").append(elementName + ", ");
+                sb.append(" ").append(elementName).append(", ");
             }
         }
         return sb.toString();

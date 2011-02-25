@@ -42,7 +42,6 @@ package com.sun.enterprise.mgmt.transport;
 
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -382,11 +381,11 @@ public class NetworkUtility {
         return (int)( ( ch1 << 24 ) + ( ch2 << 16 ) + ( ch3 << 8 ) + ch4 );
     }
 
-    public static int serialize( final ByteArrayOutputStream baos, final Map<String, Serializable> messages ) throws MessageIOException {
+    public static int serialize( final OutputStream baos, final Map<String, Serializable> messages ) throws MessageIOException {
         return serialize( baos, messages, false);
     }
 
-    public static int serialize( final ByteArrayOutputStream baos, final Map<String, Serializable> messages, final boolean debug ) throws MessageIOException {
+    public static int serialize( final OutputStream baos, final Map<String, Serializable> messages, final boolean debug ) throws MessageIOException {
         int count = 0;
         if( baos == null || messages == null )
             return count;

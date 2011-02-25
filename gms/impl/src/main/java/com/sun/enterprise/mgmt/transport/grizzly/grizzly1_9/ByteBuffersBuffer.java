@@ -41,7 +41,7 @@
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
 import com.sun.enterprise.mgmt.transport.ArrayUtils;
-import com.sun.enterprise.mgmt.transport.Buffer;
+import com.sun.enterprise.mgmt.transport.buffers.Buffer;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
@@ -114,6 +114,11 @@ public final class ByteBuffersBuffer implements Buffer {
         this.capacity = that.capacity;
 
         return this;
+    }
+
+    @Override
+    public Buffer duplicate() {
+        return new ByteBuffersBuffer(this);
     }
 
     @Override

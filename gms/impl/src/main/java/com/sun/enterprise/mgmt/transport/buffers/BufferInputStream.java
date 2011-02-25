@@ -38,7 +38,7 @@
  * holder.
  */
 
-package com.sun.enterprise.mgmt.transport;
+package com.sun.enterprise.mgmt.transport.buffers;
 
 import java.io.IOException;
 import java.io.InputStream;

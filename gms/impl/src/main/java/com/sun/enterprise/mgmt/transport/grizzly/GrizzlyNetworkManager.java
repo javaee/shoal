@@ -54,12 +54,20 @@ import com.sun.enterprise.mgmt.transport.MulticastMessageSender;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Bongjae Chang
@@ -70,7 +78,8 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     // only logger to shoal logger when necessary to debug grizzly transport within shoal.  don't leave this way.
     public final Logger LOG;
 
-    public final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap = new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
+    public final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap =
+            new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
 
     public volatile boolean running;
     public MessageSender tcpSender;
@@ -94,8 +103,8 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     protected int numberToReclaim;
     protected int maxParallelSendConnections;
     
-    public long startTimeout; // ms
-    public long sendWriteTimeout; // ms
+    public long startTimeoutMillis; // ms
+    public long sendWriteTimeoutMillis; // ms
     public int multicastPacketSize;
     public int writeSelectorPoolSize;
 
@@ -153,8 +162,8 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         numberToReclaim = Utility.getIntProperty( NUMBER_TO_RECLAIM.toString(), 10, properties );
         maxParallelSendConnections = Utility.getIntProperty( MAX_PARALLEL.toString(), 15, properties );
 
-        startTimeout = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
-        sendWriteTimeout = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
+        startTimeoutMillis = Utility.getLongProperty( START_TIMEOUT.toString(), 15 * 1000, properties );
+        sendWriteTimeoutMillis = Utility.getLongProperty( WRITE_TIMEOUT.toString(), 10 * 1000, properties );
         multicastPacketSize = Utility.getIntProperty( MULTICAST_PACKET_SIZE.toString(), 64 * 1024, properties );
         multicastTimeToLive = Utility.getIntProperty(MULTICAST_TIME_TO_LIVE.toString(),
                                       GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
@@ -162,7 +171,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         if (shoalLogger.isLoggable(Level.CONFIG)) {
             String multicastTTLresults = multicastTimeToLive == GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE ?
                     " default" : Integer.toString(multicastTimeToLive);
-            StringBuffer buf = new StringBuffer(256);
+            StringBuilder buf = new StringBuilder(256);
             buf.append("\nGrizzlyNetworkManager Configuration\n");
             buf.append("BIND_INTERFACE_ADDRESS:").append(host).append("  NetworkInterfaceName:").append(networkInterfaceName).append('\n');
             buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append('\n');
@@ -171,20 +180,17 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                      .append(" MULTICAST_TIME_TO_LIVE:").append(multicastTTLresults).append('\n');
             buf.append("FAILURE_DETECT_TCP_RETRANSMIT_TIMEOUT(ms):").append(failTcpTimeout).append('\n');
             buf.append(" MAX_PARALLEL:").append(maxParallelSendConnections).append('\n');
-            buf.append("START_TIMEOUT(ms):").append(startTimeout).append(" WRITE_TIMEOUT(ms):").append(sendWriteTimeout).append('\n');
+            buf.append("START_TIMEOUT(ms):").append(startTimeoutMillis).append(" WRITE_TIMEOUT(ms):").append(sendWriteTimeoutMillis).append('\n');
             buf.append("MAX_WRITE_SELECTOR_POOL_SIZE:").append(writeSelectorPoolSize).append('\n');
             shoalLogger.log(Level.CONFIG, buf.toString());
         }
     }
 
+    @Override
     @SuppressWarnings( "unchecked" )
     public synchronized void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException {
         super.initialize(groupName, instanceName, properties);
     }
-
-    private final CountDownLatch controllerGate = new CountDownLatch( 1 );
-    private boolean controllerGateIsReady = false;
-    private Throwable controllerGateStartupException = null;
 
 
     @Override
@@ -214,12 +220,15 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         super.stop();
     }
 
+    @Override
     public void beforeDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
     }
 
+    @Override
     public void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {
     }
 
+    @Override
     @SuppressWarnings( "unchecked" )
     public void addRemotePeer( PeerID peerID ) {
         if( peerID == null )
@@ -248,6 +257,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public void removeRemotePeer(String instanceName) {
     }
 
+    @Override
     public boolean send( final PeerID peerID, final Message message ) throws IOException {
         if( !running )
             throw new IOException( "network manager is not running" );
@@ -257,6 +267,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         return sender.send( peerID, message );
     }
 
+    @Override
     public boolean broadcast( final Message message ) throws IOException {
         if( !running )
             throw new IOException( "network manager is not running" );
@@ -266,6 +277,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         return sender.broadcast( message );
     }
 
+    @Override
     public PeerID getPeerID( final String instanceName ) {
         PeerID peerID = null;
         if( instanceName != null )
@@ -277,12 +289,14 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                 LOG.log(Level.FINE, "stack trace", new Exception("stack trace"));
             }
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "getPeerID(" + instanceName + ")" + " returning null peerIDMap=" + peerIDMap);
+                LOG.log(Level.FINE, "getPeerID({0}) returning null peerIDMap={1}",
+                        new Object[]{instanceName, peerIDMap});
             }
         }
         return peerID;
     }
 
+    @Override
     public void removePeerID( final PeerID peerID ) {
         if( peerID == null )
             return;
@@ -297,6 +311,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         removeRemotePeer( instanceName );
     }
 
+    @Override
     public boolean isConnected( final PeerID peerID ) {
         boolean isConnected = false;
         if( peerID != null ) {
@@ -330,6 +345,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
             return null;
     }
 
+    @Override
     public MessageSender getMessageSender( int transport ) {
         if( running ) {
             MessageSender sender;
@@ -350,6 +366,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         }
     }
 
+    @Override
     public MulticastMessageSender getMulticastMessageSender() {
         if( running )
             return multicastSender;

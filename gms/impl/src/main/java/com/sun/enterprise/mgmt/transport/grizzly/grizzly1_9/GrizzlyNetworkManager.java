@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,8 +40,6 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.enterprise.mgmt.transport.grizzly.PingMessageListener;
-import com.sun.enterprise.mgmt.transport.grizzly.PongMessageListener;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -114,7 +112,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         if (ctx != null)  {
             GMSMonitor monitor = ctx.getGMSMonitor();
             if (monitor != null) {
-                monitor.setSendWriteTimeout(this.sendWriteTimeout);
+                monitor.setSendWriteTimeout(this.sendWriteTimeoutMillis);
             }
         }
 
@@ -239,7 +237,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         new Thread( controller ).start();
         long controllerStartTime = System.currentTimeMillis();
         try {
-            controllerGate.await( startTimeout, TimeUnit.MILLISECONDS );
+            controllerGate.await( startTimeoutMillis, TimeUnit.MILLISECONDS );
         } catch( InterruptedException e ) {
             e.printStackTrace();
         }
@@ -280,9 +278,9 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
                 LOG.log(Level.FINE, "local peer id = " + localPeerID);
         }
         tcpSender = new GrizzlyTCPConnectorWrapper(controller,
-                sendWriteTimeout, host, tcpPort, localPeerID );
+                sendWriteTimeoutMillis, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
-                                                                                         sendWriteTimeout,
+                                                                                         sendWriteTimeoutMillis,
                                                                                          host,
                                                                                          multicastPort,
                                                                                          multicastAddress,

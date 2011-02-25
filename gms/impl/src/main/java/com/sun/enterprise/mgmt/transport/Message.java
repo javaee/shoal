@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,6 +40,8 @@
 
 package com.sun.enterprise.mgmt.transport;
 
+import com.sun.enterprise.mgmt.transport.buffers.Buffer;
+import com.sun.enterprise.mgmt.transport.buffers.ExpandableBufferWriterFactory;
 import java.nio.ByteBuffer;
 import java.io.Serializable;
 import java.util.Map;
@@ -202,6 +204,18 @@ public interface Message extends Serializable {
      * @return a set element view of the mappings contained in this message
      */
     public Set<Map.Entry<String, Serializable>> getMessageElements();
+
+    /**
+     * Returns a {@link Buffer} of this message
+     *
+     * @param bufferWriterFactory {@link ExpandableBufferWriterFactory}.
+     *
+     * @return a Buffer
+     * @throws MessageIOException if an I/O error occurs
+     */
+    public Buffer getPlainBuffer(
+            final ExpandableBufferWriterFactory bufferWriterFactory)
+            throws MessageIOException;
 
     /**
      * Returns a {@link ByteBuffer} of this message

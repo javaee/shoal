@@ -49,11 +49,11 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.SocketAddress;
 import java.net.InetSocketAddress;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.logging.Level;
-import org.glassfish.grizzly.CompletionHandler;
 import org.glassfish.grizzly.Connection;
-import org.glassfish.grizzly.EmptyCompletionHandler;
 import org.glassfish.grizzly.WriteResult;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
 
@@ -64,16 +64,18 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
 
     private final static Logger LOG = GrizzlyNetworkManager.getLogger();
     private final TCPNIOTransport tcpNioTransport;
-    private final CompletionHandler<WriteResult> returnToConnectionCacheCompletionHandler =
-            new ReturnToConnectionCacheCompletionHandler();
 
     private final ConnectionCache connectionCache;
+    private final long writeTimeoutMillis;
+
     public GrizzlyTCPMessageSender(final TCPNIOTransport tcpNioTransport,
             final ConnectionCache connectionCache,
-            final PeerID<GrizzlyPeerID> localPeerID) {
+            final PeerID<GrizzlyPeerID> localPeerID,
+            final long writeTimeoutMillis) {
         this.tcpNioTransport = tcpNioTransport;
         this.localPeerID = localPeerID;
         this.connectionCache = connectionCache;
+        this.writeTimeoutMillis = writeTimeoutMillis;
     }
 
     @Override
@@ -126,8 +128,11 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
             }
 
             try {
-                connection.write(message, returnToConnectionCacheCompletionHandler);
-
+                final Future<WriteResult> syncWriteFuture =
+                        connection.write(target, message, null);
+                syncWriteFuture.get(writeTimeoutMillis, TimeUnit.MILLISECONDS);
+                
+                connectionCache.offer(connection);
                 return true;
             } catch (MessageIOException mioe) {
                 // thrown when message size is too big.
@@ -146,14 +151,5 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
         } while (attemptNo <= MAX_RESEND_ATTEMPTS);
 
         return false;
-    }
-
-    private final class ReturnToConnectionCacheCompletionHandler 
-            extends EmptyCompletionHandler<WriteResult> {
-
-        @Override
-        public void completed(WriteResult result) {
-            connectionCache.offer(result.getConnection());
-        }
     }
 }

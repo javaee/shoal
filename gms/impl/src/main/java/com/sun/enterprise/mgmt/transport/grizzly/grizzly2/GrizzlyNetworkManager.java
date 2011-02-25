@@ -39,6 +39,9 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
+import java.nio.channels.SelectionKey;
+import org.glassfish.grizzly.filterchain.TransportFilter;
+import org.glassfish.grizzly.filterchain.FilterChainBuilder;
 import com.sun.enterprise.mgmt.transport.grizzly.PongMessageListener;
 import com.sun.enterprise.mgmt.transport.grizzly.PingMessageListener;
 import com.sun.enterprise.mgmt.transport.MessageEvent;
@@ -59,12 +62,7 @@ import java.util.List;
 import java.util.Arrays;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.concurrent.CountDownLatch;
 import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
-import com.sun.enterprise.mgmt.transport.MessageImpl;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.mgmt.transport.MessageSender;
-import com.sun.enterprise.mgmt.transport.MulticastMessageSender;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.grizzly.Grizzly;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
@@ -119,7 +117,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         if (ctx != null) {
             GMSMonitor monitor = ctx.getGMSMonitor();
             if (monitor != null) {
-                monitor.setSendWriteTimeout(this.sendWriteTimeout);
+                monitor.setSendWriteTimeout(this.sendWriteTimeoutMillis);
             }
         }
 
@@ -187,21 +185,28 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //            controller.addSelectorHandler( multicastSelectorHandler );
 //        }
 
-        ProtocolChainInstanceHandler pciHandler = new DefaultProtocolChainInstanceHandler() {
+        final FilterChainBuilder filterChainBuilder = FilterChainBuilder.stateless();
+        filterChainBuilder.add(new TransportFilter());
+        filterChainBuilder.add(new MessageFilter());
+        filterChainBuilder.add(new MessageDispatcherFilter(this));
 
-            @Override
-            public ProtocolChain poll() {
-                ProtocolChain protocolChain = protocolChains.poll();
-                if (protocolChain == null) {
-                    protocolChain = new DefaultProtocolChain();
-                    protocolChain.addFilter(GrizzlyMessageProtocolParser.createParserProtocolFilter(null));
-                    protocolChain.addFilter(new GrizzlyMessageDispatcherFilter(GrizzlyNetworkManager.this));
-                }
-                return protocolChain;
-            }
-        };
-        controller.setProtocolChainInstanceHandler(pciHandler);
-        SelectorFactory.setMaxSelectors(writeSelectorPoolSize);
+        transport.setProcessor(filterChainBuilder.build());
+        
+//        ProtocolChainInstanceHandler pciHandler = new DefaultProtocolChainInstanceHandler() {
+//
+//            @Override
+//            public ProtocolChain poll() {
+//                ProtocolChain protocolChain = protocolChains.poll();
+//                if (protocolChain == null) {
+//                    protocolChain = new DefaultProtocolChain();
+//                    protocolChain.addFilter(GrizzlyMessageProtocolParser.createParserProtocolFilter(null));
+//                    protocolChain.addFilter(new GrizzlyMessageDispatcherFilter(GrizzlyNetworkManager.this));
+//                }
+//                return protocolChain;
+//            }
+//        };
+//        controller.setProtocolChainInstanceHandler(pciHandler);
+//        SelectorFactory.setMaxSelectors(writeSelectorPoolSize);
 
         tcpNioTransport = transport;
         tcpNioConnectionCache = new ConnectionCache(tcpNioTransport,
@@ -304,7 +309,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         }
 
         tcpSender = new GrizzlyTCPMessageSender(tcpNioTransport,
-                tcpNioConnectionCache, localPeerID);
+                tcpNioConnectionCache, localPeerID, sendWriteTimeoutMillis);
 //        GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper(controller,
 //                sendWriteTimeout,
 //                host,
@@ -459,18 +464,20 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     }
 
     @Override
-    public void beforeDispatchingMessage(MessageEvent messageEvent, Map piggyback) {
+    public void beforeDispatchingMessage(final MessageEvent messageEvent,
+            final Map piggyback) {
+        
         if (messageEvent == null) {
             return;
         }
-        SelectionKey selectionKey = null;
-        if (piggyback != null) {
-            Object value = piggyback.get(MESSAGE_SELECTION_KEY_TAG);
-            if (value instanceof SelectionKey) {
-                selectionKey = (SelectionKey) value;
-            }
-        }
-        addRemotePeer(messageEvent.getSourcePeerID(), selectionKey);
+//        SelectionKey selectionKey = null;
+//        if (piggyback != null) {
+//            Object value = piggyback.get(MESSAGE_SELECTION_KEY_TAG);
+//            if (value instanceof SelectionKey) {
+//                selectionKey = (SelectionKey) value;
+//            }
+//        }
+        addRemotePeer(messageEvent.getSourcePeerID());
     }
 
     @Override
@@ -478,33 +485,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void addRemotePeer(PeerID peerID) {
-        if (peerID == null) {
-            return;
-        }
-        if (peerID.equals(localPeerID)) {
-            return; // lookback
-        }
-        String instanceName = peerID.getInstanceName();
-        if (instanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID) {
-//            PeerID<GrizzlyPeerID> previous = peerIDMap.get(instanceName);
-//            if (previous != null) {
-//                if (previous.getUniqueID().getTcpPort() != ((GrizzlyPeerID) peerID.getUniqueID()).tcpPort) {
-//                    LOG.log(Level.WARNING, "addRemotePeer: assertion failure: no mapping should have existed for member:"
-//                            + instanceName + " existingID=" + previous + " adding peerid=" + peerID, new Exception("stack trace"));
-//                }
-//            }
-            PeerID<GrizzlyPeerID> previous = peerIDMap.put(instanceName, peerID);
-            if (previous == null) {
-                Level debugLevel = Level.FINEST;
-                if (LOG.isLoggable(debugLevel)) {
-                    LOG.log(debugLevel, "addRemotePeer: " + instanceName + " peerId:" + peerID, new Exception("stack trace"));
-                }
-            }
-        }
-    }
-
     public void removeRemotePeer(String instanceName) {
         for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
             if (entry.getValue().equals(instanceName)) {
@@ -517,12 +497,12 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         }
     }
 
-    public void removeRemotePeer(SelectionKey selectionKey) {
-        if (selectionKey == null) {
-            return;
-        }
-        selectionKeyMap.remove(selectionKey);
-
+//    public void removeRemotePeer(SelectionKey selectionKey) {
+//        if (selectionKey == null) {
+//            return;
+//        }
+//        selectionKeyMap.remove(selectionKey);
+//
         // Bug Fix. DO NOT REMOVE member name to peerid mapping when selection key is being removed.
         // THIS HAPPENS TOO FREQUENTLY.  Only remove this mapping when member fails or planned shutdown.\
         // This method was getting called by GrizzlyCacheableSelectionKeyHandler.cancel(SelectionKey).
@@ -537,136 +517,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //          }
 //          peerIDMap.remove( instanceName );
 //      }
-    }
-
-    @Override
-    public boolean send(final PeerID peerID, final Message message) throws IOException {
-        if (!running) {
-            throw new IOException("network manager is not running");
-        }
-        MessageSender sender = tcpSender;
-        if (sender == null) {
-            throw new IOException("message sender is not initialized");
-        }
-        return sender.send(peerID, message);
-    }
-
-    @Override
-    public boolean broadcast(final Message message) throws IOException {
-        if (!running) {
-            throw new IOException("network manager is not running");
-        }
-        MulticastMessageSender sender = multicastSender;
-        if (sender == null) {
-            throw new IOException("multicast message sender is not initialized");
-        }
-        return sender.broadcast(message);
-    }
-
-    @Override
-    public PeerID getPeerID(final String instanceName) {
-        PeerID peerID = null;
-        if (instanceName != null) {
-            peerID = peerIDMap.get(instanceName);
-        }
-        if (peerID == null) {
-            peerID = PeerID.NULL_PEER_ID;
-            if (this.instanceName.equals(instanceName)) {
-                LOG.log(Level.FINE, "grizzly.netmgr.localPeerId.null", new Object[]{instanceName});
-                LOG.log(Level.FINE, "stack trace", new Exception("stack trace"));
-            }
-            if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "getPeerID({0}) returning null peerIDMap={1}",
-                        new Object[]{instanceName, peerIDMap});
-            }
-        }
-        return peerID;
-    }
-
-    @Override
-    public void removePeerID(final PeerID peerID) {
-        if (peerID == null) {
-            return;
-        }
-        String instanceName = peerID.getInstanceName();
-        if (instanceName == null) {
-            return;
-        }
-        Level debugLevel = Level.FINE;
-        if (LOG.isLoggable(debugLevel)) {
-            LOG.log(debugLevel, "removePeerID peerid=" + peerID, new Exception("stack trace"));
-        }
-        peerIDMap.remove(instanceName);
-        removeRemotePeer(instanceName);
-    }
-
-    @Override
-    public boolean isConnected(final PeerID peerID) {
-        boolean isConnected = false;
-        if (peerID != null) {
-            try {
-                send(peerID, new MessageImpl(Message.TYPE_PING_MESSAGE));
-                CountDownLatch latch = new CountDownLatch(1);
-                CountDownLatch oldLatch = pingMessageLockMap.putIfAbsent(peerID, latch);
-                if (oldLatch != null) {
-                    latch = oldLatch;
-                }
-                try {
-                    isConnected = latch.await(failTcpTimeout, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                }
-            } catch (Throwable ie) {
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.log(Level.FINE, "isConnected( " + peerID + " ) = " + isConnected, ie);
-                }
-                return isConnected;
-            } finally {
-                pingMessageLockMap.remove(peerID);
-            }
-            return isConnected;
-        } else {
-            return isConnected;
-        }
-    }
-
-    @Override
-    public CountDownLatch getPingMessageLock(PeerID peerID) {
-        if (peerID != null) {
-            return pingMessageLockMap.get(peerID);
-        } else {
-            return null;
-        }
-    }
-
-    @Override
-    public MessageSender getMessageSender(int transport) {
-        if (running) {
-            MessageSender sender;
-            switch (transport) {
-                case TCP_TRANSPORT:
-                    sender = tcpSender;
-                    break;
-                case UDP_TRANSPORT:
-                    sender = udpSender;
-                    break;
-                default:
-                    sender = tcpSender;
-                    break;
-            }
-            return sender;
-        } else {
-            return null;
-        }
-    }
-
-    @Override
-    public MulticastMessageSender getMulticastMessageSender() {
-        if (running) {
-            return multicastSender;
-        } else {
-            return null;
-        }
-    }
+//    }
 
     @Override
     protected Logger getGrizzlyLogger() {
