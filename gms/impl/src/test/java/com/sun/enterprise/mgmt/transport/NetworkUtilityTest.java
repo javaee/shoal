@@ -42,6 +42,7 @@ package com.sun.enterprise.mgmt.transport;
 
 import junit.framework.TestCase;
 
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -104,5 +105,18 @@ public class NetworkUtilityTest extends TestCase {
             assertTrue(NetworkUtility.isBindAddressValid(
                 local.getHostAddress()));
         }
+    }
+
+    public void testGetFirstAddress() throws IOException {
+       System.out.println( "AllLocalAddresses() = " + NetworkUtility.getAllLocalAddresses() );
+       System.out.println( "getFirstNetworkInterface() = " + NetworkUtility.getFirstNetworkInterface() );
+       System.out.println( "getFirstInetAddress( true ) = " + NetworkUtility.getFirstInetAddress(true) );
+       System.out.println( "getFirstInetAddress( false ) = " + NetworkUtility.getFirstInetAddress(false) );
+       System.out.println( "getFirstNetworkInteface() = " + NetworkUtility.getFirstNetworkInterface());
+       System.out.println( "getFirstInetAddress(firstNetworkInteface, true) = " +
+               NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),true));
+       System.out.println( "getFirstInetAddress(firstNetworkInteface, false) = " +
+               NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),false));
+
     }
 }

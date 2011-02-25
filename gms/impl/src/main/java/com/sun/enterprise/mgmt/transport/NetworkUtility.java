@@ -190,6 +190,9 @@ public class NetworkUtility {
         while( allInterfaces.hasMoreElements() ) {
             NetworkInterface anInterface = allInterfaces.nextElement();
             try {
+                if (!isUp(anInterface)) {
+                    continue;
+                }
                 Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
                 while( allIntfAddr.hasMoreElements() ) {
                     InetAddress anAddr = allIntfAddr.nextElement();
@@ -359,6 +362,19 @@ public class NetworkUtility {
         return false;
     }
 
+    public static boolean isUp( NetworkInterface anInterface ) {
+        if( anInterface == null )
+            return false;
+        if( isUpMethod != null ) {
+            try {
+                return (Boolean)isUpMethod.invoke( anInterface );
+            } catch( Throwable t ) {
+                // will just return false in this case
+            }
+        }
+        return false;
+    }
+
     public static void writeIntToByteArray( final byte[] bytes, final int offset, final int value ) throws IllegalArgumentException {
         if( bytes == null )
             return;
@@ -458,6 +474,8 @@ public class NetworkUtility {
      * @param tcpEndPort end port
      * @return an available tcp port which is not bound yet. Throws IllegalStateException if no ports exist.
      */
+    /*
+    // Using grizzly tcp port selection from a range.
     public static int getAvailableTCPPort( String host, int tcpStartPort, int tcpEndPort ) {
         if( tcpStartPort > tcpEndPort )
             tcpEndPort = tcpStartPort + 30;
@@ -480,6 +498,7 @@ public class NetworkUtility {
         LOG.log(Level.SEVERE, "netutil.no.available.ports", new Object[]{host,tcpStartPort,tcpEndPort});
         throw new IllegalStateException("Fatal error. No available ports exist for " + host + " in range " + tcpStartPort + " to " + tcpEndPort);
     }
+    */
 
     private static final Field DEPTH_FIELD;
 
@@ -577,5 +596,10 @@ public class NetworkUtility {
         System.out.println( "getFirstNetworkInterface() = " +getFirstNetworkInterface() );
         System.out.println( "getFirstInetAddress( true ) = " + getFirstInetAddress( true ) );
         System.out.println( "getFirstInetAddress( false ) = " + getFirstInetAddress( false ) );
+        System.out.println( "getFirstNetworkInteface() = " + NetworkUtility.getFirstNetworkInterface());
+        System.out.println( "getFirstInetAddress(firstNetworkInteface, true) = " +
+               NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),true));
+        System.out.println( "getFirstInetAddress(firstNetworkInteface, false) = " +
+               NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),false));
     }
 }

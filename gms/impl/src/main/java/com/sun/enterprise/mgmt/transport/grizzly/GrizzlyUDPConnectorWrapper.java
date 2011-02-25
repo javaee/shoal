@@ -77,25 +77,7 @@ public class GrizzlyUDPConnectorWrapper extends AbstractMultiMessageSender {
                                        PeerID<GrizzlyPeerID> localPeerID ) {
         this.controller = controller;
         this.writeTimeout = writeTimeout;
-        if( host != null ) {
-            this.localSocketAddress = new InetSocketAddress( host, port );
-        } else {
-            InetAddress firstInetAddress = null;
-            // prefer IPv4
-            try {
-                firstInetAddress = NetworkUtility.getFirstInetAddress( false );
-            } catch( IOException e ) {
-            }
-            if( firstInetAddress == null )
-                try {
-                    firstInetAddress = NetworkUtility.getFirstInetAddress( true );
-                } catch( IOException e ) {
-                }
-            if( firstInetAddress != null )
-                this.localSocketAddress = new InetSocketAddress( firstInetAddress, port );
-            else
-                this.localSocketAddress = null;
-        }
+        this.localSocketAddress = host == null ? new InetSocketAddress(port) : new InetSocketAddress( host, port );
         this.multicastSocketAddress = new InetSocketAddress( multicastAddress == null ? DEFAULT_MULTICAST_ADDRESS : multicastAddress, port );
         this.localPeerID = localPeerID;
     }
