@@ -39,7 +39,8 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
-import java.nio.channels.SelectionKey;
+import java.util.Iterator;
+import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.filterchain.TransportFilter;
 import org.glassfish.grizzly.filterchain.FilterChainBuilder;
 import com.sun.enterprise.mgmt.transport.grizzly.PongMessageListener;
@@ -74,6 +75,8 @@ import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -83,6 +86,7 @@ import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*
  * @author Bongjae Chang
  */
 public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
+    public static final String MESSAGE_CONNECTION_TAG = "connection";
 
     private int maxPoolSize;
     private int corePoolSize;
@@ -92,6 +96,9 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     private ExecutorService multicastSenderThreadPool = null;
     private TCPNIOTransport tcpNioTransport;
     private ConnectionCache tcpNioConnectionCache;
+
+    private final ConcurrentHashMap<String, Instance> instances =
+            new ConcurrentHashMap<String, Instance>();
     
     public GrizzlyNetworkManager() {
     }
@@ -466,35 +473,63 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     @Override
     public void beforeDispatchingMessage(final MessageEvent messageEvent,
             final Map piggyback) {
-        
+
         if (messageEvent == null) {
             return;
         }
-//        SelectionKey selectionKey = null;
-//        if (piggyback != null) {
-//            Object value = piggyback.get(MESSAGE_SELECTION_KEY_TAG);
-//            if (value instanceof SelectionKey) {
-//                selectionKey = (SelectionKey) value;
-//            }
-//        }
-        addRemotePeer(messageEvent.getSourcePeerID());
+
+        Connection connection = null;
+        if( piggyback != null ) {
+            connection = (Connection) piggyback.get(MESSAGE_CONNECTION_TAG);
+        }
+        
+        addRemotePeer(messageEvent.getSourcePeerID(), connection);
     }
 
     @Override
     public void afterDispatchingMessage(MessageEvent messageEvent, Map piggyback) {
     }
 
-    @Override
-    public void removeRemotePeer(String instanceName) {
-        for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
-            if (entry.getValue().equals(instanceName)) {
-                if (getLogger().isLoggable(Level.FINE)) {
-                    getLogger().log(Level.FINE, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
+    @SuppressWarnings( "unchecked" )
+    public void addRemotePeer(final PeerID peerID, final Connection connection) {
+        if (peerID == null) {
+            return;
+        }
+        if (peerID.equals(localPeerID)) {
+            return; // lookback
+        }
+        
+        final String peerInstanceName = peerID.getInstanceName();
+        if (peerInstanceName != null && peerID.getUniqueID() instanceof GrizzlyPeerID) {
+            final PeerID<GrizzlyPeerID> previous = peerIDMap.put(peerInstanceName, peerID);
+            if (previous == null) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "addRemotePeer: {0} peerId:{1}",
+                            new Object[]{peerInstanceName, peerID});
                 }
-                tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
-                selectionKeyMap.remove(entry.getKey());
+            }
+            
+            if (connection != null) {
+                obtainInstance(peerInstanceName).register(connection);
             }
         }
+    }
+
+    @Override
+    public void removeRemotePeer(final String instanceName) {
+        final Instance instance = instances.remove(instanceName);
+        if (instance != null) {
+            instance.close();
+        }
+//        for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
+//            if (entry.getValue().equals(instanceName)) {
+//                if (getLogger().isLoggable(Level.FINE)) {
+//                    getLogger().log(Level.FINE, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
+//                }
+//                tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
+//                selectionKeyMap.remove(entry.getKey());
+//            }
+//        }
     }
 
 //    public void removeRemotePeer(SelectionKey selectionKey) {
@@ -554,5 +589,69 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         }
 
         return 0;
+    }
+
+    private Instance obtainInstance(final String instance) {
+        Instance instanceObj = instances.get(instance);
+        if (instanceObj == null) {
+            final Instance newInstance = new Instance();
+            instanceObj = instances.putIfAbsent(instance, newInstance);
+            if (instanceObj == null) {
+                instanceObj = newInstance;
+            }
+        }
+
+        return instanceObj;
+    }
+
+    /**
+     * Class represents instance and associated connections
+     */
+    static class Instance {
+        final AtomicBoolean isClosed = new AtomicBoolean();
+
+        final ConcurrentHashMap<Connection, Long> connections =
+                new ConcurrentHashMap<Connection, Long>();
+
+        final Connection.CloseListener closeListener = new CloseListener();
+
+        void register(final Connection connection) {
+            if (!connections.contains(connection)) {
+                connections.put(connection, System.currentTimeMillis());
+                connection.addCloseListener(closeListener);
+
+                if (isClosed.get()) {
+                    try {
+                        connection.close();
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
+
+        }
+
+        void close() {
+            if (!isClosed.getAndSet(true)) {
+                for (Iterator<Connection> it = connections.keySet().iterator(); it.hasNext(); ) {
+                    final Connection connection = it.next();
+                    it.remove();
+
+                    try {
+                        connection.close();
+                    } catch (IOException ignored) {
+                    }
+                }
+
+            }
+        }
+        
+        private class CloseListener implements Connection.CloseListener {
+
+            @Override
+            public void onClosed(final Connection connection) throws IOException {
+                connections.remove(connection);
+            }
+
+        }
     }
 }
