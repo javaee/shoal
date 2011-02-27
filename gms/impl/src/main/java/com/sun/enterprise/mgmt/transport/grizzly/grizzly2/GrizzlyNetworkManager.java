@@ -39,8 +39,11 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
+import org.glassfish.grizzly.filterchain.FilterChain;
 import java.util.Iterator;
 import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.filterchain.FilterChainContext;
+import org.glassfish.grizzly.filterchain.NextAction;
 import org.glassfish.grizzly.filterchain.TransportFilter;
 import org.glassfish.grizzly.filterchain.FilterChainBuilder;
 import com.sun.enterprise.mgmt.transport.grizzly.PongMessageListener;
@@ -79,6 +82,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.glassfish.grizzly.filterchain.BaseFilter;
+import org.glassfish.grizzly.nio.transport.TCPNIOConnectorHandler;
 
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
@@ -216,7 +221,19 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //        SelectorFactory.setMaxSelectors(writeSelectorPoolSize);
 
         tcpNioTransport = transport;
-        tcpNioConnectionCache = new ConnectionCache(tcpNioTransport,
+
+        final FilterChain senderFilterChainBuilder = FilterChainBuilder.stateless()
+                .add(new TransportFilter())
+                .add(new CloseOnReadFilter())
+                .add(new MessageFilter())
+                .build();
+
+        final TCPNIOConnectorHandler senderConnectorHandler =
+                TCPNIOConnectorHandler.builder(transport)
+                .processor(senderFilterChainBuilder)
+                .build();
+
+        tcpNioConnectionCache = new ConnectionCache(senderConnectorHandler,
                 highWaterMark, maxParallelSendConnections, numberToReclaim);
     }
 
@@ -602,6 +619,22 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         }
 
         return instanceObj;
+    }
+
+    /**
+     * Filter, which is used by Senders, which don't expect any input data.
+     * So we close {@link Connection} if any data comes.
+     */
+    static class CloseOnReadFilter extends BaseFilter {
+
+        @Override
+        public NextAction handleRead(final FilterChainContext ctx)
+                throws IOException {
+
+            ctx.getConnection().close();
+            
+            return ctx.getStopAction();
+        }
     }
 
     /**
