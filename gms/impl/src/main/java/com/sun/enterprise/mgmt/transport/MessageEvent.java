@@ -81,8 +81,8 @@ public class MessageEvent extends EventObject {
     public MessageEvent( Object source, Message message, PeerID sourcePeerID, PeerID targetPeerID ) {
         super( source );
         this.message = message;
-        this.sourcePeerID = (PeerID)sourcePeerID;
-        this.targetPeerID = (PeerID)targetPeerID;
+        this.sourcePeerID = sourcePeerID;
+        this.targetPeerID = targetPeerID;
     }
 
     /**

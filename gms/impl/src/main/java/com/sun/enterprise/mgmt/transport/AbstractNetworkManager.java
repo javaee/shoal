@@ -80,12 +80,14 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void start() throws IOException {
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public void stop() throws IOException {
         messageListeners.clear();
     }
@@ -93,6 +95,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void addMessageListener( final MessageListener messageListener ) {
         if( messageListener != null )
             messageListeners.add( messageListener );
@@ -101,6 +104,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void removeMessageListener( final MessageListener messageListener ) {
         if( messageListener != null )
             messageListeners.remove( messageListener );
@@ -109,6 +113,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void receiveMessage( Message message, Map piggyback ) {
         PeerID sourcePeerID = null;
         PeerID targetPeerID = null;
@@ -145,7 +150,10 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         }
         if (messageEventNotProcessed) {
             if (LOG.isLoggable(Level.FINER)) {
-                LOG.finer("No message listener for messageEvent: " + messageEvent.toString() + " Message :" + message + " MessageFrom: " + sourcePeerID + " MessageTo:" + targetPeerID);
+                LOG.log(Level.FINER, "No message listener for messageEvent: {0} "
+                        + "Message :{1} MessageFrom: {2} MessageTo:{3}",
+                        new Object[]{messageEvent.toString(), message,
+                        sourcePeerID, targetPeerID});
             }
         }
         try {
@@ -158,6 +166,7 @@ public abstract class AbstractNetworkManager implements NetworkManager {
     /**
      * {@inheritDoc}
      */
+    @Override
     public PeerID getLocalPeerID() {
         return localPeerID;
     }
@@ -243,13 +252,16 @@ public abstract class AbstractNetworkManager implements NetworkManager {
         return LOG;
     }
 
-    public synchronized void initialize( final String groupName, final String instanceName, final Map properties ) throws IOException  {
+    @Override
+    public synchronized void initialize( final String groupName,
+            final String instanceName, final Map properties )
+            throws IOException {
         int maxMsgLength =  Utility.getIntProperty( ServiceProviderConfigurationKeys.MAX_MESSAGE_LENGTH.toString(),
                                                     MessageImpl.DEFAULT_MAX_TOTAL_MESSAGE_LENGTH,
                                                     properties );
         MessageImpl.setMaxMessageLength(maxMsgLength);
         if (LOG.isLoggable(Level.CONFIG))  {
-            LOG.config("GMS MAX_MESSAGE_LENGTH=" + maxMsgLength);
+            LOG.log(Level.CONFIG, "GMS MAX_MESSAGE_LENGTH={0}", maxMsgLength);
         }
     }
 }
