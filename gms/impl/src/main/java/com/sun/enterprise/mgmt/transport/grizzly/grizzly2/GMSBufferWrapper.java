@@ -73,7 +73,7 @@ final class GMSBufferWrapper implements Buffer {
 
     @Override
     public Object underlying() {
-        return grizzlyBuffer.underlying();
+        return grizzlyBuffer;
     }
 
     @Override

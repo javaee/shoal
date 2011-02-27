@@ -162,14 +162,16 @@ public class MessageFilter extends BaseFilter {
         final Message message = ctx.getMessage();
         final PeerID peerID = (PeerID) ctx.getAddress();
 
-        final Serializable uniqueID = peerID.getUniqueID();
-        final SocketAddress remoteSocketAddress;
+        SocketAddress remoteSocketAddress = null;
 
-        if( uniqueID instanceof GrizzlyPeerID ) {
-            final GrizzlyPeerID grizzlyPeerID = (GrizzlyPeerID) uniqueID;
-            remoteSocketAddress = new InetSocketAddress( grizzlyPeerID.getHost(), grizzlyPeerID.getTcpPort() );
-        } else {
-            throw new IllegalStateException( "peer ID must be GrizzlyPeerID type" );
+        if (peerID != null) {
+            final Serializable uniqueID = peerID.getUniqueID();
+            if( uniqueID instanceof GrizzlyPeerID ) {
+                final GrizzlyPeerID grizzlyPeerID = (GrizzlyPeerID) uniqueID;
+                remoteSocketAddress = new InetSocketAddress( grizzlyPeerID.getHost(), grizzlyPeerID.getTcpPort() );
+            } else {
+                throw new IllegalStateException( "peer ID must be GrizzlyPeerID type" );
+            }
         }
 
         final MemoryManager mm = ctx.getConnection().getTransport().getMemoryManager();

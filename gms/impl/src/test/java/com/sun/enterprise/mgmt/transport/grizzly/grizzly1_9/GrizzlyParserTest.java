@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,9 +40,6 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.ParserFilter;
-import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.GrizzlyMessageProtocolParser;
-import com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9.ControllerUtils;
 import com.sun.grizzly.Context;
 import com.sun.grizzly.Controller;
 import com.sun.grizzly.DefaultProtocolChain;
@@ -99,7 +96,7 @@ public class GrizzlyParserTest extends TestCase {
         super.tearDown();
     }
 
-    public void ttestSimpleMessage() throws IOException {
+    public void testSimpleMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -115,7 +112,7 @@ public class GrizzlyParserTest extends TestCase {
         assertEquals(1, result);
         }
 
-    public void ttestChunkedMessage() throws IOException {
+    public void testChunkedMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -151,7 +148,7 @@ public class GrizzlyParserTest extends TestCase {
         assertEquals(1, result);
         }
 
-    public void ttestOneAndHalfMessage() throws IOException {
+    public void testOneAndHalfMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -181,7 +178,7 @@ public class GrizzlyParserTest extends TestCase {
         assertEquals(1, result2);
         }
 
-    public void ttestBigMessage() throws IOException {
+    public void testBigMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -199,7 +196,7 @@ public class GrizzlyParserTest extends TestCase {
         assertEquals(1, result);
         }
 
-    public void ttestOneAndHalfBigMessage() throws IOException {
+    public void testOneAndHalfBigMessage() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
@@ -229,7 +226,7 @@ public class GrizzlyParserTest extends TestCase {
         assertEquals(1, result2);
         }
 
-    public void ttestTinyRemainder() throws IOException {
+    public void testTinyRemainder() throws IOException {
         Socket s = new Socket("localhost", PORT);
         s.setSoTimeout(5000);
         OutputStream os = s.getOutputStream();
