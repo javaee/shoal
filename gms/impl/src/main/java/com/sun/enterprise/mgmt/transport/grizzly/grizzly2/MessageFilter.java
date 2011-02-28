@@ -39,14 +39,9 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
-import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.MessageImpl;
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import java.io.IOException;
-import java.io.Serializable;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.Grizzly;

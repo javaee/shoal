@@ -136,12 +136,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
             }
         }
 
-        // moved setting of localPeerId.
-
-//        InetAddress localInetAddress = null;
-//        if (host != null) {
-//            localInetAddress = InetAddress.getByName(host);
-//        }
         final TCPNIOTransportBuilder tcpTransportBuilder =
                 TCPNIOTransportBuilder.newInstance();
 
@@ -160,48 +154,11 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
         final TCPNIOTransport transport = tcpTransportBuilder.build();
 
-//        final CacheableConnectorHandlerPool cacheableHandlerPool =
-//                new CacheableConnectorHandlerPool( controller, highWaterMark,
-//                numberToReclaim, maxParallelSendConnections,
-//                new ConnectionFinder<ConnectorHandler>() {
-//
-//            @Override
-//            public ConnectorHandler find(ContactInfo<ConnectorHandler> cinfo,
-//                    Collection<ConnectorHandler> idleConnections,
-//                    Collection<ConnectorHandler> busyConnections)
-//                    throws IOException {
-//
-//                if (!idleConnections.isEmpty()) {
-//                    return null;
-//                }
-//
-//                return cinfo.createConnection();
-//            }
-//        });
-//
-//        controller.setConnectorHandlerPool( cacheableHandlerPool );
-
         final TCPNIOServerConnection serverConnection = transport.bind(
                 host != null ? host : "0.0.0.0",
                 new PortRange(tcpStartPort, tcpEndPort),
                 SERVER_CONNECTION_BACKLOG);
         tcpPort = ((InetSocketAddress) serverConnection.getLocalAddress()).getPort();
-//        tcpSelectorHandler = new ReusableTCPSelectorHandler();
-//        tcpSelectorHandler.setPortRange(new PortRange());
-//        tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
-//        tcpSelectorHandler.setInet( localInetAddress );
-//
-//        controller.addSelectorHandler( tcpSelectorHandler );
-
-//        MulticastSelectorHandler multicastSelectorHandler = new MulticastSelectorHandler();
-//        multicastSelectorHandler.setPort( multicastPort );
-//        multicastSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
-//        if( GrizzlyUtil.isSupportNIOMulticast() ) {
-//            multicastSelectorHandler.setMulticastAddress( multicastAddress );
-//            multicastSelectorHandler.setNetworkInterface( networkInterfaceName );
-//            multicastSelectorHandler.setInet( localInetAddress );
-//            controller.addSelectorHandler( multicastSelectorHandler );
-//        }
 
         final FilterChainBuilder filterChainBuilder = FilterChainBuilder.stateless();
         filterChainBuilder.add(new TransportFilter());
@@ -210,22 +167,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
         transport.setProcessor(filterChainBuilder.build());
         
-//        ProtocolChainInstanceHandler pciHandler = new DefaultProtocolChainInstanceHandler() {
-//
-//            @Override
-//            public ProtocolChain poll() {
-//                ProtocolChain protocolChain = protocolChains.poll();
-//                if (protocolChain == null) {
-//                    protocolChain = new DefaultProtocolChain();
-//                    protocolChain.addFilter(GrizzlyMessageProtocolParser.createParserProtocolFilter(null));
-//                    protocolChain.addFilter(new GrizzlyMessageDispatcherFilter(GrizzlyNetworkManager.this));
-//                }
-//                return protocolChain;
-//            }
-//        };
-//        controller.setProtocolChainInstanceHandler(pciHandler);
-//        SelectorFactory.setMaxSelectors(writeSelectorPoolSize);
-
         tcpNioTransport = transport;
 
         final FilterChain senderFilterChainBuilder = FilterChainBuilder.stateless()
@@ -243,9 +184,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
                 highWaterMark, maxParallelSendConnections, numberToReclaim);
     }
 
-//    private final CountDownLatch controllerGate = new CountDownLatch( 1 );
-//    private boolean controllerGateIsReady = false;
-//    private Throwable controllerGateStartupException = null;
     @Override
     @SuppressWarnings("unchecked")
     public synchronized void start() throws IOException {
@@ -254,65 +192,16 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         }
         super.start();
 
-//        ControllerStateListener controllerStateListener = new ControllerStateListener() {
-//
-//            public void onStarted() {
-//            }
-//
-//            public void onReady() {
-//                if( LOG.isLoggable( Level.FINER ) )
-//                    LOG.log( Level.FINER, "GrizzlyNetworkManager is ready" );
-//                controllerGateIsReady = true;
-//                controllerGate.countDown();
-//            }
-//
-//            public void onStopped() {
-//                controllerGate.countDown();
-//            }
-//
-//            @Override
-//            public void onException(Throwable e) {
-//                if (controllerGate.getCount() > 0) {
-//                    getLogger().log(Level.SEVERE, "Exception during " +
-//                            "starting the controller", e);
-//                    controllerGate.countDown();
-//                    controllerGateStartupException = e;
-//                } else {
-//                    getLogger().log(Level.SEVERE, "Exception during " +
-//                            "controller processing", e);
-//                }
-//            }
-//        };
-//        controller.addStateListener( controllerStateListener );
-//        new Thread( controller ).start();
-//        try {
-//            controllerGate.await( startTimeout, TimeUnit.MILLISECONDS );
-//        } catch( InterruptedException e ) {
-//            e.printStackTrace();
-//        }
+
         final long transportStartTime = System.currentTimeMillis();
 
         tcpNioTransport.start();
 
         final long durationInMillis = System.currentTimeMillis() - transportStartTime;
 
-        // do not continue if controller did not start.
-//        if (!controller.isStarted() || !controllerGateIsReady) {
-//            if (controllerGateStartupException != null) {
-//                throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms",
-//                        controllerGateStartupException);
-//            } else {
-//                throw new IllegalStateException("Grizzly Controller was not started and ready after " + durationInMillis + " ms");
-//
-//            }
-//        } else if (controllerGateIsReady) {
-//            // todo: make this FINE in future.
         getLogger().log(Level.CONFIG,
                 "Grizzly controller listening on {0}:{1}. Transport started in {2} ms",
                 new Object[]{host, tcpPort, durationInMillis});
-//        }
-
-//        tcpPort = tcpSelectorHandler.getPort();
 
         if (localPeerID == null) {
             String uniqueHost = host;
@@ -340,13 +229,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
         tcpSender = new GrizzlyTCPMessageSender(tcpNioTransport,
                 tcpNioConnectionCache, localPeerID, sendWriteTimeoutMillis);
-//        GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper(controller,
-//                sendWriteTimeout,
-//                host,
-//                multicastPort,
-//                multicastAddress,
-//                localPeerID);
-//        udpSender = udpConnectorWrapper;
         udpSender = null;
         
         List<PeerID> virtualPeerIdList = getVirtualPeerIDList(virtualUriList);
@@ -544,38 +426,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         if (instance != null) {
             instance.close();
         }
-//        for (Map.Entry<SelectionKey, String> entry : selectionKeyMap.entrySet()) {
-//            if (entry.getValue().equals(instanceName)) {
-//                if (getLogger().isLoggable(Level.FINE)) {
-//                    getLogger().log(Level.FINE, "remove selection key for instance name: " + entry.getValue() + " selectionKey:" + entry.getKey());
-//                }
-//                tcpSelectorHandler.getSelectionKeyHandler().cancel(entry.getKey());
-//                selectionKeyMap.remove(entry.getKey());
-//            }
-//        }
     }
-
-//    public void removeRemotePeer(SelectionKey selectionKey) {
-//        if (selectionKey == null) {
-//            return;
-//        }
-//        selectionKeyMap.remove(selectionKey);
-//
-        // Bug Fix. DO NOT REMOVE member name to peerid mapping when selection key is being removed.
-        // THIS HAPPENS TOO FREQUENTLY.  Only remove this mapping when member fails or planned shutdown.\
-        // This method was getting called by GrizzlyCacheableSelectionKeyHandler.cancel(SelectionKey).
-
-        // use following line instead of remove call above if uncommenting the rest
-//        String instanceName = selectionKeyMap.remove( selectionKey );
-//      if( instanceName != null ) {
-//          Level level = Level.FINEST;
-//          if (LOG.isLoggable(level)) {
-//              LOG.log(level, "removeRemotePeer selectionKey=" + selectionKey + " instanceName=" + instanceName,
-//                      new Exception("stack trace"));
-//          }
-//          peerIDMap.remove( instanceName );
-//      }
-//    }
 
     @Override
     protected Logger getGrizzlyLogger() {
