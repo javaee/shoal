@@ -181,17 +181,11 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //
 //        controller.setConnectorHandlerPool( cacheableHandlerPool );
 
-        try {
         final TCPNIOServerConnection serverConnection = transport.bind(
                 host != null ? host : "0.0.0.0",
                 new PortRange(tcpStartPort, tcpEndPort),
                 SERVER_CONNECTION_BACKLOG);
         tcpPort = ((InetSocketAddress) serverConnection.getLocalAddress()).getPort();
-
-        System.out.println("TCPPORT = " + tcpPort);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 //        tcpSelectorHandler = new ReusableTCPSelectorHandler();
 //        tcpSelectorHandler.setPortRange(new PortRange());
 //        tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
