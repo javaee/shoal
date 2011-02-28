@@ -129,7 +129,7 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
 
             try {
                 final Future<WriteResult> syncWriteFuture =
-                        connection.write(target, message, null);
+                        connection.write(remoteAddress, message, null);
                 syncWriteFuture.get(writeTimeoutMillis, TimeUnit.MILLISECONDS);
                 
                 connectionCache.offer(connection);
@@ -140,6 +140,7 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
                 
                 throw mioe;
             } catch (Exception e) {
+                e.printStackTrace();
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.log(Level.FINE, "exception during the flushChannel call. Retrying with another connection #" + attemptNo, e);
                 }

@@ -160,19 +160,6 @@ public class MessageFilter extends BaseFilter {
     @Override
     public NextAction handleWrite(final FilterChainContext ctx) throws IOException {
         final Message message = ctx.getMessage();
-        final PeerID peerID = (PeerID) ctx.getAddress();
-
-        SocketAddress remoteSocketAddress = null;
-
-        if (peerID != null) {
-            final Serializable uniqueID = peerID.getUniqueID();
-            if( uniqueID instanceof GrizzlyPeerID ) {
-                final GrizzlyPeerID grizzlyPeerID = (GrizzlyPeerID) uniqueID;
-                remoteSocketAddress = new InetSocketAddress( grizzlyPeerID.getHost(), grizzlyPeerID.getTcpPort() );
-            } else {
-                throw new IllegalStateException( "peer ID must be GrizzlyPeerID type" );
-            }
-        }
 
         final MemoryManager mm = ctx.getConnection().getTransport().getMemoryManager();
 
@@ -181,7 +168,6 @@ public class MessageFilter extends BaseFilter {
                 Grizzly2ExpandableBufferWriter.createFactory(mm));
 
         ctx.setMessage(buffer.underlying());
-        ctx.setAddress(remoteSocketAddress);
 
         return ctx.getInvokeAction();
     }
