@@ -39,6 +39,7 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
+import org.glassfish.grizzly.PortRange;
 import org.glassfish.grizzly.filterchain.FilterChain;
 import java.util.Iterator;
 import org.glassfish.grizzly.Connection;
@@ -84,6 +85,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.glassfish.grizzly.filterchain.BaseFilter;
 import org.glassfish.grizzly.nio.transport.TCPNIOConnectorHandler;
+import org.glassfish.grizzly.nio.transport.TCPNIOServerConnection;
 
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
@@ -92,6 +94,7 @@ import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*
  */
 public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
     public static final String MESSAGE_CONNECTION_TAG = "connection";
+    private static final int SERVER_CONNECTION_BACKLOG = 4096;
 
     private int maxPoolSize;
     private int corePoolSize;
@@ -135,10 +138,10 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
         // moved setting of localPeerId.
 
-        InetAddress localInetAddress = null;
-        if (host != null) {
-            localInetAddress = InetAddress.getByName(host);
-        }
+//        InetAddress localInetAddress = null;
+//        if (host != null) {
+//            localInetAddress = InetAddress.getByName(host);
+//        }
         final TCPNIOTransportBuilder tcpTransportBuilder =
                 TCPNIOTransportBuilder.newInstance();
 
@@ -178,8 +181,17 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 //
 //        controller.setConnectorHandlerPool( cacheableHandlerPool );
 
-        tcpPort = bind(transport, localInetAddress, tcpStartPort, tcpEndPort);
+        try {
+        final TCPNIOServerConnection serverConnection = transport.bind(
+                host != null ? host : "0.0.0.0",
+                new PortRange(tcpStartPort, tcpEndPort),
+                SERVER_CONNECTION_BACKLOG);
+        tcpPort = ((InetSocketAddress) serverConnection.getLocalAddress()).getPort();
 
+        System.out.println("TCPPORT = " + tcpPort);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 //        tcpSelectorHandler = new ReusableTCPSelectorHandler();
 //        tcpSelectorHandler.setPortRange(new PortRange());
 //        tcpSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
@@ -574,38 +586,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     @Override
     protected Logger getGrizzlyLogger() {
         return Grizzly.logger(GrizzlyNetworkManager.class);
-    }
-
-    private static int bind(final TCPNIOTransport transport,
-            final InetAddress inetAddress, final int tcpStartPort,
-            final int tcpEndPort) throws IOException {
-
-        IOException lastIOException = null;
-
-        final int delta = sgn(tcpEndPort - tcpStartPort);
-        int port = tcpStartPort - delta;
-
-        do {
-            port += delta;
-            try {
-                transport.bind(new InetSocketAddress(inetAddress, port));
-                return port;
-            } catch (IOException e) {
-                lastIOException = e;
-            }
-        } while (port != tcpEndPort);
-
-        throw lastIOException;
-    }
-
-    private static int sgn(int v) {
-        if (v > 0) {
-            return 1;
-        } else if (v < 0) {
-            return -1;
-        }
-
-        return 0;
     }
 
     private Instance obtainInstance(final String instance) {
