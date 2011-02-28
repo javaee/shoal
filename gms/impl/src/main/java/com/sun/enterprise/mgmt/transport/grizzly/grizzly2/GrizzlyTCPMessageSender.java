@@ -140,7 +140,6 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
                 
                 throw mioe;
             } catch (Exception e) {
-                e.printStackTrace();
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.log(Level.FINE, "exception during the flushChannel call. Retrying with another connection #" + attemptNo, e);
                 }
