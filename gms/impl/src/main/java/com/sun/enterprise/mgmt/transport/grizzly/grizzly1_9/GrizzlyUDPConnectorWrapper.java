@@ -40,7 +40,6 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import com.sun.enterprise.mgmt.transport.MessageIOException;
 import com.sun.grizzly.ConnectorHandler;
 import com.sun.grizzly.Controller;
@@ -49,6 +48,7 @@ import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.mgmt.transport.Message;
 import com.sun.enterprise.mgmt.transport.NetworkUtility;
 import com.sun.enterprise.mgmt.transport.AbstractMultiMessageSender;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -78,25 +78,7 @@ public class GrizzlyUDPConnectorWrapper extends AbstractMultiMessageSender {
                                        PeerID<GrizzlyPeerID> localPeerID ) {
         this.controller = controller;
         this.writeTimeout = writeTimeout;
-        if( host != null ) {
-            this.localSocketAddress = new InetSocketAddress( host, port );
-        } else {
-            InetAddress firstInetAddress = null;
-            // prefer IPv4
-            try {
-                firstInetAddress = NetworkUtility.getFirstInetAddress( false );
-            } catch( IOException e ) {
-            }
-            if( firstInetAddress == null )
-                try {
-                    firstInetAddress = NetworkUtility.getFirstInetAddress( true );
-                } catch( IOException e ) {
-                }
-            if( firstInetAddress != null )
-                this.localSocketAddress = new InetSocketAddress( firstInetAddress, port );
-            else
-                this.localSocketAddress = null;
-        }
+        this.localSocketAddress = host == null ? new InetSocketAddress(port) : new InetSocketAddress( host, port );
         this.multicastSocketAddress = new InetSocketAddress( multicastAddress == null ? DEFAULT_MULTICAST_ADDRESS : multicastAddress, port );
         this.localPeerID = localPeerID;
     }

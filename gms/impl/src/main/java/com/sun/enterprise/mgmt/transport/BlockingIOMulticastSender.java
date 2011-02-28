@@ -105,22 +105,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                                       Executor executor,
                                       int multicastTimeToLive,
                                       NetworkManager networkManager ) throws IOException {
-        if( host != null ) {
-            this.localSocketAddress = new InetSocketAddress( host, multicastPort );
-        } else {
-            InetAddress firstInetAddress = null;
-            InetAddress multicastInetAddress = InetAddress.getByName( multicastAddress );
-            // select appropriate IP version type
-            if( multicastInetAddress instanceof Inet6Address ) {
-                firstInetAddress = NetworkUtility.getFirstInetAddress( true );
-            } else {
-                firstInetAddress = NetworkUtility.getFirstInetAddress( false );
-            }
-            if( firstInetAddress != null )
-                this.localSocketAddress = new InetSocketAddress( firstInetAddress, multicastPort );
-            else
-                this.localSocketAddress = null;
-        }
+        this.localSocketAddress = host == null ? null : new InetSocketAddress( host, multicastPort );
         this.multicastPort = multicastPort;
         if( multicastAddress == null )
             multicastAddress = DEFAULT_MULTICAST_ADDRESS;
@@ -128,11 +113,10 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         this.multicastSocketAddress = new InetSocketAddress( multicastAddress, multicastPort );
         if( networkInterfaceName != null ) {
             NetworkInterface anInterface = NetworkInterface.getByName( networkInterfaceName );
-            if( NetworkUtility.supportsMulticast( anInterface ) )
+            if( NetworkUtility.supportsMulticast( anInterface ) && anInterface.isUp()) {
                 this.anInterface = anInterface;
+            }
         }
-        if( this.anInterface == null )
-            this.anInterface = NetworkUtility.getFirstNetworkInterface();
         if( multicastPacketSize < DEFAULT_MULTICAST_PACKET_SIZE )
             this.multicastPacketSize = DEFAULT_MULTICAST_PACKET_SIZE;
         else
@@ -161,10 +145,17 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
             return;
         super.start();
         multicastSocket = new MulticastSocket( multicastPort );
-        if (anInterface != null) {
-            multicastSocket.setNetworkInterface(anInterface);
-        } else if (localSocketAddress != null) {
-            multicastSocket.setInterface(localSocketAddress.getAddress());
+
+        // fix for GLASSFISH-16103.  setNetworkInterface was not working on a IPv6-only system that had an non running
+        // network interface for etho.
+        if (anInterface != null && localSocketAddress != null) {
+            try {
+                multicastSocket.setInterface(localSocketAddress.getAddress());
+            } catch (Exception e) {
+                LOG.log(Level.WARNING, "mgmt.blockingiomulticast.setinterfacefailed",
+                                       new Object[] { localSocketAddress.getAddress() ,
+                                                      multicastSocket.getInterface()});
+            }
         }
 
         //enable loopback.
@@ -207,10 +198,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
                    " network interface: " + multicastSocket.getNetworkInterface() +
                    " multicast address:" + multicastAddress +
                    " timeToLive=" + multicastSocket.getTimeToLive());
-        if( anInterface != null )
-            multicastSocket.joinGroup( multicastSocketAddress, anInterface );
-        else
-            multicastSocket.joinGroup( multicastAddress );
+        multicastSocket.joinGroup( multicastAddress );
     }
 
     /**
@@ -224,10 +212,7 @@ public class BlockingIOMulticastSender extends AbstractMulticastMessageSender im
         super.stop();
         if( multicastSocket != null ) {
             try {
-                if( anInterface != null )
-                    multicastSocket.leaveGroup( multicastSocketAddress, anInterface );
-                else
-                    multicastSocket.leaveGroup( multicastAddress );
+                multicastSocket.leaveGroup( multicastAddress );
             } catch( IOException e ) {
             }
             multicastSocket.close();

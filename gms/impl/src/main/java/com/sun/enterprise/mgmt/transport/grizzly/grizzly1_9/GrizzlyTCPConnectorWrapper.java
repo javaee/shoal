@@ -40,13 +40,14 @@
 
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
-import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import com.sun.enterprise.mgmt.transport.*;
 import com.sun.grizzly.ConnectorHandler;
 import com.sun.grizzly.Controller;
 import com.sun.grizzly.IOEvent;
 import com.sun.grizzly.util.OutputWriter;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyUtil;
 import com.sun.grizzly.AbstractConnectorHandler;
 import com.sun.grizzly.CallbackHandler;
 import com.sun.grizzly.Context;
@@ -57,6 +58,7 @@ import java.io.Serializable;
 import java.net.SocketAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
+import java.util.Date;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -66,14 +68,11 @@ import java.util.logging.Level;
 public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
 
     private final static Logger LOG = GrizzlyNetworkManager.getLogger();
-
-    private Controller controller;
+    private final Controller controller;
     private final long writeTimeout; // ms
     private final InetSocketAddress localSocketAddress; // todo not used
 
-    public GrizzlyTCPConnectorWrapper(Controller controller, long writeTimeout,
-            String host, int port,
-            PeerID<GrizzlyPeerID> localPeerID ) {
+    public GrizzlyTCPConnectorWrapper( Controller controller, long writeTimeout, String host, int port, PeerID<GrizzlyPeerID> localPeerID ) {
         this.controller = controller;
         this.writeTimeout = writeTimeout;
         if( host != null )
@@ -94,7 +93,7 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
         } else {
             throw new IOException( "peer ID must be GrizzlyPeerID type" );
         }
-        
+
         return send(remoteSocketAddress, null, message, peerID);
         }
 
@@ -174,7 +173,7 @@ public class GrizzlyTCPConnectorWrapper extends AbstractMessageSender {
         public CloseControlCallbackHandler(ConnectorHandler connectorHandler) {
             this.connectorHandler = connectorHandler;
         }
-        
+
         @Override
         public void onConnect(IOEvent<Context> ioEvent) {
             SelectionKey key = ioEvent.attachment().getSelectionKey();
