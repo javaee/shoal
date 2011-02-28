@@ -48,7 +48,7 @@ package com.sun.enterprise.ee.cms.core;
  * @version $Revision$
  */
 public class GMSConstants {
-    public static final String GRIZZLY_GROUP_COMMUNICATION_PROVIDER="grizzly1_9";
+    public static final String GRIZZLY_GROUP_COMMUNICATION_PROVIDER="grizzly2";
     public static final String JXTA_GROUP_COMMUNICATION_PROVIDER="jxta";
     public static final String DEFAULT_GROUP_COMMUNICATION_PROVIDER=GRIZZLY_GROUP_COMMUNICATION_PROVIDER;
     public static final String GROUP_COMMUNICATION_PROVIDER =
