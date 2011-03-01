@@ -118,6 +118,7 @@ public class MessageFilter extends BaseFilter {
                         + " max-size=" + MessageImpl.getMaxMessageLength());
             }
 
+            parsingState.isHeaderParsed = true;
             parsingState.message = message;
             parsingState.messageLength = messageLength;
         }
