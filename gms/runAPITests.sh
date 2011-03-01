@@ -56,7 +56,7 @@ PROVIDER="grizzly"
 # same group
 #
 groupName="TestGroup_`uname -n`"
-if [ "${groupName}" == "" ]; then
+if [ "${groupName}" = "" ]; then
     groupName="TestGroup"
 fi
 
