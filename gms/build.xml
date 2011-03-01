@@ -81,6 +81,7 @@
         <pathelement location="${jxta.jar}"/>
         <pathelement location="${grizzly-framework.jar}"/>
         <pathelement location="${grizzly-utils.jar}"/>
+        <pathelement location="${grizzly2-framework.jar}"/>
     </path>
 
     <!--  <target name="getlastgrizzlyjars" -->
@@ -344,6 +345,7 @@
             <fileset file="${jxta.jar}"/>
             <fileset file="${grizzly-framework.jar}"/>
             <fileset file="${grizzly-utils.jar}"/>
+            <fileset file="${grizzly2-framework.jar}"/>
         </copy>
         <copy todir="${bundle.gms}">
             <fileset file="${license.dir}"/>
@@ -459,6 +461,7 @@
                 <pathelement path="${junit_classes_dir}"/>
                 <pathelement location="${grizzly-framework.jar}"/>
                 <pathelement location="${grizzly-utils.jar}"/>
+                <pathelement location="${grizzly2-framework.jar}"/>
             </classpath>
 
             <batchtest fork="yes" todir="${junit_reports}">
