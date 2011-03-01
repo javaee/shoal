@@ -137,7 +137,7 @@ public class MessageFilter extends BaseFilter {
                 parsingState.gmsBufferWrapper.wrap(buffer);
 
         parsingState.message.parseMessage(gmsBuffer,
-                gmsBuffer.position() + MessageImpl.HEADER_LENGTH,
+                pos + MessageImpl.HEADER_LENGTH,
                 parsingState.messageLength);
 
         ctx.setMessage(parsingState.message);
