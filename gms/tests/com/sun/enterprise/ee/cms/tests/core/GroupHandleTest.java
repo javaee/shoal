@@ -1771,11 +1771,16 @@ public class GroupHandleTest {
 
     public static void waitForDoneFile(String fileName) {
         File f = new File(fileName);
-        int count = 0;
+        int count = 1;
         while (!f.exists()) {
             sleep(1000);
-            if (count++ >= 10) {
-                gmsLogger.log(Level.SEVERE, "Waited 10 seconds for file:" + fileName + " to be created and it wasn't");
+            // every 10 seconds spit out a message
+            if (count%10 == 0) {
+                gmsLogger.log(Level.INFO, "Waited "+count+" seconds for file:" + fileName + " to be created and it wasn't");
+                break;
+            }
+            if (count++ >= 30) {
+                gmsLogger.log(Level.SEVERE, "Waited 30 seconds for file:" + fileName + " to be created and it wasn't");
                 break;
             }
         }
