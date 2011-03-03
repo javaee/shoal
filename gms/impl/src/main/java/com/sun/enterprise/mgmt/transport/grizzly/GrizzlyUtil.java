@@ -44,6 +44,7 @@ import java.lang.reflect.Method;
 import java.nio.channels.DatagramChannel;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.logging.Logger;
 
 /**
  * @author Bongjae Chang
@@ -52,7 +53,12 @@ public class GrizzlyUtil {
 
     private static final boolean IS_SUPPORT_NIO_MULTICAST = ( getNIOMulticastMethod() != null );
 
+    private static Logger logger = Logger.getLogger("org.glassfish.grizzly");
     private GrizzlyUtil() {
+    }
+
+    public static Logger getLogger() {
+        return logger;
     }
 
     public static boolean isSupportNIOMulticast() {

@@ -114,9 +114,9 @@ lib_home=$SHOALWORKSPACE/lib
 
 
 if [ "\${1}" == "master" ] ; then
-     java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${PROVIDER} -DLOG_LEVEL=\$6 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=\$4 -DTCPENDPORT=\$5 com.sun.enterprise.shoal.messagesenderreceivertest.BroadcastSendMsg \$1 \$2 \$3
+     java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${PROVIDER} -DLOG_LEVEL=\$6 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly2-framework.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=\$4 -DTCPENDPORT=\$5 com.sun.enterprise.shoal.messagesenderreceivertest.BroadcastSendMsg \$1 \$2 \$3
 else
-     java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${PROVIDER} -DLOG_LEVEL=\$9 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=\$7 -DTCPENDPORT=\$8 com.sun.enterprise.shoal.messagesenderreceivertest.BroadcastSendMsg \$1 \$2 \$3 \$4 \$5 \$6
+     java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${PROVIDER} -DLOG_LEVEL=\$9 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/bcprov-jdk14.jar:\${lib_home}/grizzly2-framework.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=\$7 -DTCPENDPORT=\$8 com.sun.enterprise.shoal.messagesenderreceivertest.BroadcastSendMsg \$1 \$2 \$3 \$4 \$5 \$6
 fi
 
 

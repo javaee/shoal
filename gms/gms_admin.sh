@@ -188,7 +188,7 @@ done
 
 PUBLISH_HOME=${GMS_WORKSPACE_HOME}/dist
 LIB_HOME=${GMS_WORKSPACE_HOME}/lib
-GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly-framework.jar:${LIB_HOME}/grizzly-utils.jar
+GRIZZLY_JARS=${PUBLISH_HOME}/shoal-gms-tests.jar:${PUBLISH_HOME}/shoal-gms.jar:${LIB_HOME}/grizzly2-framework.jar:${LIB_HOME}/grizzly-utils.jar
 JXTA_JARS=${LIB_HOME}/jxta.jar:${GRIZZLY_JARS}
 JARS=${GRIZZLY_JARS}
 

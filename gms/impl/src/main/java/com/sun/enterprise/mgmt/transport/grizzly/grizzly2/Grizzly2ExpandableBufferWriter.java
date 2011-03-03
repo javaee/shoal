@@ -99,6 +99,7 @@ public final class Grizzly2ExpandableBufferWriter extends ExpandableBufferWriter
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void ensureCapacity(final int delta) {
         if (delta <= 0 || grizzlyBuffer.remaining() >= delta) return;
 

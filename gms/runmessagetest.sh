@@ -51,4 +51,4 @@ The required parameters are :
 USAGE
    exit 0
 }
-java -Dcom.sun.management.jmxremote -DLOG_LEVEL=$4 -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/bcprov-jdk14.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=$5 -DTCPENDPORT=$6 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.multithreadmessagesendertest.MultiThreadMessageSender $1 $2 $3 \;
+java -Dcom.sun.management.jmxremote -DLOG_LEVEL=$4 -cp ${publish_home}/shoal-gms-tests.jar:${publish_home}/shoal-gms.jar:${lib_home}/grizzly2-framework.jar:${lib_home}/grizzly-framework.jar:${lib_home}/grizzly-utils.jar -DTCPSTARTPORT=$5 -DTCPENDPORT=$6 -DSHOAL_GROUP_COMMUNICATION_PROVIDER=grizzly com.sun.enterprise.shoal.multithreadmessagesendertest.MultiThreadMessageSender $1 $2 $3 \;
