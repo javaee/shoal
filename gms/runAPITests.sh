@@ -66,7 +66,7 @@ fi
 #-------------------------
 TMPDIR=$SHOALWORKSPACE/tmp
 if [ ! -d ${TMPDIR} ]; then
-    mkdir ${TMPDIR}
+    mkdir -p ${TMPDIR}
 fi
 rm -rf ${TMPDIR}/grouphandle.sh
 rm -rf ${TMPDIR}/groupmanagementservice.sh
@@ -109,11 +109,17 @@ ENDSCRIPT
 ############################################
 # This is where test execution really begins
 ############################################
-
-chmod 755 ${TMPDIR}/grouphandle.sh
-
 ECHO=`which echo`
 
+
+$ECHO  "Killing any previous outstanding test processes"
+PIDS=`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "${groupName}" | grep -v grep | awk '{printf ("%d ", $2)}'`
+if [ ! -z "${PIDS}" ]; then
+   $ECHO  "The following pids were found [${PIDS}], killing them"
+   kill -9 $PIDS
+fi
+
+chmod 755 ${TMPDIR}/grouphandle.sh
 
 LOGDIR=$SHOALWORKSPACE/LOGS/apitests
 logLevel=INFO
@@ -158,5 +164,12 @@ $ECHO  "Number of tests executed are the combination of the following:"
 $ECHO  "==============="
 grep -a "Testing Complete for" ${LOGDIR}/*.log
 $ECHO
+$ECHO  "Killing any outstanding test processes"
+PIDS=`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "${groupName}" | grep -v grep | awk '{printf ("%d ", $2)}'`
+if [ ! -z "${PIDS}" ]; then
+   $ECHO  "The following pids were found [${PIDS}], killing them"  
+   kill -9 $PIDS
+fi
+
 
 $ECHO "DONE Testing "
