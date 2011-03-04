@@ -81,13 +81,15 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
                                       final List<String> allCurrentMembers,
                                       final String groupName,
                                       final long startTime,
-                                      final GMSConstants.startupType startupKind) {
+                                      final GMSConstants.startupType startupKind,
+                                      final RejoinSubevent rs) {
         this.memberToken=memberToken;
         this.currentCoreMembers=currentCoreMembers;
         this.allCurrentMembers=allCurrentMembers;
         this.groupName = groupName;
         this.startTime=startTime;
         this.startupKind = startupKind;
+        this.rs = rs;
 
         if (logger.isLoggable(Level.FINE)) {
             logger.fine("JoinAndReadyNotificationSignalImpl ctor: member=" + memberToken + " group=" + groupName +  " startupKind=" + startupKind.toString());
@@ -96,7 +98,7 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
 
     JoinedAndReadyNotificationSignalImpl ( final JoinedAndReadyNotificationSignal signal ) {
         this(signal.getMemberToken(), signal.getCurrentCoreMembers(), signal.getAllCurrentMembers(),
-            signal.getGroupName(), signal.getStartTime(), signal.getEventSubType());
+            signal.getGroupName(), signal.getStartTime(), signal.getEventSubType(), signal.getRejoinSubevent());
         currentView = signal.getCurrentView();
         previousView = signal.getPreviousView();
     }
@@ -194,10 +196,6 @@ public class JoinedAndReadyNotificationSignalImpl implements JoinedAndReadyNotif
     @Override
     public RejoinSubevent getRejoinSubevent() {
         return rs;
-    }
-
-    public void setRs(RejoinSubevent rs) {
-        this.rs = rs;
     }
 
     @Override

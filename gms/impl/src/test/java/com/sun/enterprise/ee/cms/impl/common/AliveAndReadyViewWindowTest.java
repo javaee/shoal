@@ -70,7 +70,8 @@ public class AliveAndReadyViewWindowTest extends TestCase {
                                                                                   String groupName,
                                                                                   boolean isCore,
                                                                                   long startTime,
-                                                                                  GMSConstants.startupType startupKind)
+                                                                                  GMSConstants.startupType startupKind,
+                                                                                  RejoinSubevent rse)
     {
         currentMembers.add(memberName);
         if (isCore) {
@@ -78,7 +79,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         }
         JoinedAndReadyNotificationSignalImpl result =
                 new JoinedAndReadyNotificationSignalImpl(memberName, currentCoreMembers, currentMembers,
-                                                         groupName, startTime, startupKind); 
+                                                         groupName, startTime, startupKind, rse);
         return result;
     }
 
@@ -130,12 +131,12 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(DAS, GROUP_NAME,  IS_SPECTATOR,
-                                                                 START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
+                                                                 START_TIME, GMSConstants.startupType.INSTANCE_STARTUP, null);
         aliveAndReadyViewWindow.processNotification(jrSignal);
 
         for (String memberName: coreClusterMembers) {
             jrSignal = this.createJoinAndReadyNotificationSignal(memberName, GROUP_NAME,  IS_CORE,
-                                                                 START_TIME, GMSConstants.startupType.GROUP_STARTUP);
+                                                                 START_TIME, GMSConstants.startupType.GROUP_STARTUP, null);
             aliveAndReadyViewWindow.processNotification(jrSignal);
         }
         if (coreClusterMembers.size() > 0) {
@@ -164,12 +165,12 @@ public class AliveAndReadyViewWindowTest extends TestCase {
 
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(DAS, GROUP_NAME,  IS_SPECTATOR,
-                                                                 START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
+                                                                 START_TIME, GMSConstants.startupType.INSTANCE_STARTUP, null);
         aliveAndReadyViewWindow.processNotification(jrSignal);
 
         for (String memberName: coreClusterMembers) {
             jrSignal = this.createJoinAndReadyNotificationSignal(memberName, GROUP_NAME,  IS_CORE,
-                                                                 START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
+                                                                 START_TIME, GMSConstants.startupType.INSTANCE_STARTUP, null);
             aliveAndReadyViewWindow.processNotification(jrSignal);
         }
         if (coreClusterMembers.size() > 0) {
@@ -261,7 +262,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         // simulate restart of target instance
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(targetedInstance, GROUP_NAME,  IS_CORE,
-                                                             START_TIME, GMSConstants.startupType.INSTANCE_STARTUP);
+                                                             START_TIME, GMSConstants.startupType.INSTANCE_STARTUP, null);
         aliveAndReadyViewWindow.processNotification(jrSignal);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
@@ -325,7 +326,7 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         // simulate restart of killed instance
         JoinedAndReadyNotificationSignal jrSignal;
         jrSignal = this.createJoinAndReadyNotificationSignal(killInstance, GROUP_NAME,  IS_CORE,
-                                                             START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP);
+                                                             START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP, null);
         aliveAndReadyViewWindow.processNotification(jrSignal);
         assertTrue(expectedMembers.equals(aliveAndReadyViewWindow.getPreviousView().getMembers()));
         assertTrue(aliveAndReadyViewWindow.getPreviousView().getSignal().equals(jrSignal));
@@ -387,10 +388,11 @@ public class AliveAndReadyViewWindowTest extends TestCase {
         // GMS fails to detect FAILURE due to instance being restarted quicker than heartbeat failure
         // detection can detect the failure.
         JoinedAndReadyNotificationSignalImpl jrSignal;
-        jrSignal = (JoinedAndReadyNotificationSignalImpl)this.createJoinAndReadyNotificationSignal(killInstance, GROUP_NAME,  IS_CORE,
-                                                             START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP);
         RejoinSubevent rjse = new RejoinSubeventImpl(System.currentTimeMillis() - 4000);
-        jrSignal.setRs(rjse);
+        jrSignal = (JoinedAndReadyNotificationSignalImpl)this.createJoinAndReadyNotificationSignal(killInstance, GROUP_NAME,  IS_CORE,
+                                                             START_TIME + 1, GMSConstants.startupType.INSTANCE_STARTUP, rjse);
+        JoinedAndReadyNotificationSignal copyCtor = new JoinedAndReadyNotificationSignalImpl(jrSignal);
+        assertTrue(copyCtor.getRejoinSubevent().equals(rjse));
         aliveAndReadyViewWindow.processNotification(jrSignal);
 
         // assert that previous and current view are same when a JoinedAndReady with REJOIN subevent occurs.

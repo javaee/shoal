@@ -38,7 +38,6 @@
 # only if the new code is made subject to such option by the copyright
 # holder.
 #
-
 #-------------------------
 #
 # REVIEW THESE ENTRIES
@@ -56,7 +55,7 @@ PROVIDER="grizzly"
 # same group
 #
 groupName="TestGroup_`uname -n`"
-if [ "${groupName}" == "" ]; then
+if [ "${groupName}" = "" ]; then
     groupName="TestGroup"
 fi
 
@@ -66,7 +65,7 @@ fi
 #-------------------------
 TMPDIR=$SHOALWORKSPACE/tmp
 if [ ! -d ${TMPDIR} ]; then
-    mkdir ${TMPDIR}
+    mkdir -p ${TMPDIR}
 fi
 rm -rf ${TMPDIR}/grouphandle.sh
 rm -rf ${TMPDIR}/groupmanagementservice.sh
@@ -94,26 +93,61 @@ lib_home=$SHOALWORKSPACE/lib
 \$ECHO "Arg6=\${6}"
 \$ECHO "Arg7=\${7}"
 \$ECHO "Arg8=\${8}"
-
-
 \$ECHO "Starting \${1}"
 
-if [ "\${1}" == "master" ] ; then
+if [ "\${1}" = "master" ] ; then
     java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${PROVIDER} -DTCPSTARTPORT=\$5 -DTCPENDPORT=\$6 -DLOG_LEVEL=\$7 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/grizzly2-framework.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar:\${lib_home}/jxta.jar com.sun.enterprise.ee.cms.tests.core.GroupHandleTest \$1 \$2 \$3 \$4
 else
     java -Dcom.sun.management.jmxremote -DSHOAL_GROUP_COMMUNICATION_PROVIDER=${PROVIDER} -DTCPSTARTPORT=\$4 -DTCPENDPORT=\$5 -DLOG_LEVEL=\$6 -cp \${publish_home}/shoal-gms-tests.jar:\${publish_home}/shoal-gms.jar:\${lib_home}/grizzly2-framework.jar:\${lib_home}/grizzly-framework.jar:\${lib_home}/grizzly-utils.jar:\${lib_home}/jxta.jar com.sun.enterprise.ee.cms.tests.core.GroupHandleTest \$1 \$2 \$3
 fi
 ENDSCRIPT
 
+cat << ENDSCRIPT > ${TMPDIR}/killoutstandingtests.sh
+#!/bin/sh +x
+
+ECHO=\`which echo\`
+#==================================================
+# HERE IS WHERE THE TOTAL TESTTIME CAN BE ADJUSTED
+#==================================================
+\$ECHO "Waiting 5 minutes for test to complete then force a kill of the test processes"
+sleep 300
+\$ECHO  "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+\$ECHO  "SEVERE:Timeout occurred, killing any outstanding test processes"
+\$ECHO  "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+PIDS=\`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "\${groupName}" | grep -v grep | awk '{printf ("%d ", \$2)}'\`
+if [ ! -z "\${PIDS}" ]; then
+   \$ECHO  "The following pids were found [\${PIDS}], killing them"
+   kill -9 \$PIDS
+fi
+
+ENDSCRIPT
 
 ############################################
 # This is where test execution really begins
 ############################################
 
-chmod 755 ${TMPDIR}/grouphandle.sh
-
 ECHO=`which echo`
+$ECHO  "=========================================================================="
+$ECHO "This test requires a minimum of 5 minutes of runtime since there is a"
+$ECHO "default timeout of 5 minutes to ensure that the test completes and all"
+$ECHO "test processes are terminated. If the amount of testing time is determined"
+$ECHO "to be less than that, the time can be adjusted."
+$ECHO  "=========================================================================="
+$ECHO  "Killing any previous outstanding test processes"
+PIDS=`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "${groupName}" | grep -v grep | awk '{printf ("%d ", $2)}'`
+if [ ! -z "${PIDS}" ]; then
+   $ECHO  "The following pids were found [${PIDS}], killing them"
+   kill -9 $PIDS
+fi
+PIDS1=`ps -ef | grep killoutstandingtests.sh | grep -v grep | awk '{printf ("%d ", $2)}' `
+if [ ! -z "${PIDS1}" ]; then
+   # get the sleep process and the killoutstandingtests.sh process
+   PIDS=`ps -ef | grep ${PIDS1} | awk  '{printf ("%d ", $2)}' `
+   $ECHO  "The following killoutstandingtests pids were also found [${PIDS}], killing them"
+   kill -9 $PIDS
+fi
 
+chmod 755 ${TMPDIR}/*.sh
 
 LOGDIR=$SHOALWORKSPACE/LOGS/apitests
 logLevel=INFO
@@ -121,13 +155,8 @@ logLevel=INFO
 $ECHO "Log Directory=${LOGDIR}"
 $ECHO "TMP Directory=${TMPDIR}"
 
-if [ ! -d ${TMPDIR} ] ; then
-    mkdir ${TMPDIR}
-else
-    rm -rf ${TMPDIR}/script*
-fi
 if [ ! -d ${LOGDIR} ] ; then
-    mkdir ${LOGDIR}
+    mkdir -p ${LOGDIR}
 else
     rm -rf ${LOGDIR}/*.log  ${LOGDIR}/*.out ${LOGDIR}/*.done
 fi
@@ -136,6 +165,9 @@ fi
 $ECHO "Start Testing for GroupHandler"
 numInstances="3"
 $ECHO "Number of Instances=${numInstances}"
+
+$ECHO "Starting killoutstandingtests.sh process"
+${TMPDIR}/killoutstandingtests.sh &
 
 $ECHO "Starting SPECTOR/MASTER"
 ${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_master.log &
@@ -158,5 +190,18 @@ $ECHO  "Number of tests executed are the combination of the following:"
 $ECHO  "==============="
 grep -a "Testing Complete for" ${LOGDIR}/*.log
 $ECHO
+$ECHO  "Killing any outstanding test processes"
+PIDS=`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "${groupName}" | grep -v grep | awk '{printf ("%d ", $2)}'`
+if [ ! -z "${PIDS}" ]; then
+   $ECHO  "The following pids were found [${PIDS}], killing them"  
+   kill -9 $PIDS
+fi
+PIDS1=`ps -ef | grep killoutstandingtests.sh | grep -v grep | awk '{printf ("%d ", $2)}' `
+if [ ! -z "${PIDS1}" ]; then
+   # get the sleep process and the killoutstandingtests.sh process
+   PIDS=`ps -ef | grep ${PIDS1} | awk  '{printf ("%d ", $2)}' `
+   $ECHO  "The following killoutstandingtests pids were also found [${PIDS}], killing them"
+   kill -9 $PIDS
+fi
 
 $ECHO "DONE Testing "

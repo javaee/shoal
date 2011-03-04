@@ -77,7 +77,8 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
                                       final List<String> allCurrentMembers, 
                                       final String groupName,
                                       final long startTime,
-                                      final GMSConstants.startupType startupKind) {
+                                      final GMSConstants.startupType startupKind,
+                                      final RejoinSubevent rs) {
         this.memberToken=memberToken;
         this.currentCoreMembers=currentCoreMembers;
         this.allCurrentMembers=allCurrentMembers;
@@ -85,6 +86,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
         this.startTime=startTime;
         ctx = GMSContextFactory.getGMSContext( groupName );
         this.startupKind = startupKind;
+        this.rs = rs;
         if (logger.isLoggable(Level.FINE)) {
             logger.fine("JoinNotificationSignalImpl ctor: member=" + memberToken + " group=" + groupName +  " startupKind=" + startupKind.toString());
         }
@@ -92,7 +94,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
 
     JoinNotificationSignalImpl ( final JoinNotificationSignal signal ) {
         this(signal.getMemberToken(), signal.getCurrentCoreMembers(), signal.getAllCurrentMembers(),
-              signal.getGroupName(), signal.getStartTime(), signal.getEventSubType());
+              signal.getGroupName(), signal.getStartTime(), signal.getEventSubType(), signal.getRejoinSubevent());
     }
 
     /**

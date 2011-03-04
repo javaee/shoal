@@ -622,10 +622,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             getAllCurrentMembers(),
             groupName,
             startTime,
-            startupState);
-        if (rse != null) {
-            jarSignal.setRs(rse);
-        }
+            startupState,
+            rse);
         signals.add(jarSignal);
     }
 
@@ -638,7 +636,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             logger.log(Level.FINE, "addJoinNotificationSignal member:" + token + " RejoinSubevent:" + rse);
         }
         if (rse != null) {
-            rejoinTxt =  gmsRb.getString("viewwindow.rejoining") + rse.toString();
+            rejoinTxt =  MessageFormat.format(gmsRb.getString("viewwindow.rejoining"), rse.toString());
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine(String.format(
                     "addJoinNotificationSignal setting rejoin subevent for token '%s'",
@@ -656,10 +654,8 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             getAllCurrentMembers(),
             groupName,
             startTime,
-            startupState);
-        if (rse != null) {
-            jnSignal.setRs(rse);
-        }
+            startupState,
+            rse);
         signals.add(jnSignal);
     }
 

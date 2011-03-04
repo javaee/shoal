@@ -42,16 +42,22 @@ package com.sun.enterprise.gms.tools;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.StringTokenizer;
 import java.util.UUID;
 
 /**
- * A work in progress.
+ * Collects user parameters and starts/stops the sender
+ * and receiver threads. This can be run directly with
+ * the main() method or can be wrapped in another tool
+ * using the run() method.
  */
 public class MulticastTester {
 
     static final StringManager sm = StringManager.getInstance();
 
     static final String DASH = "--";
+
+    static final String SEP = "|";
 
     // these are public so they can be used in external programs
     public static final String HELP_OPTION = DASH + sm.get("help.option");
@@ -96,7 +102,8 @@ public class MulticastTester {
 
         try {
             InetAddress localHost = InetAddress.getLocalHost();
-            dataString = localHost.getHostName() + "|" +
+            dataString = mcAddress + SEP +
+                localHost.getHostName() + SEP +
                 UUID.randomUUID().toString();
         } catch (UnknownHostException uhe) {
             System.err.println(sm.get("whoops", uhe.getMessage()));
@@ -118,7 +125,6 @@ public class MulticastTester {
             receiver.done = true;
             sender.done = true;
 
-            log("joining receiver thread");
             receiver.interrupt();
             receiver.join(500);
             if (receiver.isAlive()) {
@@ -127,9 +133,7 @@ public class MulticastTester {
                 log("joined receiver thread");
             }
 
-            log("interrupting sender thread");
             sender.interrupt();
-            log("joining sender thread");
             sender.join(500);
             if (sender.isAlive()) {
                 log("could not join sender thread");
@@ -244,7 +248,7 @@ public class MulticastTester {
 
     private void log(String msg) {
         if (debug) {
-            System.err.println(msg);
+            System.err.println("MainThread: " + msg);
         }
     }
 
@@ -253,8 +257,15 @@ public class MulticastTester {
         System.exit(tester.run(args));
     }
 
-    // make the output a little more readable
+    /*
+     * Make the output a little more readable. The expected
+     * format is prefix|host|uuid. If a message received
+     * does not start with the prefix, it is ignored
+     * and this method isn't called.
+     */
     static String trimDataString(String s) {
-        return s.substring(0, s.indexOf("|")); 
+        StringTokenizer st = new StringTokenizer(s, SEP);
+        st.nextToken();
+        return st.nextToken();
     }
 }
