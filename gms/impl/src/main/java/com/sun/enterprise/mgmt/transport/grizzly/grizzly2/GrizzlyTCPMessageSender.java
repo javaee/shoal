@@ -140,10 +140,22 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
                 
                 throw mioe;
             } catch (Exception e) {
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.log(Level.FINE, "exception during the flushChannel call. Retrying with another connection #" + attemptNo, e);
+
+                // following exception is getting thrown java.util.concurrent.ExecutionException with MessageIOException
+                // as cause when calling synchWriteFuture.get. Unwrap the cause, check it and
+                // get this to fail immediately if cause is a MessageIOException.
+                Throwable cause = e.getCause();
+                if (cause instanceof MessageIOException) {
+                    try {
+                        connection.close();
+                    } catch (Throwable t) {}
+                    throw (MessageIOException)cause;
                 }
 
+                // TODO: Turn this back to FINE in future. Need to track these for the time being.
+                if (LOG.isLoggable(Level.INFO)) {
+                    LOG.log(Level.INFO, "exception writing message to connection. Retrying with another connection #" + attemptNo, e);
+                }
                 connection.close();
             }
 
