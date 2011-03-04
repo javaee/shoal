@@ -112,7 +112,7 @@ ECHO=\`which echo\`
 \$ECHO "Waiting 5 minutes for test to complete then force a kill of the test processes"
 sleep 300
 \$ECHO  "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-\$ECHO  "Timeout occurred, killing any outstanding test processes"
+\$ECHO  "SEVERE:Timeout occurred, killing any outstanding test processes"
 \$ECHO  "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 PIDS=\`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "\${groupName}" | grep -v grep | awk '{printf ("%d ", \$2)}'\`
 if [ ! -z "\${PIDS}" ]; then
