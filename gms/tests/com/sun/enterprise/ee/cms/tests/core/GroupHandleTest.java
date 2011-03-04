@@ -425,9 +425,11 @@ public class GroupHandleTest {
         String doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         String outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST29");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -435,9 +437,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST29");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -445,9 +449,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST29");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST29: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -464,9 +470,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST30: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST30");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+               gmsLogger.log(Level.SEVERE, "TEST30: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -483,30 +491,37 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        int iActual = Integer.parseInt(sActual);
-        if (iActual != iExpected) {
-            gmsLogger.log(Level.SEVERE, "TEST31: The number of zero length msgs sent does not equal the number of zero length msgs received, sent=(" + iExpected + "), received=(" + iActual + "), file=" + outFileName);
+        int iActual=0;
+        sActual = readDataFromFile(outFileName,"TEST31");
+        if (sActual != null){
+            iActual = Integer.parseInt(sActual);
+            if (iActual != iExpected) {
+                gmsLogger.log(Level.SEVERE, "TEST31: The number of zero length msgs sent does not equal the number of zero length msgs received, sent=(" + iExpected + "), received=(" + iActual + "), file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
         fileName = logDir + File.separator + GROUPHANDLE + "_core102_TestComponent_EmptyMessage";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        iActual = Integer.parseInt(sActual);
-        if (iActual != iExpected) {
-            gmsLogger.log(Level.SEVERE, "TEST31: The number of zero length msgs sent does not equal the number of zero length msgs received, sent=(" + iExpected + "), received=(" + iActual + "), file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST31");
+        if (sActual != null){
+            iActual = Integer.parseInt(sActual);
+            if (iActual != iExpected) {
+                gmsLogger.log(Level.SEVERE, "TEST31: The number of zero length msgs sent does not equal the number of zero length msgs received, sent=(" + iExpected + "), received=(" + iActual + "), file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
         fileName = logDir + File.separator + GROUPHANDLE + "_core103_TestComponent_EmptyMessage";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        iActual = Integer.parseInt(sActual);
-        if (iActual != iExpected) {
-            gmsLogger.log(Level.SEVERE, "TEST31: The number of zero length msgs sent does not equal the number of zero length msgs received, sent=(" + iExpected + "), received=(" + iActual + "), file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST31");
+        if (sActual != null){
+            iActual = Integer.parseInt(sActual);
+            if (iActual != iExpected) {
+                gmsLogger.log(Level.SEVERE, "TEST31: The number of zero length msgs sent does not equal the number of zero length msgs received, sent=(" + iExpected + "), received=(" + iActual + "), file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -570,9 +585,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST4: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST4");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST4: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -607,9 +624,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST38");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -617,9 +636,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST38");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -627,9 +648,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST38");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST38: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -795,27 +818,33 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST35");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
         fileName = logDir + File.separator + GROUPHANDLE + "_core103_TestComponent_TEST35";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST35");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
         fileName = logDir + File.separator + GROUPHANDLE + "_master_TestComponent_TEST35";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST35");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST35: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -834,9 +863,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST62: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST62");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST62: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -856,18 +887,22 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST63: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST63");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+               gmsLogger.log(Level.SEVERE, "TEST63: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
         fileName = logDir + File.separator + GROUPHANDLE + "_master_TestComponent_TEST63";
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST63: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST63");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+               gmsLogger.log(Level.SEVERE, "TEST63: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -888,9 +923,11 @@ public class GroupHandleTest {
         doneFileName = fileName + ".done";
         waitForDoneFile(doneFileName);
         outFileName = fileName + ".out";
-        sActual = readDataFromFile(outFileName);
-        if (!sActual.equals(sExpected)) {
-            gmsLogger.log(Level.SEVERE, "TEST64: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+        sActual = readDataFromFile(outFileName,"TEST64");
+        if (sActual != null){
+            if (!sActual.equals(sExpected)) {
+                gmsLogger.log(Level.SEVERE, "TEST64: The msg sent does not equal the msg received, sent=(" + sExpected.length() + ")|" + sExpected + "|, received=(" + sActual.length() + ")|" + sActual + "|, file=" + outFileName);
+            }
         }
         removeFile(doneFileName);
 
@@ -1645,7 +1682,7 @@ public class GroupHandleTest {
                                     Integer value = 1;
                                     File f = new File(dataFileName);
                                     if (f.exists()) {
-                                        String s = readDataFromFile(dataFileName);
+                                        String s = readDataFromFile(dataFileName,"processNotification");
                                         value = new Integer(s);
                                         value++;
                                     }
@@ -1777,7 +1814,6 @@ public class GroupHandleTest {
             // every 10 seconds spit out a message
             if (count%10 == 0) {
                 gmsLogger.log(Level.INFO, "Waited "+count+" seconds for file:" + fileName + " to be created and it wasn't");
-                break;
             }
             if (count++ >= 30) {
                 gmsLogger.log(Level.SEVERE, "Waited 30 seconds for file:" + fileName + " to be created and it wasn't");
@@ -1804,15 +1840,15 @@ public class GroupHandleTest {
         }
     }
 
-    public static String readDataFromFile(String fileName) {
-        String result = "";
+    public static String readDataFromFile(String fileName, String testname) {
+        String result = null;
         try {
             BufferedReader in = new BufferedReader(new FileReader(fileName));
             result = in.readLine();
         } catch (FileNotFoundException fnfe) {
-            gmsLogger.log(Level.SEVERE, "Could not access file:" + fileName, fnfe);
+            gmsLogger.log(Level.SEVERE, testname+":Could not access file:" + fileName, fnfe);
         } catch (IOException ioe) {
-            gmsLogger.log(Level.SEVERE, "Could not read from file:" + fileName, ioe);
+            gmsLogger.log(Level.SEVERE, testname+ ":Could not read from file:" + fileName, ioe);
         }
         return result;
     }
