@@ -46,8 +46,12 @@ import com.sun.enterprise.ee.cms.impl.client.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.MemberStates;
 import com.sun.enterprise.mgmt.ConfigConstants;
+import com.sun.enterprise.mgmt.transport.MessageIOException;
+import com.sun.enterprise.mgmt.transport.MessageImpl;
 import junit.framework.TestCase;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -182,10 +186,28 @@ public class GroupManagementServiceImplTest extends TestCase {
         try {
             Thread.sleep(1000);
         } catch(InterruptedException ie) {}
+
         assertTrue("expected to receive 40 messages, only received " + numMsgReceived.get(), numMsgReceived.get() == 40);
         assertTrue(monitor.getGMSMessageMonitorStats("NotRegisteredtestTargetComponent").getNumMsgsNoListener() == 10);
         assertTrue(monitor.getGMSMessageMonitorStats("NotRegistered2testTargetComponent").getNumMsgsNoListener() == 10);            
         monitor.report();
+
+        System.out.println("Test sending too big of a message");
+        byte[] tooBigPayload = new byte[MessageImpl.getMaxMessageLength()];
+        byte filler = 'e';
+        Arrays.fill(tooBigPayload, filler);
+        try {
+            gms.getGroupHandle().sendMessage(instanceName, "testTargetComponent", tooBigPayload);
+            assertTrue("Failed.  Should have thrown GMSException caused by MessageIOException sending too big a message payload", false);
+        } catch (GMSException ge) {
+            log.log(Level.INFO, "handled expected exception GMSException caused by ", ge.getCause().getClass().getName() + ": " + ge.getCause().getMessage());
+            assertTrue("Passed sending too big a message test. Handled expected exception.", ge.getCause() instanceof MessageIOException);
+        } catch (Throwable t) {
+            log.log(Level.WARNING, "unexpected exception sending too big of a message", t);
+            assertTrue("Failed", false);
+        }
+        monitor.report();
+
         gms.shutdown(GMSConstants.shutdownType.INSTANCE_SHUTDOWN);
         log.setLevel(Level.INFO);                                                
     }
