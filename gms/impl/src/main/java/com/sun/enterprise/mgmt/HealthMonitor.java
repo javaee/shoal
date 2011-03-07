@@ -41,6 +41,7 @@
 package com.sun.enterprise.mgmt;
 
 import com.sun.enterprise.ee.cms.core.GMSMember;
+import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -57,11 +58,7 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -181,7 +178,8 @@ public class HealthMonitor implements MessageListener, Runnable {
         this.localPeerID = manager.getPeerID();
         this.failureDetectionTCPTimeout = failureDetectionTCPTimeout;
         this.failureDetectionTCPPort = failureDetectionTCPPort;
-        isConnectedPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        ThreadFactory isConnectedThreadFactory = new GMSThreadFactory("GMS-isConnected-Group-" + manager.getGroupName() + "-thread");
+        isConnectedPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(3, isConnectedThreadFactory);
         if (LOG.isLoggable(Level.CONFIG)) {
             LOG.config("HealthMonitor: heartBeatTimeout(ms)=" + timeout +
                        " maxMissedBeats=" + maxMissedBeats +
@@ -959,6 +957,11 @@ public class HealthMonitor implements MessageListener, Runnable {
 
         announceStop(isClusterShutdown);
         reportMyState(STOPPED, null);
+
+        if (isConnectedPool != null) {
+            isConnectedPool.shutdownNow();
+        }
+
         //acquire lock again since dont want send() to send messages while stop()
         //is clearing the caches
         sendStopLock.lock();
