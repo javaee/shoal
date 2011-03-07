@@ -109,7 +109,7 @@ ECHO=\`which echo\`
 #==================================================
 # HERE IS WHERE THE TOTAL TESTTIME CAN BE ADJUSTED
 #==================================================
-\$ECHO "Waiting 5 minutes for test to complete then force a kill of the test processes"
+\$ECHO "Waiting a maximum of 5 minutes for test to complete then force a kill of the test processes"
 sleep 300
 \$ECHO  "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 \$ECHO  "SEVERE:Timeout occurred, killing any outstanding test processes"
@@ -128,7 +128,7 @@ ENDSCRIPT
 
 ECHO=`which echo`
 $ECHO  "=========================================================================="
-$ECHO "This test requires a minimum of 5 minutes of runtime since there is a"
+$ECHO "This test requires a maximum of 5 minutes of runtime since there is a"
 $ECHO "default timeout of 5 minutes to ensure that the test completes and all"
 $ECHO "test processes are terminated. If the amount of testing time is determined"
 $ECHO "to be less than that, the time can be adjusted."
@@ -169,17 +169,24 @@ $ECHO "Number of Instances=${numInstances}"
 $ECHO "Starting killoutstandingtests.sh process"
 ${TMPDIR}/killoutstandingtests.sh &
 
+$ECHO "Date: `date`"
 $ECHO "Starting SPECTOR/MASTER"
 ${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_master.log &
+masters_pid=$!
+$ECHO "Finished starting SPECTOR/MASTER"
 
+echo Masters PID=${masters_pid}
 # give time for the SPECTATOR and WATCHDOG to start
 sleep 5
 $ECHO "Starting CORE members on `uname -n`"
 
 ${TMPDIR}/grouphandle.sh core103 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core103.log &
 ${TMPDIR}/grouphandle.sh core102 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core102.log &
-${TMPDIR}/grouphandle.sh core101 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core101.log
-#-----------------------------------------------
+${TMPDIR}/grouphandle.sh core101 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core101.log &
+$ECHO "Finished starting CORE members"
+$ECHO "Waiting for MASTER to complete testing or timeout to occur"
+wait ${masters_pid}
+$ECHO "Date: `date`"
 
 
 $ECHO  "The following are SEVERE messages found in the logs:"
