@@ -167,7 +167,7 @@ numInstances="3"
 $ECHO "Number of Instances=${numInstances}"
 
 $ECHO "Starting killoutstandingtests.sh process"
-${TMPDIR}/killoutstandingtests.sh &
+${TMPDIR}/killoutstandingtests.sh >& ${LOGDIR}/killoutstandingtests.log &
 
 $ECHO "Date: `date`"
 $ECHO "Starting SPECTOR/MASTER"
@@ -189,9 +189,10 @@ wait ${masters_pid}
 $ECHO "Date: `date`"
 
 
-$ECHO  "The following are SEVERE messages found in the logs:"
+$ECHO  "The following are severe messages found in the logs:"
 $ECHO  "==============="
 grep -a "SEVERE" ${LOGDIR}/*.log
+grep -a "SEVERE" ${LOGDIR}/killoutstandingtests.log
 $ECHO  "==============="
 $ECHO  "Number of tests executed are the combination of the following:"
 $ECHO  "==============="
