@@ -79,7 +79,7 @@ public class GroupHandleTest {
     static AtomicInteger numberOfJoinAndReady = new AtomicInteger(0);
     static List<String> members;
     static List<GMSMember> GMSMembers;
-    static int exceedTimeoutLimit = 9;
+    static int exceedTimeoutLimit = 300; // 5 minutes
     static String groupName = null;
     static String logDir = null;
     static int numOfTests = 0;
@@ -141,19 +141,25 @@ public class GroupHandleTest {
 
         GroupHandleTest sender = new GroupHandleTest();
         if (memberID.equalsIgnoreCase("core101")) {
-            sender.runTest();
+            sender.testExecutionCoreMember();
         } else if (memberID.equalsIgnoreCase("master")) {
-            sender.spectatorMember();
+            sender.masterSpectatorMember();
         } else {
-            sender.otherCoreMember();
+            sender.otherCoreMembers();
         }
 
         System.out.println("================================================================");
-        if (numOfTests > 0) {
-            System.out.println(GROUPHANDLE + " Testing Complete for " + numOfTests + " tests");
+        if (memberID.equalsIgnoreCase("core101")) {
+            if (numOfTests > 0) {
+               gmsLogger.log(Level.INFO, GROUPHANDLE + " Testing Complete for " + numOfTests + " tests");
+            } else {
+               gmsLogger.log(Level.SEVERE, "Testing NOT Complete only " + numOfTests + " tests run");
+            }
         } else {
-            System.out.println("Testing Complete  (NOTE: NOT ALL TESTS ARE COMPLETE)");
+               gmsLogger.log(Level.INFO, GROUPHANDLE + " Testing Complete");
         }
+        System.out.println(memberID+" exiting");
+        gmsLogger.log(Level.INFO, memberID+" exiting");
 
     }
 
@@ -166,7 +172,7 @@ public class GroupHandleTest {
         System.exit(0);
     }
 
-    private void runTest() {
+    private void testExecutionCoreMember() {
 
         //******************************
         // NEXT TEST ID = TEST74
@@ -1381,7 +1387,7 @@ public class GroupHandleTest {
         leaveGroupAndShutdown(memberID, gms);
     }
 
-    private void spectatorMember() {
+    private void masterSpectatorMember() {
 
         long waitForStartTime = 0;
         long exceedTimeout = 0;
@@ -1437,10 +1443,10 @@ public class GroupHandleTest {
                     firstTime = false;
                 }
                 currentTime = System.currentTimeMillis();
-                exceedTimeout = ((currentTime - waitForStartTime) / 60000);
-                gmsLogger.log(Level.INFO, ("exceed timeout=" + exceedTimeout));
-                if (exceedTimeout > exceedTimeoutLimit + 1) {
-                    gmsLogger.log(Level.SEVERE, memberID + " EXCEEDED " + (exceedTimeoutLimit + 2) + " minute timeout waiting to receive all PLANNEDSHUTDOWN messages");
+                exceedTimeout = ((currentTime - waitForStartTime) / 1000);
+                gmsLogger.log(Level.INFO, ("current timeout value=" + exceedTimeout+", Max="+exceedTimeoutLimit));
+                if (exceedTimeout > exceedTimeoutLimit) {
+                    gmsLogger.log(Level.SEVERE, memberID + " EXCEEDED " + (exceedTimeoutLimit/60) + " minute test timeout before we received all PLANNEDSHUTDOWN messages");
                     break;
                 }
             }
@@ -1449,9 +1455,9 @@ public class GroupHandleTest {
         leaveGroupAndShutdown(memberID, gms);
     }
 
-    private void otherCoreMember() {
+    private void otherCoreMembers() {
 
-        System.out.println("Starting Other Instance");
+        System.out.println("Starting core instance");
 
         //initialize Group Management Service and register for Group Events
 
@@ -1487,7 +1493,6 @@ public class GroupHandleTest {
             System.out.println("members=" + gms.getGroupHandle().getCurrentCoreMembers().toString());
         }
         leaveGroupAndShutdown(memberID, gms);
-
     }
 
     private GroupManagementService initializeGMS(String memberID, String groupName, GroupManagementService.MemberType mType) {
