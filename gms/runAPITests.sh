@@ -166,16 +166,11 @@ $ECHO "Start Testing for GroupHandler"
 numInstances="3"
 $ECHO "Number of Instances=${numInstances}"
 
-$ECHO "Starting killoutstandingtests.sh process"
-${TMPDIR}/killoutstandingtests.sh >& ${LOGDIR}/killoutstandingtests.log &
-
 $ECHO "Date: `date`"
 $ECHO "Starting SPECTOR/MASTER"
 ${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_master.log &
-masters_pid=$!
 $ECHO "Finished starting SPECTOR/MASTER"
 
-echo Masters PID=${masters_pid}
 # give time for the SPECTATOR and WATCHDOG to start
 sleep 5
 $ECHO "Starting CORE members on `uname -n`"
@@ -183,9 +178,21 @@ $ECHO "Starting CORE members on `uname -n`"
 ${TMPDIR}/grouphandle.sh core103 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core103.log &
 ${TMPDIR}/grouphandle.sh core102 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core102.log &
 ${TMPDIR}/grouphandle.sh core101 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core101.log &
+core101_pid=$!
+$ECHO "CORE101 pid=${core101_pid}"
+
 $ECHO "Finished starting CORE members"
-$ECHO "Waiting for MASTER to complete testing or timeout to occur"
-wait ${masters_pid}
+
+$ECHO "Starting killoutstandingtests.sh process"
+${TMPDIR}/killoutstandingtests.sh >& ${LOGDIR}/killoutstandingtests.log &
+
+$ECHO "Waiting for CORE101 to complete testing or timeout to occur"
+# CORE101 should be the last process running because the tests actually do some testing where core101 sends a shutdown
+# to the master and then does some api testing after that point. This situation would cause
+# that existing master to finish its processing. Once we leave the group, we should become the
+# master of ourselves, hence the testing that is done
+wait ${core101_pid}
+
 $ECHO "Date: `date`"
 
 
