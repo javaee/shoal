@@ -102,7 +102,7 @@ else
 fi
 ENDSCRIPT
 
-cat << ENDSCRIPT > ${TMPDIR}/killoutstandingtests.sh
+cat << ENDSCRIPT > ${TMPDIR}/killoutstandingtestprocesses.sh
 #!/bin/sh +x
 
 ECHO=\`which echo\`
@@ -139,11 +139,11 @@ if [ ! -z "${PIDS}" ]; then
    $ECHO  "The following pids were found [${PIDS}], killing them"
    kill -9 $PIDS
 fi
-PIDS1=`ps -ef | grep killoutstandingtests.sh | grep -v grep | awk '{printf ("%d ", $2)}' `
+PIDS1=`ps -ef | grep killoutstandingtestprocesses.sh | grep -v grep | awk '{printf ("%d ", $2)}' `
 if [ ! -z "${PIDS1}" ]; then
-   # get the sleep process and the killoutstandingtests.sh process
+   # get the sleep process and the killoutstandingtestprocesses.sh process
    PIDS=`ps -ef | grep ${PIDS1} | awk  '{printf ("%d ", $2)}' `
-   $ECHO  "The following killoutstandingtests pids were also found [${PIDS}], killing them"
+   $ECHO  "The following killoutstandingtestprocesses pids were also found [${PIDS}], killing them"
    kill -9 $PIDS
 fi
 
@@ -183,8 +183,8 @@ $ECHO "CORE101 pid=${core101_pid}"
 
 $ECHO "Finished starting CORE members"
 
-$ECHO "Starting killoutstandingtests.sh process"
-${TMPDIR}/killoutstandingtests.sh >& ${LOGDIR}/killoutstandingtests.log &
+$ECHO "Starting killoutstandingtestprocesses.sh process"
+${TMPDIR}/killoutstandingtestprocesses.sh >& ${LOGDIR}/killoutstandingtestprocesses.log &
 
 $ECHO "Waiting for CORE101 to complete testing or timeout to occur"
 # CORE101 should be the last process running because the tests actually do some testing where core101 sends a shutdown
@@ -195,15 +195,14 @@ wait ${core101_pid}
 
 $ECHO "Date: `date`"
 
-
+$ECHO  "==============="
+grep -a "Testing Complete for" ${LOGDIR}/*.log | awk -F"|" '{print $7}'
+$ECHO  "==============="
 $ECHO  "The following are severe messages found in the logs:"
 $ECHO  "==============="
 grep -a "SEVERE" ${LOGDIR}/*.log
-grep -a "SEVERE" ${LOGDIR}/killoutstandingtests.log
+grep -a "SEVERE" ${LOGDIR}/killoutstandingtestprocesses.log
 $ECHO  "==============="
-$ECHO  "Number of tests executed are the combination of the following:"
-$ECHO  "==============="
-grep -a "Testing Complete for" ${LOGDIR}/*.log
 $ECHO
 $ECHO  "Killing any outstanding test processes"
 PIDS=`ps -ef | grep "com.sun.enterprise.ee.cms.tests.core.GroupHandleTest" | grep "${groupName}" | grep -v grep | awk '{printf ("%d ", $2)}'`
@@ -211,11 +210,11 @@ if [ ! -z "${PIDS}" ]; then
    $ECHO  "The following pids were found [${PIDS}], killing them"  
    kill -9 $PIDS
 fi
-PIDS1=`ps -ef | grep killoutstandingtests.sh | grep -v grep | awk '{printf ("%d ", $2)}' `
+PIDS1=`ps -ef | grep killoutstandingtestprocesses.sh | grep -v grep | awk '{printf ("%d ", $2)}' `
 if [ ! -z "${PIDS1}" ]; then
-   # get the sleep process and the killoutstandingtests.sh process
+   # get the sleep process and the killoutstandingtestprocesses.sh process
    PIDS=`ps -ef | grep ${PIDS1} | awk  '{printf ("%d ", $2)}' `
-   $ECHO  "The following killoutstandingtests pids were also found [${PIDS}], killing them"
+   $ECHO  "The following killoutstandingtestprocesses pids were also found [${PIDS}], killing them"
    kill -9 $PIDS
 fi
 
