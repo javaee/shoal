@@ -78,7 +78,9 @@ public class GrizzlyUtil {
     private static Method getNIOMulticastMethod() {
         Method method = null;
         try {
-            method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
+            // WORKAROUND: disable using NIO multicast in JDK 1.7 due to failure on OEL reported as Glassfish issue 16173.
+            //             Will revisit enabling again in the future.
+            //method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
         } catch( Throwable t ) {
             method = null;
         }
