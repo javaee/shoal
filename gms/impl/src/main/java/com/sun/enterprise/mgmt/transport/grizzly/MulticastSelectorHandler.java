@@ -47,16 +47,10 @@ import com.sun.grizzly.async.UDPAsyncQueueWriter;
 import com.sun.enterprise.mgmt.transport.NetworkUtility;
 
 import java.io.IOException;
+import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.net.SocketAddress;
-import java.net.NetworkInterface;
-import java.net.InetSocketAddress;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.BindException;
-import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.concurrent.Callable;
 import java.lang.reflect.Method;
@@ -73,7 +67,12 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
     //private MembershipKey membershipKey;
     private Object membershipKey;
 
-    private final Method joinMethod;
+    // begin JDK 7
+    private final Method joinMethod;          // JDK 7: DatagramChannel.join(InetAddress, NetworkInterface)
+    private final Method openMethod;          // JDK 7: DatagramChannel.open(ProtocolFamily)
+    private final Class standardProtocolFamilyClass;  //JDK 7 enum java.net.StandardProtocolFamily
+    private Object protocolFamilyOfMulticastAddress;            //enum constant INET or INET6
+    // end JDK 7
 
     public MulticastSelectorHandler() {
         try {
@@ -87,11 +86,33 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
             method = DatagramChannel.class.getMethod( "join", InetAddress.class, NetworkInterface.class );
         } catch( Throwable t ) {
             method = null;
-            if( logger.isLoggable( Level.FINER ) ) {
-                logger.log( Level.FINER, "this JDK doesn't support DatagramChannel#join()", t );
+            if( logger.isLoggable( Level.FINEST ) ) {
+                logger.log( Level.FINEST, "this JDK doesn't support DatagramChannel#join(InetAddress, NetworkInterface)", t );
             }
         }
         joinMethod = method;
+
+        Class standardProtocolFamily = null;
+        Class protocolFamilyClass = null;
+        if (joinMethod != null) {
+            method = null;
+            try {
+                // JDK 1.7
+                standardProtocolFamily = Class.forName("java.net.StandardProtocolFamily");
+                protocolFamilyClass = Class.forName("java.net.ProtocolFamily");
+            } catch (ClassNotFoundException cnfe) {
+            }
+            if (standardProtocolFamily != null) {
+                try {
+                    // JDK 1.7
+                    method = DatagramChannel.class.getMethod("open", protocolFamilyClass);
+                } catch (NoSuchMethodException nsme) {
+                    logger.warning("unable to find method DatagramChannel.open(" + protocolFamilyClass.getCanonicalName());
+                }
+            }
+        }
+        standardProtocolFamilyClass = standardProtocolFamily;
+        openMethod = method;
     }
 
     @Override
@@ -131,15 +152,23 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
 
             connectorInstanceHandler = new ConnectorInstanceHandler.ConcurrentQueueDelegateCIH( getConnectorInstanceHandlerDelegate() );
 
-            datagramChannel = DatagramChannel.open();
+            // fix for Glassfish issue 16173 and bugster 7026376: Call jdk 7 DatagramChannel.open(ProtocolFamily) with protocol family of MulticastAddress.
+            // do not call DatagramChannel.open() since it is unspecified what protocol family it will select when
+            // multiple protocols are supported by a network interface.
+            try{
+                // datagramChannel = DatagramChannel.open(protocolFamilyOfMulticastAddress);
+                datagramChannel = (DatagramChannel)openMethod.invoke(datagramChannel, protocolFamilyOfMulticastAddress);
+            } catch (Throwable t) {
+                logger.log( Level.WARNING,
+                                "Exception occured when tried to open datagram channel with protocol family:" +
+                                        protocolFamilyOfMulticastAddress + " multicastaddress=" +
+                                multicastAddress, t);
+            }
             selector = Selector.open();
             if( role != Role.CLIENT ) {
                 datagramSocket = datagramChannel.socket();
                 datagramSocket.setReuseAddress( reuseAddress );
-                if( inet == null )
-                    datagramSocket.bind( new InetSocketAddress( getPort() ) );
-                else
-                    datagramSocket.bind( new InetSocketAddress( inet, getPort() ) );
+                datagramSocket.bind( new InetSocketAddress( getPort() ) );
 
                 datagramChannel.configureBlocking( false );
                 datagramChannel.register( selector, SelectionKey.OP_READ );
@@ -148,12 +177,12 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
 
                 if( multicastAddress != null && joinMethod != null ) {
                     try {
-                        membershipKey = joinMethod.invoke( datagramChannel, multicastAddress, anInterface );
+                        membershipKey = joinMethod.invoke( datagramChannel, multicastAddress, anInterface);
                         //membershipKey = datagramChannel.join( multicastAddress, anInterface );
                     } catch( Throwable t ) {
-                        if( logger.isLoggable( Level.FINE ) ) {
-                            logger.log( Level.FINE, "Exception occured when tried to join datagram channel", t );
-                        }
+                        logger.log( Level.WARNING,
+                                "Exception occured when tried to join datagram channel with multicast group address" +
+                                multicastAddress, t);
                     }
                 }
             }
@@ -163,9 +192,21 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
         }
     }
 
-    public void setMulticastAddress( String multicastAddress ) throws UnknownHostException {
-        if( multicastAddress != null )
-            this.multicastAddress = InetAddress.getByName( multicastAddress );
+    public void setMulticastAddress( String multicastAddr ) throws UnknownHostException {
+        if( multicastAddr != null ) {
+            multicastAddress = InetAddress.getByName( multicastAddr );
+            if (standardProtocolFamilyClass != null) {
+                Object[] pfe = standardProtocolFamilyClass.getEnumConstants();
+                if (multicastAddress instanceof Inet4Address) {
+                    protocolFamilyOfMulticastAddress = pfe[0];  // ProtocolFamily.INET
+                } else if (multicastAddress instanceof Inet6Address) {
+                    protocolFamilyOfMulticastAddress = pfe[1]; // ProtocolFamily.INET6
+                }
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("setMulticastAddress: multicastAddress=" + multicastAddress + " protocolFamilyOfMulticastAddress=" + protocolFamilyOfMulticastAddress);
+                }
+            }
+        }
     }
 
     public void setNetworkInterface( String networkInterfaceName ) throws SocketException {
@@ -202,9 +243,9 @@ public class MulticastSelectorHandler extends ReusableUDPSelectorHandler {
                 newDatagramChannel.connect( remoteAddress );
             }
         } catch( Throwable t ) {
-            if( logger.isLoggable( Level.FINE ) ) {
-                logger.log( Level.FINE, "Exception occured when tried to join or connect datagram channel", t );
-            }
+                logger.log( Level.WARNING,
+                                "Exception occured when tried to join datagram channel with multicast group address" +
+                                multicastAddress, t );
         }
 
         onConnectInterest( key, ctx );

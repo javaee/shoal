@@ -233,7 +233,6 @@ public class NetworkUtility {
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while( interfaces != null && interfaces.hasMoreElements() ) {
             NetworkInterface anInterface = interfaces.nextElement();
-            //LOG.info("getFirstNetworkInterface: anInterface=" + anInterface);
             if( isLoopbackNetworkInterface( anInterface ) ) {
                 loopback = anInterface;
                 continue;
@@ -251,6 +250,9 @@ public class NetworkUtility {
             throw new IOException( "failed to find a network interface" );
         } else {
             firstNetworkInterface = firstInterface;
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("getFirstNetworkInterface  result: interface name" + firstNetworkInterface.getName() + " address:" + firstNetworkInterface.getInetAddresses().nextElement().toString());
+            }
             return firstNetworkInterface;
         }
     }
