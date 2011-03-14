@@ -82,6 +82,4 @@ public class BufferInputStream extends InputStream {
         buffer.position(buffer.position() + skipped);
         return skipped;
     }
-
-
 }
