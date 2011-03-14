@@ -1418,16 +1418,18 @@ public class GroupHandleTest {
 
         // wait for testing to complete
 
+        boolean started = false;
         while (true) {
             sleep(5000); // 5 second
             gmsLogger.log(Level.INFO, "===================================================");
             gmsLogger.log(Level.INFO, "CORE members who have sent PLANNEDSHUTDOWN are: (" + numberOfPlannedShutdownReceived.size() + ") " + numberOfPlannedShutdownReceived.toString());
+            int currentCoreMembers = gms.getGroupHandle().getCurrentCoreMembers().size();
             if (numberOfPlannedShutdownReceived.size() == 2) {
                 gmsLogger.log(Level.INFO, "===================================================");
                 gmsLogger.log(Level.INFO, "PLANNEDSHUTDOWN received from all CORE members");
                 gmsLogger.log(Level.INFO, "===================================================");
                 break;
-            } else if (gms.getGroupHandle().getCurrentCoreMembers().size() == 0) {
+            } else if (started && currentCoreMembers == 0) {
                 gmsLogger.log(Level.INFO, "===================================================");
                 gmsLogger.log(Level.INFO, "Missed a PLANNEDSHUTDOWN. All core members have stopped. Only received PLANNEDSHUTDOWN from CORE members : (" + numberOfPlannedShutdownReceived.size() + ") " + numberOfPlannedShutdownReceived.toString());
                 gmsLogger.log(Level.INFO, "===================================================");
@@ -1435,9 +1437,12 @@ public class GroupHandleTest {
             } else if (completedCheck.get()) {
                 break;
             } else {
+                if (!started && currentCoreMembers > 0) {
+                    started = true;
+                }
 
                 // set a timeout of 5 minutes to wait once the first core reports plannedshutdown
-                gmsLogger.log(Level.INFO, "Number of CORE members that still exist are:" + gms.getGroupHandle().getCurrentCoreMembers().size());
+                gmsLogger.log(Level.INFO, "Number of CORE members that still exist are:" + currentCoreMembers);
                 if (firstTime) {
                     waitForStartTime = System.currentTimeMillis();
                     firstTime = false;
