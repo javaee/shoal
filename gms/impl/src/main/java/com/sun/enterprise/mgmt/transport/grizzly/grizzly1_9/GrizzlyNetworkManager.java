@@ -164,10 +164,11 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
         controller.addSelectorHandler( tcpSelectorHandler );
 
-        MulticastSelectorHandler multicastSelectorHandler = new MulticastSelectorHandler();
-        multicastSelectorHandler.setPort( multicastPort );
-        multicastSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
+
         if( GrizzlyUtil.isSupportNIOMulticast() ) {
+            MulticastSelectorHandler multicastSelectorHandler = new MulticastSelectorHandler();
+            multicastSelectorHandler.setPort( multicastPort );
+            multicastSelectorHandler.setSelectionKeyHandler( new GrizzlyCacheableSelectionKeyHandler( highWaterMark, numberToReclaim, this ) );
             multicastSelectorHandler.setMulticastAddress( multicastAddress );
             multicastSelectorHandler.setNetworkInterface( networkInterfaceName );
             multicastSelectorHandler.setInet( localInetAddress );
