@@ -172,7 +172,7 @@ ${TMPDIR}/grouphandle.sh master ${groupName} ${numInstances} ${LOGDIR} 9100 9200
 $ECHO "Finished starting SPECTOR/MASTER"
 
 # give time for the SPECTATOR and WATCHDOG to start
-sleep 5
+sleep 6
 $ECHO "Starting CORE members on `uname -n`"
 
 ${TMPDIR}/grouphandle.sh core103 ${groupName} ${LOGDIR} 9100 9200 ${logLevel} >& ${LOGDIR}/GroupHandle_core103.log &
