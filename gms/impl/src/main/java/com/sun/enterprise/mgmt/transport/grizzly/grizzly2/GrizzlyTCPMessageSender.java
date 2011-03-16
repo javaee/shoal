@@ -120,6 +120,14 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
 
             try {
                 connection = connectionCache.poll(localAddress, remoteAddress);
+                if (connection == null) {
+                    LOG.log(Level.WARNING, "failed to get a connection from connectionCache in attempt# " +
+                                          attemptNo + ". GrizzlyTCPMessageSender.send(localAddr=" + localAddress +
+                                          " , remoteAddr=" + remoteAddress + " sendTo=" + target +
+                                           " msg=" + message + ". Retrying send", new Exception("stack trace"));
+                    // try again.
+                    continue;
+                }
             } catch (Throwable t) {
                     // include local call stack.
                     final IOException localIOE = new IOException("failed to connect to " + target.toString(), t);
