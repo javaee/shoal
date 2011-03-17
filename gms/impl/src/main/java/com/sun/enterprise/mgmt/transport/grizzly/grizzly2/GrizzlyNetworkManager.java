@@ -474,8 +474,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         final Connection.CloseListener closeListener = new CloseListener();
 
         void register(final Connection connection) {
-            if (!connections.contains(connection)) {
-                connections.put(connection, System.currentTimeMillis());
+            if (connections.putIfAbsent(connection, System.currentTimeMillis()) == null) {
                 connection.addCloseListener(closeListener);
 
                 if (isClosed.get()) {
