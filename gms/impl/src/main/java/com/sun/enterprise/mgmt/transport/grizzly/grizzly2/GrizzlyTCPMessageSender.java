@@ -129,10 +129,10 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
                     continue;
                 }
             } catch (Throwable t) {
-                    // include local call stack.
-                    final IOException localIOE = new IOException("failed to connect to " + target.toString(), t);
-                     //AbstractNetworkManager.getLogger().log(Level.WARNING, "failed to connect to target " + target.toString(), localIOE);
-                    throw localIOE;
+                // include local call stack.
+                final IOException localIOE = new IOException("failed to connect to " + target.toString(), t);
+                 //AbstractNetworkManager.getLogger().log(Level.WARNING, "failed to connect to target " + target.toString(), localIOE);
+                throw localIOE;
             }
 
             try {
