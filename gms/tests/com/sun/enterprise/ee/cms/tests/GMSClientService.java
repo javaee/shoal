@@ -92,8 +92,9 @@ public class GMSClientService implements Runnable, CallBack{
         if (memberToken != null && memberToken.compareTo("server") != 0) {
             gms.addActionFactory(serviceName,
                                  new FailureRecoveryActionFactoryImpl(this));
-            gms.addActionFactory(new MessageActionFactoryImpl(this), serviceName);
+
         }
+        gms.addActionFactory(new MessageActionFactoryImpl(this), serviceName);
         gms.addActionFactory(new JoinedAndReadyNotificationActionFactoryImpl(this));
     }
 
@@ -193,6 +194,8 @@ public class GMSClientService implements Runnable, CallBack{
                     " signal.getCurrentView()=" + jrSignal.getCurrentView());
             try {
                 gms.getGroupHandle().sendMessage(serverToken, serviceName, "hello".getBytes());
+                gms.getGroupHandle().sendMessage("server", serviceName, "hello".getBytes());
+                gms.getGroupHandle().sendMessage("server", "nonExistentTargetComponent", "hello".getBytes());
                 logger.log(Level.INFO, "send hello from member: " + gms.getInstanceName() + " to joinedandready instance: " + serverToken + " succeeded.");
             } catch (GMSException e) {
                 logger.log(Level.WARNING, "failed to send hello message to newly joined member:" + serverToken + " trying one more time", e);
@@ -218,6 +221,9 @@ public class GMSClientService implements Runnable, CallBack{
                     " signal.getPreviousView()=" + arSignal.getPreviousView() +
                     " getCurrentView()=" + arSignal.getCurrentView());
             extractMemberDetails( notification, serverToken );
+        } else if (notification instanceof MessageSignal) {
+            MessageSignal msgSig = (MessageSignal)notification;
+            logger.info("Received message " + msgSig.getMessage() + " from:" + msgSig.getMemberToken() + " targetComponent:" + msgSig.getTargetComponent());
         }
     }
 

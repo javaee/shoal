@@ -60,6 +60,7 @@ public class GMSLogDomain  {
         "com.sun.enterprise.ee.cms.logging.LogStrings";
 
     private static final String GMS_MONITOR_LOGGER = GMS_LOGGER + ".monitor";
+    private static final String GMS_HANDLER_LOGGER = GMS_LOGGER + ".handler";
     private static final String MCAST_LOGGER_NAME = GMS_LOGGER + ".mcast";
     private static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
     private static final String GMS_SEND = GMS_LOGGER + ".send";
@@ -84,5 +85,9 @@ public class GMSLogDomain  {
     
     public static Logger getSendLogger() {
         return Logger.getLogger(GMS_SEND, LOG_STRINGS);
+    }
+
+    public static Logger getHandlerLogger() {
+        return Logger.getLogger(GMS_HANDLER_LOGGER, LOG_STRINGS);
     }
 }

@@ -86,6 +86,7 @@ public class Router {
     private final BlockingQueue<SignalPacket> queue;
     private AtomicInteger queueHighWaterMark = new AtomicInteger(0);
     private final Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private final Logger handlerLogger = GMSLogDomain.getHandlerLogger();
     private final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
     private final ExecutorService actionPool;
     private final ExecutorService messageActionPool;
@@ -134,6 +135,7 @@ public class Router {
      */
     void addDestination(final FailureNotificationActionFactory failureNotificationActionFactory) {
         failureNotificationAF.add(failureNotificationActionFactory);
+        logActionRegistration("FailureNotification");
     }
 
     /**
@@ -145,6 +147,7 @@ public class Router {
      */
     void addDestination(final String componentName, final FailureRecoveryActionFactory failureRecoveryActionFactory) {
         failureRecoveryAF.put(componentName, failureRecoveryActionFactory);
+        logActionRegistration("FailureRecovery", componentName);
     }
 
     /**
@@ -155,6 +158,7 @@ public class Router {
      */
     void addDestination(final JoinNotificationActionFactory joinNotificationActionFactory) {
         joinNotificationAF.add(joinNotificationActionFactory);
+        logActionRegistration("JoinNotification");
     }
 
      /**
@@ -165,6 +169,7 @@ public class Router {
      */
     void addDestination(final JoinedAndReadyNotificationActionFactory joinedAndReadyNotificationActionFactory) {
         joinedAndReadyNotificationAF.add(joinedAndReadyNotificationActionFactory);
+        logActionRegistration("JoinedAndReadyNotification");
     }
 
     /**
@@ -175,6 +180,7 @@ public class Router {
      */
     void addDestination(final PlannedShutdownActionFactory plannedShutdownActionFactory) {
         plannedShutdownAF.add(plannedShutdownActionFactory);
+        logActionRegistration("PlannedShutdown");
     }
 
     /**
@@ -185,6 +191,7 @@ public class Router {
      */
     void addDestination(final FailureSuspectedActionFactory failureSuspectedActionFactory) {
         failureSuspectedAF.add(failureSuspectedActionFactory);
+        logActionRegistration("FailureSuspected");
     }
 
     /**
@@ -195,6 +202,7 @@ public class Router {
      */
     void addDestination(final MessageActionFactory messageActionFactory,final String componentName) {
         messageAF.put(componentName, messageActionFactory);
+        logActionRegistration("GMS Message", componentName);
     }
 
     /**
@@ -205,6 +213,24 @@ public class Router {
      */
     void addDestination(final GroupLeadershipNotificationActionFactory groupLeadershipNotificationActionFactory ) {
         groupLeadershipNotificationAFs.add( groupLeadershipNotificationActionFactory );
+        logActionRegistration("GroupLeadershipNotification");
+    }
+
+    private void logActionRegistration(String notification) {
+        logActionRegistration(notification, null);
+    }
+
+    private void logActionRegistration(String notification, String componentName) {
+        if (handlerLogger.isLoggable(Level.FINE)) {
+            final Exception ste = handlerLogger.isLoggable(Level.FINER) ? new Exception("stack trace") : null;
+            StringBuffer buf = new StringBuffer(30);
+            buf.append("registering a ").append(notification).append(" handler for ");
+            if (componentName != null) {
+                buf.append("targetComponent: ").append(componentName).append(" for ");
+            }
+            buf.append("group: ").append(groupName);
+            handlerLogger.log(Level.FINE, buf.toString(), ste);
+        }
     }
 
     /**
