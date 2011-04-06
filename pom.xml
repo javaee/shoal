@@ -52,7 +52,7 @@
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/branches/SHOAL_1_1_ABSTRACTING_TRANSPORT</connection>
+        <connection>scm:svn:https://svn.java.net/svn/shoal~svn/trunk</connection>
     </scm>
 
     <issueManagement>
@@ -90,6 +90,13 @@
             </roles>
         </developer>
     </developers>
+
+    <licenses>
+        <license>
+            <name>CDDL+GPL</name>
+            <url>http://glassfish.java.net/public/CDDL+GPL.html</url>
+        </license>
+    </licenses>
 
     <properties>
         <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
@@ -138,7 +145,6 @@
                     <threshold>${findbugs.threshold}</threshold>
                     <excludeFilterFile>${findbugs.exclude}</excludeFilterFile>
                     <findbugsXmlOutput>true</findbugsXmlOutput>
-                    <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
                 </configuration>
             </plugin>
         </plugins>
