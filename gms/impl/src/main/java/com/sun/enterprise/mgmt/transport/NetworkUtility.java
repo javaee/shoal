@@ -98,6 +98,8 @@ public class NetworkUtility {
     public volatile static InetAddress firstInetAddressV4;
     public volatile static InetAddress firstInetAddressV6;
 
+    private static final boolean IS_AIX_JDK;
+
     static {
         InetAddress GET_ADDRESS = null;
         try {
@@ -164,6 +166,8 @@ public class NetworkUtility {
         } catch( Throwable t ) {
             supportsMulticastMethod = null;
         }
+        String vendor = System.getProperty("java.vendor");
+        IS_AIX_JDK = vendor == null ? false  : vendor.startsWith("IBM");
     }
 
     /**
@@ -354,13 +358,31 @@ public class NetworkUtility {
     public static boolean supportsMulticast( NetworkInterface anInterface ) {
         if( anInterface == null )
             return false;
-        if( isUpMethod != null && supportsMulticastMethod != null ) {
+        boolean result = true;
+        if( isUpMethod != null ) {
             try {
-                return (Boolean)isUpMethod.invoke( anInterface ) && (Boolean)supportsMulticastMethod.invoke( anInterface );
+                result = (Boolean)isUpMethod.invoke( anInterface );
+            } catch( Throwable t ) {
+                result = false;
+            }
+        }
+        if (!result) {
+            return result;
+        } else if (IS_AIX_JDK) {
+
+            // workaround for Network.supportsMulticast not working properly on AIX.
+            if (LOG.isLoggable(Level.FINE)) {
+                LOG.fine("Workaround for java.net.NetworkInterface.supportsMulticast() returning false on AIX");
+            }
+            return true;
+        } else if( supportsMulticastMethod != null) {
+            try {
+                return (Boolean)supportsMulticastMethod.invoke( anInterface );
             } catch( Throwable t ) {
                 // will just return false in this case
             }
         }
+
         return false;
     }
 
