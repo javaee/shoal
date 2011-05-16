@@ -52,7 +52,7 @@
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:https://svn.java.net/svn/shoal~svn/trunk</connection>
+        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</connection>
     </scm>
 
     <issueManagement>
