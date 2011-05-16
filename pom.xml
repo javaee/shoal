@@ -47,12 +47,12 @@
     <groupId>org.shoal</groupId>
     <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.5.31-SNAPSHOT</version>
+    <version>1.5.31</version>
     <name>shoal</name>
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:https://svn.java.net/svn/shoal~svn/trunk</connection>
+        <connection>scm:svn:https://svn.java.net/svn/shoal~svn/tags/shoal-1.5.31</connection>
     </scm>
 
     <issueManagement>
