@@ -1948,11 +1948,12 @@ class MasterNode implements MessageListener, Runnable {
 
             if (entered) {
                 if (missed.size() > 0) {
-                    // TODO: considering making this fine before final release.
                     // stats monitor needs to count the number of dropped master change events sent over UDP.
-                    mcastLogger.log(Level.INFO, "mgmt.masternode.missed.change.events",
-                            new Object[]{ master.getInstanceName(), latestMasterViewID ,
-                                          missed, lastCheckedMasterViewID});
+                    if (mcastLogger.isLoggable(Level.FINE)) {
+                        mcastLogger.log(Level.FINE, "mgmt.masternode.missed.change.events",
+                                new Object[]{ master.getInstanceName(), latestMasterViewID ,
+                                              missed, lastCheckedMasterViewID});
+                    }
                 } else {
                     if (mcastLogger.isLoggable(DEBUG_TRACE)){
                         mcastLogger.log(DEBUG_TRACE, "exit checkForMissedMasterChangeEvents master:" +
