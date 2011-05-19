@@ -153,12 +153,13 @@ public class ReliableMulticast {
             msg.addMessageElement("RESEND", Boolean.TRUE);
             result = manager.getNetworkManager().send(to, rb.msg);
             rb.resends++;
-            logger.log(Level.INFO, "mgmt.reliable.mcast.resend",
-                                    new Object[]{seqId, to.getInstanceName(),to.getGroupName(), rb.resends,
-                                                 clusterViewEventMsgToString(msg)});
-
-        } else {
-            logger.log(Level.INFO, "mgmt.reliable.mcast.resend.failed",
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "mgmt.reliable.mcast.resend",
+                                        new Object[]{seqId, to.getInstanceName(),to.getGroupName(), rb.resends,
+                                                     clusterViewEventMsgToString(msg)});
+            }
+        } else if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "mgmt.reliable.mcast.resend.failed",
                                     new Object[]{seqId, to.getInstanceName(),to.getGroupName()});
         }
         return result;
