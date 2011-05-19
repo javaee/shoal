@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -166,41 +166,47 @@ public class MessageWindow implements Runnable {
     }
 
     private void handleDSCMessage(final DSCMessage dMsg, final String token) {
+        final Logger DSCLogger = GMSLogDomain.getDSCLogger();
         if (ctx.isWatchdog()) {
             // Distributed State Cache is disabled for WATCHDOG member.
             return;
         }
 
         final String ops = dMsg.getOperation();
-        if (logger.isLoggable(Level.FINER)) {
-            logger.log(Level.FINER, MessageFormat.format("DSCMessageReceived from :{0}, Operation :{1}", token, ops));
+        if (DSCLogger.isLoggable(Level.FINE)) {
+            DSCLogger.log(Level.FINE, MessageFormat.format("DSCMessageReceived from :{0}, Operation :{1}", token, ops));
         }
         final DistributedStateCacheImpl dsc =
                 (DistributedStateCacheImpl) getGMSContext().getDistributedStateCache();
         if (ops.equals(DSCMessage.OPERATION.ADD.toString())) {
-            if (logger.isLoggable(Level.FINER)) {
-                logger.log(Level.FINER, "Adding Message: " + dMsg.getKey() + ":" + dMsg.getValue());
+            if (DSCLogger.isLoggable(Level.FINE)) {
+                DSCLogger.log(Level.FINE, "Adding Message: " + dMsg.getKey() + ":" + dMsg.getValue());
             }
             dsc.addToLocalCache(dMsg.getKey(), dMsg.getValue());
         } else if (ops.equals(DSCMessage.OPERATION.REMOVE.toString())) {
-            if (logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, "Removing Values with Key: " + dMsg.getKey());
+            if (DSCLogger.isLoggable(Level.FINE)) {
+                    DSCLogger.log(Level.FINE, "Removing Values with Key: " + dMsg.getKey());
             }
             dsc.removeFromLocalCache(dMsg.getKey());
         } else if (ops.equals(DSCMessage.OPERATION.ADDALLLOCAL.toString())) {
             if (dMsg.isCoordinator()) {
                 try {
-                    logger.log(Level.FINER, "Syncing local cache with group ...");
+                    DSCLogger.log(Level.FINE, "Syncing local cache with group ...");
                     dsc.addAllToRemoteCache();
-                    logger.log(Level.FINER, "done with local to group sync...");
+                    DSCLogger.log(Level.FINE, "done with local to group sync...");
                 } catch (GMSException e) {
-                    logger.log(Level.WARNING, e.getLocalizedMessage());
+                    DSCLogger.log(Level.WARNING, e.getLocalizedMessage());
                 }
-                logger.log(Level.FINER, "adding group cache state to local cache..");
+                if (DSCLogger.isLoggable(Level.FINE)) {
+                    DSCLogger.log(Level.FINE, "adding group cache state to local cache..");
+                }
                 dsc.addAllToLocalCache(dMsg.getCache());
             }
         } else if (ops.equals(DSCMessage.OPERATION.ADDALLREMOTE.toString())) {
             dsc.addAllToLocalCache(dMsg.getCache());
+            if (DSCLogger.isLoggable(Level.FINE)) {
+                DSCLogger.log(Level.FINE, "Add All Remote from member:" + token + " dsc=" + dsc);
+            }
         }//TODO: determine if the following is needed.
         /*else if( ops.equals( DSCMessage.OPERATION.REMOVEALL.toString()) ) {
             dsc.removeAllFromCache( dMsg. );

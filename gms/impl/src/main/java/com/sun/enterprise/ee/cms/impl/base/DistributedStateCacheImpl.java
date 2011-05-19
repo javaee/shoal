@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,10 +40,7 @@
 
 package com.sun.enterprise.ee.cms.impl.base;
 
-import com.sun.enterprise.ee.cms.core.DistributedStateCache;
-import com.sun.enterprise.ee.cms.core.GMSCacheable;
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
+import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.common.DSCMessage;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
@@ -55,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import static java.util.logging.Level.FINER;
@@ -94,13 +92,15 @@ import java.util.logging.Logger;
  * @version $Revision$
  */
 public class DistributedStateCacheImpl implements DistributedStateCache {
-    private final static Logger logger = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+    private final static Logger logger = GMSLogDomain.getDSCLogger();
     private static final ConcurrentHashMap<String, DistributedStateCacheImpl> ctxCache = new ConcurrentHashMap<String, DistributedStateCacheImpl>();
 
     private final String groupName;
     private final ConcurrentHashMap<GMSCacheable, Object> cache;
     private final AtomicReference<GMSContext> ctxRef;
     private volatile boolean firstSyncDone;
+    private final Object cacheUpdated = new Object();
+    private AtomicBoolean waitingForUpdate = new AtomicBoolean(false);
 
     //private constructor for single instantiation
     private DistributedStateCacheImpl(final String groupName) {
@@ -108,6 +108,28 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         this.cache = new ConcurrentHashMap<GMSCacheable, Object>();
         this.ctxRef = new AtomicReference<GMSContext>(null);
         this.firstSyncDone = false;
+    }
+
+    private void waitForCacheUpdate(long waitTimeMs) {
+        boolean setWaitingForUpdate = waitingForUpdate.compareAndSet(false, true);
+        synchronized(cacheUpdated) {
+            try {
+                cacheUpdated.wait(waitTimeMs);
+            } catch (InterruptedException ie) {
+                // ignore
+            }
+            if (setWaitingForUpdate) {
+                waitingForUpdate.compareAndSet(true, false);
+            }
+        }
+    }
+
+    private void notifyCacheUpdate() {
+        if (waitingForUpdate.get()) {
+            synchronized(cacheUpdated) {
+                cacheUpdated.notifyAll();
+            }
+        }
     }
 
     //return the only instance we want to return
@@ -185,6 +207,7 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             logger.log(Level.FINEST, "Adding cKey=" + cKey.toString() + " state=" + state.toString());
         }
         cache.put(cKey, state);
+        notifyCacheUpdate();
         printDSCContents();
     }
 
@@ -217,6 +240,11 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             }
         }
         return ctx;
+    }
+
+    @Override
+    public String toString() {
+        return getDSCContents();
     }
 
     private String getDSCContents() {
@@ -314,26 +342,52 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         if (!retval.isEmpty()) {
             return retval;
         } else {
-            if (!getGMSContext().isShuttingDown() &&
-                    !memberToken.equals(getGMSContext().getServerIdentityToken()) &&
-                    getGMSContext().getGroupHandle().getAllCurrentMembers().contains(memberToken)) {
+            final String thisMember = getGMSContext().getServerIdentityToken();
+            String remoteDSCMemberToken = memberToken;
+            List<String> currentMembers = getGMSContext().getGroupHandle().getAllCurrentMembers();
+
+            // first check if the instance that set the key value pair originally is a current group member.
+            if (currentMembers != null && ! currentMembers.contains( remoteDSCMemberToken)) {
+                
+                // memberToken that originally set the key value pair has left group,
+                // so lets try to get memberTokens distributed state cache values from oldest current member.
+                // NOTE: that jts TX_LOG_DIR is the location of log directory for a failed server
+                // and its value is accessed from its FailureRecoveryAgent, thus this is cover a real life
+                // scenario for getting an instances' key value pair when the instance is no longer around.
+                remoteDSCMemberToken = getOldestCurrentMember(thisMember);
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "getFromCacheForPattern componentName:" + componentName + " memberToken:" + memberToken +
+                                            " missing data in local cache. look up data from oldest group member:" + remoteDSCMemberToken);
+                }
+            }
+            if (!getGMSContext().isShuttingDown()) {
                 ConcurrentHashMap<GMSCacheable, Object> temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
                 DSCMessage msg = new DSCMessage(temp, DSCMessage.OPERATION.ADDALLLOCAL.toString(), true);
                 try {
-                    boolean sent = sendMessage(memberToken, msg);
+                    boolean sent = sendMessage( remoteDSCMemberToken, msg);
                     if (sent) {
-                        Thread.sleep(3000);
+                        final long MAX_WAIT = 6000;
+                        final long startTime = System.currentTimeMillis();
+                        final long stopTime = startTime + MAX_WAIT;
+                        final long WAIT_INTERVAL = 1500;
+                        while (retval.isEmpty() &&
+                               System.currentTimeMillis() < stopTime) {
+                            waitForCacheUpdate(WAIT_INTERVAL);
+                            retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
+                        }
+                        if (logger.isLoggable(Level.FINE)) {
+                            final long DURATION = System.currentTimeMillis() - startTime;
+                            logger.fine("getFromCacheForPattern waited " + DURATION + " ms for result " +
+                                    retval);
+                        }
                     } else {
                         if (logger.isLoggable(Level.FINE)) {
                             logger.log(Level.FINE, "DistributedStateCacheImpl.getFromCachePattern() send failed for component=" +
                                     componentName + " member=" + memberToken);
                         }
                     }
-                    retval.putAll(getEntryFromCacheForPattern(componentName, memberToken));
                 } catch (GMSException e) {
                     logger.log(Level.WARNING, "dsc.sync.exception", e);
-                } catch (InterruptedException e) {
-                    //ignore
                 }
             } else {
                 logger.log(Level.FINE,
@@ -344,9 +398,28 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             }
         }
         if (retval.isEmpty()) {
-            logger.finer("retVal is empty");
+            logger.fine("retVal is empty");
         }
         return retval;
+    }
+
+    private String getOldestCurrentMember(String exclude) {
+        List<GMSMember> currentMembers = getGMSContext().getGroupHandle().getCurrentView();
+        GMSMember oldestMember = null;
+        if (currentMembers != null) {
+            for (GMSMember member : currentMembers) {
+                if (member.getMemberToken().equals(exclude)){
+                    continue;
+                }
+                if (oldestMember == null) {
+                    oldestMember = member;
+                }
+                if (member.getStartTime() < oldestMember.getStartTime()) {
+                    oldestMember = member;
+                }
+            }
+        }
+        return oldestMember == null ? null : oldestMember.getMemberToken();
     }
 
     public Map<GMSCacheable, Object> getFromCache(final Object key) {
@@ -404,8 +477,8 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
     void addAllToLocalCache(final Map<GMSCacheable, Object> map) {
         if (map != null && map.size() > 0) {
             cache.putAll(map);
+            notifyCacheUpdate();
         }
-
         indicateFirstSyncDone();
 
         logger.log(FINER, "done adding all to Distributed State Cache");

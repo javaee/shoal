@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -64,6 +64,7 @@ public class GMSLogDomain  {
     private static final String MCAST_LOGGER_NAME = GMS_LOGGER + ".mcast";
     private static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
     private static final String GMS_SEND = GMS_LOGGER + ".send";
+    private static final String GMS_DSC = GMS_LOGGER + ".dsc";
 
     private GMSLogDomain() { /* you can't have me */}
 
@@ -89,5 +90,9 @@ public class GMSLogDomain  {
 
     public static Logger getHandlerLogger() {
         return Logger.getLogger(GMS_HANDLER_LOGGER, LOG_STRINGS);
+    }
+
+    public static Logger getDSCLogger() {
+        return Logger.getLogger(GMS_DSC, LOG_STRINGS);
     }
 }

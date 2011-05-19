@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -42,12 +42,14 @@
 
 import com.sun.enterprise.ee.cms.core.*;
 import com.sun.enterprise.ee.cms.impl.client.*;
+import com.sun.enterprise.ee.cms.impl.base.DistributedStateCacheImpl;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
 import static java.lang.Thread.sleep;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.io.Serializable;
 
  /**
  * This is a mock object that exists to demonstrate a GMS client.
@@ -73,6 +75,7 @@ public class GMSClientService implements Runnable, CallBack{
     private String serviceName;
     private static final int MILLIS = 4000;
     public static final String IIOP_MEMBER_DETAILS_KEY = "IIOPListenerEndPoints";
+    public static final String TXLOGLOCATION = "TX_LOG_DIR";
 
     public GMSClientService(final String serviceName,
                             final String memberToken,
@@ -89,7 +92,8 @@ public class GMSClientService implements Runnable, CallBack{
         gms.addActionFactory(new PlannedShutdownActionFactoryImpl(this));
         gms.addActionFactory(new JoinNotificationActionFactoryImpl(this));
         gms.addActionFactory(new FailureNotificationActionFactoryImpl(this));
-        if (memberToken != null && memberToken.compareTo("server") != 0) {
+        if (serviceName.equals("TransactionService") &&
+            memberToken != null && ! memberToken.equals("server")) {
             gms.addActionFactory(serviceName,
                                  new FailureRecoveryActionFactoryImpl(this));
 
@@ -163,23 +167,43 @@ public class GMSClientService implements Runnable, CallBack{
                 .append(notification.toString())
                 .append("] has been processed")
                 .toString());
-        if( notification instanceof FailureRecoverySignal)
-        {
-            try {
-                extractMemberDetails( notification, notification.getMemberToken() );
-                sleep(MILLIS);
-            } catch ( InterruptedException e ) {
-                logger.log(Level.INFO, e.getLocalizedMessage());
+        if (notification instanceof FailureRecoverySignal) {
+            FailureRecoverySignal signal = (FailureRecoverySignal) notification;
+
+            final boolean SIMULATE_DSC_FAILURE = true;
+            DistributedStateCacheImpl dsc = (DistributedStateCacheImpl) gms.getGroupHandle().getDistributedStateCache();
+            if (SIMULATE_DSC_FAILURE) {
+
+                // simulate that the FailureRecovery agent never received the DSC update for TX_LOG_DIR for the failed instance.
+                // fix in GMS is if the instance that set the value is not current member, to ask the
+                // longest running member what the value should be.  This simulation verifies that the
+                // value is retrieved from the distributed state cache maintained on another cluster member.
+                dsc.removeAllForMember(signal.getMemberToken());
+                logger.info("in FailureRecovery notification: simulate missing TX_LOG_DIR for member:" + signal.getMemberToken() + " dsc:" + dsc);
             }
-        }
-        else if(notification instanceof JoinNotificationSignal)
-        {
+            String logdir = null;
+            Map<Serializable, Serializable> failedMemberDetails = notification.getMemberDetails();
+            if (failedMemberDetails != null) {
+                logdir = (String) failedMemberDetails.get(TXLOGLOCATION);
+            }
+            if (logdir == null) {
+                logger.severe("failed regression test for GLASSFISH-16422: distributed state cache value TX_LOG_DIR incorrectly null in FailureRecovery. dsc=" + dsc);
+            } else {
+                logger.info("FailureRecoveryAction for targetComponent: " + signal.getComponentName() + "  TX_LOG_DIR is " + logdir);
+            }
+            extractMemberDetails(notification, notification.getMemberToken());
+
+        } else if (notification instanceof JoinNotificationSignal) {
             serverToken =
                     notification.getMemberToken();
             logger.info("Received JoinNotificationSignal for member " + serverToken + " componentService:" + this.serviceName +
                     " with state set to " + ((JoinNotificationSignal) notification).getMemberState().toString());
 
-            extractMemberDetails( notification, serverToken );
+            // Commented out getting member details in join.
+            // It is a bad idea to access distributed state cache info in join handler, it is too
+            // early to have this info and just results in a lot pulling of data from origin
+            // member.  Okey to call this in JoinedAndReady notification.
+            //extractMemberDetails( notification, serverToken );
 
         } else if (notification instanceof JoinedAndReadyNotificationSignal) {
             serverToken =
@@ -220,7 +244,9 @@ public class GMSClientService implements Runnable, CallBack{
             logger.info(notification.getClass().getSimpleName() + " for member:" + serverToken +
                     " signal.getPreviousView()=" + arSignal.getPreviousView() +
                     " getCurrentView()=" + arSignal.getCurrentView());
-            extractMemberDetails( notification, serverToken );
+            // ensure that FailureRecovery is first time trying to access TX_LOG_DIR info to simulate
+            // GF-16422.
+            //extractMemberDetails( notification, serverToken );
         } else if (notification instanceof MessageSignal) {
             MessageSignal msgSig = (MessageSignal)notification;
             logger.info("Received message " + msgSig.getMessage() + " from:" + msgSig.getMemberToken() + " targetComponent:" + msgSig.getTargetComponent());
