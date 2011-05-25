@@ -129,7 +129,7 @@ public abstract class Command<K, V>
             throws IOException {
 
         if (! beforeTransmit()) {
-            _logger.log(Level.WARNING, "Aborting command transmission for " + getName() + " because beforeTransmit returned false");
+            _logger.log(Level.FINE, "Aborting command transmission for " + getName() + " because beforeTransmit returned false");
         }
     }
 

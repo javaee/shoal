@@ -112,7 +112,9 @@ public class ReplicatedBackingStore<K extends Serializable, V extends Serializab
     @Override
     public void remove(K key) throws BackingStoreException {
         try {
-            dataStore.remove(key);
+            if (dataStore != null) {
+                dataStore.remove(key);
+            }
         } catch (DataStoreException dsEx) {
             throw new BackingStoreException("Error during remove: " + key, dsEx);
         }
