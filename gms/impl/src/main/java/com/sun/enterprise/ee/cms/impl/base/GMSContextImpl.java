@@ -76,8 +76,7 @@ public class GMSContextImpl extends GMSContextBase {
     private Thread viewWindowThread = null;
     private Thread messageWindowThread = null;
     private AliveAndReadyViewWindow aliveAndReadyViewWindow = null;
-    private static final Map<String, RejoinSubevent> instanceRejoins =
-        new ConcurrentHashMap<String, RejoinSubevent>();
+    private final Map<String, RejoinSubevent> instanceRejoins = new ConcurrentHashMap<String, RejoinSubevent>();
     private MessageWindow messageWindow = null;
     private GMSMonitor gmsMonitor;
 
