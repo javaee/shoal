@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -80,6 +80,8 @@ public class GroupServiceProvider
     private AtomicLong previousViewId = new AtomicLong(-100);
 
     private volatile AliveAndReadyView arView;
+
+    private ConcurrentHashMap<String, Long> lastSendMsgFailNotification = new ConcurrentHashMap<String, Long>();
 
     public GroupServiceProvider(String myName, String groupName, boolean startGMS) {
         init(myName, groupName, startGMS);
@@ -188,8 +190,9 @@ public class GroupServiceProvider
                         System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
                 configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(),
                         System.getProperty("HEARTBEAT_FREQUENCY", "2000"));
-                //Uncomment this to receive loop back messages
-                //configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
+                // added for junit testing of send and receive to self.
+                // these settings are not used in glassfish config of gms anyways.
+                configProps.put(ServiceProviderConfigurationKeys.LOOPBACK.toString(), "true");
                 final String bindInterfaceAddress = System.getProperty("BIND_INTERFACE_ADDRESS");
                 if (bindInterfaceAddress != null) {
                     configProps.put(ServiceProviderConfigurationKeys.BIND_INTERFACE_ADDRESS.toString(), bindInterfaceAddress);
@@ -257,24 +260,40 @@ public class GroupServiceProvider
             groupHandle.sendMessage(targetMemberName, token, data);
             return true;
         } catch (MemberNotInViewException memEx) {
-            logger.log(Level.WARNING, "Error during groupHandle.sendMessage(" + targetMemberName + ") failed because "
-            + targetMemberName + " is not alive?");
+            final String msg = "Error during groupHandle.sendMessage(" + targetMemberName + "," +
+                                token + ") failed because " + targetMemberName + " is not alive?";
+            logSendMsgFailure(memEx, targetMemberName, msg);
         } catch (GMSException gmsEx) {
             try {
                 groupHandle.sendMessage(targetMemberName, token, data);
                 return true;
-            } catch (MemberNotInViewException memEx2) {
-                logger.log(Level.WARNING, "Error during groupHandle.sendMessage(" + targetMemberName + ") failed because "
-                + targetMemberName + " is not alive?");
             } catch (GMSException gmsEx2) {
-                logger.log(Level.WARNING, "Error during groupHandle.sendMessage(" + targetMemberName + ", " + token + "; size="
-                        + (data == null ? -1 : data.length));
-                logger.log(Level.FINE, "Error during groupHandle.sendMessage(" + targetMemberName + ", " + token + "; size="
-                        + (data == null ? -1 : data.length), gmsEx2);
+                final String msg = "Error during groupHandle.sendMessage(" + targetMemberName + ", " +
+                                   token + "; size=" + (data == null ? -1 : data.length) + ")";
+                logSendMsgFailure(gmsEx2, targetMemberName, msg);
             }
         }
 
         return false;
+    }
+
+    // ensure that log is not spammed with these messages.
+    // package private so can call from junit test
+    void logSendMsgFailure(GMSException t, String targetMemberName, String message) {
+        final long SEND_FAILED_NOTIFICATION_PERIOD = 1000 * 60 * 60 * 12 ;  // within a 12 hour period,only notify once.
+
+        final Long lastNotify = lastSendMsgFailNotification.get(targetMemberName);
+        final long currentTime = System.currentTimeMillis();
+        if (lastNotify == null || currentTime > lastNotify + SEND_FAILED_NOTIFICATION_PERIOD) {
+            lastSendMsgFailNotification.put(targetMemberName, new Long(currentTime));
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.WARNING, message, t);
+            } else {
+                Throwable causeT = t.getCause();
+                String cause = causeT == null ? t.getMessage() : causeT.getMessage();
+                logger.log(Level.WARNING, message + " Cause:" + cause);
+            }
+        }
     }
 
     @Override
