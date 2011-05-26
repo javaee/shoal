@@ -216,6 +216,19 @@ public class GroupCommunicationProviderImpl implements
         clusterManager.stop(isClusterShutdown);
     }
 
+    // the cluster view is in flux when all the members are joining.
+    // send synch the distributed state cache WITHOUT checking if instance is in view.
+    public boolean sendMessage(final PeerID id, final Serializable msg) {
+        boolean sent = false;
+        try {
+            sent = clusterManager.send(id, msg, false);
+        } catch (Throwable t) {
+            GMSLogDomain.getDSCLogger().log(Level.FINE, "failed to send DSC message to member:" + id, t);
+        }
+        return sent;
+    }
+
+
     /**
      * Sends a message using the underlying group communication
      * providers'(GCP's) APIs. Requires the users' message to be wrapped into a

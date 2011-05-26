@@ -541,6 +541,25 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
         }
     }
 
+    void syncCache(final PeerID peerID, final boolean isCoordinator) throws GMSException {
+        final ConcurrentHashMap<GMSCacheable, Object> temp;
+        temp = new ConcurrentHashMap<GMSCacheable, Object>(cache);
+
+        final DSCMessage msg = new DSCMessage(temp, DSCMessage.OPERATION.ADDALLLOCAL.toString(), isCoordinator);
+        if (!peerID.getInstanceName().equals(getGMSContext().getServerIdentityToken())) {
+            if (logger.isLoggable(Level.FINER)) {
+                logger.log(Level.FINER, "Sending sync message from DistributedStateCache to member " + peerID);
+            }
+            boolean result = ((GroupCommunicationProviderImpl)this.ctxRef.get().getGroupCommunicationProvider()).sendMessage(peerID, msg);
+            if (logger.isLoggable(Level.FINE))  {
+                logger.log(Level.FINE, "synch cache sent result:" + result + " with member:" + peerID.getInstanceName() + " id:" + peerID);
+            }
+        }
+        if (isCoordinator) {
+            indicateFirstSyncDone();
+        }
+    }
+
     private GMSCacheable getTrueKey(GMSCacheable cKey) {
         final Set<GMSCacheable> keys;
         keys = cache.keySet();

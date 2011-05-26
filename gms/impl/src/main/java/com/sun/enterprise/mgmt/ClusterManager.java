@@ -379,7 +379,7 @@ public class ClusterManager implements MessageListener {
      * the message after waiting some amount of time.
      * @throws java.io.IOException if an io error occurs
      */
-    public boolean send(final PeerID peerid, final Serializable msg) throws IOException, MemberNotInViewException {
+    public boolean send(final PeerID peerid, final Serializable msg, boolean validatePeeridInView) throws IOException, MemberNotInViewException {
         boolean sent = false;
         if (!stopping) {
             final Message message = new MessageImpl( Message.TYPE_CLUSTER_MANAGER_MESSAGE );
@@ -388,8 +388,8 @@ public class ClusterManager implements MessageListener {
 
             if (peerid != null) {
                 //check if the peerid is part of the cluster view
-                if (getClusterViewManager().containsKey(peerid, true)) {
-                    if (LOG.isLoggable(Level.FINE)) {
+                if (! validatePeeridInView || getClusterViewManager().containsKey(peerid, true)) {
+                    if (LOG.isLoggable(Level.FINE) && validatePeeridInView) {
                         LOG.fine("ClusterManager.send : Cluster View contains " + peerid.toString());
                     }
                     sent = netManager.send( peerid, message );
@@ -413,6 +413,10 @@ public class ClusterManager implements MessageListener {
             }
         }
         return sent;
+    }
+
+    public boolean send(final PeerID peerid, final Serializable msg) throws IOException, MemberNotInViewException {
+        return send(peerid, msg, true);
     }
 
     /**
