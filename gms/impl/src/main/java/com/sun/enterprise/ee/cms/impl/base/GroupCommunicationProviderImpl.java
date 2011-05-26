@@ -223,7 +223,7 @@ public class GroupCommunicationProviderImpl implements
         try {
             sent = clusterManager.send(id, msg, false);
         } catch (Throwable t) {
-            GMSLogDomain.getDSCLogger().log(Level.FINE, "failed to send DSC message to member:" + id, t);
+            GMSLogDomain.getDSCLogger().log(Level.FINE, "failed to send DSC message to member:" + id + " cause:" + t.getLocalizedMessage());
         }
         return sent;
     }
