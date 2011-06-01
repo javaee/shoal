@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -93,6 +93,7 @@ public class ApplicationServer implements Runnable, CallBack {
     final private GroupManagementService.MemberType memberType;
     private volatile boolean stopped = false;
     private long lifeTime=0;
+    private static final String TXLOGLOCATION = "TX_LOG_DIR";
 
     public ApplicationServer(final String serverName, final String groupName,
                              final GroupManagementService.MemberType memberType,
@@ -166,6 +167,7 @@ public class ApplicationServer implements Runnable, CallBack {
         details.put(GMSClientService.IIOP_MEMBER_DETAILS_KEY, ar1);
         try {
             ((GroupManagementServiceImpl) gms).setMemberDetails(serverName, details);
+            ((GroupManagementServiceImpl) gms).updateMemberDetails(serverName, TXLOGLOCATION, serverName + "/txlog.data");
         }
         catch (GMSException e) {
             logger.log(Level.WARNING, e.getLocalizedMessage());

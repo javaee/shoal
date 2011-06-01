@@ -580,7 +580,7 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             token.compareTo(getGMSContext().getServerIdentityToken()) == 0) {
             if (packet.getClusterView().getSize() > 1) {
                 // TODO: Figure out a better way to sync
-                syncDSC(token);
+                syncDSC(advert.getID());
             }
             if (member.isCore()) {
                 addJoinNotificationSignal(token, member.getGroupName(), member.getStartTime());
@@ -679,13 +679,51 @@ class ViewWindowImpl implements ViewWindow, Runnable {
             logger.log(Level.FINE, "I am coordinator, performing sync ops on " + token);
             try {
                 dsc = (DistributedStateCacheImpl) getGMSContext().getDistributedStateCache();
+                if (logger.isLoggable(Level.FINER)) {
                 logger.log(Level.FINER, "got DSC ref " + dsc.toString());
+                }
 
                 // this sleep() gives the new remote member some time to receive
                 // this same view change before we ask it to sync with us.
                 Thread.sleep(SYNCWAITMILLIS);
                 logger.log(Level.FINER, "Syncing...");
                 dsc.syncCache(token, true);
+                logger.log(Level.FINER, "Sync request sent..");
+            } catch (GMSException e) {
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "GMSException during DSC sync " + e.getLocalizedMessage(), e);
+                }
+            } catch (InterruptedException e) {
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, e.getLocalizedMessage(), e);
+                }
+            } catch (Exception e) {
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, "Exception during DSC sync:" + e, e);
+                }
+            }
+        }
+    }
+
+    private void syncDSC(final PeerID peerid) {
+        final DistributedStateCacheImpl dsc;
+        // if coordinator, call dsc to sync with this member
+        if (isCoordinator()) {
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "I am coordinator, performing sync ops on member:" + peerid.getInstanceName() +
+                                       " peerid:" + peerid);
+            }
+            try {
+                dsc = (DistributedStateCacheImpl) getGMSContext().getDistributedStateCache();
+                if (logger.isLoggable(Level.FINER)) {
+                    logger.log(Level.FINER, "got DSC ref " + dsc.toString());
+                }
+
+                // this sleep() gives the new remote member some time to receive
+                // this same view change before we ask it to sync with us.
+                Thread.sleep(SYNCWAITMILLIS);
+                logger.log(Level.FINER, "Syncing...");
+                dsc.syncCache(peerid, true);
                 logger.log(Level.FINER, "Sync request sent..");
             } catch (GMSException e) {
                 if (logger.isLoggable(Level.FINE)) {

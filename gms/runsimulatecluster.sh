@@ -257,7 +257,7 @@ if [ $DIST = false ]; then
     echo "Removing old server log"
     rm -f ${LOGS_DIR}/server.log
     echo "Starting server"
-    if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    if [ ! -z "${BINDINGINTERFACEADDRESS}" ]; then
        BIA="-bia ${BINDINGINTERFACEADDRESS}"
     else
        BIA=""
@@ -311,7 +311,7 @@ if [ $DIST = false ]; then
         else
            INSTANCE_NAME=instance${count}
         fi
-        if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+        if [ ! -z "${BINDINGINTERFACEADDRESS}" ]; then
           BIA="-bia ${BINDINGINTERFACEADDRESS}"
         else
           BIA=""
@@ -381,7 +381,7 @@ wait
 # setting up the BIA for the admin cli
 #
 if [ $DIST = false ]; then
-    if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    if [ ! -z "${BINDINGINTERFACEADDRESS}" ]; then
          BIA="-bia ${BINDINGINTERFACEADDRESS}"
     else
         BIA=""
@@ -389,7 +389,7 @@ if [ $DIST = false ]; then
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
        TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-       if [ ! -z ${TMP} ]; then
+       if [ ! -z "${TMP}" ]; then
            BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
        else
            BIA=""
@@ -578,7 +578,7 @@ fi
 # setting up the BIA for the admin cli
 #
 if [ $DIST = false ]; then
-    if [ ! -z ${BINDINGINTERFACEADDRESS} ]; then
+    if [ ! -z "${BINDINGINTERFACEADDRESS}" ]; then
          BIA="-bia ${BINDINGINTERFACEADDRESS}"
     else
         BIA=""
@@ -586,7 +586,7 @@ if [ $DIST = false ]; then
 else
     if [ -f ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties ]; then
        TMP=`egrep "^BIND_INTERFACE_ADDRESS" ${CLUSTER_CONFIGS}/${GROUPNAME}/server.properties`
-       if [ ! -z ${TMP} ]; then
+       if [ ! -z "${TMP}" ]; then
            BIA="-bia `echo $TMP | awk -F= '{print $2}' ` "
        else
            BIA=""

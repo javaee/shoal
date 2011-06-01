@@ -216,6 +216,19 @@ public class GroupCommunicationProviderImpl implements
         clusterManager.stop(isClusterShutdown);
     }
 
+    // the cluster view is in flux when all the members are joining.
+    // send synch the distributed state cache WITHOUT checking if instance is in view.
+    public boolean sendMessage(final PeerID id, final Serializable msg) {
+        boolean sent = false;
+        try {
+            sent = clusterManager.send(id, msg, false);
+        } catch (Throwable t) {
+            GMSLogDomain.getDSCLogger().log(Level.FINE, "failed to send DSC message to member:" + id + " cause:" + t.getLocalizedMessage());
+        }
+        return sent;
+    }
+
+
     /**
      * Sends a message using the underlying group communication
      * providers'(GCP's) APIs. Requires the users' message to be wrapped into a
@@ -332,8 +345,7 @@ public class GroupCommunicationProviderImpl implements
             } else {
                 final PeerID id = clusterManager.getID(targetMemberIdentityToken);
                 if (id.equals(PeerID.NULL_PEER_ID)) {
-                    // TBD:  re-evaluate after testing if this should be a warning or not.
-                    logger.log(Level.WARNING, "GroupCommunicationProvider.sendMessage(target=" + targetMemberIdentityToken + "): unable to send message: missing mapping from member identifier to network peerid");
+                    logger.log(Level.FINE, "GroupCommunicationProvider.sendMessage(target=" + targetMemberIdentityToken + "): unable to send message: missing mapping from member identifier to network peerid");
                     throw new MemberNotInViewException("No mapping from member identifier:" + targetMemberIdentityToken + " to a network peerid.");
                 }
                 if (clusterManager.getClusterViewManager().containsKey(id)) {

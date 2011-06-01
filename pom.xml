@@ -91,6 +91,13 @@
         </developer>
     </developers>
 
+    <licenses>
+        <license>
+            <name>CDDL+GPL</name>
+            <url>http://glassfish.java.net/public/CDDL+GPL.html</url>
+        </license>
+    </licenses>
+
     <properties>
         <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
         <grizzly.version>1.9.24</grizzly.version>
@@ -141,7 +148,6 @@
                     <threshold>${findbugs.threshold}</threshold>
                     <excludeFilterFile>${findbugs.exclude}</excludeFilterFile>
                     <findbugsXmlOutput>true</findbugsXmlOutput>
-                    <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
                 </configuration>
             </plugin>
         </plugins>
