@@ -42,6 +42,12 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
+    <parent>
+        <groupId>net.java</groupId>
+        <artifactId>jvnet-parent</artifactId>
+        <version>1</version>
+    </parent>
+
     <modelVersion>4.0.0</modelVersion>
     
     <groupId>org.shoal</groupId>
@@ -53,12 +59,20 @@
 
     <scm>
         <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</connection>
+        <developerConnection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</developerConnection>
+        <url>http://java.net/projects/shoal/sources/svn/show</url>
     </scm>
 
     <issueManagement>
         <system>IssueTracker</system>
         <url>http://java.net/jira/browse/SHOAL</url>
     </issueManagement>
+    <mailingLists>
+        <mailingList>
+            <name>Shoal Developer</name>
+            <archive>dev@shoal.java.net</archive>
+        </mailingList>
+    </mailingLists>
 
     <developers>
         <developer>
@@ -147,16 +161,16 @@
                     <findbugsXmlOutput>true</findbugsXmlOutput>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>                           
+                <artifactId>maven-release-plugin</artifactId>                         
+                <configuration>                                                       
+                    <mavenExecutorId>forked-path</mavenExecutorId>                
+                    <useReleaseProfile>false</useReleaseProfile>                  
+                    <arguments>${release.arguments}</arguments>
+                </configuration>                                                      
+            </plugin>                    
         </plugins>
-        <!-- explicitly define this extension to resolve invalid checksums -->
-        <!-- See:  http://jira.codehaus.org/browse/MNG-4301 -->
-        <extensions>
-            <extension>
-                <groupId>org.apache.maven.wagon</groupId>
-                <artifactId>wagon-webdav</artifactId>
-                <version>1.0-beta-2</version>                                                               
-           </extension>              
-        </extensions>
     </build>
 
     <reporting>
@@ -213,13 +227,4 @@
             <url>http://maven.glassfish.org/content/groups/glassfish</url>
         </repository>
     </repositories>
-
-    <distributionManagement>
-        <repository>       <!-- internal repository to publish to -->
-            <uniqueVersion>false</uniqueVersion>
-            <id>rator.sfbay</id>
-            <url>dav:http://glassfish-maven-repository.us.oracle.com/maven/repositories/glassfish/</url>
-        </repository>
-    </distributionManagement>
-
 </project>
