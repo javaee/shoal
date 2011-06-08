@@ -53,14 +53,14 @@
     <groupId>org.shoal</groupId>
     <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.5.33</version>
+    <version>1.5.34-SNAPSHOT</version>
     <name>shoal</name>
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/tags/shoal-1.5.33</connection>
-        <developerConnection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/tags/shoal-1.5.33</developerConnection>
-        <url>http://java.net/projects/shoal/sources/svn/show/tags/shoal-1.5.33</url>
+        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</connection>
+        <developerConnection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</developerConnection>
+        <url>http://java.net/projects/shoal/sources/svn/show</url>
     </scm>
 
     <issueManagement>
