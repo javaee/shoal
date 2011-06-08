@@ -164,6 +164,15 @@
                     <findbugsXmlOutput>true</findbugsXmlOutput>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>                           
+                <artifactId>maven-release-plugin</artifactId>                         
+                <configuration>                                                       
+                    <mavenExecutorId>forked-path</mavenExecutorId>                
+                    <useReleaseProfile>false</useReleaseProfile>                  
+                    <arguments>${release.arguments}</arguments>
+                </configuration>                                                      
+            </plugin>                    
         </plugins>
         <!-- explicitly define this extension to resolve invalid checksums -->
         <!-- See:  http://jira.codehaus.org/browse/MNG-4301 -->
@@ -187,15 +196,6 @@
                     <excludeFilterFile>${findbugs.exclude}</excludeFilterFile>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>                           
-                <artifactId>maven-release-plugin</artifactId>                         
-                <configuration>                                                       
-                    <mavenExecutorId>forked-path</mavenExecutorId>                
-                    <useReleaseProfile>false</useReleaseProfile>                  
-                    <arguments>${release.arguments}</arguments>
-                </configuration>                                                      
-            </plugin>                    
         </plugins>
     </reporting>
 
