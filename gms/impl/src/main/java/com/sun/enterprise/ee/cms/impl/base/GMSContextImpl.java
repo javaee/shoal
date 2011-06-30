@@ -211,6 +211,10 @@ public class GMSContextImpl extends GMSContextBase {
         if (gmsMonitor != null) {
             gmsMonitor.stop();
         }
+        if (distributedStateCache != null) {
+            distributedStateCache.removeAll();
+            distributedStateCache = null;
+        }
     }
 
     @Override

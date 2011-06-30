@@ -61,7 +61,7 @@ public class GroupLeadershipNotificationSignalImpl implements GroupLeadershipNot
     protected static final Logger logger = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
 
     private static final String MEMBER_DETAILS = "MEMBERDETAILS";
-    private static GMSContext ctx;
+    private GMSContext ctx;
 
     private final String memberToken;
     private final String groupName;

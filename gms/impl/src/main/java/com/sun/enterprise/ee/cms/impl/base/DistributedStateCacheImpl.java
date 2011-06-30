@@ -143,6 +143,10 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
             // no, there is no one, create a new one then
             instance = new DistributedStateCacheImpl(groupName);
 
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "created a DistributedStateCache for group:" + groupName);
+            }
+
             // put the new instance to the map, unless another thread won the race and has put its own instance already.
             // if there is another instance already, use that one instead and discard ours
             DistributedStateCacheImpl otherInstance = ctxCache.putIfAbsent(groupName, instance);
@@ -627,6 +631,10 @@ public class DistributedStateCacheImpl implements DistributedStateCache {
      */
     public void removeAll() {
         cache.clear();
+        ctxCache.remove(groupName);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("removed distributed state cache for group: " + groupName);
+        }
     }
 
     public void removeAllForMember(final String memberToken) {

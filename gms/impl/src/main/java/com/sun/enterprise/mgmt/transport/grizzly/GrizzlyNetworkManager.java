@@ -380,8 +380,9 @@ public class GrizzlyNetworkManager extends AbstractNetworkManager {
                 throw new IOException("can not find an unique host");
             localPeerID = new PeerID<GrizzlyPeerID>(new GrizzlyPeerID(uniqueHost, tcpPort, multicastAddress, multicastPort), groupName, instanceName);
             peerIDMap.put(instanceName, localPeerID);
-            if (LOG.isLoggable(Level.FINE))
-                LOG.log(Level.FINE, "local peer id = " + localPeerID);
+            if (getLogger().isLoggable(Level.CONFIG)) {
+                getLogger().log(Level.CONFIG, "GMS Local Peer ID=" + localPeerID);
+            }
         }
         tcpSender = new GrizzlyTCPConnectorWrapper( controller, sendWriteTimeout, host, tcpPort, localPeerID );
         GrizzlyUDPConnectorWrapper udpConnectorWrapper = new GrizzlyUDPConnectorWrapper( controller,
