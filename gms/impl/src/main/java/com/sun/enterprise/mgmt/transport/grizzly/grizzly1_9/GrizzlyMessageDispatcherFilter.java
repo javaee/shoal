@@ -55,9 +55,9 @@ import java.util.HashMap;
  */
 public class GrizzlyMessageDispatcherFilter implements ProtocolFilter {
 
-    private final GrizzlyNetworkManager networkManager;
+    private final GrizzlyNetworkManager1_9 networkManager;
 
-    public GrizzlyMessageDispatcherFilter( GrizzlyNetworkManager networkManager ) {
+    public GrizzlyMessageDispatcherFilter( GrizzlyNetworkManager1_9 networkManager ) {
         this.networkManager = networkManager;
     }
 
@@ -70,7 +70,7 @@ public class GrizzlyMessageDispatcherFilter implements ProtocolFilter {
         Map<String, Object> piggyback = null;
         if( selectionKey != null ) {
             piggyback = new HashMap<String, Object>();
-            piggyback.put( GrizzlyNetworkManager.MESSAGE_SELECTION_KEY_TAG, selectionKey );
+            piggyback.put( GrizzlyNetworkManager1_9.MESSAGE_SELECTION_KEY_TAG, selectionKey );
         }
         networkManager.receiveMessage( incomingMessage, piggyback );
         return false;

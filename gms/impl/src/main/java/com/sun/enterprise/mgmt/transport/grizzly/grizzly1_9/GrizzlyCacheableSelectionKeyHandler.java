@@ -50,12 +50,12 @@ import java.nio.channels.SelectionKey;
  */
 public class GrizzlyCacheableSelectionKeyHandler extends CacheableSelectionKeyHandler {
 
-    private GrizzlyNetworkManager networkManager;
+    private GrizzlyNetworkManager1_9 networkManager;
 
     public GrizzlyCacheableSelectionKeyHandler() {
     }
 
-    public GrizzlyCacheableSelectionKeyHandler( int highWaterMark, int numberToReclaim, GrizzlyNetworkManager networkManager ) {
+    public GrizzlyCacheableSelectionKeyHandler( int highWaterMark, int numberToReclaim, GrizzlyNetworkManager1_9 networkManager ) {
         super( highWaterMark, numberToReclaim );
         this.networkManager = networkManager;
     }

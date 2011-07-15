@@ -62,11 +62,8 @@ import java.net.InetAddress;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Arrays;
-import java.net.URI;
-import java.net.URISyntaxException;
+
 import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.grizzly.Grizzly;
@@ -92,7 +89,7 @@ import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*
 /**
  * @author Bongjae Chang
  */
-public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
+public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
     public static final String MESSAGE_CONNECTION_TAG = "connection";
     private static final int SERVER_CONNECTION_BACKLOG = 4096;
 
@@ -108,7 +105,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     private final ConcurrentHashMap<String, Instance> instances =
             new ConcurrentHashMap<String, Instance>();
     
-    public GrizzlyNetworkManager() {
+    public GrizzlyNetworkManager2() {
     }
 
     public void localConfigure(final Map properties) {
@@ -358,7 +355,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
     @Override
     protected Logger getGrizzlyLogger() {
-        return Grizzly.logger(GrizzlyNetworkManager.class);
+        return Grizzly.logger(GrizzlyNetworkManager2.class);
     }
 
     private Instance obtainInstance(final String instance) {

@@ -41,6 +41,7 @@
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly1_9;
 
 import com.sun.enterprise.mgmt.transport.buffers.BufferUtils;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager;
 import com.sun.grizzly.ProtocolParser;
 import com.sun.grizzly.SSLConfig;
 import com.sun.enterprise.mgmt.transport.Message;
@@ -71,7 +72,7 @@ import java.util.logging.Level;
  */
 public class GrizzlyMessageProtocolParser implements ProtocolParser<Message> {
 
-    private final static Logger LOG = GrizzlyNetworkManager.getLogger();
+    private final Logger LOG = GrizzlyNetworkManager.getLogger();
 
     private static final int MIN_BUFFER_FREE_SPACE = 1024;
 

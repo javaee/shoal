@@ -181,7 +181,9 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
             String multicastTTLresults = multicastTimeToLive == GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE ?
                     " default" : Integer.toString(multicastTimeToLive);
             StringBuilder buf = new StringBuilder(256);
-            buf.append("\nGrizzlyNetworkManager Configuration\n");
+            buf.append("\n");
+            buf.append(this.getClass().getSimpleName());
+            buf.append(" Configuration\n");
             buf.append("BIND_INTERFACE_ADDRESS:").append(host).append("  NetworkInterfaceName:").append(networkInterfaceName).append('\n');
             buf.append("TCPSTARTPORT..TCPENDPORT:").append(tcpStartPort).append("..").append(tcpEndPort).append('\n');
             buf.append("MULTICAST_ADDRESS:MULTICAST_PORT:").append(multicastAddress).append(':').append(multicastPort)

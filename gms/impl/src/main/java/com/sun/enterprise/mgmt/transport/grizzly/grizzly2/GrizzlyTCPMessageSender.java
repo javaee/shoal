@@ -39,6 +39,7 @@
  */
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager;
 import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.mgmt.transport.AbstractMessageSender;

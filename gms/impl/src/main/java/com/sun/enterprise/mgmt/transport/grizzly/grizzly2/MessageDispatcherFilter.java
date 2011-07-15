@@ -62,9 +62,9 @@ public class MessageDispatcherFilter extends BaseFilter {
             Grizzly.DEFAULT_ATTRIBUTE_BUILDER.createAttribute(
             MessageDispatcherFilter.class.getName() + ".piggyBack");
 
-    private final GrizzlyNetworkManager networkManager;
+    private final GrizzlyNetworkManager2 networkManager;
 
-    public MessageDispatcherFilter( GrizzlyNetworkManager networkManager ) {
+    public MessageDispatcherFilter( GrizzlyNetworkManager2 networkManager ) {
         this.networkManager = networkManager;
     }
 
@@ -76,7 +76,7 @@ public class MessageDispatcherFilter extends BaseFilter {
         Map<String, Connection> piggyBack = piggyBackAttribute.get(connection);
         if (piggyBack == null) {
             piggyBack = new HashMap<String, Connection>();
-            piggyBack.put(GrizzlyNetworkManager.MESSAGE_CONNECTION_TAG, connection);
+            piggyBack.put(GrizzlyNetworkManager2.MESSAGE_CONNECTION_TAG, connection);
             piggyBackAttribute.set(connection, piggyBack);
         }
         

@@ -46,7 +46,6 @@ import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
-import com.sun.enterprise.mgmt.HealthMessage;
 import com.sun.enterprise.mgmt.transport.*;
 import com.sun.enterprise.mgmt.transport.grizzly.*;
 import com.sun.grizzly.*;
@@ -71,7 +70,7 @@ import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*
 /**
  * @author Bongjae Chang
  */
-public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
+public class GrizzlyNetworkManager1_9 extends com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager {
 
     public static final String MESSAGE_SELECTION_KEY_TAG = "selectionKey";
 
@@ -89,7 +88,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
     public TCPSelectorHandler tcpSelectorHandler = null;
 
 
-    public GrizzlyNetworkManager() {
+    public GrizzlyNetworkManager1_9() {
     }
 
     public void localConfigure( final Map properties ) {
@@ -185,7 +184,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
                     protocolChain.addFilter(
                             GrizzlyMessageProtocolParser.createParserProtocolFilter(null));
                     protocolChain.addFilter(new GrizzlyMessageDispatcherFilter(
-                            GrizzlyNetworkManager.this));
+                            GrizzlyNetworkManager1_9.this));
                 }
                 return protocolChain;
             }
@@ -213,7 +212,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
 
             public void onReady() {
                 if( LOG.isLoggable( Level.FINER ) )
-                    LOG.log( Level.FINER, "GrizzlyNetworkManager is ready" );
+                    LOG.log( Level.FINER, "GrizzlyNetworkManager1_9 is ready" );
                 controllerGateIsReady = true;
                 controllerGate.countDown();
             }
