@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,8 +40,8 @@
 
 package com.sun.enterprise.mgmt;
 
-import static com.sun.enterprise.mgmt.ClusterViewEvents.*;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
+import static com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST;
 import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.core.RejoinSubevent;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
@@ -62,12 +62,15 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static com.sun.enterprise.mgmt.ClusterViewEvents.*;
 
 /**
  * Master Node defines a protocol by which a set of nodes connected to a JXTA infrastructure group
@@ -104,6 +107,8 @@ class MasterNode implements MessageListener, Runnable {
     private static final Logger mcastLogger = GMSLogDomain.getMcastLogger();
     private static final Logger masterLogger = GMSLogDomain.getMasterNodeLogger();
     private static final Logger monitorLogger = GMSLogDomain.getMonitorLogger();
+    private static final Logger nomLog = GMSLogDomain.getNoMCastLogger();
+
     private final ClusterManager manager;
 
     private boolean masterAssigned = false;
@@ -162,6 +167,7 @@ class MasterNode implements MessageListener, Runnable {
     private ReliableMulticast reliableMulticast;
     private final ExecutorService checkForMissedMasterMsgSingletonExecutor;
     final TreeSet<ProcessedMasterViewId> processedChangeEvents = new TreeSet<ProcessedMasterViewId>();
+    final boolean NON_MULTICAST;
 
 
     /**
@@ -174,7 +180,8 @@ class MasterNode implements MessageListener, Runnable {
      */
     MasterNode(final ClusterManager manager,
                final long timeout,
-               final int interval) {
+               final int interval,
+               Map props) {
         localNodeID = manager.getPeerID();
         if (timeout > 0) {
             this.timeout = timeout;
@@ -187,6 +194,8 @@ class MasterNode implements MessageListener, Runnable {
         outstandingMasterNodeMessages = new TreeSet<MasterNodeMessageEvent>();
         checkForMissedMasterMsgSingletonExecutor =
             Executors.newSingleThreadExecutor(new GMSThreadFactory("GMS-validateMasterChangeEvents-Group-" + manager.getGroupName() + "-thread"));
+        String value = (String)props.get(VIRTUAL_MULTICAST_URI_LIST.toString());
+        NON_MULTICAST = value != null && value.length() > 0;
     }
 
     /**
@@ -345,6 +354,7 @@ class MasterNode implements MessageListener, Runnable {
         masterViewID.set(clusterViewManager.getMasterViewID());
         final long timeToWait = timeout;
         LOG.log(Level.FINER, "Attempting to discover a master node");
+
         Message query = createMasterQuery();
         send(null, null, query);
         if (LOG.isLoggable(Level.FINER)) {
@@ -743,6 +753,10 @@ class MasterNode implements MessageListener, Runnable {
             } else if (LOG.isLoggable(Level.FINER)) {
                 LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
             }
+        } else if (masterAssigned && NON_MULTICAST) {
+
+            // forward master node query to Master.
+            send(getMasterNodeID(), "", msg);
         }
         //for issue 484
         //when the master is killed and restarted very quickly

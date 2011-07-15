@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -44,16 +44,15 @@ import static com.sun.enterprise.mgmt.ConfigConstants.*;
 import static com.sun.enterprise.mgmt.transport.grizzly.GrizzlyConfigConstants.*;
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.mgmt.transport.AbstractNetworkManager;
-import com.sun.enterprise.mgmt.transport.Message;
-import com.sun.enterprise.mgmt.transport.MessageEvent;
-import com.sun.enterprise.mgmt.transport.MessageImpl;
-import com.sun.enterprise.mgmt.transport.MessageSender;
-import com.sun.enterprise.mgmt.transport.MulticastMessageSender;
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.mgmt.HealthMessage;
+import com.sun.enterprise.mgmt.HealthMonitor;
+import com.sun.enterprise.mgmt.transport.*;
 
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
 
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
@@ -63,8 +62,6 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +74,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     // too many protocol warnings/severe when trying to communicate to a stopped/killed member of cluster.
     // only logger to shoal logger when necessary to debug grizzly transport within shoal.  don't leave this way.
     public final Logger LOG;
+    public final Logger nomcastLogger;
 
     public final ConcurrentHashMap<String, PeerID<GrizzlyPeerID>> peerIDMap =
             new ConcurrentHashMap<String, PeerID<GrizzlyPeerID>>();
@@ -112,8 +110,14 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     public final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
+    protected VirtualMulticastSender vms = null;
+    protected boolean disableMulticast = false;
+    protected String virtualUriList;
+
     public GrizzlyNetworkManager() {
-        LOG = getGrizzlyLogger();
+
+       LOG = GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER);
+       nomcastLogger = GMSLogDomain.getNoMCastLogger();
     }
 
     private boolean validMulticastAddress(String multicastAddr) {
@@ -168,6 +172,11 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         multicastTimeToLive = Utility.getIntProperty(MULTICAST_TIME_TO_LIVE.toString(),
                                       GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
+        virtualUriList = Utility.getStringProperty(VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties);
+        if (virtualUriList != null && !virtualUriList.trim().isEmpty()) {
+            nomcastLogger.log(Level.CONFIG, "mgmt.disableUDPmulticast", new Object[]{VIRTUAL_MULTICAST_URI_LIST.toString(), virtualUriList});
+            disableMulticast = true;
+        }
         if (shoalLogger.isLoggable(Level.CONFIG)) {
             String multicastTTLresults = multicastTimeToLive == GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE ?
                     " default" : Integer.toString(multicastTimeToLive);
@@ -199,21 +208,6 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         // TBD: consider if code can be share here or not between grizzly 1.9 and 2.0 transport containers.
     }
 
-    abstract public List<PeerID> getVirtualPeerIDList( String virtualUriList );
-
-
-    private PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
-        if( uri == null )
-            return null;
-        URI virtualUri = new URI( uri );
-        return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( virtualUri.getHost(),
-                                                             virtualUri.getPort(),
-                                                             multicastAddress,
-                                                             multicastPort ),
-                                          localPeerID.getGroupName(),
-                                          // the instance name is not meaningless in this case
-                                          "Unknown" );
-    }
 
     @Override
     public void stop() throws IOException {
@@ -246,12 +240,12 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
 //            }
             PeerID<GrizzlyPeerID> previous = peerIDMap.put( instanceName, peerID );
             if (previous == null) {
-                Level debugLevel = Level.FINEST;
-                if (LOG.isLoggable(debugLevel)) {
-                    LOG.log(debugLevel, "addRemotePeer: " + instanceName + " peerId:" + peerID, new Exception("stack trace"));
+                if (nomcastLogger.isLoggable(Level.FINE)) {
+                    nomcastLogger.log(Level.FINE, "addRemotePeer: " + instanceName + " peerId:" + peerID, new Exception("stack trace"));
                 }
             }
         }
+        addToVMS(peerID);
     }
 
     public void removeRemotePeer(String instanceName) {
@@ -309,6 +303,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         }
         peerIDMap.remove( instanceName );
         removeRemotePeer( instanceName );
+        removeFromVMS(peerID);
     }
 
     @Override
@@ -375,4 +370,114 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     }
 
     protected abstract Logger getGrizzlyLogger();
+
+    protected List<PeerID> getVirtualPeerIDList(String virtualUriList) {
+        if (virtualUriList == null) {
+            return null;
+        }
+        if (nomcastLogger.isLoggable(Level.FINE)) {
+            nomcastLogger.log(Level.FINE, "VIRTUAL_MULTICAST_URI_LIST = {0}", virtualUriList);
+        }
+        List<PeerID> virtualPeerIdList = new ArrayList<PeerID>();
+        //if this object has multiple addresses that are comma separated
+        if (virtualUriList.indexOf(",") > 0) {
+            String addresses[] = virtualUriList.split(",");
+            if (addresses.length > 0) {
+                List<String> virtualUriStringList = Arrays.asList(addresses);
+                for (String uriString : virtualUriStringList) {
+                    try {
+                        PeerID peerID = getPeerIDFromURI(uriString);
+                        if (peerID != null) {
+                            virtualPeerIdList.add(peerID);
+                            if (nomcastLogger.isLoggable(Level.FINE)) {
+                                nomcastLogger.log(Level.FINE,
+                                        "VIRTUAL_MULTICAST_URI = {0}, Converted PeerID = {1}",
+                                        new Object[]{uriString, peerID});
+                            }
+                        }
+                    } catch (URISyntaxException use) {
+                        if (LOG.isLoggable(Level.CONFIG)) {
+                            LOG.log(Level.CONFIG,
+                                    "failed to parse the virtual multicast uri("
+                                    + uriString + ")", use);
+                        }
+                    }
+                }
+            }
+        } else {
+            //this object has only one address in it, so add it to the list
+            try {
+                PeerID peerID = getPeerIDFromURI(virtualUriList);
+                if (peerID != null) {
+                    virtualPeerIdList.add(peerID);
+                    if (nomcastLogger.isLoggable(Level.FINE)) {
+                        nomcastLogger.log(Level.FINE,
+                                "VIRTUAL_MULTICAST_URI = {0}, Converted PeerID = {1}",
+                                new Object[]{virtualUriList, peerID});
+                    }
+                }
+            } catch (URISyntaxException use) {
+                if (nomcastLogger.isLoggable(Level.CONFIG)) {
+                    nomcastLogger.log(Level.CONFIG, "failed to parse the virtual multicast uri(" + virtualUriList + ")", use);
+                }
+            }
+        }
+        return virtualPeerIdList;
+    }
+
+    protected PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
+        if( uri == null )
+            return null;
+        URI virtualUri = new URI( uri.trim() );
+        return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( virtualUri.getHost(),
+                                                             virtualUri.getPort(),
+                                                             multicastAddress,
+                                                             multicastPort ),
+                                          localPeerID.getGroupName(),
+                                          // the instance name is not meaningless in this case
+                                          "Unknown" );
+    }
+
+    protected boolean isLeavingMessage(MessageEvent msgEvent) {
+        Message msg = msgEvent.getMessage();
+        if(msg.getType() == Message.TYPE_HEALTH_MONITOR_MESSAGE) {
+
+            // do not add remote peer when health message is STOPPING or DEAD.
+            // these messages are coming in AFTER the cache has been cleared already
+            // of the leaving instance.
+            HealthMessage hmsg = (HealthMessage)msg.getMessageElement(HealthMonitor.HEALTHM);
+            if (hmsg != null) {
+                HealthMessage.Entry entry = hmsg.getEntries().get(0);
+
+                // confirm state is a LEAVING state.
+                if (entry.isState(HealthMonitor.STOPPED) || entry.isState(HealthMonitor.CLUSTERSTOPPING) ||
+                    entry.isState(HealthMonitor.DEAD) || entry.isState(HealthMonitor.PEERSTOPPING)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    protected void addToVMS(PeerID peerID) {
+        if (vms != null) {
+            Set<PeerID> virtualPeerIdSet = vms.getVirtualPeerIDSet();
+            boolean result = virtualPeerIdSet.add(peerID);
+            if (result && nomcastLogger.isLoggable(Level.FINE)) {
+                nomcastLogger.log(Level.FINE, "addRemotePeer: virtualPeerIDSet added:" + peerID + " set size=" + virtualPeerIdSet.size() +
+                        " virtualPeerIdSet=" + virtualPeerIdSet /* , new Exception("stack trace")*/);
+            }
+        }
+    }
+
+    protected void removeFromVMS(PeerID peerID) {
+        if (vms != null) {
+            Set<PeerID> virtualPeerIdSet = vms.getVirtualPeerIDSet();
+            boolean result = virtualPeerIdSet.remove(peerID);
+            if (result && nomcastLogger.isLoggable(Level.FINE)) {
+                nomcastLogger.fine("removeRemotePeer: virtualPeerIDSet removed:" + peerID + " set size=" + virtualPeerIdSet.size() +
+                    " virtualPeerIdSet=" + virtualPeerIdSet);
+            }
+        }
+    }
 }

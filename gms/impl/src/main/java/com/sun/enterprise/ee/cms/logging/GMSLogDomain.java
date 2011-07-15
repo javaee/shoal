@@ -65,6 +65,7 @@ public class GMSLogDomain  {
     private static final String MASTER_LOGGER_NAME = GMS_LOGGER + ".MasterNode";
     private static final String GMS_SEND = GMS_LOGGER + ".send";
     private static final String GMS_DSC = GMS_LOGGER + ".dsc";
+    private static final String GMS_NOMCAST = GMS_LOGGER + ".nomcast";
 
     private GMSLogDomain() { /* you can't have me */}
 
@@ -94,5 +95,9 @@ public class GMSLogDomain  {
 
     public static Logger getDSCLogger() {
         return Logger.getLogger(GMS_DSC, LOG_STRINGS);
+    }
+
+    public static Logger getNoMCastLogger() {
+        return Logger.getLogger(GMS_NOMCAST, LOG_STRINGS);
     }
 }

@@ -46,6 +46,7 @@ import com.sun.enterprise.ee.cms.impl.base.Utility;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.impl.common.GMSMonitor;
+import com.sun.enterprise.mgmt.HealthMessage;
 import com.sun.enterprise.mgmt.transport.*;
 import com.sun.enterprise.mgmt.transport.grizzly.*;
 import com.sun.grizzly.*;
@@ -104,7 +105,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         super.initialize(groupName, instanceName, properties);
         this.instanceName = instanceName;
         this.groupName = groupName;
-        configure( properties );
+        configure(properties);
         localConfigure(properties);
         System.out.println("Grizzly 1.9 NetworkManager");
 
@@ -289,21 +290,14 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         udpSender = udpConnectorWrapper;
         List<PeerID> virtualPeerIdList = getVirtualPeerIDList( virtualUriList );
         if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() ) {
-            final boolean FAIRNESS = true;
-            ThreadFactory tf = new GMSThreadFactory("GMS-mcastSenderThreadPool-thread");
-
-            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS,
-                                                                new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ), tf);
-            multicastSender = new VirtualMulticastSender( host,
-                                                          multicastAddress,
-                                                          multicastPort,
-                                                          networkInterfaceName,
-                                                          multicastPacketSize,
-                                                          localPeerID,
-                                                          multicastSenderThreadPool,
-                                                          this,
-                                                          multicastTimeToLive,
-                                                          virtualPeerIdList );
+            // Comment out this thread pool until UDP unicast is implemented.
+            //final boolean FAIRNESS = true;
+//            ThreadFactory tf = new GMSThreadFactory("GMS-mcastSenderThreadPool-thread");
+//
+//            multicastSenderThreadPool = new ThreadPoolExecutor( 10, 10, 60 * 1000, TimeUnit.MILLISECONDS,
+//                                                                new ArrayBlockingQueue<Runnable>( 1024, FAIRNESS ), tf);
+            vms = new VirtualMulticastSender(this, virtualPeerIdList);
+            multicastSender = vms;
         } else {
             if( GrizzlyUtil.isSupportNIOMulticast() ) {
                 multicastSender = udpConnectorWrapper;
@@ -357,6 +351,7 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
             if( selectionKey != null )
                 selectionKeyMap.put( selectionKey, instanceName );
         }
+        addToVMS(peerID);
     }
 
     @Override
@@ -434,19 +429,6 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
         return virtualPeerIdList;
     }
 
-    private PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
-        if( uri == null )
-            return null;
-        URI virtualUri = new URI( uri );
-        return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( virtualUri.getHost(),
-                                                             virtualUri.getPort(),
-                                                             multicastAddress,
-                                                             multicastPort ),
-                                          localPeerID.getGroupName(),
-                                          // the instance name is not meaningless in this case
-                                          "Unknown" );
-    }
-
     @Override
     public synchronized void stop() throws IOException {
         if( !running )
@@ -478,7 +460,9 @@ public class GrizzlyNetworkManager extends com.sun.enterprise.mgmt.transport.gri
             if( value instanceof SelectionKey )
                 selectionKey = (SelectionKey)value;
         }
-        addRemotePeer( messageEvent.getSourcePeerID(), selectionKey );
+        if (! isLeavingMessage(messageEvent)) {
+            addRemotePeer(messageEvent.getSourcePeerID(), selectionKey);
+        }
     }
 
     public void afterDispatchingMessage( MessageEvent messageEvent, Map piggyback ) {

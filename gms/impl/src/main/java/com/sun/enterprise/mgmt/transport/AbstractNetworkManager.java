@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -192,7 +192,12 @@ public abstract class AbstractNetworkManager implements NetworkManager {
                     }
                 }
             } catch (Throwable t) {
-                LOG.log(Level.WARNING, "error instantiating NetworkManager service", t);
+
+                // only a SEVERE error if no implementation of service is available.
+                // for example in glassfish 3.1.x, there is no grizzly 2.o jars.
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "error instantiating NetworkManager service", t);
+                }
             }
         }
         if (networkManager == null) {

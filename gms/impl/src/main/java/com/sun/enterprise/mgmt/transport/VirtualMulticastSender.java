@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -43,6 +43,9 @@ package com.sun.enterprise.mgmt.transport;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
 import java.util.List;
 import java.util.ArrayList;
@@ -61,39 +64,36 @@ import java.io.IOException;
  *
  * @author Bongjae Chang
  */
-public class VirtualMulticastSender extends BlockingIOMulticastSender {
+public class VirtualMulticastSender extends AbstractMulticastMessageSender {
 
     private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
 
-    final List<PeerID> virtualPeerIdList = new ArrayList<PeerID>();
+    final Set<PeerID> virtualPeerIdList = new CopyOnWriteArraySet<PeerID>();
     final NetworkManager networkManager;
 
-    public VirtualMulticastSender( String host,
-                                   String multicastAddress,
-                                   int multicastPort,
-                                   String networkInterfaceName,
-                                   int multicastPacketSize,
-                                   PeerID localPeerID,
-                                   Executor executor,
-                                   NetworkManager networkManager,
-                                   int multicastTimeToLive,
-                                   List<PeerID> virtualPeerIdList ) throws IOException {
-        super( host, multicastAddress,
-               multicastPort,
-               networkInterfaceName,
-               multicastPacketSize,
-               localPeerID,
-               executor,
-               multicastTimeToLive,
-               networkManager );
+    public VirtualMulticastSender(NetworkManager networkManager, List<PeerID> initialPeerIds) throws IOException {
         this.networkManager = networkManager;
-        if( virtualPeerIdList != null && !virtualPeerIdList.isEmpty() )
-            this.virtualPeerIdList.addAll( virtualPeerIdList );
+        if( initialPeerIds != null && !initialPeerIds.isEmpty() ) {
+            this.virtualPeerIdList.addAll(initialPeerIds);
+        }
+    }
+
+    public Set<PeerID> getVirtualPeerIDSet() {
+        return virtualPeerIdList;
+    }
+
+    @Override
+    public synchronized void start() throws IOException {
+        // ADDED EXPLICITLY SO SUPERCLASS start() is not called to start multicast listener.
+        // we are not supporting hybrid solution of some multicast and some non-multicast at this time,
+        // it is all multicast or all virtual multicast.
+
     }
 
     @Override
     public synchronized void stop() throws IOException {
-        super.stop();
+        // did not call super.start(), no need to call super.stop().
+        // super.stop();
         virtualPeerIdList.clear();
     }
 
@@ -102,18 +102,38 @@ public class VirtualMulticastSender extends BlockingIOMulticastSender {
      */
     @Override
     protected boolean doBroadcast( final Message message ) throws IOException {
+        if (LOG.isLoggable(Level.FINER)) {
+            LOG.entering(this.getClass().getSimpleName(), "doBroadcast", new Object[]{message});
+            LOG.finer("VirtualMulticastSender.doBroadcast() virtualPeerIdList = " + virtualPeerIdList);
+        }
         boolean result = true;
-        if( !super.doBroadcast( message ) )
-            result = false;
+
+        // TODO:  Removed combining multicast with TCP virtual multicast.
+//        if( !super.doBroadcast( message ) )
+//            result = false;
         // send the message to virtual server on TCP
         MessageSender tcpSender = networkManager.getMessageSender( ShoalMessageSender.TCP_TRANSPORT );
+
         for( PeerID peerID : virtualPeerIdList ) {
             try {
-                if( !tcpSender.send( peerID, message ) )
+                if (LOG.isLoggable(Level.FINEST)) {
+                    LOG.log(Level.FINEST, "VirtualMulticastSender.doBroadcast prepare to send msg to peerID " + peerID);
+                }
+                if( !tcpSender.send( peerID, message ) ) {
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.log(Level.FINE, "VirtualMulticastSender.doBroadcast failed to send msg to peerID " + peerID);
+                    }
                     result = false;
+                } else {
+                    if (LOG.isLoggable(Level.FINEST)) {
+                        LOG.log(Level.FINEST, "VirtualMulticastSender.doBroadcast succeded to send msg to peerID " + peerID);
+                    }
+                }
+
             } catch( IOException ie ) {
-                if( LOG.isLoggable( Level.FINEST ) )
-                    LOG.log( Level.FINEST, "failed to send a message to a virtual multicast endpoint(" + peerID + ")", ie );
+                if( LOG.isLoggable( Level.INFO ) )
+                    LOG.log( Level.INFO, "failed to send message to a virtual multicast endpoint[" + peerID +
+                                         "] message=[" + message + "]", ie );
             }
         }
         return result;
