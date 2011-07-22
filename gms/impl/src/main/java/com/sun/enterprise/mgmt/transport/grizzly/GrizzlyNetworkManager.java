@@ -172,9 +172,9 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         multicastTimeToLive = Utility.getIntProperty(MULTICAST_TIME_TO_LIVE.toString(),
                                       GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
-        virtualUriList = Utility.getStringProperty(VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties);
+        virtualUriList = Utility.getStringProperty(DISCOVERY_URI_LIST.toString(), null, properties);
         if (virtualUriList != null && !virtualUriList.trim().isEmpty()) {
-            nomcastLogger.log(Level.CONFIG, "mgmt.disableUDPmulticast", new Object[]{VIRTUAL_MULTICAST_URI_LIST.toString(), virtualUriList});
+            nomcastLogger.log(Level.CONFIG, "mgmt.disableUDPmulticast", new Object[]{DISCOVERY_URI_LIST.toString(), virtualUriList});
             disableMulticast = true;
         }
         if (shoalLogger.isLoggable(Level.CONFIG)) {
@@ -373,17 +373,17 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
 
     protected abstract Logger getGrizzlyLogger();
 
-    protected List<PeerID> getVirtualPeerIDList(String virtualUriList) {
-        if (virtualUriList == null) {
+    protected List<PeerID> getVirtualPeerIDList(String groupDiscoveryUriList) {
+        if (groupDiscoveryUriList == null) {
             return null;
         }
         if (nomcastLogger.isLoggable(Level.FINE)) {
-            nomcastLogger.log(Level.FINE, "VIRTUAL_MULTICAST_URI_LIST = {0}", virtualUriList);
+            nomcastLogger.log(Level.FINE, "DISCOVERY_URI_LIST = {0}", groupDiscoveryUriList);
         }
         List<PeerID> virtualPeerIdList = new ArrayList<PeerID>();
         //if this object has multiple addresses that are comma separated
-        if (virtualUriList.indexOf(",") > 0) {
-            String addresses[] = virtualUriList.split(",");
+        if (groupDiscoveryUriList.indexOf(",") > 0) {
+            String addresses[] = groupDiscoveryUriList.split(",");
             if (addresses.length > 0) {
                 List<String> virtualUriStringList = Arrays.asList(addresses);
                 for (String uriString : virtualUriStringList) {
@@ -393,14 +393,14 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                             virtualPeerIdList.add(peerID);
                             if (nomcastLogger.isLoggable(Level.FINE)) {
                                 nomcastLogger.log(Level.FINE,
-                                        "VIRTUAL_MULTICAST_URI = {0}, Converted PeerID = {1}",
+                                        "DISCOVERY_URI = {0}, Converted PeerID = {1}",
                                         new Object[]{uriString, peerID});
                             }
                         }
                     } catch (URISyntaxException use) {
                         if (LOG.isLoggable(Level.CONFIG)) {
                             LOG.log(Level.CONFIG,
-                                    "failed to parse the virtual multicast uri("
+                                    "failed to parse the DISCOVERY_URI_LIST item ("
                                     + uriString + ")", use);
                         }
                     }
@@ -409,18 +409,18 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         } else {
             //this object has only one address in it, so add it to the list
             try {
-                PeerID peerID = getPeerIDFromURI(virtualUriList);
+                PeerID peerID = getPeerIDFromURI(groupDiscoveryUriList);
                 if (peerID != null) {
                     virtualPeerIdList.add(peerID);
                     if (nomcastLogger.isLoggable(Level.FINE)) {
                         nomcastLogger.log(Level.FINE,
-                                "VIRTUAL_MULTICAST_URI = {0}, Converted PeerID = {1}",
-                                new Object[]{virtualUriList, peerID});
+                                "DISCOVERY_URI = {0}, Converted PeerID = {1}",
+                                new Object[]{groupDiscoveryUriList, peerID});
                     }
                 }
             } catch (URISyntaxException use) {
                 if (nomcastLogger.isLoggable(Level.CONFIG)) {
-                    nomcastLogger.log(Level.CONFIG, "failed to parse the virtual multicast uri(" + virtualUriList + ")", use);
+                    nomcastLogger.log(Level.CONFIG, "failed to parse the DISCOVERY_URI_LIST item(" + groupDiscoveryUriList + ")", use);
                 }
             }
         }
@@ -430,9 +430,13 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     protected PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
         if( uri == null )
             return null;
-        URI virtualUri = new URI( uri.trim() );
-        return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( virtualUri.getHost(),
-                                                             virtualUri.getPort(),
+        URI discoveryUri = new URI( uri.trim() );
+        int port = discoveryUri.getPort();
+        if (port == -1) {
+            port = tcpStartPort;
+        }
+        return new PeerID<GrizzlyPeerID>( new GrizzlyPeerID( discoveryUri.getHost(),
+                                                             port,
                                                              multicastAddress,
                                                              multicastPort ),
                                           localPeerID.getGroupName(),

@@ -96,7 +96,7 @@ public class GrizzlyNetworkManager1_9 extends com.sun.enterprise.mgmt.transport.
         corePoolSize = Utility.getIntProperty( CORE_POOLSIZE.toString(), 20, properties );
         keepAliveTime = Utility.getLongProperty( KEEP_ALIVE_TIME.toString(), 60 * 1000, properties );
         poolQueueSize = Utility.getIntProperty( POOL_QUEUE_SIZE.toString(), 1024 * 4, properties );
-        virtualUriList = Utility.getStringProperty( VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties );
+        virtualUriList = Utility.getStringProperty( DISCOVERY_URI_LIST.toString(), null, properties );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -392,7 +392,7 @@ public class GrizzlyNetworkManager1_9 extends com.sun.enterprise.mgmt.transport.
     public List<PeerID> getVirtualPeerIDList( String virtualUriList ) {
         if( virtualUriList == null )
             return null;
-        LOG.config( "VIRTUAL_MULTICAST_URI_LIST = " + virtualUriList );
+        LOG.config( "DISCOVERY_URI_LIST = " + virtualUriList );
         List<PeerID> virtualPeerIdList = new ArrayList<PeerID>();
         //if this object has multiple addresses that are comma separated
         if( virtualUriList.indexOf( "," ) > 0 ) {

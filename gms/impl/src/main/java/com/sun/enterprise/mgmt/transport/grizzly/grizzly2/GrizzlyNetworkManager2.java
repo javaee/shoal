@@ -113,7 +113,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
         corePoolSize = Utility.getIntProperty(CORE_POOLSIZE.toString(), 20, properties);
         keepAliveTime = Utility.getLongProperty(KEEP_ALIVE_TIME.toString(), 60 * 1000, properties);
         poolQueueSize = Utility.getIntProperty(POOL_QUEUE_SIZE.toString(), 1024 * 4, properties);
-        virtualUriList = Utility.getStringProperty(VIRTUAL_MULTICAST_URI_LIST.toString(), null, properties);
+        virtualUriList = Utility.getStringProperty(DISCOVERY_URI_LIST.toString(), null, properties);
     }
 
     @Override

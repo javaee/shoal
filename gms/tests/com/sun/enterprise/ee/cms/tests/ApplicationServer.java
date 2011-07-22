@@ -391,7 +391,7 @@ public class ApplicationServer implements Runnable, CallBack {
         configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
                 System.getProperty("IS_INITIAL_HOST", "false"));
         if(System.getProperty("INITIAL_HOST_LIST") != null){
-            configProps.put(ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST.toString(),
+            configProps.put(ServiceProviderConfigurationKeys.DISCOVERY_URI_LIST.toString(),
                 System.getProperty("INITIAL_HOST_LIST"));
         }
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(),

@@ -113,11 +113,46 @@ public enum ServiceProviderConfigurationKeys {
     * The port here could be any available unoccupied port.<br> 
     * Specifying this list is helpful particularly when cluster members are located
     * beyond one subnet or multicast traffic is disabled.
-    * Note: The implementation in Shoal at the moment only uses the first
-    * address in this list and ignores the rest. This is an enhancement that is not
-    * yet completed.
+    *
+    * Deprecated and used only by Shoal GMS over JXTA transport.
     */
     VIRTUAL_MULTICAST_URI_LIST,
+
+   /**
+    * Enables a starting GMS member to discover and join its group without requiring UDP multicast.
+    *
+    * This enum represents a key with value that is a comma separated list of
+    * initial bootstrapping uri addresses. There must be a GMS member running at one
+    * of these bootstrapping addresses to enable the current member to join the group.
+    * This list must be specified on all members of the cluster through this property.
+    *
+    * <p>
+    * The bootstrap address uri is specified as protocol://ipaddress:port.
+    * The protocol and/or the port are optional. Their values will be defaulted when
+    * they are left out. Thus, allowing the list to be a comma separated list of ip addresses or
+    * of protcol://ipaddress. An example address uri is tcp://someDnsHostName:port  or
+    * tcp://ipAddress:port.
+    *
+    * <p>
+    * The default port is the GMS property TCPSTARTPORT.                                            *
+    * When the scheme is ommitted, the default scheme is tcp.
+    * Initial implementation will only support tcp.
+    *
+    * <p>
+    * If this value is set to an empty list, it indicates that this is the first instance
+    * starting in the cluster. Setting this value to empty string indicates that UDP multicast is disabled.
+    *
+    * <p>
+    * When the list is not empty, at least one of the instances refernenced by the uri must be able to be contacted to enable
+    * joining an active GMS group.
+    *
+    * <p>
+    * TODO: multi-home machine considerations.
+    * On multi-home machines, it is quite probable that one will be required to set GMS property BIND_INTERFACE_ADDRESS.
+    * It is network stack specific which network interface address is selected when there are multiple
+    * enabled network interfaces.
+    */
+    DISCOVERY_URI_LIST,
 
    /**
     * If you wish to specify a particular network interface that should be used

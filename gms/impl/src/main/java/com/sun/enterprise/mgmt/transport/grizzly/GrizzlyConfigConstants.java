@@ -70,6 +70,6 @@ public enum GrizzlyConfigConstants {
 
     // comma separated list of tcp uri endpoints
     // ex) tcp://192.168.0.3:9090,tcp://61.77.153.2:9090
-    VIRTUAL_MULTICAST_URI_LIST,
+    DISCOVERY_URI_LIST,
     MULTICAST_TIME_TO_LIVE
 }

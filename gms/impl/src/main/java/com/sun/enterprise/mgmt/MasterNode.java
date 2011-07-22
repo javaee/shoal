@@ -41,6 +41,7 @@
 package com.sun.enterprise.mgmt;
 
 import com.sun.enterprise.ee.cms.core.GMSConstants;
+import static com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys.DISCOVERY_URI_LIST;
 import static com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST;
 import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.core.RejoinSubevent;
@@ -194,8 +195,14 @@ class MasterNode implements MessageListener, Runnable {
         outstandingMasterNodeMessages = new TreeSet<MasterNodeMessageEvent>();
         checkForMissedMasterMsgSingletonExecutor =
             Executors.newSingleThreadExecutor(new GMSThreadFactory("GMS-validateMasterChangeEvents-Group-" + manager.getGroupName() + "-thread"));
-        String value = (String)props.get(VIRTUAL_MULTICAST_URI_LIST.toString());
-        NON_MULTICAST = value != null && value.length() > 0;
+        String value = (String)props.get(DISCOVERY_URI_LIST.toString());
+        boolean NON_MULTICAST_VALUE = value != null;
+        if (! NON_MULTICAST_VALUE) {
+            // check VIRTUAL_MULTICAST_URI_LIST for jxta implementation.
+            value = (String)props.get(VIRTUAL_MULTICAST_URI_LIST.toString());
+            NON_MULTICAST_VALUE = value != null;
+        }
+        NON_MULTICAST = NON_MULTICAST_VALUE;
     }
 
     /**
