@@ -455,6 +455,26 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
             }
         }
         URI discoveryUri = new URI(uri);
+
+        /*
+         * If someone specifies a URI value as a simple hostname
+         * or IP address without any other information, this creates
+         * a relative URI and URI.getHost() returns null. Prepending
+         * the value with // creates an absolute URI.
+         *
+         * This allows users to specify either "myhost" or "tcp://myhost"
+         * for better usability. This would make a good JDK certification
+         * test question.
+         */
+        if (!discoveryUri.isAbsolute()) {
+            if (nomcastLogger.isLoggable(Level.FINE)) {
+                nomcastLogger.log(Level.FINE, String.format(
+                    "'%s' is a relative uri. Will use '//%s' instead.",
+                    uri, uri
+                ));
+            }
+            discoveryUri = new URI("//" + uri);
+        }
         int port = discoveryUri.getPort();
         if (port == -1) {
             port = tcpStartPort;
