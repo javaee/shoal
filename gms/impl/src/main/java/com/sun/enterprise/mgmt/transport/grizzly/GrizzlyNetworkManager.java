@@ -427,10 +427,34 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         return virtualPeerIdList;
     }
 
-    protected PeerID<GrizzlyPeerID> getPeerIDFromURI( String uri ) throws URISyntaxException {
-        if( uri == null )
+    protected PeerID<GrizzlyPeerID> getPeerIDFromURI(String uri) throws URISyntaxException {
+        if( uri == null ) {
             return null;
-        URI discoveryUri = new URI( uri.trim() );
+        }
+        uri = uri.trim();
+        if (uri.isEmpty()) {
+            /*
+             * In the case of user-managed clusters, we permit
+             * an empty (but not-null) discovery list. This implies that
+             * we are the first member in the group and we are not
+             * using multicast. Only tcp scheme currently supported.
+             */
+            try {
+                String host = InetAddress.getLocalHost().getHostAddress();
+
+                // specifying null multicast address and -1 multicast port
+                GrizzlyPeerID gpID = new GrizzlyPeerID(host,
+                    tcpStartPort, null, -1);
+                
+                return new PeerID<GrizzlyPeerID>(gpID,
+                    localPeerID.getGroupName(),
+                    // the instance name is not meaningless in this case
+                    "Unknown");
+            } catch (UnknownHostException ignored) {
+                // will see null hostname in output
+            }
+        }
+        URI discoveryUri = new URI(uri);
         int port = discoveryUri.getPort();
         if (port == -1) {
             port = tcpStartPort;
