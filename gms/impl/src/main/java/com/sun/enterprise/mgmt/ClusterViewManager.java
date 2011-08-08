@@ -42,6 +42,7 @@ package com.sun.enterprise.mgmt;
 
 import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.core.RejoinSubevent;
+import com.sun.enterprise.ee.cms.impl.base.CustomTagNames;
 import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.impl.base.Utility;
@@ -385,22 +386,52 @@ public class ClusterViewManager {
      * @return the top node on the list
      */
     SystemAdvertisement getMasterCandidate() {
-        final SystemAdvertisement adv;
+        SystemAdvertisement seniorMember = null;
         lockLog("getMasterCandidate()");
         viewLock.lock();
         try {
+            /* no longer take first instance in sorted order.
+             */
+            /*
             final PeerID id = view.firstKey();
             adv = view.get(id);
+            */
+
+            // make senior member the Master candidate.
+            // adapting to scenarios where cluster membership is not static, but a dynamic evolving
+            // group of members.  (i.e. VM in Cloud complete and new member may replace in future, not a restart
+            // of previous member.)
+            long seniorMemberStartTime = Long.MAX_VALUE;
+            for (SystemAdvertisement i : view.values()) {
+                if (seniorMember == null) {
+                    seniorMember = i;
+                    try {
+                        seniorMemberStartTime = Long.getLong(i.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+                    } catch (NoSuchFieldException ignore) {}
+                } else {
+                    long iCurrentStartTime = Long.MAX_VALUE;
+                    try {
+                        iCurrentStartTime = Long.getLong(i.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+                    } catch (NoSuchFieldException ignore) {}
+                    if (iCurrentStartTime < seniorMemberStartTime ){
+                        seniorMember = i;
+                        seniorMemberStartTime = iCurrentStartTime;
+                    }
+                }
+            }
+
         } finally {
             viewLock.unlock();
         }
-        if (LOG.isLoggable(Level.FINER)){
-            LOG.log(Level.FINER,
+
+        // TODO: change this log level to FINE before FINAL release.
+        if (LOG.isLoggable(Level.INFO)){
+            LOG.log(Level.INFO,
                     new StringBuffer().append("Returning Master Candidate Node :")
-                            .append(adv.getName()).append(' ').append(adv.getID())
+                            .append(seniorMember.getName()).append(' ').append(seniorMember.getID())
                             .toString());
         }
-        return adv;
+        return seniorMember;
     }
 
     /**
