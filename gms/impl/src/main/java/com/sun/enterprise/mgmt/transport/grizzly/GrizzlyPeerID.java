@@ -89,14 +89,13 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
 
     // NOTE: no longer include tcpport in this calculation nor the hash calculation.
     //       instance should be able to use a port within a range and still be considered same instance.
-    // NOTE: no longer include host in this calculation nor the hash calculation.
-    //       instance should be able to start on a different ip address (restart in cloud).
     @Override
     public boolean equals( Object other ) {
         if( other instanceof GrizzlyPeerID ) {
             GrizzlyPeerID otherPeerID = (GrizzlyPeerID)other;
             return multicastPort == otherPeerID.multicastPort  &&
-                   multicastAddress.equals(otherPeerID.multicastAddress);
+                   multicastAddress.equals(otherPeerID.multicastAddress) &&
+                   host.equals(host);
         } else {
             return false;
         }
@@ -109,6 +108,7 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
         int result = 17;
         result = 37 * result + multicastAddress.hashCode();
         result = 37 * result + multicastPort;
+        result = 37 * result + host.hashCode();
         return result;
     }
 
