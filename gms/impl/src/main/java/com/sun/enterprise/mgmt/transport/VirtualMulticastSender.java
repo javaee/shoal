@@ -42,13 +42,13 @@ package com.sun.enterprise.mgmt.transport;
 
 import com.sun.enterprise.ee.cms.impl.base.PeerID;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyNetworkManager;
+import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
 
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.Executor;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.io.IOException;
@@ -66,16 +66,22 @@ import java.io.IOException;
  */
 public class VirtualMulticastSender extends AbstractMulticastMessageSender {
 
-    private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
+    //private static final Logger LOG = GMSLogDomain.getLogger( GMSLogDomain.GMS_LOGGER );
+    private static final Logger LOG = GMSLogDomain.getNoMCastLogger();
 
     final Set<PeerID> virtualPeerIdList = new CopyOnWriteArraySet<PeerID>();
     final NetworkManager networkManager;
+    final Map<PeerID, Long> lastReportedSendFailure = new ConcurrentHashMap<PeerID, Long>();
+    final long LAST_REPORTED_FAILURE_DURATION_MS = 10000;  // 10 seconds between reporting failed send.
+    final long DISCOVERY_PERIOD_COMPLETED_TIME;
+    boolean discoveryCleanupPending = true;
 
     public VirtualMulticastSender(NetworkManager networkManager, List<PeerID> initialPeerIds) throws IOException {
         this.networkManager = networkManager;
         if( initialPeerIds != null && !initialPeerIds.isEmpty() ) {
             this.virtualPeerIdList.addAll(initialPeerIds);
         }
+        DISCOVERY_PERIOD_COMPLETED_TIME = System.currentTimeMillis() + 10000;
     }
 
     public Set<PeerID> getVirtualPeerIDSet() {
@@ -114,6 +120,12 @@ public class VirtualMulticastSender extends AbstractMulticastMessageSender {
         // send the message to virtual server on TCP
         MessageSender tcpSender = networkManager.getMessageSender( ShoalMessageSender.TCP_TRANSPORT );
 
+        if (discoveryCleanupPending) {
+            if (DISCOVERY_PERIOD_COMPLETED_TIME - System.currentTimeMillis() < 0 ) {
+                discoveryCleanupPending = false;
+                removeUnknownInstances();
+            }
+        }
         for( PeerID peerID : virtualPeerIdList ) {
             try {
                 if (LOG.isLoggable(Level.FINEST)) {
@@ -131,11 +143,55 @@ public class VirtualMulticastSender extends AbstractMulticastMessageSender {
                 }
 
             } catch( IOException ie ) {
-                if( LOG.isLoggable( Level.INFO ) )
-                    LOG.log( Level.INFO, "failed to send message to a virtual multicast endpoint[" + peerID +
-                                         "] message=[" + message + "]", ie );
+                Long lastFail = lastReportedSendFailure.get(peerID);
+                long currentTime = System.currentTimeMillis();
+                if (lastFail == null ||
+                   ((lastFail - currentTime) > LAST_REPORTED_FAILURE_DURATION_MS) ) {
+                    if( LOG.isLoggable( Level.INFO ) ) {
+                        LOG.log( Level.INFO, "failed to send message to a virtual multicast endpoint[" + peerID +
+                                            "] message=[" + message + "]", ie );
+                    }
+                    lastReportedSendFailure.put(peerID, currentTime);
+                }
+                purge();
             }
         }
         return result;
+    }
+
+    /**
+     * Remove all PeerID entries added via DISCOVERY_URI_LIST.  These entries have "Unknown_" at start for instance
+     * name.
+     *
+     * If there are not removed, then we send to those DISCOVERY_URI_LIST instances multiple times.
+     */
+    public void removeUnknownInstances() {
+            boolean removed = false;
+            LinkedList<PeerID> unknownList = new LinkedList<PeerID>();
+            Iterator<PeerID> iter = virtualPeerIdList.iterator();
+            while (iter.hasNext()) {
+                PeerID id = iter.next();
+                if (id.getInstanceName().startsWith("Unknown_")) {
+                    removed = true;
+                    unknownList.add(id);
+                }
+            }
+            if (removed) {
+                virtualPeerIdList.removeAll(unknownList);
+            }
+            if (removed && LOG.isLoggable(Level.INFO)) {
+                LOG.info("Removed the following DISCOVERY seeded unknown instance names from virtualPeerIDList" +
+                        unknownList + " virtualPeerIDset=" + virtualPeerIdList);
+            }
+    }
+
+    private void purge() {
+         Iterator<Map.Entry<PeerID, Long>> iter = lastReportedSendFailure.entrySet().iterator();
+         while (iter.hasNext()) {
+             Map.Entry<PeerID, Long> e = iter.next();
+             if (e.getValue() - System.currentTimeMillis() > LAST_REPORTED_FAILURE_DURATION_MS) {
+                 iter.remove();
+             }
+         }
     }
 }

@@ -105,6 +105,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public long sendWriteTimeoutMillis; // ms
     public int multicastPacketSize;
     public int writeSelectorPoolSize;
+    final public String UNKNOWN = "Unknown_";
 
     final public String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
 
@@ -449,7 +450,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                 return new PeerID<GrizzlyPeerID>(gpID,
                     localPeerID.getGroupName(),
                     // the instance name is not meaningless in this case
-                    "Unknown");
+                    UNKNOWN + host);
             } catch (UnknownHostException ignored) {
                 // will see null hostname in output
             }
@@ -485,7 +486,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                                                              multicastPort ),
                                           localPeerID.getGroupName(),
                                           // the instance name is not meaningless in this case
-                                          "Unknown" );
+                                          UNKNOWN + discoveryUri.getHost() );
     }
 
     protected boolean isLeavingMessage(MessageEvent msgEvent) {

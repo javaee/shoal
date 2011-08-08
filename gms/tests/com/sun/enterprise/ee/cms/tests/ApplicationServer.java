@@ -382,18 +382,27 @@ public class ApplicationServer implements Runnable, CallBack {
         
         Properties configProps = new Properties();
         configProps.put(ServiceProviderConfigurationKeys.MONITORING.toString(), "5"); //seconds
-        configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
-                                    System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
-        configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(),
-                                    Integer.parseInt(System.getProperty("MULTICASTPORT", "2299")));
-        logger.info("multicastaddress:" + configProps.get("MULTICASTADDRESS")  + " multicastport:" + configProps.get("MULTICASTPORT"));
-        logger.fine("Is initial host="+System.getProperty("IS_INITIAL_HOST"));
-        configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
+
+        String discovery_uri_list = System.getProperty("DISCOVERY_URI_LIST");
+        if (discovery_uri_list != null) {
+            // non-multicast mode, seed with Master URI. Only work on single machine test case, not implemented for distributed test execution now.
+            configProps.put(ServiceProviderConfigurationKeys.DISCOVERY_URI_LIST.toString(), "http://127.0.0.1:9090");  // non-multicast mode
+        } else {
+            //multicast mode
+            configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(),
+                            System.getProperty("MULTICASTADDRESS", "229.9.1.1"));
+            configProps.put(ServiceProviderConfigurationKeys.MULTICASTPORT.toString(),
+                            Integer.parseInt(System.getProperty("MULTICASTPORT", "2299")));
+            logger.info("multicastaddress:" + configProps.get("MULTICASTADDRESS")  + " multicastport:" + configProps.get("MULTICASTPORT"));
+            logger.fine("Is initial host="+System.getProperty("IS_INITIAL_HOST"));
+
+             configProps.put(ServiceProviderConfigurationKeys.IS_BOOTSTRAPPING_NODE.toString(),
                 System.getProperty("IS_INITIAL_HOST", "false"));
-        if(System.getProperty("INITIAL_HOST_LIST") != null){
-            configProps.put(ServiceProviderConfigurationKeys.DISCOVERY_URI_LIST.toString(),
-                System.getProperty("INITIAL_HOST_LIST"));
         }
+        //if(System.getProperty("INITIAL_HOST_LIST") != null){
+        //    configProps.put(ServiceProviderConfigurationKeys.DISCOVERY_URI_LIST.toString(),
+        //        System.getProperty("INITIAL_HOST_LIST"));
+        //}
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_RETRIES.toString(),
                         System.getProperty("MAX_MISSED_HEARTBEATS", "3"));
         configProps.put(ServiceProviderConfigurationKeys.FAILURE_DETECTION_TIMEOUT.toString(),

@@ -742,6 +742,10 @@ public class GMSAdminCLI implements CallBack {
     private GroupManagementService initializeGMS(String memberID, String groupName, GroupManagementService.MemberType mType) {
         myLogger.fine("entering initializeGMS");
         Properties configProps = new Properties();
+        String nomcast = System.getProperty("GMS_DISCOVERY_URI_LIST");
+        if (nomcast != null) {
+            configProps.put("DISCOVERY_URI_LIST", nomcast);
+        }
         String ma = System.getProperty("MULTICASTADDRESS", "229.9.1.1");
         myLogger.config("MULTICASTADDRESS=" + ma);
         configProps.put(ServiceProviderConfigurationKeys.MULTICASTADDRESS.toString(), ma);

@@ -831,8 +831,8 @@ public class HealthMonitor implements MessageListener, Runnable {
             } catch (Throwable all) {
                 LOG.log(Level.WARNING, "mgmt.healthmonitor.threaduncaughtexception",
                         new Object[]{Thread.currentThread().getName(), all});
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.log(Level.FINE, "stack trace", all);
+                if (LOG.isLoggable(Level.INFO)) {
+                    LOG.log(Level.INFO, "stack trace", all);
                 }
             }
         }
