@@ -45,10 +45,7 @@ import static com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys.DI
 import static com.sun.enterprise.ee.cms.core.ServiceProviderConfigurationKeys.VIRTUAL_MULTICAST_URI_LIST;
 import com.sun.enterprise.ee.cms.core.GMSMember;
 import com.sun.enterprise.ee.cms.core.RejoinSubevent;
-import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
-import com.sun.enterprise.ee.cms.impl.base.PeerID;
-import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
-import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.impl.base.*;
 import com.sun.enterprise.ee.cms.impl.common.GMSContext;
 import com.sun.enterprise.ee.cms.impl.common.GMSContextFactory;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
@@ -218,6 +215,24 @@ class MasterNode implements MessageListener, Runnable {
         return masterViewID.get();
     }
 
+    static public long getStartTime(SystemAdvertisement adv) {
+        long result = 0L;
+        try {
+           result = Long.getLong(adv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+        } catch (NoSuchFieldException ignore) {}
+        return result;
+    }
+
+    /**
+     * Returns true if current master is truely senior to new possible master represented by newAdv.
+     * @param currentAdv
+     * @param newAdv
+     * @return
+     */
+    static public boolean isSeniorMember(SystemAdvertisement currentAdv, SystemAdvertisement newAdv) {
+        return getStartTime(currentAdv) < getStartTime(newAdv);
+    }
+
     /**
      * Sets the Master Node peer ID, also checks for collisions at which event
      * A Conflict Message is sent to the conflicting node, and master designation
@@ -240,8 +255,9 @@ class MasterNode implements MessageListener, Runnable {
             send(systemAdv.getID(), systemAdv.getName(),
                     createMasterCollisionMessage());
 
-            //TODO add code to ensure whether this node should remain as master or resign (basically noop)
-            if (manager.getPeerID().compareTo(systemAdv.getID()) >= 0) {
+            //TODO add code to ensure whether this node should remain as master or resign
+            //if (manager.getPeerID().compareTo(systemAdv.getID()) >= 0) {
+            if (isSeniorMember(manager.getSystemAdvertisement(), systemAdv)) {
                 masterLogger.log(Level.FINE, "Affirming Master Node role");
             } else {
                 masterLogger.log(Level.FINE, "Resigning Master Node role in anticipation of a master node announcement");
