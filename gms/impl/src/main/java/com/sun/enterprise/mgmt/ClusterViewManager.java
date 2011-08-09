@@ -402,16 +402,17 @@ public class ClusterViewManager {
             // group of members.  (i.e. VM in Cloud complete and new member may replace in future, not a restart
             // of previous member.)
             long seniorMemberStartTime = Long.MAX_VALUE;
-            for (SystemAdvertisement i : view.values()) {
+            for (Map.Entry<PeerID, SystemAdvertisement> e : view.entrySet()) {
+                SystemAdvertisement i = e.getValue();
                 if (seniorMember == null) {
                     seniorMember = i;
                     try {
-                        seniorMemberStartTime = Long.getLong(i.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+                        seniorMemberStartTime = Long.parseLong(i.getCustomTagValue(CustomTagNames.START_TIME.toString()));
                     } catch (NoSuchFieldException ignore) {}
                 } else {
                     long iCurrentStartTime = Long.MAX_VALUE;
                     try {
-                        iCurrentStartTime = Long.getLong(i.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+                        iCurrentStartTime = Long.parseLong(i.getCustomTagValue(CustomTagNames.START_TIME.toString()));
                     } catch (NoSuchFieldException ignore) {}
                     if (iCurrentStartTime < seniorMemberStartTime ){
                         seniorMember = i;
@@ -422,6 +423,11 @@ public class ClusterViewManager {
 
         } finally {
             viewLock.unlock();
+        }
+
+        if (seniorMember == null) {
+            LOG.warning("getMasterCandidate: no master candidate selected, nominating self");
+            seniorMember = manager.getSystemAdvertisement();
         }
 
         // TODO: change this log level to FINE before FINAL release.

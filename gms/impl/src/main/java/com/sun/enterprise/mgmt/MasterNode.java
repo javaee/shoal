@@ -218,7 +218,7 @@ class MasterNode implements MessageListener, Runnable {
     static public long getStartTime(SystemAdvertisement adv) {
         long result = 0L;
         try {
-           result = Long.getLong(adv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
+           result = Long.parseLong(adv.getCustomTagValue(CustomTagNames.START_TIME.toString()));
         } catch (NoSuchFieldException ignore) {}
         return result;
     }
