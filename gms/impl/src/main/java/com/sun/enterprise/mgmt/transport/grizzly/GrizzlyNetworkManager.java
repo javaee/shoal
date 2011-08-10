@@ -486,7 +486,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                                                              multicastPort ),
                                           localPeerID.getGroupName(),
                                           // the instance name is not meaningless in this case
-                                          UNKNOWN + discoveryUri.getHost() );
+                                          UNKNOWN + discoveryUri.getHost() +"_" + port);
     }
 
     protected boolean isLeavingMessage(MessageEvent msgEvent) {
