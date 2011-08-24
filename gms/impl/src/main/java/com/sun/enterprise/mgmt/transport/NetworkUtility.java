@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -56,6 +56,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -240,9 +241,10 @@ public class NetworkUtility {
                 loopback = anInterface;
                 continue;
             }
-            if( supportsMulticast( anInterface ) &&
-                ( getFirstInetAddress( anInterface, false ) != null ||
-                  getFirstInetAddress( anInterface, true ) != null ) ) {
+
+            // removed check if multicast enabled.  Definitely not correct for non-multicast mode.
+            if( getFirstInetAddress( anInterface, false ) != null ||
+                getFirstInetAddress( anInterface, true ) != null ) {
                 firstInterface = anInterface;
                 break;
             }
@@ -254,10 +256,18 @@ public class NetworkUtility {
         } else {
             firstNetworkInterface = firstInterface;
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.fine("getFirstNetworkInterface  result: interface name" + firstNetworkInterface.getName() + " address:" + firstNetworkInterface.getInetAddresses().nextElement().toString());
+                LOG.fine("getFirstNetworkInterface  result: interface name:" + firstNetworkInterface.getName() + " address:" + firstNetworkInterface.getInetAddresses().nextElement().toString());
             }
             return firstNetworkInterface;
         }
+    }
+
+    public static InetAddress getLocalHostAddress() {
+        InetAddress result = null;
+        try {
+            result = InetAddress.getLocalHost();
+        } catch (UnknownHostException ignore) {}
+        return result;
     }
 
     /**
@@ -619,10 +629,36 @@ public class NetworkUtility {
         System.out.println( "getFirstNetworkInterface() = " +getFirstNetworkInterface() );
         System.out.println( "getFirstInetAddress( true ) = " + getFirstInetAddress( true ) );
         System.out.println( "getFirstInetAddress( false ) = " + getFirstInetAddress( false ) );
+        System.out.println( "getLocalHostAddress = " + getLocalHostAddress());
         System.out.println( "getFirstNetworkInteface() = " + NetworkUtility.getFirstNetworkInterface());
         System.out.println( "getFirstInetAddress(firstNetworkInteface, true) = " +
                NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),true));
         System.out.println( "getFirstInetAddress(firstNetworkInteface, false) = " +
                NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),false));
+               Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+        System.out.println("\nAll Network Interfaces");
+        for (NetworkInterface netint : Collections.list(nets))
+            displayInterfaceInformation(netint);
+    }
+
+    static void displayInterfaceInformation(NetworkInterface netint) throws SocketException {
+        System.out.printf("Display name: %s\n", netint.getDisplayName());
+        System.out.printf("Name: %s\n", netint.getName());
+        Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
+
+        for (InetAddress inetAddress : Collections.list(inetAddresses)) {
+            System.out.printf("InetAddress: %s\n", inetAddress);
+        }
+
+        System.out.printf("Up? %s\n", netint.isUp());
+        System.out.printf("Loopback? %s\n", netint.isLoopback());
+        System.out.printf("PointToPoint? %s\n", netint.isPointToPoint());
+        System.out.printf("Supports multicast? %s\n", netint.supportsMulticast());
+        System.out.printf("Virtual? %s\n", netint.isVirtual());
+        System.out.printf("Hardware address: %s\n",
+                    java.util.Arrays.toString(netint.getHardwareAddress()));
+        System.out.printf("MTU: %s\n", netint.getMTU());
+
+        System.out.printf("\n");
     }
 }

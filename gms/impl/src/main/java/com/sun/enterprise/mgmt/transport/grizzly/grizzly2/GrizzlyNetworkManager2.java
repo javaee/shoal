@@ -209,7 +209,14 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
                     firstInetAddress = NetworkUtility.getFirstInetAddress(true);
                 }
                 if (firstInetAddress == null) {
-                    throw new IOException("can not find a first InetAddress");
+
+                    // last ditch effort to get a valid public IP address.
+                    // just in case NetworkInterface methods such as isUp is working incorrectly on some platform,
+                    // Inspired by GLASSFISH-17195.
+                    firstInetAddress = NetworkUtility.getLocalHostAddress();
+                    if (firstInetAddress == null) {
+                        throw new IOException("can not find a first InetAddress");
+                    }
                 }
                 uniqueHost = firstInetAddress.getHostAddress();
             }

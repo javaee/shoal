@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -42,9 +42,7 @@ package com.sun.enterprise.gms.tools;
 
 import static com.sun.enterprise.ee.cms.core.GMSConstants.MINIMUM_MULTICAST_TIME_TO_LIVE;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.net.*;
 
 /**
  * Used to periodically send multicast messages.
@@ -87,7 +85,36 @@ public class MulticastSenderThread extends Thread {
                 data.length, group, mcPort);
             socket = new MulticastSocket(mcPort);
             if (bindInterface != null) {
-                socket.setInterface(InetAddress.getByName(bindInterface));
+
+                try {
+                    InetAddress iaddr = InetAddress.getByName(bindInterface);
+                    if (iaddr == null) {
+                        System.err.println("ignoring invalid bindinterface that could not be mapped to an InetAddress");
+                    } else {
+                        NetworkInterface ni = NetworkInterface.getByInetAddress(iaddr);
+
+                        if (ni != null && ni.isUp() && ni.supportsMulticast()) {
+                            socket.setInterface(iaddr);
+                            System.out.println(String.format(sm.get("configured.bindinterface", bindInterface,
+                                           ni.getName(), ni.getDisplayName(), ni.isUp(), ni.supportsMulticast(),
+                                           ni.isLoopback())));
+                        } else {
+                            // invalid.bindinterface=Ignoring invalid bind interface:{0} DisplayName:{1} isUp:{2} \
+                            //                                        supportMulticast:{3} isLoopBack:{4}
+                            if (ni != null) {
+                                System.out.println(String.format(sm.get("invalid.bindinterface", bindInterface,
+                                           ni.getName(), ni.getDisplayName(), ni.isUp(), ni.supportsMulticast(),
+                                           ni.isLoopback())));
+                            } else {
+                                System.err.println("ignoring invalid bindinterface " + bindInterface +
+                                                   " that could not be mapped to a NetworkInterface");
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    System.err.println("ignoring bindinterface due to exception " + t.getClass()
+                                       + " " + t.getLocalizedMessage());
+                }
             }
             if (ttl != -1) {
                 try {
