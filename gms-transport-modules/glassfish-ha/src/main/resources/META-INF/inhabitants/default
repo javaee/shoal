@@ -1,0 +1,2 @@
+# generated on 17 Jun 2010 15:23:45 GMT
+class=org.glassfish.ha.store.impl.NoOpBackingStoreFactory,index=org.glassfish.ha.store.api.BackingStoreFactory:noop
