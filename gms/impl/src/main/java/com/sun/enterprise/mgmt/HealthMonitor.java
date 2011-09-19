@@ -535,15 +535,15 @@ public class HealthMonitor implements MessageListener, Runnable {
                         // only compare sequence ids if heathmessage entrys from same member with same start time
                         //if (entry.getSeqID() <= cachedEntry.getSeqId()) {
                         if (cachedEntry.isFromSameMemberStartup(entry) && entry.getSeqID() < cachedEntry.getSeqID()) {
-                            if (LOG.isLoggable(Level.FINE)) {
-                                LOG.log(Level.FINE, MessageFormat.format("Received an older health message from source member {2} seqId={0}." +
+                            if (LOG.isLoggable(Level.FINER)) {
+                                LOG.log(Level.FINER, MessageFormat.format("Received an older health message from source member {2} seqId={0}." +
                                         " Current cached health message seqId:{1}. ",
                                         entry.getSeqID(), cachedEntry.getSeqID(), entry.adv.getName()));
                             }
                             if (entry.state.equals(states[CLUSTERSTOPPING]) || entry.state.equals(states[PEERSTOPPING])) {
                                 //dont discard the message
                                 //and don't alter the state if the cachedEntry's state is stopped
-                                LOG.log(Level.FINE, "Received an older health message " +
+                                LOG.log(Level.FINER, "Received an older health message " +
                                            "with clusterstopping state." +
                                          " Calling handleStopEvent() to handle shutdown state.");
 
@@ -562,8 +562,8 @@ public class HealthMonitor implements MessageListener, Runnable {
                         }
                     }
                     cache.put(entry.id, entry);
-                    if (LOG.isLoggable(Level.FINE)) {
-                        LOG.log(Level.FINE, "Put into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id +
+                    if (LOG.isLoggable(Level.FINER)) {
+                        LOG.log(Level.FINER, "Put into cache " + entry.adv.getName() + " state = " + entry.state + " peerid = " + entry.id +
                                 " seq id=" + entry.getSeqID());
                     }
                 }
@@ -879,7 +879,7 @@ public class HealthMonitor implements MessageListener, Runnable {
             if (peerid != null) {
                 // Unicast datagram
                 // create a op pipe to the destination peer
-                LOG.log(Level.FINE, "Unicasting Message to :" + peerid.toString());
+                LOG.log(Level.FINER, "Unicasting Message to :" + peerid.toString());
                 msgSendStat = getMsgSendStats(peerid.getInstanceName());
                 sent = manager.getNetworkManager().send( peerid, msg );
                 msgSendStat.sendSucceeded();
@@ -1328,15 +1328,15 @@ public class HealthMonitor implements MessageListener, Runnable {
                         entry.state.equals(states[ALIVE]) ||
                         entry.state.equals(states[READY]) ||
                         entry.state.equals(states[ALIVEANDREADY])) {
-                        if (LOG.isLoggable(Level.FINE)) {
-                            LOG.fine("processCacheUpdate : " + entry.adv.getName() + " 's state is " + entry.state);
+                        if (LOG.isLoggable(Level.FINER)) {
+                            LOG.finer("processCacheUpdate : " + entry.adv.getName() + " 's state is " + entry.state);
                         }
                         //if there is a record, then get the number of
                         //retries performed in an earlier iteration
                         try {
                             determineInDoubtPeers(entry, cacheSnapShotTime);
                         } catch (NumberFormatException nfe) {
-                            if (LOG.isLoggable(Level.FINE)) {
+                            if (LOG.isLoggable(Level.FINER)) {
                                 nfe.printStackTrace();
                             }
                             LOG.log(Level.WARNING, "mgmt.healthmonitor.timestampconversionexception", nfe.getLocalizedMessage());
@@ -1353,8 +1353,8 @@ public class HealthMonitor implements MessageListener, Runnable {
             if (!stop) {
 
                 final boolean processInDoubt = canProcessInDoubt(entry);
-                if (processInDoubt && LOG.isLoggable(Level.FINE)) {
-                    LOG.log(Level.FINE, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
+                if (processInDoubt && LOG.isLoggable(Level.FINER)) {
+                    LOG.log(Level.FINER, MessageFormat.format("For instance = {0}; last recorded heart-beat = {1}ms ago, heart-beat # {2} out of a max of {3}",
                             entry.adv.getName(), (cacheSnapShotTime - entry.timestamp),
                             computeMissedBeat(cacheSnapShotTime, entry), maxMissedBeats));
                 }

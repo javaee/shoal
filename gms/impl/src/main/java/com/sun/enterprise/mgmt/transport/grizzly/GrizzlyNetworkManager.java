@@ -174,7 +174,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
                                       GMSConstants.DEFAULT_MULTICAST_TIME_TO_LIVE, properties);
         writeSelectorPoolSize = Utility.getIntProperty( MAX_WRITE_SELECTOR_POOL_SIZE.toString(), 30, properties );
         virtualUriList = Utility.getStringProperty(DISCOVERY_URI_LIST.toString(), null, properties);
-        if (virtualUriList != null && !virtualUriList.trim().isEmpty()) {
+        if (virtualUriList != null) {
             nomcastLogger.log(Level.CONFIG, "mgmt.disableUDPmulticast", new Object[]{DISCOVERY_URI_LIST.toString(), virtualUriList});
             disableMulticast = true;
         }
