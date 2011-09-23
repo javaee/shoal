@@ -290,27 +290,52 @@ public class NetworkUtility {
         }
         NetworkInterface anInterface = getFirstNetworkInterface();
 //        LOG.info("getFirstInetAddress: first network interface=" + anInterface);
-        Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
-        while( allIntfAddr.hasMoreElements() ) {
-            InetAddress anAddr = allIntfAddr.nextElement();
-//            LOG.info("getFirstInetAddress: anAddr=" + anAddr);
-            if( anAddr.isLoopbackAddress() || anAddr.isAnyLocalAddress() )
-                continue;
-            if( firstInetAddressV6 == null && anAddr instanceof Inet6Address )
-                firstInetAddressV6 = anAddr;
-            else if( firstInetAddressV4 == null && anAddr instanceof Inet4Address )
-                firstInetAddressV4 = anAddr;
-            if( firstInetAddressV6 != null && firstInetAddressV4 != null )
-                break;
-        }
-        if( preferIPv6 ) {
-//            LOG.info("exit getFirstInetAddress ipv6 result=" + firstInetAddressV6);
-            return firstInetAddressV6;
-        }else {
-//            LOG.info("exit getFirstInetAddress ipv4 result=" + firstInetAddressV4);
-            return firstInetAddressV4;
+        if (anInterface == null) {
+           if (preferIPv6 && firstInetAddressV6 != null ) {
+               return firstInetAddressV6;
+           } else {
+               return firstInetAddressV4;
+           }
+        } else {
+            return getNetworkInetAddress(anInterface, preferIPv6);
         }
     }
+
+    /**
+        * Return a first <code>InetAddress</code> of network interface
+        * But, if any network interfaces were not found locally, <code>null</code> could be returned.
+        *
+        * @param preferIPv6 if true, prefer IPv6 InetAddress. otherwise prefer IPv4 InetAddress
+        * @return a first found <code>InetAddress</code>.
+        * @throws IOException if an I/O error occurs or a network interface was not found
+        */
+       public static InetAddress getNetworkInetAddress(NetworkInterface anInterface, boolean preferIPv6) throws IOException {
+           LOG.info("enter getFirstInetAddress networkInterface=" + anInterface + " preferIPv6=" + preferIPv6);
+
+//        LOG.info("getFirstInetAddress: first network interface=" + anInterface);
+           Enumeration<InetAddress> allIntfAddr = anInterface.getInetAddresses();
+           while( allIntfAddr.hasMoreElements() ) {
+               InetAddress anAddr = allIntfAddr.nextElement();
+//            LOG.info("getFirstInetAddress: anAddr=" + anAddr);
+               // allow loopback address.  only work on a single machine. used for development.
+               //if( anAddr.isLoopbackAddress() || anAddr.isAnyLocalAddress() )
+               //    continue;
+               if( firstInetAddressV6 == null && anAddr instanceof Inet6Address )
+                   firstInetAddressV6 = anAddr;
+               else if( firstInetAddressV4 == null && anAddr instanceof Inet4Address )
+                   firstInetAddressV4 = anAddr;
+               if( firstInetAddressV6 != null && firstInetAddressV4 != null )
+                   break;
+           }
+           if( preferIPv6  && firstInetAddressV6 != null) {
+//            LOG.info("exit getFirstInetAddress ipv6 result=" + firstInetAddressV6);
+               return firstInetAddressV6;
+           }else {
+//            LOG.info("exit getFirstInetAddress ipv4 result=" + firstInetAddressV4);
+               return firstInetAddressV4;
+           }
+       }
+
 
     /**
      * Return a first <code>InetAddress</code> of the given network interface
@@ -595,8 +620,16 @@ public class NetworkUtility {
     public static boolean isBindAddressValid(String addressString) {
         ServerSocket socket = null;
         try {
-            InetAddress ia = Inet4Address.getByName(addressString);
+            InetAddress ia = null;
+            try {
+                ia = Inet4Address.getByName(addressString);
+            } catch (Exception e) {}
 
+            if (ia == null) {
+                // check if address string is a network interface.
+               NetworkInterface netInt = NetworkInterface.getByName(addressString);
+               ia = getNetworkInetAddress(netInt, false);
+            }
             // port 0 means any free port
             // backlog 0 means use default
             socket = new ServerSocket(0, 0, ia);
@@ -658,6 +691,12 @@ public class NetworkUtility {
         System.out.printf("Hardware address: %s\n",
                     java.util.Arrays.toString(netint.getHardwareAddress()));
         System.out.printf("MTU: %s\n", netint.getMTU());
+        try {
+            System.out.printf("Network Inet Address (preferIPV6=false) %s\n", getNetworkInetAddress(netint, false).toString() );
+        } catch (IOException ignore) {}
+        try {
+            System.out.printf("Network Inet Address (preferIPV6=true) %s\n", getNetworkInetAddress(netint, true).toString());
+        } catch (IOException ignore) {}
 
         System.out.printf("\n");
     }

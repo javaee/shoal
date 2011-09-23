@@ -93,9 +93,13 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
     public boolean equals( Object other ) {
         if( other instanceof GrizzlyPeerID ) {
             GrizzlyPeerID otherPeerID = (GrizzlyPeerID)other;
-            return multicastPort == otherPeerID.multicastPort  &&
-                   multicastAddress.equals(otherPeerID.multicastAddress) &&
-                   host.equals(host);
+            boolean multicastAddressCompare;
+            if (multicastAddress == null)  {
+                multicastAddressCompare = (multicastAddress == otherPeerID.multicastAddress);
+            } else {
+                multicastAddressCompare = multicastAddress.equals(otherPeerID.multicastAddress);
+            }
+            return multicastPort == otherPeerID.multicastPort  && multicastAddressCompare && host.equals(host);
         } else {
             return false;
         }
@@ -106,7 +110,9 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
     @Override
     public int hashCode() {
         int result = 17;
-        result = 37 * result + multicastAddress.hashCode();
+        if (multicastAddress != null) {
+            result = 37 * result + multicastAddress.hashCode();
+        }
         result = 37 * result + multicastPort;
         result = 37 * result + host.hashCode();
         return result;

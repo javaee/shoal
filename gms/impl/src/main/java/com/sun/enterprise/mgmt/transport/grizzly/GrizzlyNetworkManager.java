@@ -149,15 +149,36 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         }
         if (host != null) {
             try {
-                InetAddress inetAddr = InetAddress.getByName(host);
-                NetworkInterface ni;
-                ni = NetworkInterface.getByInetAddress(inetAddr);
+                InetAddress inetAddr = null;
+                NetworkInterface ni = null;
+                try {
+                    inetAddr = InetAddress.getByName(host);
+                } catch (UnknownHostException he) {
+                    ni = NetworkInterface.getByName(host);
+                    if (ni != null) {
+                        try  {
+                            inetAddr = NetworkUtility.getNetworkInetAddress(ni, false);
+                        } catch (IOException ignore) {}
+                        if (inetAddr == null) {
+                            try {
+                                inetAddr = NetworkUtility.getNetworkInetAddress(ni, true);
+                            } catch (IOException ignore) {}
+                        }
+                    } else {
+                        shoalLogger.log(Level.WARNING, "grizzlynetmgr.invalidbindaddr", new Object[]{he.getLocalizedMessage()});
+                    }
+                }
+                if (ni == null) {
+                    ni = NetworkInterface.getByInetAddress(inetAddr);
+                }
                 if (ni != null) {
                     networkInterfaceName = ni.getName();
                 }
+                if (inetAddr != null) {
+                    host = inetAddr.getHostAddress();
+                    properties.put(BIND_INTERFACE_ADDRESS.toString(), host);
+                }
             } catch (SocketException ex) {
-                shoalLogger.log(Level.WARNING, "grizzlynetmgr.invalidbindaddr", new Object[]{ex.getLocalizedMessage()});
-            } catch (UnknownHostException ex) {
                 shoalLogger.log(Level.WARNING, "grizzlynetmgr.invalidbindaddr", new Object[]{ex.getLocalizedMessage()});
             }
         }
