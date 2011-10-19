@@ -114,7 +114,7 @@
 
     <properties>
         <grizzly.group.id>com.sun.grizzly</grizzly.group.id>
-        <grizzly.version>1.9.24</grizzly.version>
+        <grizzly.version>1.9.36</grizzly.version>
 
         <grizzly2.group.id>org.glassfish.grizzly</grizzly2.group.id>
         <grizzly2.version>2.1</grizzly2.version>
@@ -211,7 +211,11 @@
                 <version>${grizzly.version}</version>
                 <artifactId>grizzly-framework</artifactId>
             </dependency>
-
+            <dependency>
+                <groupId>${grizzly.group.id}</groupId>
+                <version>${grizzly.version}</version>
+                <artifactId>grizzly-http</artifactId>
+            </dependency>
             <dependency>
                 <groupId>${grizzly2.group.id}</groupId>
                 <version>${grizzly2.version}</version>
