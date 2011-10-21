@@ -64,18 +64,16 @@ public class MultiCastReceiverThread extends Thread {
 
     int mcPort;
     String mcAddress;
-    String bindInterface;
     boolean debug;
     String targetData;
     MulticastSocket ms;
     String expectedPrefix;
 
     public MultiCastReceiverThread(int mcPort, String mcAddress,
-        String bindInterface, boolean debug, String targetData) {
+        boolean debug, String targetData) {
         super("McastReceiver");
         this.mcPort = mcPort;
         this.mcAddress = mcAddress;
-        this.bindInterface = bindInterface;
         this.debug = debug;
         this.targetData = targetData;
         StringTokenizer st = new StringTokenizer(targetData, SEP);
@@ -90,9 +88,6 @@ public class MultiCastReceiverThread extends Thread {
 
             InetAddress group = InetAddress.getByName(mcAddress);
             ms = new MulticastSocket(mcPort);
-            if (bindInterface != null) {
-                ms.setInterface(InetAddress.getByName(bindInterface));
-            }
             ms.joinGroup(group);
 
             System.out.println(sm.get("listening.info"));

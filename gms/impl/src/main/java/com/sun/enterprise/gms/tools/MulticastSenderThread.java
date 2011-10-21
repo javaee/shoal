@@ -40,9 +40,13 @@
 
 package com.sun.enterprise.gms.tools;
 
+import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
+import com.sun.enterprise.mgmt.transport.NetworkUtility;
+
 import static com.sun.enterprise.ee.cms.core.GMSConstants.MINIMUM_MULTICAST_TIME_TO_LIVE;
 import java.io.IOException;
 import java.net.*;
+import java.util.logging.Level;
 
 /**
  * Used to periodically send multicast messages.
@@ -84,38 +88,37 @@ public class MulticastSenderThread extends Thread {
             DatagramPacket datagramPacket = new DatagramPacket(data,
                 data.length, group, mcPort);
             socket = new MulticastSocket(mcPort);
+
             if (bindInterface != null) {
+                InetAddress iaddr = InetAddress.getByName(bindInterface);
+                log("InetAddress.getByName returned: " + iaddr);
 
-                try {
-                    InetAddress iaddr = InetAddress.getByName(bindInterface);
-                    if (iaddr == null) {
-                        System.err.println("ignoring invalid bindinterface that could not be mapped to an InetAddress");
+                // make sure the network interface is valid
+                NetworkInterface ni = NetworkInterface.getByInetAddress(iaddr);
+                if (ni != null && NetworkUtility.isUp(ni)) {
+                    socket.setInterface(iaddr);
+                    System.out.println(String.format(sm.get("configured.bindinterface", bindInterface,
+                        ni.getName(), ni.getDisplayName(), NetworkUtility.isUp(ni),
+                        ni.isLoopback())));
+                } else {
+                    if (ni != null) {
+                        System.out.println(String.format(sm.get("invalid.bindinterface", bindInterface,
+                            ni.getName(), ni.getDisplayName(), NetworkUtility.isUp(ni),
+                            ni.isLoopback())));
                     } else {
-                        NetworkInterface ni = NetworkInterface.getByInetAddress(iaddr);
-
-                        if (ni != null && ni.isUp() && ni.supportsMulticast()) {
-                            socket.setInterface(iaddr);
-                            System.out.println(String.format(sm.get("configured.bindinterface", bindInterface,
-                                           ni.getName(), ni.getDisplayName(), ni.isUp(), ni.supportsMulticast(),
-                                           ni.isLoopback())));
-                        } else {
-                            // invalid.bindinterface=Ignoring invalid bind interface:{0} DisplayName:{1} isUp:{2} \
-                            //                                        supportMulticast:{3} isLoopBack:{4}
-                            if (ni != null) {
-                                System.out.println(String.format(sm.get("invalid.bindinterface", bindInterface,
-                                           ni.getName(), ni.getDisplayName(), ni.isUp(), ni.supportsMulticast(),
-                                           ni.isLoopback())));
-                            } else {
-                                System.err.println("ignoring invalid bindinterface " + bindInterface +
-                                                   " that could not be mapped to a NetworkInterface");
-                            }
-                        }
+                        System.err.println(sm.get("nonexistent.bindinterface",
+                            bindInterface));
                     }
-                } catch (Throwable t) {
-                    System.err.println("ignoring bindinterface due to exception " + t.getClass()
-                                       + " " + t.getLocalizedMessage());
+                    iaddr = getFirstAddress();
+                    log("setting socket to: " + iaddr + " instead");
+                    socket.setInterface(iaddr);
                 }
+            } else {
+                InetAddress iaddr = getFirstAddress();
+                log("setting socket to: " + iaddr);
+                socket.setInterface(iaddr);
             }
+
             if (ttl != -1) {
                 try {
                     socket.setTimeToLive(ttl);
@@ -183,6 +186,15 @@ public class MulticastSenderThread extends Thread {
                 socket.close();
             }
         }
+    }
+
+    // utility so we can silence the shoal logger
+    private InetAddress getFirstAddress() throws IOException {
+        if (!debug) {
+            GMSLogDomain.getLogger(GMSLogDomain.GMS_LOGGER).setLevel(
+                Level.SEVERE);
+        }
+        return NetworkUtility.getFirstInetAddress(false);
     }
 
     private void log(String msg) {

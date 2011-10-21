@@ -110,8 +110,12 @@ public class MulticastTester {
             return 1;
         }
 
+        /*
+         * The receiver thread doesn't take a bind interface because
+         * the interface only impacts multicast sending.
+         */
         MultiCastReceiverThread receiver = new MultiCastReceiverThread(
-            mcPort, mcAddress, bindInterface, debug, dataString);
+            mcPort, mcAddress, debug, dataString);
         MulticastSenderThread sender = new MulticastSenderThread(mcPort,
             mcAddress, bindInterface, ttl,
             msgPeriodInMillis, debug, dataString);
