@@ -263,21 +263,11 @@ public class GrizzlyNetworkManager1_9 extends com.sun.enterprise.mgmt.transport.
         if (localPeerID == null) {
             String uniqueHost = host;
             if (uniqueHost == null) {
-                // prefer IPv4
-                InetAddress firstInetAddress = NetworkUtility.getFirstInetAddress(false);
-                if (firstInetAddress == null)
-                    firstInetAddress = NetworkUtility.getFirstInetAddress(true);
-                if (firstInetAddress == null) {
 
-                    // last ditch effort to get a valid public IP address.
-                    // just in case NetworkInterface methods such as isUp is working incorrectly on some platform,
-                    // Inspired by GLASSFISH-17195.
-                    firstInetAddress = NetworkUtility.getLocalHostAddress();
-                    if (firstInetAddress == null) {
-                        throw new IOException("can not find a first InetAddress");
-                    }
+                InetAddress firstInetAddress = NetworkUtility.getFirstInetAddress();
+                if (firstInetAddress != null) {
+                    uniqueHost = firstInetAddress.getHostAddress();
                 }
-                uniqueHost = firstInetAddress.getHostAddress();
             }
             if (uniqueHost == null)
                 throw new IOException("can not find an unique host");

@@ -43,8 +43,6 @@ package com.sun.enterprise.mgmt.transport;
 import junit.framework.TestCase;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -110,13 +108,20 @@ public class NetworkUtilityTest extends TestCase {
     public void testGetFirstAddress() throws IOException {
        System.out.println( "AllLocalAddresses() = " + NetworkUtility.getAllLocalAddresses() );
        System.out.println( "getFirstNetworkInterface() = " + NetworkUtility.getFirstNetworkInterface() );
+       boolean preferIPv6Addresses = Boolean.parseBoolean(System.getProperty("java.net.preferIPv6Addresses", "false"));
+       System.out.println("java.net.preferIPv6Addresses=" + System.getProperty("java.net.preferIPv6Addresses", "false"));
+       System.out.println( "getFirstInetAddress( preferIPv6Addresses:" + preferIPv6Addresses + ") = " + NetworkUtility.getFirstInetAddress() );
+       System.setProperty("java.net.preferIPv6Addresses", new Boolean(!preferIPv6Addresses).toString());
+       preferIPv6Addresses = Boolean.parseBoolean(System.getProperty("java.net.preferIPv6Addresses", "false"));
+       System.out.println( "getFirstInetAddress( preferIPv6Addresses:" + preferIPv6Addresses +  ") = " + NetworkUtility.getFirstInetAddress() );
+       System.setProperty("java.net.preferIPv6Addresses", new Boolean(!preferIPv6Addresses).toString());
        System.out.println( "getFirstInetAddress( true ) = " + NetworkUtility.getFirstInetAddress(true) );
        System.out.println( "getFirstInetAddress( false ) = " + NetworkUtility.getFirstInetAddress(false) );
        System.out.println( "getFirstNetworkInteface() = " + NetworkUtility.getFirstNetworkInterface());
-       System.out.println( "getFirstInetAddress(firstNetworkInteface, true) = " +
-               NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),true));
-       System.out.println( "getFirstInetAddress(firstNetworkInteface, false) = " +
-               NetworkUtility.getFirstInetAddress(NetworkUtility.getFirstNetworkInterface(),false));
+       System.out.println( "getNetworkInetAddress(firstNetworkInteface, true) = " +
+               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(),true));
+       System.out.println( "getNetworkInetAddress(firstNetworkInteface, false) = " +
+               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(),false));
 
     }
 }
