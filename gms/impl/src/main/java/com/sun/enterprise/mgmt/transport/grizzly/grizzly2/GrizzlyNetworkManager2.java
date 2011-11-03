@@ -152,7 +152,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
         final TCPNIOTransport transport = tcpTransportBuilder.build();
 
         final TCPNIOServerConnection serverConnection = transport.bind(
-                host != null ? host : "0.0.0.0",
+                host != null ? host : NetworkUtility.getAnyAddress().getHostAddress(),
                 new PortRange(tcpStartPort, tcpEndPort),
                 SERVER_CONNECTION_BACKLOG);
         tcpPort = ((InetSocketAddress) serverConnection.getLocalAddress()).getPort();

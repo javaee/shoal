@@ -107,8 +107,8 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public int writeSelectorPoolSize;
     final public String UNKNOWN = "Unknown_";
 
-    final public String DEFAULT_MULTICAST_ADDRESS = "230.30.1.1";
-
+    final public String DEFAULT_IPv4_MULTICAST_ADDRESS = "230.30.1.1";
+    final public String DEFAULT_IPv6_MULTICAST_ADDRESS = "FF01:0:0:0:0:0:0:1";
     public final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
     protected VirtualMulticastSender vms = null;
@@ -130,6 +130,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         return validateMulticastAddress != null && validateMulticastAddress.isMulticastAddress();
     }
 
+    @SuppressWarnings( "unchecked" )
     public void configure( final Map properties ) {
         Logger shoalLogger = getLogger();
         host = Utility.getStringProperty( BIND_INTERFACE_ADDRESS.toString(), null, properties );
@@ -141,6 +142,8 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
         // tcpPort = NetworkUtility.getAvailableTCPPort( host, tcpStartPort, tcpEndPort );
 
         multicastPort = Utility.getIntProperty( MULTICASTPORT.toString(), 9090, properties );
+        final String DEFAULT_MULTICAST_ADDRESS = NetworkUtility.getPreferIpv6Addresses() ?
+                                           DEFAULT_IPv6_MULTICAST_ADDRESS : DEFAULT_IPv4_MULTICAST_ADDRESS;
         multicastAddress = Utility.getStringProperty( MULTICASTADDRESS.toString(), DEFAULT_MULTICAST_ADDRESS, properties );
         if (!validMulticastAddress(multicastAddress)) {
             shoalLogger.log(Level.SEVERE, "grizzlynetmgr.invalidmcastaddr",

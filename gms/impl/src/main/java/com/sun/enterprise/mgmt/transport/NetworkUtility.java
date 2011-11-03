@@ -62,6 +62,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -97,10 +98,13 @@ public class NetworkUtility {
     public volatile static NetworkInterface firstNetworkInterface;
     public volatile static InetAddress firstInetAddressV4;
     public volatile static InetAddress firstInetAddressV6;
+    public static AtomicBoolean preferIPv6Addresses = null;
 
     private static final boolean IS_AIX_JDK;
 
     static {
+        boolean preferIPv6Addresses = getPreferIpv6Addresses();
+
         InetAddress GET_ADDRESS = null;
         try {
             GET_ADDRESS = InetAddress.getByName( IPV4ANYADDRESS );
@@ -119,7 +123,7 @@ public class NetworkUtility {
         }
         ANYADDRESSV6 = GET_ADDRESS;
 
-        ANYADDRESS = ( ANYADDRESSV4 == null ) ? ANYADDRESSV6 : ANYADDRESSV4;
+        ANYADDRESS = ( ANYADDRESSV4 == null || preferIPv6Addresses) ? ANYADDRESSV6 : ANYADDRESSV4;
 
         GET_ADDRESS = null;
         try {
@@ -139,10 +143,11 @@ public class NetworkUtility {
         }
         LOOPBACKV6 = GET_ADDRESS;
 
-        LOOPBACK = ( LOOPBACKV4 == null ) ? LOOPBACKV6 : LOOPBACKV4;
+        LOOPBACK = ( LOOPBACKV4 == null || preferIPv6Addresses) ? LOOPBACKV6 : LOOPBACKV4;
 
-        if( LOOPBACK == null || ANYADDRESS == null )
+        if( LOOPBACK == null || ANYADDRESS == null ) {
             throw new IllegalStateException( "failure initializing statics. Neither IPV4 nor IPV6 seem to work" );
+        }
     }
 
     private static Method isLoopbackMethod = null;
@@ -222,6 +227,22 @@ public class NetworkUtility {
         return allLocalAddresses;
     }
 
+    public static InetAddress getAnyAddress() {
+        if (getPreferIpv6Addresses() && ANYADDRESSV6 != null) {
+            return ANYADDRESSV6;
+        } else {
+            return ANYADDRESSV4;
+        }
+    }
+
+    public static InetAddress getLoopbackAddress() {
+        if (getPreferIpv6Addresses() && LOOPBACKV6 != null) {
+            return LOOPBACKV6;
+        } else {
+            return LOOPBACKV4;
+        }
+    }
+
     /**
      * Return a first network interface except for the lookback
      * But, if any network interfaces were not found locally, the lookback interface is returned.
@@ -271,7 +292,25 @@ public class NetworkUtility {
     }
 
     public static boolean getPreferIpv6Addresses() {
-        return Boolean.parseBoolean(System.getProperty("java.net.preferIPv6Addresses", "false"));
+        if (preferIPv6Addresses == null) {
+            String propValue = null;
+            boolean result = false;
+            try {
+                propValue = System.getProperty("java.net.preferIPv6Addresses", "false");
+                result = Boolean.parseBoolean(propValue);
+            } catch (Throwable t) {
+                if (LOG.isLoggable(Level.WARNING)) {
+                    LOG.log(Level.WARNING, "netutil.invalidPreferIPv6Addresses", new Object[]{t.getLocalizedMessage()});
+                    LOG.log(Level.WARNING, "stack trace", t);
+                }
+            } finally {
+                preferIPv6Addresses = new AtomicBoolean(result);
+            }
+        }
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, "NetworkUtlity.getPreferIpv6Addresses=" + preferIPv6Addresses.get());
+        }
+        return preferIPv6Addresses.get();
     }
 
     /**
@@ -747,8 +786,9 @@ public class NetworkUtility {
     static void displayInterfaceInformation(NetworkInterface netint) throws SocketException {
         System.out.printf("Display name: %s\n", netint.getDisplayName());
         System.out.printf("Name: %s\n", netint.getName());
-        Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
+        System.out.printf("PreferIPv6Addresses: %b\n", getPreferIpv6Addresses());
 
+        Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
         for (InetAddress inetAddress : Collections.list(inetAddresses)) {
             System.out.printf("InetAddress: %s\n", inetAddress);
         }
