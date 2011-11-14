@@ -856,8 +856,8 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     /**
-     * Processes a Masternode Query message. This results in a master node
-     * response if this node is a master node.
+     * Processes a Node Query message. This results in a node
+     * response.
      *
      * @param msg the Message
      * @param adv the source node SystemAdvertisement
@@ -895,7 +895,11 @@ class MasterNode implements MessageListener, Runnable {
             if (LOG.isLoggable(Level.FINER)) {
                 LOG.log(Level.FINER, "Sending Node response to  :" + adv.getName());
             }
-            send(adv.getID(), null, response);
+            // Part of fix for BugDB 13375653. Broadcast node response. to all nodes.
+            // TCP connnection between isolated instance and master does not repair in time to
+            // receive this message.
+            //send(adv.getID(), null, response);
+            send(null, null, response);
         }
         return true;
     }
@@ -912,6 +916,9 @@ class MasterNode implements MessageListener, Runnable {
         final Object msgElement = msg.getMessageElement(NODERESPONSE);
 
         if (msgElement == null || adv == null) {
+            if (LOG.isLoggable(Level.FINER)) {
+                LOG.log(Level.FINER, "WARNING: returning without processing in processNodeResponse msgElement=" + msgElement + " adv=" + adv);
+            }
             return false;
         }
         if (isMaster() && masterAssigned) {
@@ -930,6 +937,8 @@ class MasterNode implements MessageListener, Runnable {
             } else if (LOG.isLoggable(Level.FINER)) {
                 LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
             }
+        } else if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE,  "Received a node response from " + adv.getName() + " id:" + adv.getID());
         }
         return true;
     }
