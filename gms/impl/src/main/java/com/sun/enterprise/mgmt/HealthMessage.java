@@ -164,10 +164,6 @@ public class HealthMessage implements Serializable {
             this.seqID = seqID;
         }
 
-        public Entry(final Entry previousEntry, final String newState) {
-            this(previousEntry.adv,  newState, previousEntry.seqID + 1);
-        }
-
         // copy ctor
         public Entry(final Entry entry) {
             this(entry.adv, entry.state, entry.seqID);

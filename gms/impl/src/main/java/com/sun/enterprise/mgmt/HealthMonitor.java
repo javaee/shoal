@@ -1475,7 +1475,11 @@ public class HealthMonitor implements MessageListener, Runnable {
                         LOG.log(Level.INFO, "mgmt.healthmonitor.alreadydead", new Object[] {entry.id, deadTime});
                         return;
                     }
-                    deadEntry = new HealthMessage.Entry(lastCheck, states[DEAD]);
+                    // master is generating a DEAD health entry on behalf of DEAD instance.
+                    // DO NOT bump the HM seqid just in case the master is declaring an instance dead and it is only
+                    // isolated by a network failure.  When isolated instance rejoins cluster, its HM seqid will still
+                    // be this value, so keep it same now.  Part of fix for BugDB 13375653.
+                    deadEntry = new HealthMessage.Entry(lastCheck.adv, states[DEAD], lastCheck.getSeqID());
                     cache.put(lastCheck.id, deadEntry);
                 }
                 if (LOG.isLoggable(Level.FINE)){
