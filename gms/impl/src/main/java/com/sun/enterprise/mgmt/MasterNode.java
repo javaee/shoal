@@ -369,10 +369,10 @@ class MasterNode implements MessageListener, Runnable {
      * @return The master value
      */
     boolean isMaster() {
-        if (masterLogger.isLoggable(Level.FINER)) {
-            masterLogger.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
-        } else if (LOG.isLoggable(Level.FINER)) {
-            LOG.log(Level.FINER, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
+        if (masterLogger.isLoggable(Level.FINEST)) {
+            masterLogger.log(Level.FINEST, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
+        } else if (LOG.isLoggable(Level.FINEST)) {
+            LOG.log(Level.FINEST, "isMaster :" + clusterViewManager.isMaster() + " MasterAssigned :" + masterAssigned + " View Size :" + clusterViewManager.getViewSize());
         }
         return clusterViewManager.isMaster();
     }
@@ -696,13 +696,26 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     @SuppressWarnings("unchecked")
-    boolean processResendRequest(final Message msg, final SystemAdvertisement adv) throws IOException {
+    boolean processResendRequest(final Message msg, final SystemAdvertisement adv, boolean isAdvAddedToView) throws IOException {
         if (isMaster() && masterAssigned) {
             Object element = msg.getMessageElement(RESENDREQUEST);
             if (element != null && element instanceof List) {
                 List<Long> missedList = (List<Long>)element;
                 for (Long missed : missedList) {
                     reliableMulticast.resend(adv.getID(), missed);
+                }
+                if (isAdvAddedToView) {
+                    final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
+                    Message masterResponseMsg = createMasterResponse(false, localNodeID);
+                    synchronized(masterViewID) {
+                        clusterViewManager.setMasterViewID(masterViewID.incrementAndGet());
+                        addAuthoritativeView(masterResponseMsg);
+                    }
+                    clusterViewManager.notifyListeners(cvEvent);
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.log(Level.FINE, "Rejoin initiated due to resend request: Master " + manager.getInstanceName() +  " broadcasting ADD_EVENT  of member: " + adv.getName() + " to GMS group: " + manager.getGroupName());
+                    }
+                    sendNewView(null, cvEvent, masterResponseMsg, false);
                 }
                 return true;
             }
@@ -925,7 +938,7 @@ class MasterNode implements MessageListener, Runnable {
             if (LOG.isLoggable(Level.FINE)) {
                 LOG.log(Level.FINE, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
             }
-            if(isAdvAddedToView) {
+            //if(isAdvAddedToView) {
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
                 Message responseMsg = createMasterResponse(false, localNodeID);
                 synchronized(masterViewID) {
@@ -934,9 +947,9 @@ class MasterNode implements MessageListener, Runnable {
                 }
                 clusterViewManager.notifyListeners(cvEvent);
                 sendNewView(null, cvEvent, responseMsg, false);
-            } else if (LOG.isLoggable(Level.FINER)) {
-                LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
-            }
+            //} else if (LOG.isLoggable(Level.FINER)) {
+            //    LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
+            //}
         } else if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE,  "Received a node response from " + adv.getName() + " id:" + adv.getID());
         }
@@ -1114,7 +1127,7 @@ class MasterNode implements MessageListener, Runnable {
                         discoveryView.add(adv);
                     }
                 }
-                if (processResendRequest(msg, adv)) {
+                if (processResendRequest(msg, adv, result)) {
                     return;
                 }
                 if (processMasterNodeQuery(msg, adv, result)) {

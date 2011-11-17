@@ -124,10 +124,10 @@ public class ClusterViewManager {
                             .toString());
                 }
                 manager.getNetworkManager().addRemotePeer(advertisement.getID());
+                view.put(advertisement.getID(), advertisement);
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.log(Level.FINE, "add " + advertisement.getName() + " newViewSize=" + view.size());
                 }
-                view.put(advertisement.getID(), advertisement);
                 result = true;
                 if (LOG.isLoggable(Level.FINER)){
                     LOG.log(Level.FINER, MessageFormat.format("Cluster view now contains {0} entries", getViewSize()));
