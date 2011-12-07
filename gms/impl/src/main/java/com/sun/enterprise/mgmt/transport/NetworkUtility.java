@@ -263,8 +263,10 @@ public class NetworkUtility {
                 continue;
             }
 
-            // removed check if multicast enabled.  Definitely not correct for non-multicast mode.
-            if( getNetworkInetAddress(anInterface, false) != null ||
+            // replaced isMulticast() check with just an isUp() check.
+            // Definitely not correct for non-multicast mode to not allow non-multicast network interfaces.
+            if( isUp(anInterface) &&
+                getNetworkInetAddress(anInterface, false) != null ||
                 getNetworkInetAddress(anInterface, true) != null ) {
                 firstInterface = anInterface;
                 break;
