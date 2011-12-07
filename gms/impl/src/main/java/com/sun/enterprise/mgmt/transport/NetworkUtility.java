@@ -265,11 +265,11 @@ public class NetworkUtility {
 
             // replaced isMulticast() check with just an isUp() check.
             // Definitely not correct for non-multicast mode to not allow non-multicast network interfaces.
-            if( isUp(anInterface) &&
-                getNetworkInetAddress(anInterface, false) != null ||
-                getNetworkInetAddress(anInterface, true) != null ) {
-                firstInterface = anInterface;
-                break;
+            if( isUp(anInterface)) {
+                if (getNetworkInetAddress(anInterface, false) != null || getNetworkInetAddress(anInterface, true) != null ) {
+                    firstInterface = anInterface;
+                    break;
+                }
             }
         }
         if( firstInterface == null )
@@ -279,7 +279,7 @@ public class NetworkUtility {
         } else {
             firstNetworkInterface = firstInterface;
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.fine("getFirstNetworkInterface  result: interface name:" + firstNetworkInterface.getName() + " address:" + firstNetworkInterface.getInetAddresses().nextElement().toString());
+                LOG.fine("getFirstNetworkInterface  result: interface name:" + firstNetworkInterface.getName() + " address:" + firstNetworkInterface.getInetAddresses().nextElement());
             }
             return firstNetworkInterface;
         }
@@ -795,7 +795,7 @@ public class NetworkUtility {
             System.out.printf("InetAddress: %s\n", inetAddress);
         }
 
-        System.out.printf("Up? %s\n", netint.isUp());
+        System.out.printf("Up? %s\n", isUp(netint));
         System.out.printf("Loopback? %s\n", netint.isLoopback());
         System.out.printf("PointToPoint? %s\n", netint.isPointToPoint());
         System.out.printf("Supports multicast? %s\n", netint.supportsMulticast());
@@ -804,10 +804,10 @@ public class NetworkUtility {
                     java.util.Arrays.toString(netint.getHardwareAddress()));
         System.out.printf("MTU: %s\n", netint.getMTU());
         try {
-            System.out.printf("Network Inet Address (preferIPV6=false) %s\n", getNetworkInetAddress(netint, false).toString() );
+            System.out.printf("Network Inet Address (preferIPV6=false) %s\n", getNetworkInetAddress(netint, false) );
         } catch (IOException ignore) {}
         try {
-            System.out.printf("Network Inet Address (preferIPV6=true) %s\n", getNetworkInetAddress(netint, true).toString());
+            System.out.printf("Network Inet Address (preferIPV6=true) %s\n", getNetworkInetAddress(netint, true));
         } catch (IOException ignore) {}
         InetAddress ia = resolveBindInterfaceName(netint.getName());
         String ia_string = ia != null ? ia.getHostAddress() : "<unresolved>";
