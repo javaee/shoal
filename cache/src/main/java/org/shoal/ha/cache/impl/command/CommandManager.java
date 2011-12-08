@@ -158,8 +158,8 @@ public class CommandManager<K, V>
         } catch (Throwable th) {
             _logger.log(Level.WARNING, "Error[2] during parsing command: opcode: " + messageData[0], th);
         } finally {
-           try {bis.close();} catch (Exception ex) {}
-           try {ois.close();} catch (Exception ex) {}
+           try {bis.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ByteArrayInputStream");}
+           try {ois.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ObjectInputStream");}
         }
     }
     

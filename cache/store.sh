@@ -54,6 +54,7 @@ if [ "${1}" = "-h" ]; then
 fi
 
 CACHE_HOME=.
+HA_API_JAR=/space/work/ha-api/target/ha-api-3.1.10-SNAPSHOT.jar
 
 CP=${HA_API_JAR}:${CACHE_HOME}/target/classes:${CACHE_HOME}/../gms/api/target/shoal-gms-api.jar:${CACHE_HOME}/../gms/impl/target/shoal-gms-impl.jar:${CACHE_HOME}/../gms/lib/grizzly-framework.jar:${CACHE_HOME}/../gms/lib/grizzly-utils.jar
 

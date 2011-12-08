@@ -69,8 +69,6 @@ public class DataStoreShell {
 
     public static void main(String[] args)
         throws Exception {
-        DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
-
         BackingStoreConfiguration<String, Serializable> conf = new BackingStoreConfiguration<String, Serializable>();
         conf.setStoreName(args[0])
                 .setInstanceName(args[1])
@@ -90,16 +88,9 @@ public class DataStoreShell {
     }
 
     private void runShell(BackingStore<String, Serializable> ds) {
-        String[] loggerNames = new String[] {
-            ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND,
-            ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND,
-            ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND};
-
-        for (String loggerName : loggerNames) {
-            Logger logger = Logger.getLogger(loggerName);
-            logger.setLevel(Level.ALL);
-            System.out.println("*** For " + loggerName + " ==> LOG LEVEL SET TO ALL ****");
-        }
+        Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND).setLevel(Level.ALL);
+        Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND).setLevel(Level.ALL);
+        Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND).setLevel(Level.ALL);
         
         this.ds = ds;
         String line = "";

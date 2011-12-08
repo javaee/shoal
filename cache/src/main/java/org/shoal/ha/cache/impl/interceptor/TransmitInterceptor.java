@@ -98,8 +98,8 @@ public final class TransmitInterceptor<K, V>
             if (! transmitted) {
                 cmd.onFailure();   
             }
-            try {oos.close();} catch (Exception ex) {}
-            try {bos.close();} catch (Exception ex) {}
+            try {oos.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ObjectOutputStream");}
+            try {bos.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ByteArrayOutputStream");}
         }
     }
 

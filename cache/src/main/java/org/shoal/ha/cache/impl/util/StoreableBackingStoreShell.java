@@ -48,10 +48,7 @@ import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -67,7 +64,6 @@ public class StoreableBackingStoreShell {
 
     public static void main(String[] args)
         throws Exception {
-        DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
 
         BackingStoreConfiguration<String, MyStoreable> conf = new BackingStoreConfiguration<String, MyStoreable>();
         conf.setStoreName(args[0])
@@ -355,7 +351,7 @@ public class StoreableBackingStoreShell {
                     ", maxIdleTime=" + maxIdleTime +
                     ", str1='" + str1 + '\'' +
                     ", str2='" + str2 + '\'' +
-                    ", dirty=" + dirty +
+                    ", dirty=" + Arrays.toString(dirty) +
                     '}';
         }
     }

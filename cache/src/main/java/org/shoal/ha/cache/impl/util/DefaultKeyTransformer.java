@@ -1,16 +1,22 @@
 package org.shoal.ha.cache.impl.util;
 
 import org.glassfish.ha.store.util.KeyTransformer;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
 public class DefaultKeyTransformer<K>
     implements KeyTransformer<K> {
+
+    private static final Logger _logger =
+            Logger.getLogger(ShoalCacheLoggerConstants.CACHE);
 
     private ClassLoader loader;
 
@@ -32,8 +38,8 @@ public class DefaultKeyTransformer<K>
             throw new RuntimeException(ex);
             //TODO FIXME This cannot be RuntimeException
         } finally {
-            try {oos.close();} catch (Exception ex) {}
-            try {bos.close();} catch (Exception ex) {}
+            try {oos.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ObjectOutputStream");}
+            try {bos.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ByteArrayOutputStream");}
         }
     }
 
@@ -47,8 +53,8 @@ public class DefaultKeyTransformer<K>
         } catch (Exception ex) {
             throw new RuntimeException (ex);
         } finally {
-            try {ois.close();} catch (Exception ex) {}
-            try {bis.close();} catch (Exception ex) {}
+            try {ois.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ObjectInputStream");}
+            try {bis.close();} catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ByteArrayInputStream");}
         }
     }
 

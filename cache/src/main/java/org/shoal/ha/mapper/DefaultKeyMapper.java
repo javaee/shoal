@@ -115,13 +115,12 @@ public class DefaultKeyMapper
                 );
             }
         }
-        hc = Math.abs(hc);
 
         try {
             rLock.lock();
             return members.length == 0
                     ? null
-                    : members[hc % (members.length)];
+                    : members[Math.abs(hc % members.length)];
         } finally {
             rLock.unlock();
         }
@@ -134,7 +133,7 @@ public class DefaultKeyMapper
             rLock.lock();
             return members.length == 0
                     ? _EMPTY_REPLICAS
-                    : replicaChoices[hc % (members.length)];
+                    : replicaChoices[Math.abs(hc % members.length)];
         } finally {
             rLock.unlock();
         }
@@ -185,13 +184,12 @@ public class DefaultKeyMapper
                 HashableKey k = (HashableKey) key1;
                 hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
             }
-            hc = Math.abs(hc);
 
             try {
                 rLock.lock();
                 return previuousAliveAndReadyMembers.length == 0
                         ? new String[] {_EMPTY_REPLICAS}
-                        : new String[] {previuousAliveAndReadyMembers[hc % (previuousAliveAndReadyMembers.length)]};
+                        : new String[] {previuousAliveAndReadyMembers[Math.abs(hc % previuousAliveAndReadyMembers.length)]};
             } finally {
                 rLock.unlock();
             }
@@ -254,7 +252,7 @@ public class DefaultKeyMapper
             hc = k.getHashKey() == null ? hc : k.getHashKey().hashCode();
         }
 
-        return Math.abs(hc);
+        return hc;
     }
 
     private static int getDigestHashCode(String val) {

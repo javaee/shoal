@@ -46,9 +46,12 @@ import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
@@ -63,7 +66,6 @@ public class SimpleDataStoreShell {
 
     public static void main(String[] args)
         throws Exception {
-        DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
 
         DataStoreContext<String, String> conf = new DataStoreContext<String, String>();
         conf.setStoreName(args[0])
@@ -292,7 +294,9 @@ public class SimpleDataStoreShell {
                     }
                 }
             } finally {
-                try {dis.close(); } catch (IOException ex) {}
+                try {dis.close(); } catch (IOException ex) {
+                    Logger.getLogger(ShoalCacheLoggerConstants.CACHE).log(Level.FINEST, "Ignorable error while closing DataInputStream");
+                }
             }
         }
 
@@ -304,7 +308,7 @@ public class SimpleDataStoreShell {
                     ", maxIdleTime=" + maxIdleTime +
                     ", str1='" + str1 + '\'' +
                     ", str2='" + str2 + '\'' +
-                    ", dirty=" + dirty +
+                    ", dirty=" + Arrays.toString(dirty) +
                     '}';
         }
     }

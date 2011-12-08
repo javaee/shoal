@@ -39,8 +39,8 @@ public abstract class DataStoreEntryUpdater<K, V> {
         } catch (Exception ex) {
             throw new DataStoreException("Error during prepareToTransmit()", ex);
         } finally {
-            try { oos.close(); } catch (Exception ex) {}
-            try { bos.close(); } catch (Exception ex) {}
+            try { oos.close(); } catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ObjectOutputStream");}
+            try { bos.close(); } catch (Exception ex) {_logger.log(Level.FINEST, "Ignorable error while closing ByteArrayOutputStream");}
         }
 
         return result;

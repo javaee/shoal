@@ -45,6 +45,7 @@ import org.glassfish.ha.store.api.Storeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 /**
  * @author Mahesh Kannan
@@ -91,7 +92,7 @@ public class SimpleStoreableMetadata
                 ", lastAccessTime=" + lastAccessTime +
                 ", maxIdleTime=" + maxIdleTime +
                 ", isNew=" + isNew +
-                ", state=" + state +
+                ", state=" + Arrays.toString(state) +
                 '}';
     }
 
