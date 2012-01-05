@@ -41,6 +41,7 @@
 package org.shoal.ha.cache.impl.interceptor;
 
 import org.shoal.adapter.store.commands.NoOpCommand;
+import org.shoal.adapter.store.commands.SaveCommand;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
@@ -188,7 +189,8 @@ public class ReplicationCommandTransmitterWithMap<K, V>
 
         private AtomicBoolean alreadySent = new AtomicBoolean(false);
 
-        private volatile ConcurrentHashMap map = new ConcurrentHashMap();
+        private volatile ConcurrentHashMap<Object, ConcurrentLinkedQueue<Command>> map
+                = new ConcurrentHashMap<Object, ConcurrentLinkedQueue<Command>>();
 
         private AtomicInteger  removedKeysSize = new AtomicInteger(0);
 
@@ -210,7 +212,15 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     inFlightCount.incrementAndGet();
                     if (! batchThresholdReached.get()) {
                         if (isAdd) {
-                            map.put(cmd.getKey(), cmd);
+                            ConcurrentLinkedQueue<Command> cmdList = map.get(cmd.getKey());
+                            if (cmdList == null) {
+                                cmdList = new ConcurrentLinkedQueue<Command>();
+                                ConcurrentLinkedQueue<Command> cmdList1
+                                        = map.putIfAbsent(cmd.getKey(), cmdList);
+                                cmdList = cmdList1 != null ? cmdList1 : cmdList;
+                            }
+
+                            cmdList.add(cmd);
                             result = true;
                             if (map.size() >= MAX_BATCH_SIZE) {
                                 batchThresholdReached.compareAndSet(false, true);
@@ -258,8 +268,7 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                                 + "; map.size() = " + map.size()
                                 + "; removedKeys.size() = " +removedKeysSize.get());
                     }
-                    boolean completed = false;
-                    int index = 0;
+
                     NoOpCommand nc = null;
                     do {
                         nc = new NoOpCommand();
@@ -274,10 +283,6 @@ public class ReplicationCommandTransmitterWithMap<K, V>
                     }
                     timeStamp = lastTS;
                 }
-            } else {
-//                if (_statsLogger.isLoggable(Level.FINEST)) {
-//                    _statsLogger.log(Level.FINEST, "flushAndTransmit visited a new Batch");
-//                }
             }
         }
 
@@ -286,11 +291,24 @@ public class ReplicationCommandTransmitterWithMap<K, V>
             ReplicationFramePayloadCommand rfCmd = new ReplicationFramePayloadCommand();
             rfCmd.setTargetInstance(targetName);
             try {
-                int size = map.size();
-                for (Object obj : map.values()) {
-                    Command cmd = (Command) obj;
-                    if (cmd.getOpcode() != ReplicationCommandOpcode.NOOP_COMMAND) {
-                        rfCmd.addComamnd(cmd);
+                for (ConcurrentLinkedQueue<Command> cmdList : map.values()) {
+                    SaveCommand saveCmd = null;
+                    for (Command cmd : cmdList) {
+                        if (cmd.getOpcode() == ReplicationCommandOpcode.NOOP_COMMAND) {
+                            //No need to add the noop commands
+                        } else if (cmd.getOpcode() == ReplicationCommandOpcode.SAVE) {
+                            SaveCommand thisSaveCommand = (SaveCommand) cmd;
+                            if (saveCmd == null || saveCmd.getVersion() < thisSaveCommand.getVersion()) {
+                                saveCmd = thisSaveCommand;
+                            }
+                        } else {
+                            //Commands like Load{Requests|Response} Touch etc.
+                            rfCmd.addComamnd(cmd);
+                        }
+                    }
+
+                    if (saveCmd != null) {
+                        rfCmd.addComamnd(saveCmd);
                     }
                 }
 
@@ -302,17 +320,6 @@ public class ReplicationCommandTransmitterWithMap<K, V>
             }
         }
 
-
-/*        protected void finalize() {
-            if ((map.size() > 2) || (removedKeys.size() > 2)) {
-                if (alreadySent.get() != true) {
-                    _logger.log(Level.WARNING, "BatchedCommandMapDataFrame.finalize => "
-                            + "map.size = " + map.size() + "; removedKeys.size = " + removedKeys.size()
-                            + "; batchThresholdReached = " + batchThresholdReached.get()
-                    );
-                }
-            }
-        }*/
         
     }
 }

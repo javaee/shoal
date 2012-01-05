@@ -53,19 +53,9 @@ import java.util.logging.Logger;
  * @author Mahesh Kannan
  */
 public class SaveCommand<K, V>
-    extends AcknowledgedCommand<K, V> {
-
-    private transient static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+    extends AbstractSaveCommand<K, V> {
 
     private transient V v;
-
-    protected long version;
-
-    protected long lastAccessedAt;
-
-    protected long maxIdleTime;
-
-    private transient String targetInstanceName;
 
     private transient byte[] rawV;
 
@@ -74,19 +64,8 @@ public class SaveCommand<K, V>
     }
 
     public SaveCommand(K k, V v, long version, long lastAccessedAt, long maxIdleTime) {
-        this();
-        super.setKey(k);
+        super(ReplicationCommandOpcode.SAVE, k, version, lastAccessedAt, maxIdleTime);
         this.v = v;
-        this.version = version;
-        this.lastAccessedAt = lastAccessedAt;
-        this.maxIdleTime = maxIdleTime;
-    }
-
-    public boolean beforeTransmit() {
-        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), getKey());
-        super.setTargetName(targetInstanceName);
-        super.beforeTransmit();
-        return getTargetName() != null;
     }
 
     @Override
@@ -94,15 +73,18 @@ public class SaveCommand<K, V>
         throws DataStoreException {
 
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received save_command for key = " + getKey() + " from " + initiator);
+            _logger.log(Level.FINE, dsc.getServiceName() + getName()
+                    + " received save_command for key = " + getKey() + " from " + initiator
+                    + "; version = " + getVersion());
         }
+
         DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(getKey());
         synchronized (entry) {
             dsc.getDataStoreEntryUpdater().executeSave(entry, this);
         }
 
         if (dsc.isDoSynchronousReplication()) {
-            _logger.log(Level.WARNING, "SaveCommand Sending SIMPLE_ACK");
+            _logger.log(Level.FINE, "SaveCommand Sending SIMPLE_ACK");
             super.sendAcknowledgement();
         }
 
@@ -113,16 +95,8 @@ public class SaveCommand<K, V>
         return getName() + "(" + getKey() + ")";
     }
 
-    @Override
-    public String getKeyMappingInfo() {
-        return targetInstanceName;
-    }
-
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
-        out.writeLong(version);
-        out.writeLong(lastAccessedAt);
-        out.writeLong(maxIdleTime);
 
         rawV = dsc.getDataStoreEntryUpdater().getState(v);
         out.writeObject(rawV);
@@ -132,16 +106,8 @@ public class SaveCommand<K, V>
         }
     }
 
-    public long getVersion() {
-        return version;
-    }
-
-    public long getLastAccessedAt() {
-        return lastAccessedAt;
-    }
-
-    public long getMaxIdleTime() {
-        return maxIdleTime;
+    public boolean hasState() {
+        return true;
     }
 
     public byte[] getRawV() {
@@ -150,9 +116,6 @@ public class SaveCommand<K, V>
 
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
-        version = in.readLong();
-        lastAccessedAt = in.readLong();
-        maxIdleTime = in.readLong();
 
         rawV = (byte[]) in.readObject();
     }

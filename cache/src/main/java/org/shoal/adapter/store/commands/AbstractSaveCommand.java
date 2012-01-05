@@ -40,54 +40,94 @@
 
 package org.shoal.adapter.store.commands;
 
-import org.shoal.ha.cache.impl.store.DataStoreEntry;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
-import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.command.ReplicationCommandOpcode;
+import org.shoal.ha.cache.impl.store.DataStoreEntry;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
  */
-public class TouchCommand<K, V>
-    extends AbstractSaveCommand<K, V> {
+public abstract class AbstractSaveCommand<K, V>
+    extends AcknowledgedCommand<K, V> {
 
-    public TouchCommand() {
-        super(ReplicationCommandOpcode.TOUCH);
+    protected transient static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+
+    protected long version;
+
+    protected long lastAccessedAt;
+
+    protected long maxIdleTime;
+
+    private transient String targetInstanceName;
+
+    protected AbstractSaveCommand(byte opcode) {
+        super(opcode);
     }
 
-    public TouchCommand(K k, long version, long accessTime, long maxIdleTime) {
-        super(ReplicationCommandOpcode.TOUCH, k, version, accessTime, maxIdleTime);
+    public AbstractSaveCommand(byte opcode, K k, long version, long lastAccessedAt, long maxIdleTime) {
+        this(opcode);
+        super.setKey(k);
+        this.version = version;
+        this.lastAccessedAt = lastAccessedAt;
+        this.maxIdleTime = maxIdleTime;
+    }
+
+    public boolean beforeTransmit() {
+        targetInstanceName = dsc.getKeyMapper().getMappedInstance(dsc.getGroupName(), getKey());
+        super.setTargetName(targetInstanceName);
+        super.beforeTransmit();
+        return getTargetName() != null;
+    }
+
+    public abstract void execute(String initiator)
+        throws DataStoreException;
+
+    public String toString() {
+        return getName() + "(" + getKey() + ")";
     }
 
     @Override
-    public void execute(String initiator)
-        throws DataStoreException {
+    public String getKeyMappingInfo() {
+        return targetInstanceName;
+    }
 
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        out.writeLong(version);
+        out.writeLong(lastAccessedAt);
+        out.writeLong(maxIdleTime);
+        
         if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE, dsc.getServiceName() + getName() + " received touch_command for key = " + getKey() + " from " + initiator);
-        }
-
-        if (_logger.isLoggable(Level.FINE)) {
-            _logger.log(Level.FINE,  dsc.getServiceName() + getName()
-                    + " received touch_command for key = " + getKey() + " from " + initiator
-                    + "; version = " + getVersion() + "; " + dsc.getDataStoreEntryUpdater().getClass().getCanonicalName());
-        }
-
-        DataStoreEntry<K, V> entry = dsc.getReplicaStore().getOrCreateEntry(getKey());
-        synchronized (entry) {
-            dsc.getDataStoreEntryUpdater().executeTouch(entry, this);
-        }
-
-        if (dsc.isDoSynchronousReplication()) {
-            _logger.log(Level.FINE, "TouchCommand Sending SIMPLE_ACK");
-            super.sendAcknowledgement();
+            _logger.log(Level.FINE, dsc.getServiceName() + " sending state for key = " + getKey() + "; version = " + version + "; lastAccessedAt = " + lastAccessedAt + "; to " + getTargetName());
         }
     }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public long getLastAccessedAt() {
+        return lastAccessedAt;
+    }
+
+    public long getMaxIdleTime() {
+        return maxIdleTime;
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        version = in.readLong();
+        lastAccessedAt = in.readLong();
+        maxIdleTime = in.readLong();
+    }
+
+    public boolean hasState() {
+        return false;
+    }
+    
 }

@@ -40,6 +40,7 @@
 
 package org.shoal.ha.cache.impl.store;
 
+import org.shoal.adapter.store.commands.AbstractSaveCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ObjectInputStreamWithLoader;
@@ -66,7 +67,7 @@ public class DataStoreEntry<K, V> {
 
     private String replicaInstanceName;
 
-    private TreeSet<SaveCommand<K, V>> pendingUpdates;
+    private TreeSet<AbstractSaveCommand<K, V>> pendingUpdates;
 
     private boolean removed;
 
@@ -124,7 +125,7 @@ public class DataStoreEntry<K, V> {
         return oldValue == null ? null : oldValue.equals(replicaInstanceName) ? null : oldValue;
     }
 
-    public TreeSet<SaveCommand<K, V>> getPendingUpdates() {
+    public TreeSet<AbstractSaveCommand<K, V>> getPendingUpdates() {
         return pendingUpdates;
     }
 
@@ -135,12 +136,12 @@ public class DataStoreEntry<K, V> {
         }
     }
 
-    public void addPendingUpdate(SaveCommand<K, V> cmd) {
+    public void addPendingUpdate(AbstractSaveCommand<K, V> cmd) {
         if (pendingUpdates == null) {
-            pendingUpdates = new TreeSet<SaveCommand<K, V>>(
-                    new Comparator<SaveCommand<K, V>>() {
+            pendingUpdates = new TreeSet<AbstractSaveCommand<K, V>>(
+                    new Comparator<AbstractSaveCommand<K, V>>() {
                         @Override
-                        public int compare(SaveCommand<K, V> cmd1, SaveCommand<K, V> cmd2) {
+                        public int compare(AbstractSaveCommand<K, V> cmd1, AbstractSaveCommand<K, V> cmd2) {
                             return (int) (cmd1.getVersion() - cmd2.getVersion());
                         }
                     }

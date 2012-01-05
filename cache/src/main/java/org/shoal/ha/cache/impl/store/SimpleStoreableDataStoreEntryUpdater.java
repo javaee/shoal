@@ -1,10 +1,14 @@
 package org.shoal.ha.cache.impl.store;
 
 import org.glassfish.ha.store.util.SimpleMetadata;
+import org.shoal.adapter.store.commands.AbstractSaveCommand;
 import org.shoal.adapter.store.commands.LoadResponseCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
+import org.shoal.adapter.store.commands.TouchCommand;
 import org.shoal.ha.cache.api.*;
 
+import java.util.Iterator;
+import java.util.TreeSet;
 import java.util.logging.Level;
 
 /**
@@ -66,11 +70,54 @@ public class SimpleStoreableDataStoreEntryUpdater<K, V extends SimpleMetadata>
             super.updateMetaInfoInDataStoreEntry(entry, cmd);
             entry.setRawV(cmd.getRawV());
             super.printEntryInfo("SimpleStoreableDataStoreEntryUpdater:Updated", entry, cmd.getKey());
+            updateFromPendingUpdates(entry);
+            super.printEntryInfo("SimpleStoreableDataStoreEntryUpdater:Updated", entry, cmd.getKey());
         } else {
             if (_logger.isLoggable(Level.FINE)) {
                 _logger.log(Level.FINE, "SimpleStoreableDataStoreEntryUpdater.executeSave. IGNORING ... "
                     + "entry = " + entry + "; entry.version = " + entry.getVersion()
                     + "; cmd.version = " + cmd.getVersion());
+            }
+        }
+    }
+
+    @Override
+    public void executeTouch(DataStoreEntry<K, V> entry, TouchCommand<K, V> touchCmd)
+            throws DataStoreException {
+
+        entry.addPendingUpdate(touchCmd);
+        //TODO: For 'full save' mode there is no need to keep multiple touch commands
+        updateFromPendingUpdates(entry);
+        entry.setIsReplicaNode(true);
+    }
+
+    private void updateFromPendingUpdates(DataStoreEntry<K, V> entry) {
+        TreeSet<AbstractSaveCommand<K, V>> pendingUpdates = entry.getPendingUpdates();
+        if (pendingUpdates != null) {
+            Iterator<AbstractSaveCommand<K, V>> iter = entry.getPendingUpdates().iterator();
+
+            while (iter.hasNext()) {
+                AbstractSaveCommand<K, V> pendingCmd = iter.next();
+                if (entry.getVersion() > pendingCmd.getVersion()) {
+                    iter.remove();
+                    if (_logger.isLoggable(Level.FINE)) {
+                        _logger.log(Level.FINE, "**Ignoring Pending touch because "
+                                + entry.getVersion() + " > " + pendingCmd.getVersion());
+                    }
+                } else if (entry.getVersion() + 1 == pendingCmd.getVersion()) {
+                    if (_logger.isLoggable(Level.FINE)) {
+                        _logger.log(Level.FINE, "**Updated with Pending touch because, cmd.version = "
+                                + entry.getVersion() + " & pending.version = " + pendingCmd.getVersion());
+                    }
+                    iter.remove();
+                    super.updateMetaInfoInDataStoreEntry(entry, pendingCmd);
+                } else {
+                    if (_logger.isLoggable(Level.FINE)) {
+                        _logger.log(Level.FINE, "**Added Touch as pending because, cmd.version = "
+                                + entry.getVersion() + " & pending.version = " + pendingCmd.getVersion());
+                    }
+                    break;
+                }
             }
         }
     }

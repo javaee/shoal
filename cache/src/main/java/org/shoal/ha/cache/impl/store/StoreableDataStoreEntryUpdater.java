@@ -1,8 +1,10 @@
 package org.shoal.ha.cache.impl.store;
 
 import org.glassfish.ha.store.api.Storeable;
+import org.shoal.adapter.store.commands.AbstractSaveCommand;
 import org.shoal.adapter.store.commands.LoadResponseCommand;
 import org.shoal.adapter.store.commands.SaveCommand;
+import org.shoal.adapter.store.commands.TouchCommand;
 import org.shoal.ha.cache.api.*;
 
 import java.io.ByteArrayInputStream;
@@ -14,8 +16,7 @@ import java.util.logging.Level;
 /**
  * @author Mahesh Kannan
  */
-public class
-        StoreableDataStoreEntryUpdater<K, V extends Storeable>
+public class StoreableDataStoreEntryUpdater<K, V extends Storeable>
         extends DataStoreEntryUpdater<K, V> {
 
     @Override
@@ -90,19 +91,35 @@ public class
                     + "; cmd.version" + saveCmd.getVersion());
             }
             entry.addPendingUpdate(saveCmd);
-            Iterator<SaveCommand<K, V>> iter = entry.getPendingUpdates().iterator();
-            while (iter.hasNext()) {
-                SaveCommand<K, V> cmd = iter.next();
-                if (entry.getVersion() + 1 == cmd.getVersion()) {
-                    iter.remove();
-                    mergeIntoV(entry, entry.getV(), cmd);
-                }
-            }
-            entry.setIsReplicaNode(true);
+            updateFromPendingUpdates(entry);
         }
     }
 
-    private void mergeIntoV(DataStoreEntry<K, V> entry, V v, SaveCommand<K, V> cmd)
+
+    @Override
+    public void executeTouch(DataStoreEntry<K, V> entry, TouchCommand<K, V> touchCmd)
+            throws DataStoreException {
+
+        entry.addPendingUpdate(touchCmd);
+        updateFromPendingUpdates(entry);
+    }
+
+    private void updateFromPendingUpdates(DataStoreEntry<K, V> entry)
+        throws DataStoreException {
+        Iterator<AbstractSaveCommand<K, V>> iter = entry.getPendingUpdates().iterator();
+        while (iter.hasNext()) {
+            AbstractSaveCommand<K, V> cmd = iter.next();
+            if (entry.getVersion() + 1 == cmd.getVersion()) {
+                iter.remove();
+                mergeIntoV(entry, entry.getV(), cmd);
+            } else {
+                break;
+            }
+        }
+        entry.setIsReplicaNode(true);
+    }
+
+    private void mergeIntoV(DataStoreEntry<K, V> entry, V v, AbstractSaveCommand<K, V> cmd)
             throws DataStoreException {
         v._storeable_setVersion(cmd.getVersion());
         v._storeable_setLastAccessTime(cmd.getLastAccessedAt());
@@ -110,11 +127,13 @@ public class
 
         super.updateMetaInfoInDataStoreEntry(entry, cmd);
 
-        ByteArrayInputStream bis = new ByteArrayInputStream(cmd.getRawV());
-        try {
-            v._storeable_readState(bis);
-        } catch (Exception ex) {
-            throw new DataStoreException("Error during updating existing V", ex);
+        if (cmd.hasState()) {
+            ByteArrayInputStream bis = new ByteArrayInputStream(((SaveCommand) cmd).getRawV());
+            try {
+                v._storeable_readState(bis);
+            } catch (Exception ex) {
+                throw new DataStoreException("Error during updating existing V", ex);
+            }
         }
 
         //Now that we have...
