@@ -977,9 +977,9 @@ class MasterNode implements MessageListener, Runnable {
         }
         if (isMaster() && masterAssigned) {
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, MessageFormat.format("Received a Node Response from Name :{0} ID :{1}", adv.getName(), adv.getID()));
+                LOG.log(Level.FINE, MessageFormat.format("Received a Node Response from Name :{0} ID :{1} isAdvAddedToView :{2}", adv.getName(), adv.getID(), isAdvAddedToView));
             }
-            //if(isAdvAddedToView) {
+            if(isAdvAddedToView) {
                 final ClusterViewEvent cvEvent = new ClusterViewEvent(ADD_EVENT, adv);
                 Message responseMsg = createMasterResponse(false, localNodeID);
                 synchronized(masterViewID) {
@@ -988,9 +988,9 @@ class MasterNode implements MessageListener, Runnable {
                 }
                 clusterViewManager.notifyListeners(cvEvent);
                 sendNewView(null, cvEvent, responseMsg, false);
-            //} else if (LOG.isLoggable(Level.FINER)) {
-            //    LOG.log(Level.FINER, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
-            //}
+            } else if (LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.FINE, "Node " + adv.getName() + " is already in the view. Hence not sending ADD_EVENT.");
+            }
         } else if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE,  "Received a node response from " + adv.getName() + " id:" + adv.getID());
         }
