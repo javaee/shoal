@@ -147,8 +147,8 @@ public class VirtualMulticastSender extends AbstractMulticastMessageSender {
                 long currentTime = System.currentTimeMillis();
                 if (lastFail == null ||
                    ((lastFail - currentTime) > LAST_REPORTED_FAILURE_DURATION_MS) ) {
-                    if( LOG.isLoggable( Level.INFO ) ) {
-                        LOG.log( Level.INFO, "failed to send message to a virtual multicast endpoint[" + peerID +
+                    if( LOG.isLoggable( Level.FINE ) ) {
+                        LOG.log( Level.FINE, "failed to send message to a virtual multicast endpoint[" + peerID +
                                             "] message=[" + message + "]", ie );
                     }
                     lastReportedSendFailure.put(peerID, currentTime);
@@ -179,8 +179,8 @@ public class VirtualMulticastSender extends AbstractMulticastMessageSender {
             if (removed) {
                 virtualPeerIdList.removeAll(unknownList);
             }
-            if (removed && LOG.isLoggable(Level.INFO)) {
-                LOG.info("Removed the following DISCOVERY seeded unknown instance names from virtualPeerIDList" +
+            if (removed && LOG.isLoggable(Level.FINE)) {
+                LOG.fine("Removed the following DISCOVERY seeded unknown instance names from virtualPeerIDList" +
                         unknownList + " virtualPeerIDset=" + virtualPeerIdList);
             }
     }
