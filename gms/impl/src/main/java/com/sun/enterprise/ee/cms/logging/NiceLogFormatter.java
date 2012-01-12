@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -95,9 +95,7 @@ public class NiceLogFormatter extends Formatter {
     private long recordNumber = 0;
 
     @SuppressWarnings("unchecked")
-    private static final String LINE_SEPARATOR =
-            (String) java.security.AccessController.doPrivileged(
-                    new sun.security.action.GetPropertyAction("line.separator"));
+    private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
     private static final String RECORD_BEGIN_MARKER = "[#|";
     private static final String RECORD_END_MARKER = "|#]" + LINE_SEPARATOR +
