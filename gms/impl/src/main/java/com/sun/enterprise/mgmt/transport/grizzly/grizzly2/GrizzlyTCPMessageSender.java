@@ -54,9 +54,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.logging.Level;
+
+import org.glassfish.grizzly.CompletionHandler;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.WriteResult;
+import org.glassfish.grizzly.impl.FutureImpl;
+import org.glassfish.grizzly.impl.SafeFutureImpl;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
+import org.glassfish.grizzly.utils.Futures;
 
 /**
  * @author Bongjae Chang
@@ -137,17 +142,13 @@ public class GrizzlyTCPMessageSender extends AbstractMessageSender {
             }
 
             try {
-                final Future<WriteResult> syncWriteFuture =
-                        connection.write(remoteAddress, message, null);
+                final FutureImpl<WriteResult> syncWriteFuture =
+                                Futures.createSafeFuture();
+                connection.write(remoteAddress, message, Futures.toCompletionHandler(syncWriteFuture), null);
                 syncWriteFuture.get(writeTimeoutMillis, TimeUnit.MILLISECONDS);
                 
                 connectionCache.offer(connection);
                 return true;
-            } catch (MessageIOException mioe) {
-                // thrown when message size is too big.
-                connection.close();
-                
-                throw mioe;
             } catch (Exception e) {
 
                 // following exception is getting thrown java.util.concurrent.ExecutionException with MessageIOException

@@ -62,7 +62,6 @@ import org.glassfish.grizzly.impl.SafeFutureImpl;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilder;
 import org.glassfish.grizzly.utils.ChunkingFilter;
-import org.glassfish.grizzly.utils.DelayFilter;
 
 /**
  * Set of Grizzly 2.0 tests
@@ -145,10 +144,7 @@ public class GrizzlyParserTest extends TestCase {
             throw e;
         } finally {
             if (connection != null) {
-                try {
-                    connection.close();
-                } catch (IOException ignored) {
-                }
+                connection.close();
             }
             try {
                 clientTransport.stop();

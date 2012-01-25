@@ -399,10 +399,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
                 connection.addCloseListener(closeListener);
 
                 if (isClosed.get()) {
-                    try {
-                        connection.close();
-                    } catch (IOException ignored) {
-                    }
+                    connection.close();
                 }
             }
 
@@ -413,11 +410,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
                 for (Iterator<Connection> it = connections.keySet().iterator(); it.hasNext(); ) {
                     final Connection connection = it.next();
                     it.remove();
-
-                    try {
-                        connection.close();
-                    } catch (IOException ignored) {
-                    }
+                    connection.close();
                 }
 
             }
@@ -426,10 +419,9 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
         private class CloseListener implements Connection.CloseListener {
 
             @Override
-            public void onClosed(final Connection connection) throws IOException {
+            public void onClosed(Connection connection, Connection.CloseType type) throws IOException {
                 connections.remove(connection);
             }
-
         }
     }
 }

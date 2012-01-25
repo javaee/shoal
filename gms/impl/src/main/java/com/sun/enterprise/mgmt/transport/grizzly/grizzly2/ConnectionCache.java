@@ -158,11 +158,8 @@ public class ConnectionCache {
         if (cacheRecord == null) return;
         Connection connection;
         while ((connection = cacheRecord.connections.poll()) != null) {
-            try {
-                cacheRecord.idleConnectionsCount.decrementAndGet();
-                connection.close();
-            } catch (IOException ignored) {
-            }
+            cacheRecord.idleConnectionsCount.decrementAndGet();
+            connection.close();
         }
     }
 
@@ -193,7 +190,7 @@ public class ConnectionCache {
             Connection.CloseListener {
 
         @Override
-        public void onClosed(final Connection connection) throws IOException {
+        public void onClosed(Connection connection, Connection.CloseType type) throws IOException {
             final SocketAddress remoteAddress =
                     (SocketAddress) connection.getPeerAddress();
             final CacheRecord cacheRecord = cache.get(remoteAddress);
@@ -202,5 +199,6 @@ public class ConnectionCache {
                 cacheRecord.idleConnectionsCount.decrementAndGet();
             }
         }
+
     }
 }
