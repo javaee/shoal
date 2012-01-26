@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -281,6 +281,10 @@ public class GroupServiceProvider
     // package private so can call from junit test
     void logSendMsgFailure(GMSException t, String targetMemberName, String message) {
         final long SEND_FAILED_NOTIFICATION_PERIOD = 1000 * 60 * 60 * 12 ;  // within a 12 hour period,only notify once.
+
+        if (targetMemberName == null) {
+            targetMemberName = "";
+        }
 
         final Long lastNotify = lastSendMsgFailNotification.get(targetMemberName);
         final long currentTime = System.currentTimeMillis();

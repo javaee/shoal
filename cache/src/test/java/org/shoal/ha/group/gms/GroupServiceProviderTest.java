@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011-12 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -118,6 +118,19 @@ public class GroupServiceProviderTest extends TestCase {
        // double checked that second failure does not come out in server log until 12 hours pass.
        result = gsp.sendMessage("nonExistentInstance", COMPONENT, new String("hello").getBytes());
        assertEquals("sendMessage to nonExistentInstance", false, result);
+       logger.setLevel(Level.INFO);
+    }
+
+    public void testFailToBroadcastBigMessage() {
+       init();
+       logger.setLevel(Level.FINE);
+       byte[] bigPayload = new byte[70 * 1024];
+       Arrays.fill(bigPayload, (byte)'e');
+       boolean result = gsp.sendMessage(null, COMPONENT, bigPayload);
+       assertEquals("broadcast too large a payload", false, result);
+       result = gsp.sendMessage("", COMPONENT, bigPayload);
+       assertEquals("sendMessage to empty destination", false, result);
+
        logger.setLevel(Level.INFO);
     }
 

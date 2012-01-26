@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -270,16 +270,25 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public String put(K k, V v)
             throws DataStoreException {
-        String result = null;
+        String result = "";
         DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
         synchronized (entry) {
             if (!entry.isRemoved()) {
-                SaveCommand<K, V> cmd = dsc.getDataStoreEntryUpdater().createSaveCommand(entry, k, v);
-                cm.execute(cmd);
-                dscMBean.incrementSaveCount();
                 if (dsc.isCacheLocally()) {
                     entry.setV(v);
                 }
+                KeyMapper keyMapper = dsc.getKeyMapper();
+
+                // fix for GLASSFISH-18085
+                String[] members = keyMapper.getCurrentMembers();
+                if (members.length == 0) {
+                    _saveLogger.log(Level.FINE, "Skipped replication of " + k + " since there is only one instance running in the cluster.");
+                    return result;
+                }
+
+                SaveCommand<K, V> cmd = dsc.getDataStoreEntryUpdater().createSaveCommand(entry, k, v);
+                cm.execute(cmd);
+                dscMBean.incrementSaveCount();
 
                 String staleLocation = entry.setReplicaInstanceName(cmd.getTargetName());
 
@@ -292,7 +301,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                 }
             } else {
                 _logger.log(Level.WARNING, "ReplicatedDataStore.put(" + k + ") AFTER remove?");
-                return "";
+                return result;
             }
         }
 
@@ -334,6 +343,12 @@ public class ReplicatedDataStore<K, V extends Serializable>
                         + "); ReplicaChoices: " + replicachoices);
             }
 
+            // fix for GLASSFISH-18085
+            String[] members = keyMapper.getCurrentMembers();
+            if (members.length == 0) {
+                _loadLogger.log(Level.FINE, "Skipped replication of " + key + " since there is only one instance running in the cluster.");
+                return null;
+            }
             String respondingInstance = null;
             for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
                 String target = replicaHint[replicaIndex];
