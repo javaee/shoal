@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -154,23 +154,7 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
             try {
                 InetAddress inetAddr = null;
                 NetworkInterface ni = null;
-                try {
-                    inetAddr = InetAddress.getByName(host);
-                } catch (UnknownHostException he) {
-                    ni = NetworkInterface.getByName(host);
-                    if (ni != null) {
-                        try  {
-                            inetAddr = NetworkUtility.getNetworkInetAddress(ni, false);
-                        } catch (IOException ignore) {}
-                        if (inetAddr == null) {
-                            try {
-                                inetAddr = NetworkUtility.getNetworkInetAddress(ni, true);
-                            } catch (IOException ignore) {}
-                        }
-                    } else {
-                        shoalLogger.log(Level.WARNING, "grizzlynetmgr.invalidbindaddr", new Object[]{he.getLocalizedMessage()});
-                    }
-                }
+                inetAddr = NetworkUtility.resolveBindInterfaceName(host);
                 if (ni == null) {
                     ni = NetworkInterface.getByInetAddress(inetAddr);
                 }

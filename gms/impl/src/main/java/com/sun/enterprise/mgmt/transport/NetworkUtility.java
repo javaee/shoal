@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -95,7 +95,6 @@ public class NetworkUtility {
     public static final InetAddress LOOPBACKV6;
 
     public volatile static List<InetAddress> allLocalAddresses;
-    public volatile static NetworkInterface firstNetworkInterface;
     public volatile static InetAddress firstInetAddressV4;
     public volatile static InetAddress firstInetAddressV6;
     public static AtomicBoolean preferIPv6Addresses = null;
@@ -250,12 +249,12 @@ public class NetworkUtility {
      * @return a first network interface
      * @throws IOException if an I/O error occurs or a network interface was not found
      */
-    public static NetworkInterface getFirstNetworkInterface() throws IOException {
-        if( firstNetworkInterface != null )
-            return firstNetworkInterface;
+    public static NetworkInterface getFirstNetworkInterface(boolean preferIPv6) throws IOException {
         NetworkInterface loopback = null;
         NetworkInterface firstInterface = null;
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+
+        // only consider network interface that supports preferred ipv address format. (either IPv4 or IPv6.  default is IPv4)
         while( interfaces != null && interfaces.hasMoreElements() ) {
             NetworkInterface anInterface = interfaces.nextElement();
             if( isLoopbackNetworkInterface( anInterface ) ) {
@@ -263,12 +262,51 @@ public class NetworkUtility {
                 continue;
             }
 
-            // replaced isMulticast() check with just an isUp() check.
-            // Definitely not correct for non-multicast mode to not allow non-multicast network interfaces.
-            if( isUp(anInterface)) {
-                if (getNetworkInetAddress(anInterface, false) != null || getNetworkInetAddress(anInterface, true) != null ) {
+            // favor supports multicast the first time through.
+            if( isUp(anInterface) && supportsMulticast(anInterface) ) {
+                if (getNetworkInetAddress(anInterface, preferIPv6) != null) {
                     firstInterface = anInterface;
                     break;
+                }
+            }
+        }
+
+        if (firstInterface == null ){
+            // only consider network interface that supports preferred ipv address format. (either IPv4 or IPv6.  default is IPv4)
+            while( interfaces != null && interfaces.hasMoreElements() ) {
+                NetworkInterface anInterface = interfaces.nextElement();
+                if( isLoopbackNetworkInterface( anInterface ) ) {
+                    loopback = anInterface;
+                    continue;
+                }
+
+                // do not require multicast this pass through.
+                if( isUp(anInterface) ) {
+                    if (getNetworkInetAddress(anInterface, preferIPv6) != null) {
+                        firstInterface = anInterface;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // loop through network interfaces one last time, just look for network interfaces with !preferIPv6 this time.
+        if (firstInterface == null) {
+            interfaces = NetworkInterface.getNetworkInterfaces();
+            while( interfaces != null && interfaces.hasMoreElements() ) {
+                NetworkInterface anInterface = interfaces.nextElement();
+                if( isLoopbackNetworkInterface( anInterface ) ) {
+                    loopback = anInterface;
+                    continue;
+                }
+
+                // replaced isMulticast() check with just an isUp() check.
+                // Definitely not correct for non-multicast mode to not allow non-multicast network interfaces.
+                if( isUp(anInterface)) {
+                    if (getNetworkInetAddress(anInterface, !preferIPv6) != null) {
+                        firstInterface = anInterface;
+                        break;
+                    }
                 }
             }
         }
@@ -277,11 +315,14 @@ public class NetworkUtility {
         if( firstInterface == null ) {
             throw new IOException( "failed to find a network interface" );
         } else {
-            firstNetworkInterface = firstInterface;
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.fine("getFirstNetworkInterface  result: interface name:" + firstNetworkInterface.getName() + " address:" + firstNetworkInterface.getInetAddresses().nextElement());
+                InetAddress firstAddress = getNetworkInetAddress(firstInterface, preferIPv6);
+                if (firstAddress == null) {
+                    firstAddress = getNetworkInetAddress(firstInterface, !preferIPv6);
+                }
+                LOG.fine("getFirstNetworkInterface  result: interface name:" + firstInterface.getName() + " address:" + firstAddress);
             }
-            return firstNetworkInterface;
+            return firstInterface;
         }
     }
 
@@ -362,7 +403,7 @@ public class NetworkUtility {
 //            LOG.info("exit getFirstInetAddress cached ipv4 result=" + firstInetAddressV4);
             return firstInetAddressV4;
         }
-        NetworkInterface anInterface = getFirstNetworkInterface();
+        NetworkInterface anInterface = getFirstNetworkInterface(preferIPv6);
 //        LOG.info("getFirstInetAddress: first network interface=" + anInterface);
         if (anInterface == null) {
            if (preferIPv6 && firstInetAddressV6 != null ) {
@@ -400,10 +441,11 @@ public class NetworkUtility {
             // allow loopback address.  only work on a single machine. used for development.
             //if( anAddr.isLoopbackAddress() || anAddr.isAnyLocalAddress() )
             //    continue;
-            if (firstInetAddressV6 == null && anAddr instanceof Inet6Address)
+            if (firstInetAddressV6 == null && anAddr instanceof Inet6Address) {
                 firstInetAddressV6 = anAddr;
-            else if (firstInetAddressV4 == null && anAddr instanceof Inet4Address)
+            } else if (firstInetAddressV4 == null && anAddr instanceof Inet4Address) {
                 firstInetAddressV4 = anAddr;
+            }
             if (firstInetAddressV6 != null && firstInetAddressV4 != null)
                 break;
         }
@@ -670,24 +712,7 @@ public class NetworkUtility {
     public static boolean isBindAddressValid(String addressString) {
         ServerSocket socket = null;
         try {
-            InetAddress ia = null;
-            try {
-                ia = Inet4Address.getByName(addressString);
-            } catch (Exception e) {
-                if (LOG.isLoggable(Level.FINE)) {
-                    LOG.log(Level.FINE, "in isBindAddressValid(" + addressString + "): Inet4Address.getByName(" +
-                            addressString + ")", e);
-                } else {
-                    LOG.log(Level.INFO, "in isBindAddressValid(" + addressString + "): Inet4Address.getByName(" +
-                            addressString + ") handled exception " + e.getClass().getSimpleName());
-                }
-            }
-
-            if (ia == null) {
-                // check if address string is a network interface.
-               NetworkInterface netInt = NetworkInterface.getByName(addressString);
-               ia = getNetworkInetAddress(netInt, false);
-            }
+            InetAddress ia = resolveBindInterfaceName(addressString);
 
             // calling ServerSocket with null for ia means to use any local address that is available.
             // thus, if ia is not non-null at this point, must return false here.
@@ -722,41 +747,60 @@ public class NetworkUtility {
 
     public static InetAddress resolveBindInterfaceName(String addressString) {
         InetAddress ia = null;
+        NetworkInterface ni = null;
+
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("enter NetworkUtility.resolveBindInterfaceName(" + addressString + ")");
+        }
+
+        // due GLASSFISH-18047, check if addressString is a network interface before checking
+        // if it is a host name or ip address.
         try {
+            ni = NetworkInterface.getByName(addressString);
+        } catch (Throwable ignored) {
+             if (LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.FINE,
+                        "resolveBindInterfaceName: call to NetworkInterface.getByName ignoring thrown exception",
+                        ignored);
+             }
+        }
+
+        if (ni != null) {
             try {
-                ia = Inet4Address.getByName(addressString);
-            } catch (Exception e) {
+                ia = getNetworkInetAddress(ni, getPreferIpv6Addresses());
+            } catch (Throwable ignored) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE, "resolveBindInterfaceName: call to getNetworkAddress ignoring thrown exception",
+                            ignored);
+                }
             }
             if (ia == null) {
                 try {
-                    ia = Inet6Address.getByName(addressString);
-                } catch (Exception e) {
-                }
-
-                // if ia is still null, check if address string is a network interface name.
-                if (ia == null) {
-                    NetworkInterface netInt = NetworkInterface.getByName(addressString);
-                    if (netInt != null) {
-                        try {
-                            ia = getNetworkInetAddress(netInt, false);  // get IPv4
-                        } catch (IOException ioe) {
-                        }
-                        if (ia == null) {
-                            try {
-                                ia = getNetworkInetAddress(netInt, true);  // get IPv6
-                            } catch (IOException ioe) {
-                            }
-                        }
+                    ia = getNetworkInetAddress(ni, ! getPreferIpv6Addresses());
+                } catch(Throwable ignored) {
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.log(Level.FINE,
+                        "resolveBindInterfaceName: call to NetworkUtility.getNetworkAddress ignoring thrown exception",
+                                ignored);
                     }
                 }
             }
-            return ia;
-        } catch (Exception e) {
-            LOG.log(Level.WARNING, "resolveBindInterfaceName", e);
-            LOG.log(Level.WARNING, "netutil.validate.bind.address.exception",
-                    new Object[]{addressString, e.toString()});
-            return null;
         }
+        if (ia == null) {
+            try {
+                ia = InetAddress.getByName(addressString);
+            } catch (Throwable ignored) {
+                if (LOG.isLoggable(Level.FINE)) {
+                    LOG.log(Level.FINE,
+                            "resolveBindInterfaceName: call to InetAddress.getByName ignoring thrown exception",
+                            ignored);
+                }
+            }
+        }
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("return NetworkUtility.resolveBindInterfaceName(" + addressString + ")=" + ia);
+        }
+        return ia;
     }
 
     public static void main( String[] args ) throws IOException {
@@ -764,18 +808,19 @@ public class NetworkUtility {
         System.out.println("Java property java.net.preferIPv6Addresses=" + preferIPv6PropertyValue);
         boolean preferIPv6Addrs = Boolean.parseBoolean(preferIPv6PropertyValue);
         System.out.println( "AllLocalAddresses() = " + getAllLocalAddresses() );
-        System.out.println( "getFirstNetworkInterface() = " +getFirstNetworkInterface() );
-        System.out.println( "getFirstInetAddress(preferIPv6Addresses:" + preferIPv6Addrs + ")=" + getFirstInetAddress(preferIPv6Addrs));
+        System.out.println( "getFirstNetworkInterface(preferIPv6Addrs) = " +getFirstNetworkInterface(preferIPv6Addrs) );
+        System.out.println( "getFirstInetAddress(preferIPv6Addresses:" + preferIPv6Addrs + ")=" +
+                getFirstInetAddress(preferIPv6Addrs));
         System.out.println( "getFirstInetAddress()=" + getFirstInetAddress());
         System.out.println( "getFirstInetAddress( true ) = " + getFirstInetAddress( true ) );
         InetAddress ia = getFirstInetAddress(false);
         System.out.println( "getFirstInetAddress( false ) = " + getFirstInetAddress( false ) );
         System.out.println("getLocalHostAddress = " + getLocalHostAddress());
-        System.out.println( "getFirstNetworkInteface() = " + NetworkUtility.getFirstNetworkInterface());
+        System.out.println( "getFirstNetworkInteface(!preferIPv6Addrs) = " + NetworkUtility.getFirstNetworkInterface(!preferIPv6Addrs));
         System.out.println( "getNetworkInetAddress(firstNetworkInteface, true) = " +
-               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(), true));
+               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(true), true));
         System.out.println( "getNetworkInetAddress(firstNetworkInteface, false) = " +
-               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(), false));
+               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(false), false));
                Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
         System.out.println("\n-------------------------------------------------------");
         System.out.println("\nAll Network Interfaces");

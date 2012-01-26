@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -93,6 +93,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
     public static final String MESSAGE_CONNECTION_TAG = "connection";
     private static final int SERVER_CONNECTION_BACKLOG = 4096;
 
+    private InetAddress tcpListenerAddress = null;
     private int maxPoolSize;
     private int corePoolSize;
     private long keepAliveTime; // ms
@@ -155,6 +156,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
                 host != null ? host : NetworkUtility.getAnyAddress().getHostAddress(),
                 new PortRange(tcpStartPort, tcpEndPort),
                 SERVER_CONNECTION_BACKLOG);
+        tcpListenerAddress =  ((InetSocketAddress)serverConnection.getLocalAddress()).getAddress();
         tcpPort = ((InetSocketAddress) serverConnection.getLocalAddress()).getPort();
 
         final FilterChainBuilder filterChainBuilder = FilterChainBuilder.stateless();
@@ -198,7 +200,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
 
         getLogger().log(Level.CONFIG,
                 "Grizzly controller listening on {0}:{1}. Transport started in {2} ms",
-                new Object[]{host, tcpPort, durationInMillis});
+                new Object[]{tcpListenerAddress, Integer.toString(tcpPort), durationInMillis});
 
         if (localPeerID == null) {
             String uniqueHost = host;

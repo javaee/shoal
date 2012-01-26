@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -106,22 +106,19 @@ public class NetworkUtilityTest extends TestCase {
     }
 
     public void testGetFirstAddress() throws IOException {
+       boolean preferIPv6Addresses = NetworkUtility.getPreferIpv6Addresses();
+
        System.out.println( "AllLocalAddresses() = " + NetworkUtility.getAllLocalAddresses() );
-       System.out.println( "getFirstNetworkInterface() = " + NetworkUtility.getFirstNetworkInterface() );
-       boolean preferIPv6Addresses = Boolean.parseBoolean(System.getProperty("java.net.preferIPv6Addresses", "false"));
-       System.out.println("java.net.preferIPv6Addresses=" + System.getProperty("java.net.preferIPv6Addresses", "false"));
+       System.out.println( "getFirstNetworkInterface(preferIPv6) = " + NetworkUtility.getFirstNetworkInterface(preferIPv6Addresses) );
+       System.out.println( "getFirstNetworkInterface(!preferIPv6) = " + NetworkUtility.getFirstNetworkInterface(!preferIPv6Addresses) );
+       System.out.println("java.net.preferIPv6Addresses=" + preferIPv6Addresses);
        System.out.println( "getFirstInetAddress( preferIPv6Addresses:" + preferIPv6Addresses + ") = " + NetworkUtility.getFirstInetAddress() );
-       System.setProperty("java.net.preferIPv6Addresses", new Boolean(!preferIPv6Addresses).toString());
-       preferIPv6Addresses = Boolean.parseBoolean(System.getProperty("java.net.preferIPv6Addresses", "false"));
-       System.out.println( "getFirstInetAddress( preferIPv6Addresses:" + preferIPv6Addresses +  ") = " + NetworkUtility.getFirstInetAddress() );
-       System.setProperty("java.net.preferIPv6Addresses", new Boolean(!preferIPv6Addresses).toString());
        System.out.println( "getFirstInetAddress( true ) = " + NetworkUtility.getFirstInetAddress(true) );
        System.out.println( "getFirstInetAddress( false ) = " + NetworkUtility.getFirstInetAddress(false) );
-       System.out.println( "getFirstNetworkInteface() = " + NetworkUtility.getFirstNetworkInterface());
        System.out.println( "getNetworkInetAddress(firstNetworkInteface, true) = " +
-               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(),true));
+               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(true),true));
        System.out.println( "getNetworkInetAddress(firstNetworkInteface, false) = " +
-               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(),false));
+               NetworkUtility.getNetworkInetAddress(NetworkUtility.getFirstNetworkInterface(false),false));
 
     }
 }
