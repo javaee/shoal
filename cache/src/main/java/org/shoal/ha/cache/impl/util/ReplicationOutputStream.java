@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -42,6 +42,7 @@ package org.shoal.ha.cache.impl.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /**
  * @author Mahesh Kannan
@@ -78,7 +79,7 @@ public class ReplicationOutputStream
         if (str == null) {
             writeInt(0);
         } else {
-            byte[] data = str.getBytes();
+            byte[] data = str.getBytes(Charset.defaultCharset());
             writeInt(data.length);
             write(data);
         }

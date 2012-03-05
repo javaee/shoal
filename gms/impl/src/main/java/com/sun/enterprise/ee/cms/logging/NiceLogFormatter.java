@@ -107,7 +107,7 @@ public class NiceLogFormatter extends Formatter {
     private static final String RFC_3339_DATE_FORMAT =
             "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 
-    private static final SimpleDateFormat dateFormatter =
+    private final SimpleDateFormat dateFormatter =
             new SimpleDateFormat( RFC_3339_DATE_FORMAT );
     private static final String PRODUCT_VERSION = "Shoal";
 

@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -41,6 +41,7 @@
 package com.sun.enterprise.ee.cms.spi;
 
 import java.io.Serializable;
+import java.nio.charset.Charset;
 
 /**
  * This is a wrapper Serializable so that a message sent to a remote member can 
@@ -102,9 +103,9 @@ public class GMSMessage implements Serializable {
         sb.append(" message size:" + message.length);
         sb.append(" payload:");
         if (message.length < 30) {
-            sb.append(new String(message));
+            sb.append(new String(message, Charset.defaultCharset()));
         } else {
-            sb.append(new String(message).substring(0,15));
+            sb.append(new String(message, Charset.defaultCharset()).substring(0,15));
         }
         sb.append(" group:").append(groupName);
         return sb.toString();

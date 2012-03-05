@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -47,6 +47,7 @@ import com.sun.enterprise.ee.cms.impl.common.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.ee.cms.spi.GMSMessage;
 
+import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -240,7 +241,7 @@ public class MessageWindow implements Runnable {
         final String localId = getGMSContext().getServerIdentityToken();
         if (logger.isLoggable(Level.FINER)) {
             logger.log(Level.FINER, MessageFormat.format("Sender:{0}, Receiver :{1}, TargetComponent :{2}, Message :{3}",
-                    sender, localId, message.getComponentName(), new String(message.getMessage())));
+                    sender, localId, message.getComponentName(), new String(message.getMessage(), Charset.defaultCharset())));
         }
     }
 

@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -45,6 +45,7 @@ import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.group.GroupMemberEventListener;
 
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -260,9 +261,9 @@ public class DefaultKeyMapper
         try {
             String hcStr = "_" + val.hashCode() + "_";
             MessageDigest dig = MessageDigest.getInstance("MD5");
-            dig.update(hcStr.getBytes());
-            dig.update(val.getBytes());
-            dig.update(hcStr.getBytes());
+            dig.update(hcStr.getBytes(Charset.defaultCharset()));
+            dig.update(val.getBytes(Charset.defaultCharset()));
+            dig.update(hcStr.getBytes(Charset.defaultCharset()));
             BigInteger bi = new BigInteger(dig.digest());
             hc = bi.intValue();
             return hc;

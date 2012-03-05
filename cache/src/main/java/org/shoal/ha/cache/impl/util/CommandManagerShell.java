@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -57,6 +57,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +80,7 @@ public class CommandManagerShell {
 
     public static void main(String[] args)
         throws Exception {
-        DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[0], args[1]);
+        //DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[0], args[1]);
 
         BackingStoreConfiguration<MyKey, SimpleMetadata> conf = new BackingStoreConfiguration<MyKey, SimpleMetadata>();
         conf.setStoreName("shoal-cache")
@@ -108,7 +109,7 @@ public class CommandManagerShell {
 
         this.ds = ds;
         String line = "";
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in, Charset.defaultCharset()));
         do {
             prompt();
             try {

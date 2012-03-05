@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -41,6 +41,7 @@
 package org.shoal.ha.cache.impl.util;
 
 import java.io.*;
+import java.nio.charset.Charset;
 
 /**
  * @author Mahesh Kannan
@@ -52,7 +53,7 @@ public class SimpleSerializer {
         int len = str == null ? 0 : str.length();
         ros.write(Utility.intToBytes(len));
         if (len > 0) {
-            ros.write(str.getBytes());
+            ros.write(str.getBytes(Charset.defaultCharset()));
         }
     }
 
@@ -80,7 +81,7 @@ public class SimpleSerializer {
 
     public static String deserializeString(byte[] data, int offset) {
         int len = Utility.bytesToInt(data, offset);
-        return new String(data, offset+4, len);
+        return new String(data, offset+4, len, Charset.defaultCharset());
     }
 
     public static Object deserialize(ClassLoader loader, byte[] data, int offset)

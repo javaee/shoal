@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -41,6 +41,7 @@
 package org.shoal.ha.cache.impl.util;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
 
 /**
  * @author Mahesh Kannan
@@ -92,7 +93,7 @@ public class ReplicationInputStream
         String str = null;
         int len = readInt();
         if (len > 0) {
-            str = new String(buf, pos, len);
+            str = new String(buf, pos, len, Charset.defaultCharset());
             pos += len;
         }
 

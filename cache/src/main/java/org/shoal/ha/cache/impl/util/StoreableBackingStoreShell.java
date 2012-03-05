@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -48,6 +48,7 @@ import org.shoal.adapter.store.ReplicatedBackingStoreFactory;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -86,7 +87,7 @@ public class StoreableBackingStoreShell {
     private void runShell(BackingStore<String, MyStoreable> ds) {
         this.ds = ds;
         String line = "";
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in, Charset.defaultCharset()));
         do {
             prompt();
             try {
@@ -298,7 +299,7 @@ public class StoreableBackingStoreShell {
                 if (dirty[0]) {
                     dos.writeInt(str1 == null ? 0 : str1.length());
                     if (str1 != null) {
-                        dos.write(str1.getBytes());
+                        dos.write(str1.getBytes(Charset.defaultCharset()));
                     }
                 }
                 dos.writeBoolean(dirty[1]);
@@ -325,7 +326,7 @@ public class StoreableBackingStoreShell {
                     if (strLen > 0) {
                         byte[] strBytes = new byte[strLen];
                         dis.read(strBytes);
-                        str1 = new String(strBytes);
+                        str1 = new String(strBytes, Charset.defaultCharset());
                     }
                 }
 

@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -1385,6 +1385,7 @@ class MasterNode implements MessageListener, Runnable {
                      final ClusterViewEvent event,
                      final Message msg,
                      final boolean includeView) {
+        final String memberName = event.getAdvertisement().getName();
         RejoinSubevent rjse = null;
         if (includeView) {
             addAuthoritativeView(msg);
@@ -1396,9 +1397,9 @@ class MasterNode implements MessageListener, Runnable {
             case JOINED_AND_READY_EVENT:
                 GMSContext gmsCtx = getGMSContext();
                 if (gmsCtx != null) {
-                    rjse = gmsCtx.getInstanceRejoins().get(event.getAdvertisement().getName());
+                    rjse = gmsCtx.getInstanceRejoins().get(memberName);
                     if (LOG.isLoggable(Level.FINE)) {
-                        LOG.fine("sendNewView: clusterViewEvent:" + event.getEvent().toString() + " rejoinSubevent=" + rjse + " member: " + event.getAdvertisement().getName());
+                        LOG.fine("sendNewView: clusterViewEvent:" + event.getEvent().toString() + " rejoinSubevent=" + rjse + " member: " + memberName);
                     }
                     if (rjse != null) {
                         msg.addMessageElement(REJOIN_SUBEVENT, rjse);
@@ -1417,7 +1418,7 @@ class MasterNode implements MessageListener, Runnable {
             reliableBroadcastSend(msg);
         }
         if (rjse != null && event.getEvent() == JOINED_AND_READY_EVENT) {
-            ctx.getInstanceRejoins().remove(rjse);
+            ctx.getInstanceRejoins().remove(memberName);
         }
     }
 

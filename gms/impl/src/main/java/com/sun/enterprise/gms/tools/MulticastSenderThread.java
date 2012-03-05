@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -46,6 +46,7 @@ import com.sun.enterprise.mgmt.transport.NetworkUtility;
 import static com.sun.enterprise.ee.cms.core.GMSConstants.MINIMUM_MULTICAST_TIME_TO_LIVE;
 import java.io.IOException;
 import java.net.*;
+import java.nio.charset.Charset;
 import java.util.logging.Level;
 
 /**
@@ -83,7 +84,7 @@ public class MulticastSenderThread extends Thread {
         InetAddress group = null;
         MulticastSocket socket = null;
         try {
-            byte [] data = dataString.getBytes();
+            byte [] data = dataString.getBytes(Charset.defaultCharset());
             group = InetAddress.getByName(mcAddress);
             DatagramPacket datagramPacket = new DatagramPacket(data,
                 data.length, group, mcPort);

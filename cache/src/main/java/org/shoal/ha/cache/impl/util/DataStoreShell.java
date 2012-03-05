@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -51,6 +51,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -88,13 +89,16 @@ public class DataStoreShell {
     }
 
     private void runShell(BackingStore<String, Serializable> ds) {
-        Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND).setLevel(Level.ALL);
-        Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND).setLevel(Level.ALL);
-        Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND).setLevel(Level.ALL);
+        Logger csc_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+        csc_log.setLevel(Level.ALL);
+        Logger clrc_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
+        clrc_log.setLevel(Level.ALL);
+        Logger clresp_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
+        clresp_log.setLevel(Level.ALL);
         
         this.ds = ds;
         String line = "";
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in, Charset.defaultCharset()));
         do {
             prompt();
             try {

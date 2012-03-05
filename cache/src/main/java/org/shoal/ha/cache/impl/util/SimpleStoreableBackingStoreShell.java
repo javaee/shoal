@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -51,6 +51,7 @@ import org.shoal.ha.cache.impl.command.CommandManager;
 import org.shoal.ha.mapper.DefaultKeyMapper;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,7 @@ public class SimpleStoreableBackingStoreShell {
 
     public static void main(String[] args)
         throws Exception {
-        DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
+        //DefaultKeyMapper keyMapper = new DefaultKeyMapper(args[1], args[2]);
 
         BackingStoreConfiguration<MyKey, SimpleMetadata> conf = new BackingStoreConfiguration<MyKey, SimpleMetadata>();
         conf.setStoreName(args[0])
@@ -102,7 +103,7 @@ public class SimpleStoreableBackingStoreShell {
 
         this.ds = ds;
         String line = "";
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in, Charset.defaultCharset()));
         do {
             prompt();
             try {
@@ -147,7 +148,7 @@ public class SimpleStoreableBackingStoreShell {
 
                 st = new SimpleMetadata(version,
                             System.currentTimeMillis(), 600000,
-                            ("Value:" + i + ":" + version).getBytes());
+                            ("Value:" + i + ":" + version).getBytes(Charset.defaultCharset()));
                 cache.put(key1, st);
                 String rs = ds.save(key1, st, true);
                 System.out.println("PUT key = " + key1 + " : " + st + ";   TO : " + rs);
@@ -164,7 +165,7 @@ public class SimpleStoreableBackingStoreShell {
             MyKey key = new MyKey(params[0], null);
             SimpleMetadata st = ds.load(key, params.length > 1 ? params[1] : null);
             if (st != null) {
-                System.out.println("get(" + params[0] + ") => " + st + " ==> " + new String(st.getState()));
+                System.out.println("get(" + params[0] + ") => " + st + " ==> " + new String(st.getState(), Charset.defaultCharset()));
                 cache.put(key, st);
             } else {
                 System.out.println("get(" + params[0] + ") NOT FOUND ==> null");
