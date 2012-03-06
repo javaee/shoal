@@ -73,7 +73,7 @@ public class ConnectionCache {
             new ConcurrentHashMap<SocketAddress, CacheRecord>();
 
     // Connect timeout 5 seconds
-    private final long connectTimeoutMillis = 5000;
+    static private final long connectTimeoutMillis = 5000;
 
     private final Connection.CloseListener removeCachedConnectionOnCloseListener =
             new RemoveCachedConnectionOnCloseListener();

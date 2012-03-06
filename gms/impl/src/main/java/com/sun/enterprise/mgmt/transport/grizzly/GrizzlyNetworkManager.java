@@ -105,10 +105,10 @@ public abstract class GrizzlyNetworkManager extends AbstractNetworkManager {
     public long sendWriteTimeoutMillis; // ms
     public int multicastPacketSize;
     public int writeSelectorPoolSize;
-    final public String UNKNOWN = "Unknown_";
+    static final public String UNKNOWN = "Unknown_";
 
-    final public String DEFAULT_IPv4_MULTICAST_ADDRESS = "230.30.1.1";
-    final public String DEFAULT_IPv6_MULTICAST_ADDRESS = "FF01:0:0:0:0:0:0:1";
+    static final public String DEFAULT_IPv4_MULTICAST_ADDRESS = "230.30.1.1";
+    static final public String DEFAULT_IPv6_MULTICAST_ADDRESS = "FF01:0:0:0:0:0:0:1";
     public final ConcurrentHashMap<PeerID, CountDownLatch> pingMessageLockMap = new ConcurrentHashMap<PeerID, CountDownLatch>();
 
     protected VirtualMulticastSender vms = null;

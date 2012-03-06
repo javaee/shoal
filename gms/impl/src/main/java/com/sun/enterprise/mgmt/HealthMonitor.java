@@ -1188,8 +1188,8 @@ public class HealthMonitor implements MessageListener, Runnable {
             if (entry == null) {
                 final long BEFORE_FIRST_HEALTHMESSAGE_SEQ_ID = 0;
                 entry = new HealthMessage.Entry(adv, states[STARTING], BEFORE_FIRST_HEALTHMESSAGE_SEQ_ID);
-                cache.put(id, entry);
-                return true;
+                 HealthMessage.Entry result = cache.putIfAbsent(id, entry);
+                return result == null;
             } else {
                 return false;
             }
@@ -1419,7 +1419,7 @@ public class HealthMonitor implements MessageListener, Runnable {
     }
 
     private class FailureVerifier implements Runnable {
-        private final long buffer = 500;
+        static private final long BUFFER_TIMEOUT_MS = 500;
 
         public void run() {
             try {
@@ -1447,7 +1447,7 @@ public class HealthMonitor implements MessageListener, Runnable {
 
         void verify() throws InterruptedException {
             //wait for the specified timeout for verification
-            Thread.sleep(verifyTimeout + buffer);
+            Thread.sleep(verifyTimeout + BUFFER_TIMEOUT_MS);
             HealthMessage.Entry entry;
             for (HealthMessage.Entry entry1 : getCacheCopy().values()) {
                 entry = entry1;
@@ -1845,7 +1845,7 @@ public class HealthMonitor implements MessageListener, Runnable {
         }
 
         private static class MsgSendStats {
-            final long MAX_DURATION_BETWEEN_FAILURE_REPORT_MS = (60000 * 60) * 2;  // two hours between fail to send to an instance.
+            static final long MAX_DURATION_BETWEEN_FAILURE_REPORT_MS = (60000 * 60) * 2;  // two hours between fail to send to an instance.
             String     memberName;
             AtomicLong numSends;
             AtomicLong numFailSends;

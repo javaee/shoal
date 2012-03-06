@@ -329,7 +329,7 @@ public class Router {
     }
 
     private long lastReported = 0L;
-    final private long NEXT_REPORT_DURATION = 1000 * 60 * 30;  // 30 minutes
+    static final private long NEXT_REPORT_DURATION = 1000 * 60 * 30;  // 30 minutes
 
     /**
      * Adds a single signal to the queue.
@@ -434,7 +434,10 @@ public class Router {
                 if (missedMessages == null) {
                     missedMessages = new AtomicInteger(1);
                     missedMessagesInt = 1;
-                    undeliveredMessages.put(targetComponent, missedMessages);
+                    AtomicInteger alreadyPresent = undeliveredMessages.putIfAbsent(targetComponent, missedMessages);
+                    if (alreadyPresent != null) {
+                      alreadyPresent.incrementAndGet();
+                    }
                 } else {
                     missedMessagesInt = missedMessages.incrementAndGet();
                 }

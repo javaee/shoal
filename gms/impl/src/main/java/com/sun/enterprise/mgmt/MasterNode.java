@@ -108,6 +108,8 @@ class MasterNode implements MessageListener, Runnable {
     private static final Logger nomLog = GMSLogDomain.getNoMCastLogger();
 
     private final ClusterManager manager;
+    private String instanceName="";
+    private String groupName="";
 
     private boolean masterAssigned = false;
     private volatile boolean discoveryInProgress = true;
@@ -186,6 +188,8 @@ class MasterNode implements MessageListener, Runnable {
         }
         this.interval = interval;
         this.manager = manager;
+        instanceName = manager.getInstanceName();
+        groupName = manager.getGroupName();
         sysAdv = manager.getSystemAdvertisement();
         discoveryView = new ClusterView(sysAdv);
         timer = new Timer(true);
@@ -1774,8 +1778,11 @@ class MasterNode implements MessageListener, Runnable {
 
                 // CAUTION: note that comparison should include which peerid that the master view sequence id is from.
                 //          does not make sense to compare between instances.
-                //return peerCompareToResult + (int)(seqId - ((MasterNodeMessageEvent)o).seqId);
-                return (int)(seqId - ((MasterNodeMessageEvent)o).seqId);
+                if (peerCompareToResult != 0) {
+                    return peerCompareToResult;
+                } else {
+                    return (int)(seqId - ((MasterNodeMessageEvent)o).seqId);
+                }
             } else {
                 throw new IllegalArgumentException();
             }
@@ -1875,7 +1882,7 @@ class MasterNode implements MessageListener, Runnable {
                 }
             }
             LOG.log(Level.CONFIG, "mgmt.masternode.processmsgcompleted",
-                    new Object[]{manager.getInstanceName(), manager.getGroupName(),
+                    new Object[]{instanceName, groupName,
                                  outstandingMasterNodeMessages.size()});
         }
     }

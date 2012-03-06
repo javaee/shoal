@@ -99,7 +99,7 @@ public class GrizzlyPeerID implements Serializable, Comparable<GrizzlyPeerID> {
             } else {
                 multicastAddressCompare = multicastAddress.equals(otherPeerID.multicastAddress);
             }
-            return multicastPort == otherPeerID.multicastPort  && multicastAddressCompare && host.equals(host);
+            return multicastPort == otherPeerID.multicastPort  && multicastAddressCompare && host.equals(otherPeerID.getHost());
         } else {
             return false;
         }

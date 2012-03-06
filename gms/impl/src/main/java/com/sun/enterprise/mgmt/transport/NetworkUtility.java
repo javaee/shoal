@@ -97,7 +97,7 @@ public class NetworkUtility {
     public volatile static List<InetAddress> allLocalAddresses;
     public volatile static InetAddress firstInetAddressV4;
     public volatile static InetAddress firstInetAddressV6;
-    public static AtomicBoolean preferIPv6Addresses = null;
+    static AtomicBoolean preferIPv6Addresses = null;
 
     private static final boolean IS_AIX_JDK;
 

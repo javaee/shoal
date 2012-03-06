@@ -72,7 +72,7 @@ public class VirtualMulticastSender extends AbstractMulticastMessageSender {
     final Set<PeerID> virtualPeerIdList = new CopyOnWriteArraySet<PeerID>();
     final NetworkManager networkManager;
     final Map<PeerID, Long> lastReportedSendFailure = new ConcurrentHashMap<PeerID, Long>();
-    final long LAST_REPORTED_FAILURE_DURATION_MS = 10000;  // 10 seconds between reporting failed send.
+    static final long LAST_REPORTED_FAILURE_DURATION_MS = 10000;  // 10 seconds between reporting failed send.
     final long DISCOVERY_PERIOD_COMPLETED_TIME;
     boolean discoveryCleanupPending = true;
 
