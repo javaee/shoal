@@ -133,7 +133,7 @@ public class GMSFactory {
         if ( groupName == null ) {
             throw new RuntimeException(sm.get("ex.factory.start.missing.group"));
         }
-        GroupManagementService gms = null;
+        GroupManagementService gms;
         //if this method is called, GMS is enabled. It is assumed that
         //calling code made checks in configurations about the enablement
         //The recommended way for calling code for this purpose is to call the
@@ -271,10 +271,10 @@ public class GMSFactory {
         // for jdk 5.  just use class loader.
         try {
             Class GmsImplClass = Class.forName(classname);
-            gmsImpl = (GroupManagementService) GmsImplClass.newInstance();
-            if (gmsImpl == null) {
+            if (GmsImplClass == null) {
                 LOG.log(Level.SEVERE, "factory.load.service.error");
             } else {
+                gmsImpl = (GroupManagementService) GmsImplClass.newInstance();
                 if (LOG.isLoggable(Level.FINE)) {
                     LOG.log(Level.FINE, "findByClassLoader() loaded service " + gmsImpl.getClass().getName());
                 }
@@ -294,8 +294,7 @@ public class GMSFactory {
                // jdk 5 will end up here. Not a reportable error.
            }
            if (gmsImpl == null) {
-               String classname = null;
-               classname = "com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl";
+               String classname = "com.sun.enterprise.ee.cms.impl.common.GroupManagementServiceImpl";
                gmsImpl = findByClassLoader(classname);
            }
            return gmsImpl;
