@@ -67,8 +67,11 @@ public class DataStoreShell {
     BackingStore<String, Serializable> ds;
 
     int counter = 0;
+  private final Logger csc_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
+  private final Logger clrc_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
+  private final Logger clresp_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
 
-    public static void main(String[] args)
+  public static void main(String[] args)
         throws Exception {
         BackingStoreConfiguration<String, Serializable> conf = new BackingStoreConfiguration<String, Serializable>();
         conf.setStoreName(args[0])
@@ -89,11 +92,8 @@ public class DataStoreShell {
     }
 
     private void runShell(BackingStore<String, Serializable> ds) {
-        Logger csc_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_SAVE_COMMAND);
         csc_log.setLevel(Level.ALL);
-        Logger clrc_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_REQUEST_COMMAND);
         clrc_log.setLevel(Level.ALL);
-        Logger clresp_log = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_LOAD_RESPONSE_COMMAND);
         clresp_log.setLevel(Level.ALL);
         
         this.ds = ds;
