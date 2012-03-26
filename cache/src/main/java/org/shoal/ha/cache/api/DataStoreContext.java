@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -51,6 +51,7 @@ import org.shoal.ha.cache.impl.util.ResponseMediator;
 import org.shoal.ha.mapper.KeyMapper;
 
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -72,6 +73,8 @@ public class DataStoreContext<K, V>
 
     private ReplicatedDataStoreStatsHolder dscMBean;
 
+    private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
+
     public DataStoreContext(String serviceName, GroupService gs, ClassLoader loader) {
         super.setStoreName(serviceName);
         super.setInstanceName(gs.getMemberName());
@@ -81,6 +84,22 @@ public class DataStoreContext<K, V>
     
     public DataStoreContext() {
         super();
+    }
+
+    public void acquireReadLock() {
+        rwLock.readLock().lock();
+    }
+
+    public void releaseReadLock() {
+        rwLock.readLock().unlock();
+    }
+
+    public void acquireWriteLock() {
+        rwLock.writeLock().lock();
+    }
+
+    public void releaseWriteLock() {
+        rwLock.writeLock().unlock();
     }
 
     public DataStoreContext(BackingStoreConfiguration conf) {

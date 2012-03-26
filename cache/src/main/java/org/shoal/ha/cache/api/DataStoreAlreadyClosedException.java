@@ -38,24 +38,28 @@
  * holder.
  */
 
-package org.shoal.ha.cache.impl.interceptor;
+package org.shoal.ha.cache.api;
 
-import org.shoal.ha.cache.api.DataStoreContext;
-import org.shoal.ha.cache.api.DataStoreException;
-import org.shoal.ha.cache.impl.command.Command;
+import java.io.IOException;
 
 /**
  * @author Mahesh Kannan
- * 
  */
-public interface CommandCollector<K, V> {
-    void initialize(String targetName, DataStoreContext<K, V> rsInfo);
+public class DataStoreAlreadyClosedException
+    extends DataStoreException {
 
-    void close();
+    public DataStoreAlreadyClosedException() {
+    }
 
-    void addCommand(Command<K, V> cmd)
-            throws DataStoreException;
+    public DataStoreAlreadyClosedException(String message) {
+        super(message);
+    }
 
-    void removeCommand(Command<K, V> cmd)
-            throws DataStoreException;
+    public DataStoreAlreadyClosedException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public DataStoreAlreadyClosedException(Throwable cause) {
+        super(cause);
+    }
 }
