@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,6 +40,7 @@
 
 package org.shoal.ha.cache.impl.interceptor;
 
+import org.shoal.adapter.store.commands.NoOpCommand;
 import org.shoal.ha.cache.api.DataStoreContext;
 import org.shoal.ha.cache.api.DataStoreException;
 import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
@@ -110,6 +111,15 @@ public class ReplicationCommandTransmitterManager<K, V>
                 }
                 break;
         }
+    }
+
+    public void close() {
+        for (CommandCollector<K, V> cc : transmitters.values()) {
+            cc.close();
+        }
+
+       try { broadcastTransmitter.addCommand(new NoOpCommand()); } catch (DataStoreException dsEx) {}
+       broadcastTransmitter.close();
     }
 
 }

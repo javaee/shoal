@@ -62,6 +62,7 @@ import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -101,6 +102,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
 
     private MBeanServer mbs;
     private ObjectName mbeanObjectName;
+    
+    private AtomicBoolean closed = new AtomicBoolean(false);
 
     public ReplicatedDataStore(DataStoreContext<K, V> conf, GroupService gs) {
         this.dsc = conf;
@@ -266,237 +269,276 @@ public class ReplicatedDataStore<K, V extends Serializable>
         }
     }
 
-
     @Override
     public String put(K k, V v)
-            throws DataStoreException {
+        throws DataStoreException {
         String result = "";
-        DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
-        synchronized (entry) {
-            if (!entry.isRemoved()) {
-                if (dsc.isCacheLocally()) {
-                    entry.setV(v);
-                }
-                KeyMapper keyMapper = dsc.getKeyMapper();
 
-                // fix for GLASSFISH-18085
-                String[] members = keyMapper.getCurrentMembers();
-                if (members.length == 0) {
-                    _saveLogger.log(Level.FINE, "Skipped replication of " + k + " since there is only one instance running in the cluster.");
+        try {
+            dsc.acquireReadLock();
+            if (closed.get()) {
+                throw new DataStoreAlreadyClosedException("put() failed. Store " + dsc.getStoreName() + " already closed");
+            }
+
+            DataStoreEntry<K, V> entry = replicaStore.getOrCreateEntry(k);
+            synchronized (entry) {
+                if (!entry.isRemoved()) {
+                    if (dsc.isCacheLocally()) {
+                        entry.setV(v);
+                    }
+                    KeyMapper keyMapper = dsc.getKeyMapper();
+
+                    // fix for GLASSFISH-18085
+                    String[] members = keyMapper.getCurrentMembers();
+                    if (members.length == 0) {
+                        _saveLogger.log(Level.FINE, "Skipped replication of " + k + " since there is only one instance running in the cluster.");
+                        return result;
+                    }
+
+                    SaveCommand<K, V> cmd = dsc.getDataStoreEntryUpdater().createSaveCommand(entry, k, v);
+                    cm.execute(cmd);
+                    dscMBean.incrementSaveCount();
+
+                    String staleLocation = entry.setReplicaInstanceName(cmd.getTargetName());
+
+                    result = cmd.getKeyMappingInfo();
+
+                    if ((staleLocation != null) && (! staleLocation.equals(cmd.getTargetName()))) {
+                        StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>(k);
+                        staleCmd.setStaleTargetName(staleLocation);
+                        cm.execute(staleCmd);
+                    }
+                } else {
+                    _logger.log(Level.WARNING, "ReplicatedDataStore.put(" + k + ") AFTER remove?");
                     return result;
                 }
-
-                SaveCommand<K, V> cmd = dsc.getDataStoreEntryUpdater().createSaveCommand(entry, k, v);
-                cm.execute(cmd);
-                dscMBean.incrementSaveCount();
-
-                String staleLocation = entry.setReplicaInstanceName(cmd.getTargetName());
-
-                result = cmd.getKeyMappingInfo();
-
-                if ((staleLocation != null) && (! staleLocation.equals(cmd.getTargetName()))) {
-                    StaleCopyRemoveCommand<K, V> staleCmd = new StaleCopyRemoveCommand<K, V>(k);
-                    staleCmd.setStaleTargetName(staleLocation);
-                    cm.execute(staleCmd);
-                }
-            } else {
-                _logger.log(Level.WARNING, "ReplicatedDataStore.put(" + k + ") AFTER remove?");
-                return result;
             }
-        }
 
-        if (_saveLogger.isLoggable(Level.FINE)) {
-            _saveLogger.log(Level.FINE, debugName + " done save(" + k + ") to " + result);
+            if (_saveLogger.isLoggable(Level.FINE)) {
+                _saveLogger.log(Level.FINE, debugName + " done save(" + k + ") to " + result);
+            }
+        } finally {
+            dsc.releaseReadLock();
         }
         return result;
     }
 
     @Override
     public V get(K key)
-            throws DataStoreException {
+        throws DataStoreException {
         dscMBean.incrementLoadCount();
         V v = null;
-        boolean foundLocally = false;
-        DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
-        if (entry != null) {
-            if (!entry.isRemoved()) {
-                v = dsc.getDataStoreEntryUpdater().getV(entry);
-                if (v != null) {
-                    foundLocally = true;
-                    dscMBean.incrementLocalLoadSuccessCount();
-                    if (_loadLogger.isLoggable(Level.FINE)) {
-                        _loadLogger.log(Level.FINE, debugName + "load(" + key
+
+        try {
+            dsc.acquireReadLock();
+            if (closed.get()) {
+                throw new DataStoreAlreadyClosedException("get() failed. Store " + dsc.getStoreName() + " already closed");
+            }
+
+            dscMBean.incrementLoadCount();
+            boolean foundLocally = false;
+            DataStoreEntry<K, V> entry = replicaStore.getEntry(key);
+            if (entry != null) {
+                if (!entry.isRemoved()) {
+                    v = dsc.getDataStoreEntryUpdater().getV(entry);
+                    if (v != null) {
+                        foundLocally = true;
+                        dscMBean.incrementLocalLoadSuccessCount();
+                        if (_loadLogger.isLoggable(Level.FINE)) {
+                            _loadLogger.log(Level.FINE, debugName + "load(" + key
                                 + "); FOUND IN LOCAL CACHE!!");
+                        }
                     }
-                }
-            } else {
-                return null; //Because it is already removed
-            }
-        }
-
-        if (v == null) {
-            KeyMapper keyMapper = dsc.getKeyMapper();
-            String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
-            String[] replicaHint = replicachoices.split(":");
-            if (_loadLogger.isLoggable(Level.FINE)) {
-                _loadLogger.log(Level.FINE, debugName + "load(" + key
-                        + "); ReplicaChoices: " + replicachoices);
-            }
-
-            // fix for GLASSFISH-18085
-            String[] members = keyMapper.getCurrentMembers();
-            if (members.length == 0) {
-                _loadLogger.log(Level.FINE, "Skipped replication of " + key + " since there is only one instance running in the cluster.");
-                return null;
-            }
-            String respondingInstance = null;
-            for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
-                String target = replicaHint[replicaIndex];
-                if (target == null || target.trim().length() == 0 || target.equals(dsc.getInstanceName())) {
-                    continue;
-                }
-                LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key,
-                        entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), target);
-                if (_loadLogger.isLoggable(Level.FINE)) {
-                    _loadLogger.log(Level.FINE, debugName + "load(" + key
-                        + ") Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
-                }
-
-                cm.execute(command);
-                v = command.getResult(3, TimeUnit.SECONDS);
-                if (v != null) {
-                    respondingInstance = command.getRespondingInstanceName();
-                    dscMBean.incrementSimpleLoadSuccessCount();
-                    break;
+                } else {
+                    return null; //Because it is already removed
                 }
             }
 
             if (v == null) {
+                KeyMapper keyMapper = dsc.getKeyMapper();
+                String replicachoices = keyMapper.getReplicaChoices(dsc.getGroupName(), key);
+                String[] replicaHint = replicachoices.split(":");
                 if (_loadLogger.isLoggable(Level.FINE)) {
-                    _loadLogger.log(Level.FINE, debugName + "*load(" + key
-                        + ") Performing broadcast load");
+                    _loadLogger.log(Level.FINE, debugName + "load(" + key
+                        + "); ReplicaChoices: " + replicachoices);
                 }
-                String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
-                for (String targetInstance : targetInstances) {
-                    if (targetInstance.equals(dsc.getInstanceName())) {
+
+                // fix for GLASSFISH-18085
+                String[] members = keyMapper.getCurrentMembers();
+                if (members.length == 0) {
+                _loadLogger.log(Level.FINE, "Skipped replication of " + key + " since there is only one instance running in the cluster.");
+                    return null;
+                }
+                String respondingInstance = null;
+                for (int replicaIndex = 0; (replicaIndex < replicaHint.length) && (replicaIndex < MAX_REPLICA_TRIES); replicaIndex++) {
+                    String target = replicaHint[replicaIndex];
+                    if (target == null || target.trim().length() == 0 || target.equals(dsc.getInstanceName())) {
                         continue;
                     }
-                    LoadRequestCommand<K, V> lrCmd = new LoadRequestCommand<K, V>(key,
-                            entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), targetInstance);
+                    LoadRequestCommand<K, V> command= new LoadRequestCommand<K, V>(key,
+                        entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), target);
                     if (_loadLogger.isLoggable(Level.FINE)) {
-                        _loadLogger.log(Level.FINE, debugName + "*load(" + key
-                            + ") Trying to load from " + targetInstance);
+                        _loadLogger.log(Level.FINE, debugName + "load(" + key
+                            + ") Trying to load from Replica[" + replicaIndex + "]: " + replicaHint[replicaIndex]);
                     }
 
-                    cm.execute(lrCmd);
-                    v = lrCmd.getResult(3, TimeUnit.SECONDS);
+                    cm.execute(command);
+                    v = command.getResult(3, TimeUnit.SECONDS);
                     if (v != null) {
-                        respondingInstance = targetInstance;
-                        dscMBean.incrementBroadcastLoadSuccessCount();
+                        respondingInstance = command.getRespondingInstanceName();
+                        dscMBean.incrementSimpleLoadSuccessCount();
                         break;
                     }
                 }
-            }
 
-            if (v != null) {
-                entry = replicaStore.getEntry(key);
-                if (entry != null) {
-                    synchronized (entry) {
-                        if (!entry.isRemoved()) {
-                            if (dsc.isCacheLocally()) {
-                                entry.setV(v);
-                            }
+                if (v == null) {
+                    if (_loadLogger.isLoggable(Level.FINE)) {
+                        _loadLogger.log(Level.FINE, debugName + "*load(" + key
+                            + ") Performing broadcast load");
+                    }
+                    String[] targetInstances = dsc.getKeyMapper().getCurrentMembers();
+                    for (String targetInstance : targetInstances) {
+                        if (targetInstance.equals(dsc.getInstanceName())) {
+                            continue;
+                        }
+                        LoadRequestCommand<K, V> lrCmd = new LoadRequestCommand<K, V>(key,
+                            entry == null ? DataStoreEntry.MIN_VERSION : entry.getVersion(), targetInstance);
+                        if (_loadLogger.isLoggable(Level.FINE)) {
+                            _loadLogger.log(Level.FINE, debugName + "*load(" + key
+                                + ") Trying to load from " + targetInstance);
+                        }
 
-                            entry.setLastAccessedAt(System.currentTimeMillis());
-                            entry.setReplicaInstanceName(respondingInstance);
-                            //Note: Do not remove the stale replica now. We will
-                            //  do that in save
-                            if (_loadLogger.isLoggable(Level.FINE)) {
-                                _loadLogger.log(Level.FINE, debugName + "load(" + key
-                                        + "; Successfully loaded data from " + respondingInstance);
-                            }
-
-                            dscMBean.incrementLoadSuccessCount();
-                        } else {
-                            if (_loadLogger.isLoggable(Level.FINE)) {
-                                _loadLogger.log(Level.FINE, debugName + "load(" + key
-                                        + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
-                            }
-                            dscMBean.incrementLoadFailureCount();
+                        cm.execute(lrCmd);
+                        v = lrCmd.getResult(3, TimeUnit.SECONDS);
+                        if (v != null) {
+                            respondingInstance = targetInstance;
+                            dscMBean.incrementBroadcastLoadSuccessCount();
+                            break;
                         }
                     }
                 }
-            } else {
-                dscMBean.incrementLoadFailureCount();
-            }
-        }
 
-        if (_loadLogger.isLoggable(Level.FINE)) {
-            _loadLogger.log(Level.FINE, debugName + "load(" + key + ") Final result: " + v);
-        }
+                if (v != null) {
+                    entry = replicaStore.getEntry(key);
+                    if (entry != null) {
+                        synchronized (entry) {
+                            if (!entry.isRemoved()) {
+                                if (dsc.isCacheLocally()) {
+                                    entry.setV(v);
+                                }
 
-        if ((v != null) && foundLocally) {
-            //Because we did a successful load, to ensure that the data lives in another instance
-            //  lets do a save
+                                entry.setLastAccessedAt(System.currentTimeMillis());
+                                entry.setReplicaInstanceName(respondingInstance);
+                                //Note: Do not remove the stale replica now. We will
+                                //  do that in save
+                                if (_loadLogger.isLoggable(Level.FINE)) {
+                                    _loadLogger.log(Level.FINE, debugName + "load(" + key
+                                        + "; Successfully loaded data from " + respondingInstance);
+                                }
 
-            try {
-                String secondaryReplica = put(key, v);
-                if (_logger.isLoggable(Level.FINE)) {
-                    _saveLogger.log(Level.FINE, "(SaveOnLoad) Saved the data to replica: "  + secondaryReplica);
+                                dscMBean.incrementLoadSuccessCount();
+                            } else {
+                                if (_loadLogger.isLoggable(Level.FINE)) {
+                                    _loadLogger.log(Level.FINE, debugName + "load(" + key
+                                        + "; Got data from " + respondingInstance + ", but another concurrent thread removed the entry");
+                                }
+                                dscMBean.incrementLoadFailureCount();
+                            }
+                        }
+                    }
+                } else {
+                    dscMBean.incrementLoadFailureCount();
                 }
-            } catch (DataStoreException dsEx) {
-                _saveLogger.log(Level.WARNING, "(SaveOnLoad) Failed to save data after a load", dsEx);
             }
 
+            if (_loadLogger.isLoggable(Level.FINE)) {
+                _loadLogger.log(Level.FINE, debugName + "load(" + key + ") Final result: " + v);
+            }
+
+            if ((v != null) && foundLocally) {
+                //Because we did a successful load, to ensure that the data lives in another instance
+                //  lets do a save
+
+                try {
+                    String secondaryReplica = put(key, v);
+                    if (_logger.isLoggable(Level.FINE)) {
+                        _saveLogger.log(Level.FINE, "(SaveOnLoad) Saved the data to replica: "  + secondaryReplica);
+                    }
+                } catch (DataStoreException dsEx) {
+                    _saveLogger.log(Level.WARNING, "(SaveOnLoad) Failed to save data after a load", dsEx);
+                }
+
+            }
+            return v;
+        } finally {
+            dsc.releaseReadLock();
         }
-        return v;
     }
 
     @Override
     public void remove(K k)
-            throws DataStoreException {
+        throws DataStoreException {
 
-        if (_logger.isLoggable(Level.FINE)) {
-        	_logger.log(Level.FINE, "DataStore.remove(" + k + ") CALLED ****");
-	}
-
-        replicaStore.remove(k);
-        dscMBean.incrementRemoveCount();
-        
-        String[] targets = dsc.getKeyMapper().getCurrentMembers();
-
-        if (targets != null) {
-            for (String target : targets) {
-                RemoveCommand<K, V> cmd = new RemoveCommand<K, V>(k);
-                cmd.setTarget(target);
-                cm.execute(cmd);
+        try {
+            dsc.acquireReadLock();
+            if (closed.get()) {
+                throw new DataStoreAlreadyClosedException("remove() failed. Store " + dsc.getStoreName() + " already closed");
             }
-        }
 
+            if (_logger.isLoggable(Level.FINE)) {
+                _logger.log(Level.FINE, "DataStore.remove(" + k + ") CALLED ****");
+            }
+
+            replicaStore.remove(k);
+            dscMBean.incrementRemoveCount();
+
+            String[] targets = dsc.getKeyMapper().getCurrentMembers();
+
+            if (targets != null) {
+                for (String target : targets) {
+                    RemoveCommand<K, V> cmd = new RemoveCommand<K, V>(k);
+                    cmd.setTarget(target);
+                    cm.execute(cmd);
+                }
+            }
+        } finally {
+            dsc.releaseReadLock();
+        }
     }
 
     @Override
     public String touch(K k, long version, long ts, long ttl)
-            throws DataStoreException {
+        throws DataStoreException {
         String location = "";
-        DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
-        if (entry != null) {
-            synchronized (entry) {
-                long now = System.currentTimeMillis();
-                entry.setLastAccessedAt(now);
-                String target = entry.getReplicaInstanceName();
-                TouchCommand<K, V> cmd = new TouchCommand<K, V>(k, version, now, defaultIdleTimeoutInMillis);
-                cm.execute(cmd);
-
-                location = cmd.getKeyMappingInfo();
+        try {
+            dsc.acquireReadLock();
+            if (closed.get()) {
+                throw new DataStoreAlreadyClosedException("touch() failed. Store " + dsc.getStoreName() + " already closed");
             }
+
+            DataStoreEntry<K, V> entry = replicaStore.getEntry(k);
+            if (entry != null) {
+                synchronized (entry) {
+                    long now = System.currentTimeMillis();
+                    entry.setLastAccessedAt(now);
+                    String target = entry.getReplicaInstanceName();
+                    TouchCommand<K, V> cmd = new TouchCommand<K, V>(k, version, now, defaultIdleTimeoutInMillis);
+                    cm.execute(cmd);
+
+                    location = cmd.getKeyMappingInfo();
+                }
+            }
+        } finally {
+            dsc.releaseReadLock();
         }
         return location;
     }
 
+
     @Override
     public int removeIdleEntries(long idleFor) {
 
+        int finalResult = 0;
         String[] targets = dsc.getKeyMapper().getCurrentMembers();
 
         ResponseMediator respMed = dsc.getResponseMediator();
@@ -505,8 +547,11 @@ public class ReplicatedDataStore<K, V extends Serializable>
         Future<Integer> future = resp.getFuture();
         resp.setTransientResult(new Integer(0));
 
-        int finalResult = 0;
         try {
+            dsc.acquireReadLock();
+            if (closed.get()) {
+                throw new DataStoreAlreadyClosedException("removeIdleEntries() failed. Store " + dsc.getStoreName() + " already closed");
+            }
             if (targets != null && dsc.isBroadcastRemovedExpired()) {
                 resp.setExpectedUpdateCount(targets.length);
                 for (String target : targets) {
@@ -534,6 +579,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
             //TODO
         } finally {
             respMed.removeCommandResponse(tokenId);
+            dsc.releaseReadLock();
         }
 
         return finalResult;
@@ -544,6 +590,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
     @Override
     public void close() {
         try {
+            dsc.acquireWriteLock();
+            closed.set(true);
+            dsc.getCommandManager().close();
             if (mbs != null && mbeanObjectName != null) {
                 mbs.unregisterMBean(mbeanObjectName);
             }
@@ -551,30 +600,48 @@ public class ReplicatedDataStore<K, V extends Serializable>
             //TODO
         } catch (MBeanRegistrationException mbRegEx) {
             //TODO
+        } finally {
+            dsc.releaseWriteLock();
         }
     }
 
+    @Override
+    public void destroy() {
+        close();
+    }
+
     public int size() {
+
         int result = 0;
-        KeyMapper km = dsc.getKeyMapper();
-        String[] targets = km.getCurrentMembers();
-
-        int targetCount = targets.length;
-        SizeRequestCommand[] commands = new SizeRequestCommand[targetCount];
-
-        for (int i = 0; i < targetCount; i++) {
-            commands[i] = new SizeRequestCommand(targets[i]);
-            try {
-                dsc.getCommandManager().execute(commands[i]);
-            } catch (DataStoreException dse) {
-                //TODO:
+        try {
+            dsc.acquireReadLock();
+            if (closed.get()) {
+                //Since we cannot throw an Exception and since the store is already closed
+                // we return 0
+                return 0;
             }
-        }
 
-        for (int i = 0; i < targetCount; i++) {
-            result += commands[i].getResult();
+            KeyMapper km = dsc.getKeyMapper();
+            String[] targets = km.getCurrentMembers();
+    
+            int targetCount = targets.length;
+            SizeRequestCommand[] commands = new SizeRequestCommand[targetCount];
+    
+            for (int i = 0; i < targetCount; i++) {
+                commands[i] = new SizeRequestCommand(targets[i]);
+                try {
+                    dsc.getCommandManager().execute(commands[i]);
+                } catch (DataStoreException dse) {
+                    //TODO:
+                }
+            }
+    
+            for (int i = 0; i < targetCount; i++) {
+                result += commands[i].getResult();
+            }
+        } finally {
+            dsc.releaseReadLock();
         }
-
         return result;
     }
 }
