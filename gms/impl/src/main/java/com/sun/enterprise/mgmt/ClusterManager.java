@@ -40,25 +40,22 @@
 
 package com.sun.enterprise.mgmt;
 
-import com.sun.enterprise.ee.cms.core.GMSException;
-import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
-import com.sun.enterprise.ee.cms.core.GroupManagementService;
 import com.sun.enterprise.ee.cms.core.GMSConstants;
-import com.sun.enterprise.ee.cms.impl.base.CustomTagNames;
-import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisement;
-import com.sun.enterprise.ee.cms.impl.base.SystemAdvertisementImpl;
-import com.sun.enterprise.ee.cms.impl.base.PeerID;
-import com.sun.enterprise.ee.cms.impl.base.Utility;
+import com.sun.enterprise.ee.cms.core.GMSException;
+import com.sun.enterprise.ee.cms.core.GroupManagementService;
+import com.sun.enterprise.ee.cms.core.MemberNotInViewException;
+import com.sun.enterprise.ee.cms.impl.base.*;
 import com.sun.enterprise.ee.cms.logging.GMSLogDomain;
 import com.sun.enterprise.mgmt.transport.*;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.net.InetAddress;
-import java.net.Inet6Address;
 
 /**
  * The ClusterManager is the entry point for using the cluster management module
@@ -174,88 +171,48 @@ public class ClusterManager implements MessageListener {
      }
 
     private boolean isLoopBackEnabled(final Map props) {
-        boolean loopback = false;
-        if (props != null && !props.isEmpty()) {
-            Object lp = props.get( ConfigConstants.LOOPBACK.toString());
-            if (lp != null) {
-                loopback = Boolean.parseBoolean((String) lp);
-            }
-        }
-        return loopback;
+        boolean LOOPBACK_DEFAULT = false;
+        return Utility.getBooleanProperty(ConfigConstants.LOOPBACK.toString(), LOOPBACK_DEFAULT, props);
     }
 
     private long getDiscoveryTimeout(Map props) {
-        long discTimeout = 5000;
-        if (props != null && !props.isEmpty()) {
-            Object dt = props.get( ConfigConstants.DISCOVERY_TIMEOUT.toString());
-            if (dt != null) {
-                if (dt instanceof Long) {
-                   discTimeout = (Long)dt;
-                } else if (dt instanceof String) {
-                    discTimeout = Long.parseLong((String) dt);
-                }
-            }
-        }
-        return discTimeout;
+        long DISCOVERY_TIMEOUT_DEFAULT = 5000;  // milliseconds or 5 seconds.
+        return Utility.getLongProperty(ConfigConstants.DISCOVERY_TIMEOUT.toString(),
+            DISCOVERY_TIMEOUT_DEFAULT, props);
     }
 
     private long getFailureDetectionTimeout(Map props) {
-        long failTimeout = 3000;
-        if (props != null && !props.isEmpty()) {
-            Object ft = props.get( ConfigConstants.FAILURE_DETECTION_TIMEOUT.toString());
-            if (ft != null) {
-                failTimeout = Long.parseLong((String) ft);
-            }
-        }
-        return failTimeout;
+        long DEFAULT_FAILURE_DETECTION_TIMEOUT = 3000;
+        return Utility.getLongProperty(ConfigConstants.FAILURE_DETECTION_TIMEOUT.toString(),
+            DEFAULT_FAILURE_DETECTION_TIMEOUT, props);
     }
 
     private int getFailureDetectionRetries(Map props) {
-        int failRetry = 3;
-
-        if (props != null && !props.isEmpty()) {
-            Object fr = props.get( ConfigConstants.FAILURE_DETECTION_RETRIES.toString());
-            if (fr != null) {
-                failRetry = Integer.parseInt((String) fr);
-            }
-        }
-        return failRetry;
+        int DEFAULT_FAILURE_RETRY = 3;
+        return Utility.getIntProperty(ConfigConstants.FAILURE_DETECTION_RETRIES.toString(),
+            DEFAULT_FAILURE_RETRY, props);
     }
 
     private long getFailureDetectionTcpRetransmitTimeout(Map props) {
-        long failTcpTimeout = 10000;   // sailfin requirement to discover network outage under 30 seconds.
+        long DEFAULT_FAIL_TCP_TIMEOUT = 10000;   // sailfin requirement to discover network outage under 30 seconds.
                                        // fix for sailfin 626.
-                                       // HealthMonitor.isConnected() is called twice and must time out twice, using 20 seconds.
+                                       // HealthMonitor.isConnected() is called twice and must time out twice,
+                                       // using 20 seconds.
                                        // indoubt detection and failure verification takes 8-10 seconds.
-        if (props != null && !props.isEmpty()) {
-            Object ft = props.get( ConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString());
-            if (ft != null) {
-                failTcpTimeout = Long.parseLong((String) ft);
-            }
-        }
-        return failTcpTimeout;
+        return Utility.getLongProperty(ConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_TIMEOUT.toString(),
+            DEFAULT_FAIL_TCP_TIMEOUT, props);
     }
 
     private int getFailureDetectionTcpRetransmitPort(Map props) {
-        int failTcpPort = 9000;
-        if (props != null && !props.isEmpty()) {
-            Object ft = props.get( ConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_PORT.toString());
-            if (ft != null) {
-                failTcpPort = Integer.parseInt((String) ft);
-            }
-        }
-        return failTcpPort;
+        int DEFAULT_FAIL_TCP_PORT = 9000;
+        return Utility.getIntProperty(ConfigConstants.FAILURE_DETECTION_TCP_RETRANSMIT_PORT.toString(),
+            DEFAULT_FAIL_TCP_PORT, props);
     }
 
     private long getVerifyFailureTimeout(Map props) {
-        long verifyTimeout = 2000;
-        if (props != null && !props.isEmpty()) {
-            Object vt = props.get( ConfigConstants.FAILURE_VERIFICATION_TIMEOUT.toString());
-            if (vt != null) {
-                verifyTimeout = Long.parseLong((String) vt);
-            }
-        }
-        return verifyTimeout;
+        long DEFAULT_VERIFY_TIMEOUT = 2000;
+        return Utility.getLongProperty(ConfigConstants.FAILURE_VERIFICATION_TIMEOUT.toString(),
+                                    DEFAULT_VERIFY_TIMEOUT, props);
     }
 
     public void addClusteMessageListener(final ClusterMessageListener listener) {
