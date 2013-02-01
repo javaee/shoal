@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2013 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -154,7 +154,7 @@ class MasterNode implements MessageListener, Runnable {
     private List<String> groupStartingMembers = null;
     private final Timer timer;
     private DelayedSetGroupStartingCompleteTask groupStartingTask = null;
-    static final private long MAX_GROUPSTARTING_TIME = 240000;  // 4 minute limit for group starting duration.
+    static final private long MAX_GROUPSTARTING_TIME_MS = 10L * 60L * 1000L;  // 10 minute limit for group starting duration.
     static final private long GROUPSTARTING_COMPLETE_DELAY = 3000;   // delay before completing group startup.  Allow late arriving JoinedAndReady notifications
                                                                      // to be group starting.
     private boolean clusterStopping = false;
@@ -577,7 +577,7 @@ class MasterNode implements MessageListener, Runnable {
                 LOG.log(Level.FINE, "MNR indicates GroupStart for group: " + manager.getGroupName() + " members:" + groupmembers);
             }
             setGroupStarting(true);
-            delayedSetGroupStarting(false, MAX_GROUPSTARTING_TIME);  // place a boundary on length of time that GroupStarting state is true.
+            delayedSetGroupStarting(false, MAX_GROUPSTARTING_TIME_MS);  // place a boundary on length of time that GroupStarting state is true.
         }
         msgElement = msg.getMessageElement(AMASTERVIEW);
         if ( msgElement == null || !(msgElement instanceof List) ) {
@@ -1166,15 +1166,22 @@ class MasterNode implements MessageListener, Runnable {
                 // add the advertisement to the list
                 if (adv != null) {
                     if (isMaster() && masterAssigned) {
+
+                        // MEMBER IS ADDED TO GROUP HERE.  Must authenticate BEFORE adding.
                         result = clusterViewManager.add(adv);
                     } else if (discoveryInProgress) {
                         result = false;  // never report Join event during discovery mode.
+
+                        // MEMBER IS ADDED TO GROUP while in DISCOVERY HERE. Should we authenitcate BEFORE adding to
+                        // discoveryView.
                         discoveryView.add(adv);
                     }
                 }
                 if (processResendRequest(msg, adv, result)) {
                     return;
                 }
+
+                // HERE IS PATH FOR A MEMBER JOINING THE GROUP
                 if (processMasterNodeQuery(msg, adv, result)) {
                     return;
                 }
@@ -1746,9 +1753,9 @@ class MasterNode implements MessageListener, Runnable {
         }
 
         public void run() {
-            if (delay == MasterNode.MAX_GROUPSTARTING_TIME) {
+            if (delay == MasterNode.MAX_GROUPSTARTING_TIME_MS) {
                 LOG.log(Level.WARNING, "mgmt.masternode.missgroupstartupcomplete",
-                        new Object[]{MasterNode.MAX_GROUPSTARTING_TIME / 1000});
+                        new Object[]{MasterNode.MAX_GROUPSTARTING_TIME_MS / 1000});
             }
             synchronized (timer) {
                 setGroupStarting(false);
