@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2013 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,7 +40,6 @@
 package com.sun.enterprise.mgmt.transport.grizzly.grizzly2;
 
 import org.glassfish.grizzly.PortRange;
-import org.glassfish.grizzly.filterchain.FilterChain;
 import java.util.Iterator;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
@@ -65,6 +64,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.List;
 
 import com.sun.enterprise.mgmt.transport.grizzly.GrizzlyPeerID;
+import org.glassfish.grizzly.ssl.SSLBaseFilter;
+import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
+import org.glassfish.grizzly.config.SSLConfigurator;
+import org.glassfish.grizzly.ssl.SSLFilter;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.grizzly.Grizzly;
 import com.sun.enterprise.ee.cms.impl.base.GMSThreadFactory;
@@ -102,6 +105,9 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
     private ExecutorService multicastSenderThreadPool = null;
     private TCPNIOTransport tcpNioTransport;
     private ConnectionCache tcpNioConnectionCache;
+    private SSLEngineConfigurator clientSslEngineConfigurator;
+    private SSLEngineConfigurator serverSslEngineConfigurator;
+    private Boolean RENEGOTIATE_ON_CLIENTAUTHWANT;
 
     private final ConcurrentHashMap<String, Instance> instances =
             new ConcurrentHashMap<String, Instance>();
@@ -115,6 +121,45 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
         keepAliveTime = Utility.getLongProperty(KEEP_ALIVE_TIME.toString(), 60 * 1000, properties);
         poolQueueSize = Utility.getIntProperty(POOL_QUEUE_SIZE.toString(), 1024 * 4, properties);
         virtualUriList = Utility.getStringProperty(DISCOVERY_URI_LIST.toString(), null, properties);
+        if (properties != null) {
+            clientSslEngineConfigurator = (SSLEngineConfigurator)properties.get("CLIENT_SSLENGINECONFIGURATOR");
+            if (clientSslEngineConfigurator != null) {
+                logConfig("gms client ssl engine configurator", clientSslEngineConfigurator);
+            }
+            serverSslEngineConfigurator = (SSLEngineConfigurator)properties.get("SERVER_SSLENGINECONFIGURATOR");
+            if (serverSslEngineConfigurator != null) {
+                logConfig("gms server ssl engine configurator", serverSslEngineConfigurator);
+            }
+            RENEGOTIATE_ON_CLIENTAUTHWANT = Utility.getBooleanProperty("SSL_RENEGOTIATE_ON_CLIENTAUTHWANT", false,
+                properties);
+            if (clientSslEngineConfigurator != null) {
+                getLogger().config("SSL RENEGOTIATION_ON_CLIENTAUTHWANT=" + RENEGOTIATE_ON_CLIENTAUTHWANT);
+            }
+        }
+    }
+
+    private void logConfig(String description, SSLEngineConfigurator engConfig) {
+        if (engConfig != null && getLogger().isLoggable(Level.CONFIG)) {
+            StringBuffer buf = new StringBuffer();
+            buf.append(description).append(" SSLEngineConfigurator");
+            if (engConfig != null && engConfig instanceof SSLConfigurator) {
+                SSLConfigurator sslConfigurator = (SSLConfigurator) engConfig;
+                if (sslConfigurator.getSslImplementation() != null) {
+                    buf.append(" [ssl impl=").
+                        append(sslConfigurator.getSslImplementation().getImplementationName()).append("]");
+                }
+            }
+            buf.append(" [Enabled Protocols:");
+            String[] protocols = engConfig.getEnabledProtocols();
+            if (protocols != null) {
+                for (String p : protocols) {
+                    buf.append(p).append(",");
+                }
+                buf.append("]");
+            }
+            buf.append(" Provider=").append(engConfig.getSslContext().getProvider().getName());
+            getLogger().config(buf.toString());
+        }
     }
 
     @Override
@@ -123,7 +168,7 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
         super.initialize(groupName, instanceName, properties);
         this.instanceName = instanceName;
         this.groupName = groupName;
-        System.out.println("Grizzly 2.0 NetworkManager");
+        getLogger().info("Grizzly 2.0 NetworkManager");
         configure(properties);
         localConfigure(properties);
         GMSContext ctx = GMSContextFactory.getGMSContext(groupName);
@@ -161,22 +206,30 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
 
         final FilterChainBuilder filterChainBuilder = FilterChainBuilder.stateless();
         filterChainBuilder.add(new TransportFilter());
+        if (serverSslEngineConfigurator != null && clientSslEngineConfigurator != null) {
+            getLogger().log(Level.CONFIG,
+                "Configuring SSL for point to point listener filter chain.  ServerSslEngineConfigurator="
+                + serverSslEngineConfigurator);
+            filterChainBuilder.add(new SSLBaseFilter(serverSslEngineConfigurator, RENEGOTIATE_ON_CLIENTAUTHWANT));
+        }
         filterChainBuilder.add(new MessageFilter());
         filterChainBuilder.add(new MessageDispatcherFilter(this));
 
         transport.setProcessor(filterChainBuilder.build());
         
         tcpNioTransport = transport;
-
-        final FilterChain senderFilterChainBuilder = FilterChainBuilder.stateless()
-                .add(new TransportFilter())
-                .add(new CloseOnReadFilter())
-                .add(new MessageFilter())
-                .build();
+        final FilterChainBuilder senderFilterChainBuilder = FilterChainBuilder.stateless()
+                .add(new TransportFilter());
+        if (serverSslEngineConfigurator != null && clientSslEngineConfigurator != null) {
+            getLogger().config("Configuring SSL for point to point sender filter chain clientSslEngineConfigurator="
+                + clientSslEngineConfigurator);
+            senderFilterChainBuilder.add(new SSLFilter(clientSslEngineConfigurator, clientSslEngineConfigurator));
+        }
+        senderFilterChainBuilder.add(new CloseOnReadFilter()).add(new MessageFilter());
 
         final TCPNIOConnectorHandler senderConnectorHandler =
                 TCPNIOConnectorHandler.builder(transport)
-                .processor(senderFilterChainBuilder)
+                .processor(senderFilterChainBuilder.build())
                 .build();
 
         tcpNioConnectionCache = new ConnectionCache(senderConnectorHandler,
@@ -199,8 +252,8 @@ public class GrizzlyNetworkManager2 extends com.sun.enterprise.mgmt.transport.gr
         final long durationInMillis = System.currentTimeMillis() - transportStartTime;
 
         getLogger().log(Level.CONFIG,
-                "Grizzly controller listening on {0}:{1}. Transport started in {2} ms",
-                new Object[]{tcpListenerAddress, Integer.toString(tcpPort), durationInMillis});
+            "Grizzly controller listening on {0}:{1}. Transport started in {2} ms",
+            new Object[]{tcpListenerAddress, Integer.toString(tcpPort), durationInMillis});
 
         if (localPeerID == null) {
             String uniqueHost = host;
