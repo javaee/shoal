@@ -166,7 +166,6 @@ class MasterNode implements MessageListener, Runnable {
     private final ExecutorService checkForMissedMasterMsgSingletonExecutor;
     final TreeSet<ProcessedMasterViewId> processedChangeEvents = new TreeSet<ProcessedMasterViewId>();
     final boolean NON_MULTICAST;
-    private static boolean reportedPatchbugdb17203982 = false;
 
 
     /**
@@ -1214,15 +1213,10 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     private void announceMaster(SystemAdvertisement adv) {
+        // fix for bugdb 17203982, do not span a new thread for each master announcement.
         if (reliableMulticast != null)  {
             reliableMulticast.stop();
             reliableMulticast = null;
-
-            // report that patch is enabled once in log file.
-            if (!reportedPatchbugdb17203982) {
-                reportedPatchbugdb17203982 = true;
-                LOG.log(Level.INFO, "Patch for bugdb17203982");
-            }
         }
         reliableMulticast = new ReliableMulticast(manager);
         final Message msg = createMasterResponse(true, adv.getID());
