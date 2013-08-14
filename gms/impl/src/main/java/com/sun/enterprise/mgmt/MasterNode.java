@@ -1213,6 +1213,11 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     private void announceMaster(SystemAdvertisement adv) {
+        // fix for bugdb 17203982, do not span a new thread for each master announcement.
+        if (reliableMulticast != null)  {
+            reliableMulticast.stop();
+            reliableMulticast = null;
+        }
         reliableMulticast = new ReliableMulticast(manager);
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
