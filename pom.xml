@@ -58,8 +58,8 @@
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</connection>
-        <developerConnection>scm:svn:svn+ssh://janey@svn.java.net/shoal~svn/trunk</developerConnection>
+        <connection>scm:svn:svn+ssh://java_re@svn.java.net/shoal~svn/trunk</connection>
+        <developerConnection>scm:svn:svn+ssh://java_re@svn.java.net/shoal~svn/trunk</developerConnection>
         <url>http://java.net/projects/shoal/sources/svn/show</url>
     </scm>
 
