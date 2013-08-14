@@ -1224,6 +1224,10 @@ class MasterNode implements MessageListener, Runnable {
     }
 
     private void announceMaster(SystemAdvertisement adv) {
+	if (reliableMulticast != null) {
+	    reliableMulticast.stop();
+	    reliableMulticast = null;
+        }
         reliableMulticast = new ReliableMulticast(manager);
         final Message msg = createMasterResponse(true, adv.getID());
         final ClusterViewEvent cvEvent = new ClusterViewEvent(ClusterViewEvents.MASTER_CHANGE_EVENT, adv);
