@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2014 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -52,6 +52,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -67,6 +68,20 @@ public class SizeRequestCommand<K, V>
     private String targetInstanceName;
 
     private Future future;
+    
+    private static long LOAD_REQ_CMD_TIMEOUT=3000;
+    
+    private static final String LOAD_REQ_CMD_PROP_NAME="org.shoal.ha.cache.impl.store.loadrequest.timeout";
+    
+    static {
+
+        	LOAD_REQ_CMD_TIMEOUT =
+                    Long.getLong(LOAD_REQ_CMD_PROP_NAME,LOAD_REQ_CMD_TIMEOUT);
+        	_logger.log(Level.FINE, "USING " + LOAD_REQ_CMD_PROP_NAME + " = " + LOAD_REQ_CMD_TIMEOUT);
+
+
+        _logger.log(Level.FINE, "USING SizeRequestCommand");
+    }
 
     public SizeRequestCommand() {
         super(ReplicationCommandOpcode.SIZE_REQUEST);
@@ -121,7 +136,7 @@ public class SizeRequestCommand<K, V>
     public int getResult() {
         int result = 0;
         try {
-            result = (Integer) future.get(3, TimeUnit.SECONDS);
+            result = (Integer) future.get(LOAD_REQ_CMD_TIMEOUT, TimeUnit.MILLISECONDS);
         } catch (Exception dse) {
            //TODO
         }
