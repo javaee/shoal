@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2014 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -104,6 +104,27 @@ public class ReplicatedDataStore<K, V extends Serializable>
     private ObjectName mbeanObjectName;
     
     private AtomicBoolean closed = new AtomicBoolean(false);
+    
+    private static long LOAD_REQ_CMD_TIMEOUT=3000;
+    private static long REMOVE_IDLE_ENTRIES_TIMEOUT=6000;
+    
+    private static final String LOAD_REQ_CMD_PROP_NAME="org.shoal.ha.cache.impl.store.loadrequest.timeout";
+    private static final String REMOVE_IDLE_ENTRIES_PROP_NAME="org.shoal.ha.cache.impl.store.removeidleentries.timeout";
+    
+    static {
+
+        	LOAD_REQ_CMD_TIMEOUT =
+                    Long.getLong(LOAD_REQ_CMD_PROP_NAME,LOAD_REQ_CMD_TIMEOUT);
+        	_logger.log(Level.FINE, "USING " + LOAD_REQ_CMD_PROP_NAME + " = " + LOAD_REQ_CMD_TIMEOUT);
+
+
+        	REMOVE_IDLE_ENTRIES_TIMEOUT =
+                    Long.getLong(REMOVE_IDLE_ENTRIES_PROP_NAME,REMOVE_IDLE_ENTRIES_TIMEOUT);
+        	_logger.log(Level.CONFIG, "USING " + REMOVE_IDLE_ENTRIES_PROP_NAME + " = " + REMOVE_IDLE_ENTRIES_TIMEOUT);
+
+
+        _logger.log(Level.FINE, "USING ReplicatedDataStore");
+    }
 
     public ReplicatedDataStore(DataStoreContext<K, V> conf, GroupService gs) {
         this.dsc = conf;
@@ -111,7 +132,6 @@ public class ReplicatedDataStore<K, V extends Serializable>
         this.gs = gs;
         this.instanceName = gs.getMemberName();
         this.groupName = gs.getGroupName();
-
         initialize();
         postInitialization();
 
@@ -383,7 +403,9 @@ public class ReplicatedDataStore<K, V extends Serializable>
                     }
 
                     cm.execute(command);
-                    v = command.getResult(3, TimeUnit.SECONDS);
+                    v = command.getResult(LOAD_REQ_CMD_TIMEOUT, TimeUnit.MILLISECONDS);
+                    
+                                       
                     if (v != null) {
                         respondingInstance = command.getRespondingInstanceName();
                         dscMBean.incrementSimpleLoadSuccessCount();
@@ -409,7 +431,7 @@ public class ReplicatedDataStore<K, V extends Serializable>
                         }
 
                         cm.execute(lrCmd);
-                        v = lrCmd.getResult(3, TimeUnit.SECONDS);
+                        v = lrCmd.getResult(LOAD_REQ_CMD_TIMEOUT, TimeUnit.MILLISECONDS);
                         if (v != null) {
                             respondingInstance = targetInstance;
                             dscMBean.incrementBroadcastLoadSuccessCount();
@@ -572,8 +594,8 @@ public class ReplicatedDataStore<K, V extends Serializable>
             }
 
             finalResult = (Integer) resp.getTransientResult();
+            finalResult = future.get(REMOVE_IDLE_ENTRIES_TIMEOUT, TimeUnit.MILLISECONDS);
 
-            finalResult = future.get(6, TimeUnit.SECONDS);
         } catch (Exception ex) {
             //TODO
         } finally {
