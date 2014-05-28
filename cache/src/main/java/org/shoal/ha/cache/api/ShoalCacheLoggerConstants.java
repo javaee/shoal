@@ -83,4 +83,6 @@ public class ShoalCacheLoggerConstants {
 
     public static final String CACHE_REMOVE_EXPIRED_COMMAND = "org.shoal.ha.cache.command.remove_expired";
     
+    public static final String CACHE_ACKNOWLEDGED_COMMAND = "org.shoal.ha.cache.command.acknowledged_command";
+    
 }
