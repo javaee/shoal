@@ -41,6 +41,7 @@
 package org.shoal.adapter.store.commands;
 
 import org.shoal.ha.cache.api.DataStoreException;
+import org.shoal.ha.cache.api.ShoalCacheLoggerConstants;
 import org.shoal.ha.cache.impl.command.Command;
 import org.shoal.ha.cache.impl.util.CommandResponse;
 import org.shoal.ha.cache.impl.util.ResponseMediator;
@@ -49,6 +50,8 @@ import java.io.IOException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Mahesh Kannan
@@ -56,6 +59,8 @@ import java.util.concurrent.TimeoutException;
 public abstract class AcknowledgedCommand<K, V>
         extends Command<K, V> {
 
+	private static final Logger _logger = Logger.getLogger(ShoalCacheLoggerConstants.CACHE_ACKNOWLEDGED_COMMAND);
+	
     private transient CommandResponse resp;
 
     private transient Future future;
@@ -63,6 +68,20 @@ public abstract class AcknowledgedCommand<K, V>
     private long tokenId;
 
     private String originatingInstance;
+    
+    private static long ACK_CMD_TIMEOUT=3000;
+    
+    private static final String ACK_CMD_PROP_NAME="org.shoal.adapter.store.commands.ackcmd.timeout";
+    
+    static {
+
+    	ACK_CMD_TIMEOUT =
+                    Long.getLong(ACK_CMD_PROP_NAME,ACK_CMD_TIMEOUT);
+        	_logger.log(Level.FINE, "USING " + ACK_CMD_PROP_NAME + " = " + ACK_CMD_TIMEOUT);
+
+
+        _logger.log(Level.FINE, "USING AcknowledgedCommand");
+    }
 
     protected AcknowledgedCommand(byte opCode) {
         super(opCode);
@@ -131,7 +150,7 @@ public abstract class AcknowledgedCommand<K, V>
     private void waitForAck()
         throws DataStoreException, TimeoutException {
         try {
-            future.get(3, TimeUnit.SECONDS);
+            future.get(ACK_CMD_TIMEOUT, TimeUnit.MILLISECONDS);
         } catch (TimeoutException tEx) {
             throw tEx;
         } catch (Exception inEx) {
