@@ -1,8 +1,7 @@
 theme: jekyll-theme-architect
 
 title: [Shoal]
-description: [a java based scalable dynamic clustering framework that enables system development with fault 
-tolerance, reliability and availability]
+description: [scalable dynamic clustering for fault tolerance, reliability and availability]
 
 show_downloads: false
 
