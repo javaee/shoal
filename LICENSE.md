@@ -1,4 +1,8 @@
-COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1
+---
+
+---
+
+# COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1
 
 1. Definitions.
 
@@ -351,8 +355,7 @@ COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1
 
 ------------------------------------------------------------------------
 
-NOTICE PURSUANT TO SECTION 9 OF THE COMMON DEVELOPMENT AND DISTRIBUTION
-LICENSE (CDDL)
+NOTICE PURSUANT TO SECTION 9 OF THE COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL)
 
 The code released under the CDDL shall be governed by the laws of the
 State of California (excluding conflict-of-law provisions). Any
@@ -363,7 +366,7 @@ County, California.
 
 
 
-  The GNU General Public License (GPL) Version 2, June 1991
+# The GNU General Public License (GPL) Version 2, June 1991
 
 Copyright (C) 1989, 1991 Free Software Foundation, Inc.
 51 Franklin Street, Fifth Floor
