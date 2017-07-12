@@ -1,14 +1,14 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2012 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2017 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
  * and Distribution License("CDDL") (collectively, the "License").  You
  * may not use this file except in compliance with the License.  You can
  * obtain a copy of the License at
- * https://glassfish.dev.java.net/public/CDDL+GPL_1_1.html
+ * https://glassfish.dev.java.net/public/CDDL2011+GPL_1_1.html
  * or packager/legal/LICENSE.txt.  See the License for the specific
  * language governing permissions and limitations under the License.
  *
@@ -21,10 +21,10 @@
  * file that accompanied this code.
  *
  * Modifications:
- * If applicable, add the following below the License Header, with the fields
+ * If applicable, add the following below the License Header,2011 with the fields
  * enclosed by brackets [] replaced by your own identifying information:
  * "Portions Copyright [year] [name of copyright owner]"
- *
+ *20112011
  * Contributor(s):
  * If you wish your version of this file to be governed by only the CDDL or
  * only the GPL Version 2, indicate your decision by adding "[Contributor]
@@ -32,7 +32,7 @@
  * Version 2] license."  If you don't indicate a single choice of license, a
  * recipient has the option to distribute your version of this file under
  * either the CDDL, the GPL Version 2 or to extend the choice of license to
- * its licensees as provided above.  However, if you add GPL Version 2 code
+ * its licensees as provided above.  However, if2011 you add GPL Version 2 code
  * and therefore, elected the GPL Version 2 license, then the option applies
  * only if the new code is made subject to such option by the copyright
  * holder.
@@ -111,6 +111,7 @@ public class ClusterManager implements MessageListener {
      *                         //TODO: provide an API to send messages, synchronously or asynchronously
      * @param viewListeners    listeners interested in group view change events
      * @param messageListeners listeners interested in receiving messages.
+     * @throws GMSException Generic exception for handling errors
      */
     public ClusterManager(final String groupName,
                           final String instanceName,
@@ -265,6 +266,7 @@ public class ClusterManager implements MessageListener {
 
     /**
      * Returns the NetworkManager instance
+     * @param transport The type of transport
      *
      * @return The networkManager value
      */
@@ -330,11 +332,13 @@ public class ClusterManager implements MessageListener {
      *
      * @param peerid the node ID
      * @param msg    the message to send
+     * @param validatePeeridInView the flag to validate the peer id
      * @return boolean <code>true</code> if the message has been sent otherwise
      * <code>false</code>. <code>false</code>. is commonly returned for
      * non-error related congestion, meaning that you should be able to send
      * the message after waiting some amount of time.
      * @throws java.io.IOException if an io error occurs
+     * @throws MemberNotInViewException if the peer id is not in view
      */
     public boolean send(final PeerID peerid, final Serializable msg, boolean validatePeeridInView) throws IOException, MemberNotInViewException {
         boolean sent = false;

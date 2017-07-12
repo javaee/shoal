@@ -313,7 +313,7 @@ public class LWRMulticast implements MessageListener {
 
     /**
      * Send a message to the predefined set of nodes, and expect a minimum of specified acks.
-     * <p/>
+     * <p>
      * This method blocks until ack's upto to the specified threshold
      * have been received or the timeout has been reached.
      * A call to getAckList() returns a list of ack source peer ID's

@@ -308,7 +308,7 @@ public class GroupManagementServiceImpl implements GroupManagementService, Runna
      * the member's details
      *
      * @param memberToken identity token of the member process
-     * @return Map  <Serializable, Serializable>
+     * @return Map  &lt;Serializable, Serializable&gt;
      */
 
     public Map<Serializable, Serializable> getMemberDetails(final String memberToken) {

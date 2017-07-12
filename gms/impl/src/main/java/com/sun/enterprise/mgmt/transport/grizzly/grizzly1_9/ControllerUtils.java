@@ -56,6 +56,8 @@ public class ControllerUtils {
 
     /**
      *  Start controller in seperate thread
+     * 
+     * @param controller the controller
      */
     public static void startController(final Controller controller) {
         final CountDownLatch latch = new CountDownLatch(1);
@@ -92,6 +94,8 @@ public class ControllerUtils {
 
     /**
      *  Stop controller in seperate thread
+     * 
+     * @param controller the controller
      */
     public static void stopController(Controller controller) {
         try {

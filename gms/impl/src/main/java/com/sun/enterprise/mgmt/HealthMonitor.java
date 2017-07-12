@@ -75,7 +75,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * point in time.  The intention behind the designation is that no node other than
  * the master node should determine collective state and communicate it to
  * group members.
- * <p/>
+ * <p>
  * TODO: Convert the InDoubt Peer Determination and Failure Verification into
  * Callable FutureTask using java.util.concurrent
  */
@@ -164,6 +164,8 @@ public class HealthMonitor implements MessageListener, Runnable {
      *                       waits before finalizing that the in doubt peer is dead.
      * @param timeout        in milliseconds that the health monitor waits before
      *                       retrying an indoubt peer's availability.
+     * @param failureDetectionTCPPort the tcp port of failure Detection
+     * @param failureDetectionTCPTimeout the timeout to detect the failure
      */
     public HealthMonitor(final ClusterManager manager, final long timeout,
                          final int maxMissedBeats, final long verifyTimeout,
@@ -200,6 +202,8 @@ public class HealthMonitor implements MessageListener, Runnable {
 
     /**
      * A member is considered INDOUBT when a heartbeat has not been received in this amout of time.  (in milliseconds.)
+     * 
+     * @return the duration
      */
     public long getIndoubtDuration() {
         return timeout * maxMissedBeats;
@@ -1009,7 +1013,7 @@ public class HealthMonitor implements MessageListener, Runnable {
 
     /**
      *
-     * @param peerID
+     * @param peerID is the peer id
      * @param threshold is a positive value if the user wants to look at the caller's local
      * cache to get the state
      * @param timeout is a positive value if the user desires to make a network call directly to the

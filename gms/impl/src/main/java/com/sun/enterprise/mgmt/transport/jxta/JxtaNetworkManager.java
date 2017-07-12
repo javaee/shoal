@@ -103,7 +103,7 @@ import java.net.UnknownHostException;
  * instance name, it encodes a node Peer ID, and provides utilities to derive Peer ID's
  * from an instance name.  Given an instance name, this allows any node to
  * independently interpolate a Peer ID.
- * <p/>
+ * <p>
  * TODO:REVISIT FOR REFACTORING AND ADDED REQUIRMENTS.
  * TODO: WHEN SPECIFYING INSTANCENAME IN EACH METHOD, IS IT THE INTENTION THAT THE CONSUMING APP COULD POTENTIALLY
  * TODO: PROVIDE DIFFERENT INSTANCE NAMES AT DIFFERENT TIMES DURING A GIVEN LIFETIME OF THE APP? WHAT IMPACT WOULD THERE

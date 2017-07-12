@@ -97,6 +97,7 @@ public class MessageSignalImpl implements MessageSignal {
      * to protect group resources being
      * acquired from being affected by a race condition
      * @throws  com.sun.enterprise.ee.cms.core.SignalAcquireException
+     *          Exception when unable to aquire the signal
      */
     public void acquire() throws SignalAcquireException {
     }
@@ -105,6 +106,7 @@ public class MessageSignalImpl implements MessageSignal {
      * Signal is released after processing of the signal to bring the
      * group resources to a state of availability
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
+     *          Exception when unable to release the signal
      */
     public void release() throws SignalReleaseException {
         // JMF:  do not release message resources.

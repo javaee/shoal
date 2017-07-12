@@ -92,6 +92,7 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
      * acquired from being affected by a race condition
      *
      * @throws com.sun.enterprise.ee.cms.core.SignalAcquireException
+     *          Exception when unable to aquire the signal
      *
      */
     public void acquire() throws SignalAcquireException {
@@ -103,6 +104,7 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
      * group resources to a state of availability
      *
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
+     *         Exception when unable to release the signal
      *
      */
     public void release() throws SignalReleaseException {
@@ -117,7 +119,7 @@ public class PlannedShutdownSignalImpl implements PlannedShutdownSignal {
      * returns the details of the member who caused this Signal to be generated
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
-     * @return Map - <Serializable, Serializable>
+     * @return Map - &lt;Serializable, Serializable&gt;
      */
     public Map<Serializable, Serializable> getMemberDetails ( ) {
         return ctx.getDistributedStateCache()

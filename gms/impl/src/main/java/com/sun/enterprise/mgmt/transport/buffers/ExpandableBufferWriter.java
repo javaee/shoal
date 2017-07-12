@@ -42,6 +42,8 @@ package com.sun.enterprise.mgmt.transport.buffers;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.BufferOverflowException;
+import java.nio.ReadOnlyBufferException;
 
 /**
  * Expandable Buffer writer, which adopts its size during while getting more data.
@@ -77,10 +79,10 @@ public abstract class ExpandableBufferWriter {
      *
      * @return  This buffer writer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If this buffer's current position is not smaller than its limit
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter put(final byte b) {
@@ -107,7 +109,7 @@ public abstract class ExpandableBufferWriter {
      *          If <tt>index</tt> is negative
      *          or not smaller than the buffer's limit
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter put(final int index, final byte b) {
@@ -126,13 +128,15 @@ public abstract class ExpandableBufferWriter {
      *
      * <pre>
      *     dst.put(a, 0, a.length) </pre>
+     * 
+     * @param src the source byte array
      *
      * @return  This buffer writer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there is insufficient space in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter put(final byte[] src) {
@@ -146,7 +150,7 @@ public abstract class ExpandableBufferWriter {
      * source array.  If there are more bytes to be copied from the array
      * than remain in this buffer, that is, if
      * <tt>length</tt>&nbsp;<tt>&gt;</tt>&nbsp;<tt>remaining()</tt>, then no
-     * bytes are transferred and a {@link BufferOverflowException} is
+     * bytes are transferred and a {@link java.nio.BufferOverflowException} is
      * thrown.
      *
      * <p> Otherwise, this method copies <tt>length</tt> bytes from the
@@ -159,11 +163,11 @@ public abstract class ExpandableBufferWriter {
      * the loop
      *
      * <pre>
-     *     for (int i = off; i < off + len; i++)
+     *     for (int i = off; i &lt; off + len; i++)
      *         dst.put(a[i]); </pre>
      *
      * except that it first checks that there is sufficient space in this
-     * buffer and it is potentially much more efficient. </p>
+     * buffer and it is potentially much more efficient. <p>
      *
      * @param  src
      *         The array from which bytes are to be read
@@ -179,14 +183,14 @@ public abstract class ExpandableBufferWriter {
      *
      * @return  This buffer writer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there is insufficient space in this buffer
      *
      * @throws  IndexOutOfBoundsException
      *          If the preconditions on the <tt>offset</tt> and <tt>length</tt>
      *          parameters do not hold
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter put(final byte[] src,
@@ -210,11 +214,11 @@ public abstract class ExpandableBufferWriter {
      *
      * @return  This buffer writer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than two bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter putChar(final char value) {
@@ -244,7 +248,7 @@ public abstract class ExpandableBufferWriter {
      *          or not smaller than the buffer's limit,
      *          minus one
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter putChar(final int index, final char value) {
@@ -266,11 +270,11 @@ public abstract class ExpandableBufferWriter {
      *
      * @return  This buffer writer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than two bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter putShort(final short value) {
@@ -301,7 +305,7 @@ public abstract class ExpandableBufferWriter {
      *          or not smaller than the buffer's limit,
      *          minus one
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter putShort(final int index, final short value) {
@@ -328,7 +332,7 @@ public abstract class ExpandableBufferWriter {
      *          If there are fewer than four bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter putInt(final int value) {
@@ -358,7 +362,7 @@ public abstract class ExpandableBufferWriter {
      *          or not smaller than the buffer's limit,
      *          minus three
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public ExpandableBufferWriter putInt(final int index, final int value) {

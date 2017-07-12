@@ -96,6 +96,7 @@ public class FailureNotificationSignalImpl implements FailureNotificationSignal 
      * to protect group resources that are being
      * acquired from being affected by a race condition
      * @throws  com.sun.enterprise.ee.cms.core.SignalAcquireException
+     *          the exception when signal is not acquired
      */
     public void acquire() throws SignalAcquireException {
         logger.log(Level.FINE, "FailureNotificationSignal Acquired...");        
@@ -105,6 +106,7 @@ public class FailureNotificationSignalImpl implements FailureNotificationSignal 
      * Signal is released after processing of the signal to bring the
      * group resources to a state of availability
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
+     *         the exception when signal is not released
      */
     public void release() throws SignalReleaseException {
         failedMember=null;
@@ -131,7 +133,7 @@ public class FailureNotificationSignalImpl implements FailureNotificationSignal 
      * returns the details of the member who caused this Signal to be generated
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
-     * @return Map - <Serializable, Serializable>
+     * @return Map - &lt;Serializable, Serializable&gt;
      */
     public Map<Serializable, Serializable> getMemberDetails ( ) {
         return ctx.getDistributedStateCache()

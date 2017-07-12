@@ -53,7 +53,7 @@ import org.glassfish.grizzly.filterchain.NextAction;
 import org.glassfish.grizzly.memory.MemoryManager;
 
 /**
- * Filter, responsible for {@link Buffer} <-> {@link Message} transformation.
+ * Filter, responsible for {@link Buffer} to {@link Message} transformation.
  * 
  * Message protocol format is:
  *

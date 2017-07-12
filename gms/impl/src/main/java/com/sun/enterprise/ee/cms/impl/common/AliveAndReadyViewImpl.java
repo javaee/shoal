@@ -69,7 +69,7 @@ public class AliveAndReadyViewImpl implements AliveAndReadyView {
     //       This method exists for implementation to use only and thus only occurs here to enforce that desire.
     /**
      * Terminates this view as being the current view.
-     * @param signal
+     * @param signal the signal
      * @throws NullPointerException if closeViewSignal is null.
      */
     public void setSignal(final Signal signal) {

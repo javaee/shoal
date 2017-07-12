@@ -264,9 +264,9 @@ public final class GroupHandleImpl implements GroupHandle {
      * <p>Raising the fence, places an entry into a distributed datastructure
      * that is accessed by other members during their startup
      *
-     * @param componentName
-     * @param failedMemberToken
-     * @throws GMSException
+     * @param componentName the component name
+     * @param failedMemberToken the member token
+     * @throws GMSException the GMS generic exception
      */
     public void raiseFence(final String componentName,
                            final String failedMemberToken)
@@ -316,8 +316,8 @@ public final class GroupHandleImpl implements GroupHandle {
      * encompasses lowering the fence and other cleanups.
      *
      * @param componentName target member component
-     * @param failedMemberToken
-     * @throws GMSException
+     * @param failedMemberToken the member token of the failed member
+     * @throws GMSException the GMS Generic Exception
      */
     public void lowerFence(final String componentName,
                            final String failedMemberToken)
@@ -402,8 +402,8 @@ public final class GroupHandleImpl implements GroupHandle {
      * mean that the client component can continue with its lifecycle startup
      * per its normal startup policies.
      *
-     * @param componentName
-     * @param memberToken
+     * @param componentName the component name
+     * @param memberToken the member token
      * @return boolean
      */
     public boolean isFenced(final String componentName,
