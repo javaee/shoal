@@ -48,10 +48,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.LinkedTransferQueue;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.SocketConnectorHandler;
 import org.glassfish.grizzly.utils.Exceptions;
-import org.glassfish.grizzly.utils.LinkedTransferQueue;
 
 /**
  * Connection cache implementation.
