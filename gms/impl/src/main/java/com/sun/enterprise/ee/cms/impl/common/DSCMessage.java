@@ -71,9 +71,9 @@ public class DSCMessage implements Serializable {
      * composite key comprising component, member id, and the state specific key,
      * followed by the value. The value object should strictly be only a byte[]
      * or a Serializable Object.
-     * @param key
-     * @param value
-     * @param operation
+     * @param key the key
+     * @param value the object value
+     * @param operation the type of operation
      */
     public DSCMessage( final GMSCacheable key, final Object value,
                        final String operation){

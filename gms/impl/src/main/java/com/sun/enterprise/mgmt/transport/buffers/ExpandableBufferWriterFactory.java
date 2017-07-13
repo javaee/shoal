@@ -41,7 +41,7 @@
 package com.sun.enterprise.mgmt.transport.buffers;
 
 /**
- * {@link DynamicBufferWriter} factory.
+ * {@link ExpandableBufferWriter} factory.
  *
  * @author Alexey Stashok
  */

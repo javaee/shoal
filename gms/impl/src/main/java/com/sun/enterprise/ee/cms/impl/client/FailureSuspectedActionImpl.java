@@ -64,7 +64,7 @@ package com.sun.enterprise.ee.cms.impl.client;
     * processes the signal. typically involves getting information
     * from the signal, acquiring the signal and after processing, releasing
     * the signal
-    * @param signal
+    * @param signal the signal
     */
    public void consumeSignal(final Signal signal) {
        boolean signalAcquired = false;

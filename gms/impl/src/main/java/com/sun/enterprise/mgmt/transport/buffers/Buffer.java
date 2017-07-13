@@ -92,14 +92,14 @@ public interface Buffer extends Comparable<Buffer> {
     public Object underlying();
 
     /**
-     * Returns this buffer's capacity. </p>
+     * Returns this buffer's capacity. <p>
      *
      * @return  The capacity of this buffer
      */
     public int capacity();
 
     /**
-     * Returns this buffer's position. </p>
+     * Returns this buffer's position. <p>
      *
      * @return  The position of this buffer
      */
@@ -107,7 +107,7 @@ public interface Buffer extends Comparable<Buffer> {
 
     /**
      * Sets this buffer's position.  If the mark is defined and larger than the
-     * new position then it is discarded. </p>
+     * new position then it is discarded. <p>
      *
      * @param  newPosition
      *         The new position value; must be non-negative
@@ -121,7 +121,7 @@ public interface Buffer extends Comparable<Buffer> {
     public Buffer position(int newPosition);
 
     /**
-     * Returns this buffer's limit. </p>
+     * Returns this buffer's limit. <p>
      *
      * @return  The limit of this buffer
      */
@@ -130,7 +130,7 @@ public interface Buffer extends Comparable<Buffer> {
     /**
      * Sets this buffer's limit.  If the position is larger than the new limit
      * then it is set to the new limit.  If the mark is defined and larger than
-     * the new limit then it is discarded. </p>
+     * the new limit then it is discarded. <p>
      *
      * @param  newLimit
      *         The new limit value; must be non-negative
@@ -144,7 +144,7 @@ public interface Buffer extends Comparable<Buffer> {
     public Buffer limit(int newLimit);
 
     /**
-     * Sets this buffer's mark at its position. </p>
+     * Sets this buffer's mark at its position. <p>
      *
      * @return  This buffer
      */
@@ -158,7 +158,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  InvalidMarkException
+     * @throws  java.nio.InvalidMarkException
      *          If the mark has not been set
      */
     public Buffer reset();
@@ -197,10 +197,6 @@ public interface Buffer extends Comparable<Buffer> {
      * buf.flip();        // Flip buffer
      * out.write(buf);    // Write header + data to channel</pre></blockquote>
      *
-     * <p> This method is often used in conjunction with the
-     * {@link com.sun.enterprise.mgmt.transport.Buffer#trimLeft()} method when transferring data from
-     * one place to another.  </p>
-     *
      * @return  This buffer
      */
     public Buffer flip();
@@ -224,7 +220,7 @@ public interface Buffer extends Comparable<Buffer> {
 
     /**
      * Returns the number of elements between the current position and the
-     * limit. </p>
+     * limit. <p>
      *
      * @return  The number of elements remaining in this buffer
      */
@@ -232,7 +228,7 @@ public interface Buffer extends Comparable<Buffer> {
 
     /**
      * Tells whether there are any elements between the current position and
-     * the limit. </p>
+     * the limit. <p>
      *
      * @return  <tt>true</tt> if, and only if, there is at least one element
      *          remaining in this buffer
@@ -242,11 +238,11 @@ public interface Buffer extends Comparable<Buffer> {
     // -- Singleton get/put methods --
     /**
      * Relative <i>get</i> method.  Reads the byte at this buffer's
-     * current position, and then increments the position. </p>
+     * current position, and then increments the position. <p>
      *
      * @return  The byte at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If the buffer's current position is not smaller than its limit
      */
     public byte get();
@@ -262,17 +258,17 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If this buffer's current position is not smaller than its limit
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer put(byte b);
 
     /**
      * Absolute <i>get</i> method.  Reads the byte at the given
-     * index. </p>
+     * index. <p>
      *
      * @param  index
      *         The index from which the byte will be read
@@ -303,7 +299,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          If <tt>index</tt> is negative
      *          or not smaller than the buffer's limit
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer put(int index, byte b);
@@ -316,7 +312,7 @@ public interface Buffer extends Comparable<Buffer> {
      * destination array.  If there are fewer bytes remaining in the
      * buffer than are required to satisfy the request, that is, if
      * <tt>length</tt>&nbsp;<tt>&gt;</tt>&nbsp;<tt>remaining()</tt>, then no
-     * bytes are transferred and a {@link BufferUnderflowException} is
+     * bytes are transferred and a {@link java.nio.BufferUnderflowException} is
      * thrown.
      *
      * <p> Otherwise, this method copies <tt>length</tt> bytes from this
@@ -328,12 +324,12 @@ public interface Buffer extends Comparable<Buffer> {
      * <tt>src.get(dst,&nbsp;off,&nbsp;len)</tt> has exactly the same effect as
      * the loop
      *
-     * <pre>
-     *     for (int i = off; i < off + len; i++)
-     *         dst[i] = src.get(); </pre>
+     * <pre><code>
+     *     for (int i = off; i &lt; off + len; i++)
+     *         dst[i] = src.get(); </code></pre>
      *
      * except that it first checks that there are sufficient bytes in
-     * this buffer and it is potentially much more efficient. </p>
+     * this buffer and it is potentially much more efficient. <p>
      *
      * @param  dst
      *         The array into which bytes are to be written
@@ -350,7 +346,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than <tt>length</tt> bytes
      *          remaining in this buffer
      *
@@ -370,9 +366,10 @@ public interface Buffer extends Comparable<Buffer> {
      * <pre>
      *     src.get(a, 0, a.length) </pre>
      *
+     * @param dst the destination byte array
      * @return  This buffer
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than <tt>length</tt> bytes
      *          remaining in this buffer
      */
@@ -386,7 +383,7 @@ public interface Buffer extends Comparable<Buffer> {
      * source array.  If there are more bytes to be copied from the array
      * than remain in this buffer, that is, if
      * <tt>length</tt>&nbsp;<tt>&gt;</tt>&nbsp;<tt>remaining()</tt>, then no
-     * bytes are transferred and a {@link BufferOverflowException} is
+     * bytes are transferred and a {@link java.nio.BufferOverflowException} is
      * thrown.
      *
      * <p> Otherwise, this method copies <tt>length</tt> bytes from the
@@ -399,11 +396,11 @@ public interface Buffer extends Comparable<Buffer> {
      * the loop
      *
      * <pre>
-     *     for (int i = off; i < off + len; i++)
+     *     for (int i = off; i &lt; off + len; i++)
      *         dst.put(a[i]); </pre>
      *
      * except that it first checks that there is sufficient space in this
-     * buffer and it is potentially much more efficient. </p>
+     * buffer and it is potentially much more efficient. <p>
      *
      * @param  src
      *         The array from which bytes are to be read
@@ -419,14 +416,14 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there is insufficient space in this buffer
      *
      * @throws  IndexOutOfBoundsException
      *          If the preconditions on the <tt>offset</tt> and <tt>length</tt>
      *          parameters do not hold
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer put(byte[] src, int offset, int length);
@@ -442,13 +439,9 @@ public interface Buffer extends Comparable<Buffer> {
      * <pre>
      *     dst.put(a, 0, a.length) </pre>
      *
+     * @param src the source byte array
+     * 
      * @return  This buffer
-     *
-     * @throws  BufferOverflowException
-     *          If there is insufficient space in this buffer
-     *
-     * @throws  ReadOnlyBufferException
-     *          If this buffer is read-only
      */
     public Buffer put(byte[] src);
 
@@ -461,7 +454,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  The char value at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than two bytes
      *          remaining in this buffer
      */
@@ -480,11 +473,11 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than two bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putChar(char value);
@@ -527,7 +520,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          or not smaller than the buffer's limit,
      *          minus one
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putChar(int index, char value);
@@ -541,7 +534,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  The short value at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than two bytes
      *          remaining in this buffer
      */
@@ -560,11 +553,11 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than two bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putShort(short value);
@@ -607,7 +600,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          or not smaller than the buffer's limit,
      *          minus one
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putShort(int index, short value);
@@ -621,7 +614,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  The int value at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than four bytes
      *          remaining in this buffer
      */
@@ -640,11 +633,11 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than four bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putInt(int value);
@@ -687,7 +680,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          or not smaller than the buffer's limit,
      *          minus three
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putInt(int index, int value);
@@ -701,7 +694,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  The long value at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than eight bytes
      *          remaining in this buffer
      */
@@ -720,11 +713,11 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than eight bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putLong(long value);
@@ -767,7 +760,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          or not smaller than the buffer's limit,
      *          minus seven
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putLong(int index, long value);
@@ -781,7 +774,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  The float value at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than four bytes
      *          remaining in this buffer
      */
@@ -800,11 +793,11 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than four bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putFloat(float value);
@@ -847,7 +840,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          or not smaller than the buffer's limit,
      *          minus three
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putFloat(int index, float value);
@@ -861,7 +854,7 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  The double value at the buffer's current position
      *
-     * @throws  BufferUnderflowException
+     * @throws  java.nio.BufferUnderflowException
      *          If there are fewer than eight bytes
      *          remaining in this buffer
      */
@@ -880,11 +873,11 @@ public interface Buffer extends Comparable<Buffer> {
      *
      * @return  This buffer
      *
-     * @throws  BufferOverflowException
+     * @throws  java.nio.BufferOverflowException
      *          If there are fewer than eight bytes
      *          remaining in this buffer
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putDouble(double value);
@@ -927,7 +920,7 @@ public interface Buffer extends Comparable<Buffer> {
      *          or not smaller than the buffer's limit,
      *          minus seven
      *
-     * @throws  ReadOnlyBufferException
+     * @throws  java.nio.ReadOnlyBufferException
      *          If this buffer is read-only
      */
     public Buffer putDouble(int index, double value);
@@ -942,7 +935,7 @@ public interface Buffer extends Comparable<Buffer> {
     /**
      * Returns {@link Buffer} content as {@link String}
      * @param charset the {@link Charset}, which will be use
-     * for byte[] -> {@link String} transformation.
+     * for byte[] to {@link String} transformation.
      *
      * @return {@link String} representation of this {@link Buffer} content.
      */
@@ -951,7 +944,7 @@ public interface Buffer extends Comparable<Buffer> {
     /**
      * Returns {@link Buffer}'s chunk content as {@link String}
      * @param charset the {@link Charset}, which will be use
-     * for byte[] -> {@link String} transformation.
+     * for byte[] to {@link String} transformation.
      * @param position the first byte offset in the <tt>Buffer</tt> (inclusive)
      * @param limit the last byte offset in the <tt>Buffer</tt> (exclusive)
      *

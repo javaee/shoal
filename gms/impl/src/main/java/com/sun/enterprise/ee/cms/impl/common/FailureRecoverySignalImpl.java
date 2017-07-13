@@ -79,7 +79,7 @@ public class FailureRecoverySignalImpl extends FailureNotificationSignalImpl
     /**
      * Must be called by client before beginning any recovery operation
      * in order to get support of failure fencing.
-     * @throws SignalAcquireException
+     * @throws SignalAcquireException Exception when signal is not acquired
      */
     @Override public void acquire() throws SignalAcquireException {
 

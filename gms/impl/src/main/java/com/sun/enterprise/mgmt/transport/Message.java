@@ -77,7 +77,7 @@ public interface Message extends Serializable {
     public static final int TYPE_HEALTH_MONITOR_MESSAGE = 2;
 
     /**
-     * The type of the {@link com.sun.enterprise.mgmt.MasterNode} message
+     * The type of the com.sun.enterprise.mgmt.MasterNode message
      */
     public static final int TYPE_MASTER_NODE_MESSAGE = 3;
 

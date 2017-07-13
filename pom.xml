@@ -53,19 +53,19 @@
     <groupId>org.shoal</groupId>
     <artifactId>shoal</artifactId>
     <packaging>pom</packaging>
-    <version>1.6.51-SNAPSHOT</version>
+    <version>1.6.51</version>
     <name>shoal</name>
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:svn:svn+ssh://java_re@svn.java.net/shoal~svn/trunk</connection>
-        <developerConnection>scm:svn:svn+ssh://java_re@svn.java.net/shoal~svn/trunk</developerConnection>
-        <url>http://java.net/projects/shoal/sources/svn/show</url>
+        <connection>scm:git:git://github.com/javaee/shoal.git</connection>
+        <developerConnection>scm:git:git://github.com/javaee/shoal.git</developerConnection>
+        <url>https://github.com/javaee/shoal</url>
     </scm>
 
     <issueManagement>
         <system>IssueTracker</system>
-        <url>http://java.net/jira/browse/SHOAL</url>
+        <url>https://github.com/javaee/shoal/issues</url>
     </issueManagement>
     <mailingLists>
         <mailingList>
@@ -94,15 +94,6 @@
                 <role>developer</role>
             </roles>
         </developer>
-        <developer>
-            <id>bbissett</id>
-            <name>Bobby Bissett</name>
-            <url>http://blogs.sun.com/bobby</url>
-            <organization>Oracle Inc.</organization>
-            <roles>
-                <role>developer</role>
-            </roles>
-        </developer>
     </developers>
 
     <licenses>
@@ -117,7 +108,7 @@
         <grizzly.version>1.9.36</grizzly.version>
 
         <grizzly2.group.id>org.glassfish.grizzly</grizzly2.group.id>
-        <grizzly2.version>2.3-rc4</grizzly2.version>
+        <grizzly2.version>2.4.0-beta9</grizzly2.version>
 
         <junit.group.id>junit</junit.group.id>
         <junit.version>3.8.1</junit.version>
@@ -253,9 +244,9 @@
 
     <repositories>
         <repository>
-            <id>glassfish-repo-archive</id>
-            <name>Nexus repository collection for Glassfish</name>
-            <url>http://maven.glassfish.org/content/groups/glassfish</url>
+            <id>maven-central</id>
+            <name>Maven Central Repo</name>
+	   <url>http://central.maven.org/maven2/</url>
         </repository>
     </repositories>
 

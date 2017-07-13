@@ -183,7 +183,7 @@ public class HealthMessage implements Serializable {
          * Since MasterNode reports on other peers that they are DEAD or INDOUBT, be sure not to compare sequence ids between
          * a peer and a MasterNode health message report on that peer.
          *
-         * @param other
+         * @param other the entry of other peer
          * @return true if this HM.entry and other are from same member.
          */
         public boolean isFromSameMember(HealthMessage.Entry other) {
@@ -192,7 +192,7 @@ public class HealthMessage implements Serializable {
 
         /**
          * Detect when one hm is from a failed member and the new hm is from the restart of that member.
-         * @param other
+         * @param other the entry of other peer
          * @return true if same instantiation of member sent this health message.
          */
         public boolean isFromSameMemberStartup(HealthMessage.Entry other) {

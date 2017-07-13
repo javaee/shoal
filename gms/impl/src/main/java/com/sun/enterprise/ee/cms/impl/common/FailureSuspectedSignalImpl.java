@@ -93,6 +93,7 @@ public class FailureSuspectedSignalImpl implements FailureSuspectedSignal {
      * operations.
      *
      * @throws com.sun.enterprise.ee.cms.core.SignalAcquireException
+     *         Exception when unable to acquire the signal
      *
      */
     public void acquire () throws SignalAcquireException {
@@ -105,6 +106,7 @@ public class FailureSuspectedSignalImpl implements FailureSuspectedSignal {
      * after recovery process is completed.
      *
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
+     *         Exception when unable to release the signal
      *
      */
     public void release () throws SignalReleaseException {
@@ -129,7 +131,7 @@ public class FailureSuspectedSignalImpl implements FailureSuspectedSignal {
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
      *
-     * @return Map  <Serializable, Serializable>
+     * @return Map  &lt;Serializable, Serializable&gt;
      */
     public Map<Serializable, Serializable> getMemberDetails () {
         return ctx.getDistributedStateCache()

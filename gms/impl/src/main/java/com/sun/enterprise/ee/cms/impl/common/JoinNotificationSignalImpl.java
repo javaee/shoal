@@ -103,6 +103,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * acquired from being affected by a race condition
      *
      * @throws com.sun.enterprise.ee.cms.core.SignalAcquireException
+     *         Exception when unable to aquire the signal
      *
      */
     @Override
@@ -115,7 +116,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * group resources to a state of availability
      *
      * @throws com.sun.enterprise.ee.cms.core.SignalReleaseException
-     *
+     *         Exception when unable to release the signal
      */
     @Override
     public void release() throws SignalReleaseException {
@@ -159,7 +160,7 @@ public class JoinNotificationSignalImpl implements JoinNotificationSignal{
      * returns the details of the member who caused this Signal to be generated
      * returns a Map containing key-value pairs constituting data pertaining to
      * the member's details
-     * @return Map <Serializable, Serializable> 
+     * @return Map &lt;Serializable, Serializable&gt; 
      */
     @Override
     public Map<Serializable, Serializable> getMemberDetails ( ) {

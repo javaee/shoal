@@ -125,13 +125,13 @@ public interface NetworkManager extends MulticastMessageSender, MessageSender {
 
     /**
      * Add the <code>peerID</code> to this network manager
-     * @param peerID
+     * @param peerID the peer Id
      */
     public void addRemotePeer( final PeerID peerID );
 
     /**
      * Removes the <code>peerID</code> from this network manager
-     * @param peerID
+     * @param peerID the peer Id
      */
     public void removePeerID( final PeerID peerID );
 

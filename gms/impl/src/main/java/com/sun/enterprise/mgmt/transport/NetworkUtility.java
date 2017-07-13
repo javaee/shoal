@@ -246,6 +246,8 @@ public class NetworkUtility {
      * Return a first network interface except for the lookback
      * But, if any network interfaces were not found locally, the lookback interface is returned.
      *
+     * @param preferIPv6 flag to indicate if IPV6 is preferred
+     * 
      * @return a first network interface
      * @throws IOException if an I/O error occurs or a network interface was not found
      */
@@ -420,6 +422,7 @@ public class NetworkUtility {
         * Return a first <code>InetAddress</code> of network interface
         * But, if any network interfaces were not found locally, <code>null</code> could be returned.
         *
+        * @param anInterface the type of network interface
         * @param preferIPv6 if true, prefer IPv6 InetAddress. otherwise prefer IPv4 InetAddress
         * @return a first found <code>InetAddress</code>.
         * @throws IOException if an I/O error occurs or a network interface was not found

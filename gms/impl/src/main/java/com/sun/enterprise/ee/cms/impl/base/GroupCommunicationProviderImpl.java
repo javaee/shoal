@@ -200,7 +200,7 @@ public class GroupCommunicationProviderImpl implements
      *
      * @param groupName     name of group
      * @param startupState  INITATED, COMPLETED_SUCCESS or COMPLETED_FAILED
-     * @param memberTokens  static list of members associated with startupState.  Failed members if state is COMPLETED_FAILED>
+     * @param memberTokens  static list of members associated with startupState.  Failed members if state is COMPLETED_FAILED
      */
     public void announceGroupStartup(String groupName,
                                      GMSConstants.groupStartupState startupState,
@@ -245,7 +245,7 @@ public class GroupCommunicationProviderImpl implements
      * @param synchronous               setting true here will call the underlying GCP's api
      *                                  that corresponds to a synchronous message, if
      *                                  available.
-     * @throws com.sun.enterprise.ee.cms.core.GMSException
+     * @throws com.sun.enterprise.ee.cms.core.GMSException the GMS generic expection
      *
      */
     public void sendMessage(final String targetMemberIdentityToken,
@@ -539,7 +539,8 @@ public class GroupCommunicationProviderImpl implements
      * implements Callable.
      * Used for handing off the job of calling sendMessage() method to a ThreadPool.
      * REVISIT
-
+     */
+    /*
     private class CallableMessageSend implements Callable<Object> {
         private PeerID member;
         private Serializable msg;

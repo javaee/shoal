@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 1997-2010 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997-2017 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -44,18 +44,16 @@ import java.util.EventListener;
 
 /**
  * The listener interface for receiving ClusterViewManager events.
- * <p/>
+ * <p>
  * The following example illustrates how to implement a {@link com.sun.enterprise.mgmt.ClusterViewEventListener}:
  * <pre><tt>
  * ClusterViewEventListener myListener = new ClusterViewEventListener() {
- * <p/>
  *   public void clusterViewEvent(int event, , SystemAdvertisement advertisement) {
  *        if (event == ClusterViewManager.ADD_EVENT) {
  *          .....
  *        }
  *   }
  * }
- * <p/>
  * </tt></pre>
  */
 

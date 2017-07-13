@@ -223,13 +223,13 @@ public class JxtaUtil {
     /**
      * Send <code>msg</code> over <code>pipe</code>.
      *
-     * @param pipe
-     * @param msg
+     * @param pipe the output pipe
+     * @param msg the message
      * @return boolean <code>true</code> if the message has been sent otherwise
      * <code>false</code>. <code>false</code>. is commonly returned for
      * non-error related congestion, meaning that you should be able to send
      * the message after waiting some amount of time.
-     * @throws java.io.IOException
+     * @throws java.io.IOException the exception
      */
     public static boolean send( OutputPipe pipe, Message msg) throws IOException {
 

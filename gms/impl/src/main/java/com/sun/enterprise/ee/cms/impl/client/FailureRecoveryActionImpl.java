@@ -65,7 +65,7 @@ public class FailureRecoveryActionImpl implements FailureRecoveryAction {
      * processes the recovery signal. typically involves getting information
      * from the signal, acquiring the signal and after processing, releasing
      * the signal
-     * @param signal
+     * @param signal the signal
      */
     public void consumeSignal(final Signal signal) throws ActionException {
         boolean signalAcquired = false;
