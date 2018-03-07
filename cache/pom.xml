@@ -72,23 +72,6 @@
             <scope>provided</scope>
         </dependency>
         <!-- Test -->
-
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-utils</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-framework</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly2.group.id}</groupId>
-            <version>${grizzly2.version}</version>
-            <artifactId>grizzly-framework</artifactId>
-       </dependency>
-
         <dependency>
             <groupId>${junit.group.id}</groupId>
             <artifactId>junit</artifactId>

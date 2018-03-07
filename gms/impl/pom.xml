@@ -72,32 +72,9 @@
         </dependency>
         <dependency>
             <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-utils</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
-            <artifactId>grizzly-framework</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly.group.id}</groupId>
             <artifactId>grizzly-http</artifactId>
             <scope>provided</scope>
             <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>${grizzly2.group.id}</groupId>
-            <artifactId>grizzly-framework</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi_R4_core</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>${grizzly2.group.id}</groupId>
