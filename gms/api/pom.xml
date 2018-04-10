@@ -47,7 +47,7 @@
     <parent>
         <groupId>org.shoal</groupId>
         <artifactId>shoal-gms</artifactId>
-        <version>1.6.51</version>
+        <version>1.6.52-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     
@@ -117,7 +117,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <additionalparam>-Xdoclint:none</additionalparam>
+			<doclint>none</doclint>
                 </configuration>
                 <executions>
                     <execution>

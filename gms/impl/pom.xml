@@ -47,7 +47,7 @@
     <parent>
         <groupId>org.shoal</groupId>
         <artifactId>shoal-gms</artifactId>
-        <version>1.6.51</version>
+        <version>1.6.52-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     
@@ -141,6 +141,9 @@
                 <inherited>true</inherited>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+		<configuration>
+                        <doclint>none</doclint>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
