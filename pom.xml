@@ -58,8 +58,8 @@
     <url>http://java.net/projects/shoal</url>
 
     <scm>
-        <connection>scm:git:git://github.com/javaee/shoal.git</connection>
-        <developerConnection>scm:git:git://github.com/javaee/shoal.git</developerConnection>
+        <connection>scm:git:https://github.com/javaee/shoal.git</connection>
+        <developerConnection>scm:git:https://github.com/javaee/shoal.git</developerConnection>
         <url>https://github.com/javaee/shoal</url>
     </scm>
 
