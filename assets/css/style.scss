@@ -51,7 +51,8 @@ a:hover {
 }
 
 #sidebar p {
-  font-size: 1.2em;
+  font-size: 1em;
+  margin-bottom: 1em;
 }
 
 .highlight { 
@@ -60,8 +61,8 @@ a:hover {
 
 .sponsor {
   float: left;
-  padding-top: 40px;
-  padding-left: 10px;
+  padding-top: 20px;
+  padding-left: 18px;
 }
 
 .moveright30{
@@ -79,9 +80,12 @@ a:hover {
 a.oraclelogo {
   position: absolute;
   background: transparent url(../images/Oracle-logo.png) 0 0 no-repeat;
+  background-position: 2px -2px; 
   background-size: 100% ;
   width: 96px;
   height: 62px;
+  padding-top: 2px;
+  padding-right: 20px;
 }
 
 aside#sidebar {
@@ -114,8 +118,22 @@ td {
 
 ul {
   font-size: 1em;
+  margin-left: 12px;
 }
 
+ol {
+    list-style-position: inside;
+    list-style: decimal;
+    margin-left: 26px;
+}
+
+blockquote {
+    padding: 0 0 0 10px;
+    margin-left: 14px;
+    margin-bottom: 2px;
+    font-size: 1em;
+    border-left: 4px solid #ddd;
+}
 
 #main-content h1 {
   padding-top: .6em;
@@ -193,8 +211,55 @@ ul {
   margin-bottom: 2px;
 }
 
+.footer {
+  position: relative; 
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-color: #f0f0f0;
+  //padding: 1rem;
+  padding-top: 4px;
+  padding-bottom: 14px;
+  font-size: 0.8em;
+  text-align: center;
+}
+
+.oracle {
+  color: #666;
+  font-weight: 400;
+}
+
+.oracle:hover { 
+  text-decoration: none;
+  color: #FF0000;
+}
+
 .fullpage {
   //float: center;
   color: FF0000;
   width: 900px;
 }
+
+#archive-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+#archive-footer {
+  background: #B45252;
+  line-height: 1.3;
+  text-align: center;
+  color: #FFF;
+  font-size: 15px;
+  font-family: sans-serif;
+  font-weight: 100;
+  text-shadow: 2px 2px 2px #8D0614;
+  box-shadow: 0 0 12px #424242;
+}
+
+#archive-footer a:link { color: white; font-weight: 700; }
+#archive-footer a:visited { color: white; font-weight: 700;}
+#archive-footer a:hover { color: white; font-weight: 700; text-decoration: underline;}
+#archive-footer a:active { color: white; font-weight: 700; text-decoration: underline;}
